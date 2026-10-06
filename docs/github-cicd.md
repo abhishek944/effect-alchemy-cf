@@ -73,7 +73,7 @@ The existing stack already uses shared Cloudflare state, not ephemeral local sta
 
 Env files remain ignored by Git. Install creates blank/default dev/prod files.
 On a prod push only, `scripts/configure-ci.mjs` reconstructs the runner's
-`.env.prod` with the same keys, `ALLOW_PRODUCTION=true`, `ALCHEMY_DEV=false`, blank
+`.env.prod` with the same keys, `ALLOW_PRODUCTION=true`, blank
 Access allowlist (prod has no developer wall), and the optional auth origin.
 This does not change your local file. The explicit env file overrides shell
 values; the production opt-in must be written into that file.

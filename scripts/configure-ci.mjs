@@ -20,7 +20,6 @@ const values = {
   DEV_ACCESS_EMAILS: "",
   AUTH_BASE_URL: origin,
   ALLOW_PRODUCTION: "true",
-  ALCHEMY_DEV: "false",
 };
 writeFileSync(
   file,

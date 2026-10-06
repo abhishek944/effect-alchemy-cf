@@ -44,6 +44,7 @@ export const workerOptions = Effect.gen(function* () {
     dev: { port: 1337 },
     env: {
       REQUIRE_ACCESS: !local && !production,
+      AUTH_LOCAL: local,
       OBS_SERVICE: stack.name,
       OBS_STAGE: stack.stage,
       OBS_RELEASE: release,

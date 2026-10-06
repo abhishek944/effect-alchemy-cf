@@ -2,7 +2,7 @@ import ApiWorker from "@starter/api/worker";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { AlchemyContext } from "alchemy/AlchemyContext";
-import { Config, Effect, Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { serviceName } from "../../service.config.ts";
 
 export default Alchemy.Stack(
@@ -12,11 +12,6 @@ export default Alchemy.Stack(
     state: Layer.unwrap(
       Effect.gen(function* () {
         const { dev } = yield* AlchemyContext;
-        const inherited = yield* Config.Boolean("ALCHEMY_DEV").pipe(
-          Config.withDefault(false),
-          Effect.orDie,
-        );
-        if (dev !== inherited) throw new Error("ALCHEMY_DEV must match the CLI development mode.");
         return dev ? Alchemy.localState() : Cloudflare.state();
       }),
     ),

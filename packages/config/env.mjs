@@ -5,12 +5,11 @@ const defaults = {
   DEV_ACCESS_EMAILS: "",
   AUTH_BASE_URL: "",
   ALLOW_PRODUCTION: "false",
-  ALCHEMY_DEV: "false",
 };
 const files = ["dev", "prod"].map((stage) => new URL(`.env.${stage}`, import.meta.url));
 const template = [
   "# Private stage configuration; provider credentials belong in Alchemy profiles.",
-  "# Blank AUTH_BASE_URL uses the Worker origin. ALCHEMY_DEV stays false for cloud.",
+  "# Blank AUTH_BASE_URL uses the Worker origin; Alchemy determines execution mode.",
   ...Object.entries(defaults).map(([key, value]) => `${key}=${value}`),
   "",
 ].join("\n");

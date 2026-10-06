@@ -63,9 +63,10 @@ is provided. Workspace `typecheck` scripts are internal Turbo tasks.
 
 Install creates `packages/config/.env.dev` and `.env.prod` without overwriting
 edits. Both are gitignored and share `DEV_ACCESS_EMAILS`, `AUTH_BASE_URL`,
-`ALLOW_PRODUCTION`, and `ALCHEMY_DEV`; lint rejects missing or mismatched keys.
+and `ALLOW_PRODUCTION`; lint rejects missing or mismatched keys.
 Use the matching file for dev/prod; provider credentials stay in Alchemy profiles.
-Blank `AUTH_BASE_URL` uses the Worker origin; `ALCHEMY_DEV=false` keeps cloud mode.
+Blank `AUTH_BASE_URL` uses the Worker origin. Alchemy determines execution mode;
+auth receives an automatically derived Worker binding, not a manual env flag.
 
 Frontend `@shadcn/lint` rejects raw colors, inline styles, and unknown Tailwind
 classes. Configure it in `.oxlintrc.json`; arbitrary-value/restyling rules are
@@ -130,8 +131,8 @@ before deploying. Deployment recomputes its plan; the preview is not a saved app
 Serialize deployments to each shared stage; separate stages do not make concurrent
 updates to the same stage safe. Cloud usage is billed. Do not run
 `alchemy dev --stage dev` or `--stage prod`: local/live replacement is unsafe.
-Underlying local mode refuses either cloud stage and requires a `dev_`/`dev-` name;
-inherited `ALCHEMY_DEV` must match the CLI mode.
+Underlying local mode refuses either cloud stage and requires a `dev_`/`dev-` name.
+State and auth settings derive from the actual CLI mode, not a stage env toggle.
 
 ## Production
 
