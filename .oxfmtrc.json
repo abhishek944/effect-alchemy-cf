@@ -1,0 +1,13 @@
+{
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/.alchemy/**",
+    "**/.turbo/**",
+    "pnpm-lock.yaml",
+    "var/**"
+  ],
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all"
+}

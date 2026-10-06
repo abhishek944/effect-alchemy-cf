@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+:root {
+  color-scheme: light;
+  --radius: 0.75rem;
+  --background: oklch(0.978 0.006 90);
+  --foreground: oklch(0.235 0.018 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.235 0.018 255);
+  --primary: oklch(0.31 0.035 255);
+  --primary-foreground: oklch(0.99 0.003 90);
+  --secondary: oklch(0.945 0.009 255);
+  --secondary-foreground: oklch(0.31 0.035 255);
+  --muted: oklch(0.95 0.008 255);
+  --muted-foreground: oklch(0.53 0.022 255);
+  --accent: oklch(0.94 0.01 255);
+  --accent-foreground: oklch(0.31 0.035 255);
+  --destructive: oklch(0.56 0.22 28);
+  --success: oklch(0.596 0.145 163.225);
+  --border: oklch(0.9 0.01 255);
+  --input: oklch(0.89 0.012 255);
+  --ring: oklch(0.63 0.045 255);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+::selection {
+  background: oklch(0.84 0.05 250);
+  color: oklch(0.2 0.03 250);
+}

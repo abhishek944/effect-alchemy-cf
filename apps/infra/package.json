@@ -1,0 +1,16 @@
+{
+  "name": "@starter/infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "plan": "alchemy plan",
+    "deploy": "alchemy deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.1",
+    "@starter/api": "workspace:*",
+    "alchemy": "2.0.0-beta.80",
+    "effect": "4.0.1"
+  }
+}

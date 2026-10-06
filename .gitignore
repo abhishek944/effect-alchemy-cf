@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.turbo/
+.alchemy/
+.env
+.env.*
+*.tsbuildinfo
+.DS_Store
+var/

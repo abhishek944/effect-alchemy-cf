@@ -1,0 +1,34 @@
+{
+  "name": "effect-alchemy-cf",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "pnpm lint:format:check && node packages/config/env.mjs && oxlint --type-aware --deny-warnings && node scripts/check-lines.mjs && pnpm lint:effect && pnpm lint:typecheck",
+    "lint:format": "oxfmt .",
+    "lint:format:check": "oxfmt --check .",
+    "lint:typecheck": "turbo run typecheck && tsc --noEmit",
+    "lint:effect": "effect-tsgo diagnostics --project apps/api/tsconfig.json --severity error && effect-tsgo diagnostics --project packages/auth/tsconfig.json --severity error && effect-tsgo diagnostics --project apps/infra/tsconfig.json --severity error",
+    "audit": "pnpm audit --prod --audit-level high",
+    "plan:dev": "pnpm lint && pnpm build && pnpm --filter @starter/infra plan --stage dev --profile default --env-file ../../packages/config/.env.dev",
+    "deploy:dev": "pnpm lint && pnpm build && pnpm --filter @starter/infra deploy --stage dev --profile default --env-file ../../packages/config/.env.dev",
+    "plan:prod": "pnpm lint && pnpm build && pnpm --filter @starter/infra plan --stage prod --profile prod --env-file ../../packages/config/.env.prod",
+    "deploy:prod": "pnpm lint && pnpm build && pnpm --filter @starter/infra deploy --stage prod --profile prod --env-file ../../packages/config/.env.prod",
+    "prepare": "node packages/config/env.mjs --init && lefthook install"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "0.48.1",
+    "@shadcn/lint": "0.2.0",
+    "@types/node": "24.13.6",
+    "lefthook": "2.1.17",
+    "oxfmt": "0.72.0",
+    "oxlint": "1.87.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "turbo": "2.11.7",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22.21.1"
+  },
+  "packageManager": "pnpm@10.33.4"
+}
