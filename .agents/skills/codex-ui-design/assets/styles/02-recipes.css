@@ -1,0 +1,91 @@
+.icon:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.rail {
+  background: var(--chrome);
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+.rail .icon {
+  width: 36px;
+  height: 36px;
+}
+.rail .active {
+  background: #ffffff0c;
+  color: white;
+}
+.rail-bottom {
+  margin-top: auto;
+  margin-bottom: 14px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #277f9f;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+}
+.sidebar {
+  background: var(--sidebar);
+  padding: 12px 8px;
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.side-heading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 16px;
+}
+.side-heading strong {
+  font-size: 18px;
+  font-weight: 600;
+}
+.side-heading .push {
+  margin-left: auto;
+}
+.row {
+  height: 31px;
+  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px;
+  background: transparent;
+  border-radius: 9px;
+  color: #dedede;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.row:hover {
+  background: var(--hover);
+}
+.row.selected {
+  background: var(--selected);
+}
+.row.sub {
+  padding-left: 32px;
+}
+.row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+.section-label {
+  color: var(--muted);
+  margin: 20px 8px 9px;
+  font-weight: 400;
+}

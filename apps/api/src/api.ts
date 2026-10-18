@@ -2,7 +2,12 @@ import { Schema } from "effect";
 import * as HttpApi from "effect/http-api/HttpApi";
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
+import { AccountApi } from "./account-api.ts";
+import { AdminApi } from "./admin-api.ts";
 import { Authentication } from "./authentication.ts";
+import { ChatApi } from "./chat-api.ts";
+import { ChatCapabilitiesApi } from "./chat-capability-api.ts";
+import { BillingApi, BillingAdminApi } from "./billing-api.ts";
 import { User } from "./model.ts";
 
 class Public extends HttpApiGroup.make("public").add(
@@ -15,4 +20,12 @@ class Private extends HttpApiGroup.make("private")
   .add(HttpApiEndpoint.get("me", "/api/me", { success: User }))
   .middleware(Authentication) {}
 
-export class Api extends HttpApi.make("starter").add(Public).add(Private) {}
+export class Api extends HttpApi.make("starter")
+  .add(Public)
+  .add(Private)
+  .add(AdminApi)
+  .add(ChatApi)
+  .add(ChatCapabilitiesApi)
+  .add(AccountApi)
+  .add(BillingApi)
+  .add(BillingAdminApi) {}

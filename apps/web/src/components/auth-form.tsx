@@ -98,9 +98,15 @@ export default function AuthForm({ mode, onModeChange }: Props) {
             type="password"
             autoComplete={isSigningUp ? "new-password" : "current-password"}
             minLength={isSigningUp ? 12 : 1}
+            aria-describedby={isSigningUp ? "password-minlength-hint" : undefined}
             required
             disabled={pending}
           />
+          {isSigningUp && (
+            <p id="password-minlength-hint" className="text-xs text-muted-foreground">
+              At least 12 characters.
+            </p>
+          )}
         </div>
         <Button className="w-full" type="submit" disabled={pending}>
           {pending

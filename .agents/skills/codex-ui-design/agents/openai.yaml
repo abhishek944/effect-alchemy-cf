@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex UI Design"
+  short_description: "Approved dark desktop tokens and component recipes"
+  default_prompt: "Use $codex-ui-design to build this interface with the approved dark desktop design system."

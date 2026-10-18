@@ -1,0 +1,28 @@
+{
+  "package": "lucide-static",
+  "version": "1.53.0",
+  "license": "ISC",
+  "tarball": "https://registry.npmjs.org/lucide-static/-/lucide-static-1.53.0.tgz",
+  "sha256": "fe3788dfbfd332b91a58a5fec6b257dcd41ddef553c0dbdc1ed166a0eb657600",
+  "icons": [
+    "folder-closed",
+    "message-circle",
+    "plus",
+    "arrow-up",
+    "square-pen",
+    "house",
+    "search",
+    "bell",
+    "copy",
+    "sliders-horizontal",
+    "arrow-left",
+    "git-branch",
+    "mic",
+    "wrench",
+    "chevron-down",
+    "shield",
+    "ellipsis"
+  ],
+  "docs": "https://lucide.dev/guide/",
+  "scope": "Static SVG assets for anonymous mockups only"
+}

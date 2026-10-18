@@ -1,0 +1,104 @@
+/*
+ * Profile form fields, saved-only AI disclosure and the footer status row.
+ * Copy spacing and sizes come from the selected visual source; the character
+ * counter reflects the real value, never a fixture number.
+ */
+[data-dashboard] [data-cx="profile-form"] {
+  display: grid;
+  gap: 24px;
+}
+
+[data-dashboard] [data-cx="profile-fields"] {
+  display: grid;
+  gap: 20px;
+}
+
+[data-dashboard] [data-cx="profile-field"] {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+[data-dashboard] [data-cx="profile-label"] {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+[data-dashboard] [data-cx="profile-label"] span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cx-muted);
+}
+
+[data-dashboard] [data-cx="profile-input"] {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: 10px;
+  background: var(--cx-canvas);
+  color: var(--cx-text);
+  font: inherit;
+}
+
+[data-dashboard] [data-cx="profile-input"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+[data-dashboard] textarea[data-cx="profile-input"] {
+  height: 90px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+[data-dashboard] [data-cx="profile-input"][aria-invalid="true"] {
+  border-color: var(--cx-negative);
+}
+
+[data-dashboard] [data-cx="profile-email"] {
+  margin: 0;
+  font-size: 14px;
+  color: var(--cx-text);
+  overflow-wrap: anywhere;
+}
+
+[data-dashboard] [data-cx="profile-hint"] {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--cx-muted);
+  margin: 0;
+}
+
+[data-dashboard] [data-cx="profile-count"] {
+  font-size: 11px;
+  color: var(--cx-muted);
+  text-align: right;
+}
+
+[data-dashboard] [data-cx="profile-ai"] {
+  padding-top: 16px;
+  border-top: 1px solid var(--cx-line);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--cx-muted);
+}
+
+[data-dashboard] [data-cx="profile-ai"] strong {
+  color: var(--cx-text);
+  font-weight: 500;
+}
+
+[data-dashboard] [data-cx="profile-footer"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+[data-dashboard] [data-cx="profile-status"] {
+  font-size: 12px;
+  color: var(--cx-muted);
+  margin-right: auto;
+}

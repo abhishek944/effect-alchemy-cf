@@ -1,0 +1,38 @@
+<div class="composer-container">
+  <div class="composer">
+    <textarea
+      aria-label="Message draft"
+      placeholder="Describe the next component to check…"
+      rows="2"
+    ></textarea>
+    <div class="composer-bottom">
+      <button
+        class="icon"
+        aria-label="Add sample attachment"
+        data-feedback="Add sample attachment: local visual specimen."
+      >
+        {{icon:plus}}</button
+      ><button class="permission" data-feedback="Permission selector: visual example only.">
+        {{icon:shield}}Full access {{icon:chevron-down}}</button
+      ><button
+        class="model"
+        aria-label="Choose sample model"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="model-menu"
+      >
+        Sample model {{icon:chevron-down}}</button
+      ><button
+        class="icon"
+        aria-label="Sample microphone"
+        data-feedback="Sample microphone: local visual specimen."
+      >
+        {{icon:mic}}</button
+      ><button class="send" aria-label="Send sample message" disabled>{{icon:arrow-up}}</button>
+    </div>
+    <div class="popover" id="model-menu" hidden aria-label="Sample model choices">
+      <button>Standard</button><button>Detailed</button>
+    </div>
+  </div>
+  <p class="caption">Local component playground · no network actions</p>
+</div>

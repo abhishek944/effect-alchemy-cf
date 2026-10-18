@@ -1,0 +1,67 @@
+/* Pane limits are declared once here: the grid clamps with them and the resizer resolves
+   the same expressions for its announced range, so the two cannot drift apart. */
+[data-dashboard] {
+  --cx-sidebar-min: 180px;
+  --cx-sidebar-max: min(420px, calc(100vw - 456px));
+  --cx-chat-min: min(320px, 50%);
+  --cx-chat-max: 70%;
+}
+[data-dashboard] [data-cx="pane-resizer"] {
+  display: none;
+}
+@media (min-width: 761px) {
+  [data-dashboard][data-sidebar-open="true"][data-full-view="false"] {
+    grid-template-columns:
+      var(--cx-rail-width)
+      clamp(var(--cx-sidebar-min), var(--cx-sidebar-width), var(--cx-sidebar-max)) minmax(0, 1fr);
+  }
+  [data-dashboard] [data-cx="work-area"] {
+    position: relative;
+    --cx-chat-column: clamp(var(--cx-chat-min), var(--cx-chat-width, 44%), var(--cx-chat-max));
+  }
+  [data-dashboard][data-right-open="true"][data-full-view="false"] [data-cx="work-area"] {
+    grid-template-columns: var(--cx-chat-column) minmax(0, 1fr);
+  }
+  [data-dashboard] [data-cx="pane-resizer"] {
+    display: block;
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+  }
+  [data-dashboard] [data-pane="sidebar"] {
+    right: -5px;
+    --cx-pane-min: var(--cx-sidebar-min);
+    --cx-pane-max: var(--cx-sidebar-max);
+  }
+  [data-dashboard] [data-pane="chat"] {
+    left: calc(var(--cx-chat-column) - 5px);
+    --cx-pane-min: var(--cx-chat-min);
+    --cx-pane-max: var(--cx-chat-max);
+  }
+  [data-dashboard] [data-cx="pane-resizer"]::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+  }
+  [data-dashboard] [data-cx="pane-resizer"]:is(:hover, :focus, [data-dragging])::after {
+    background: var(--cx-resizer);
+  }
+  [data-dashboard]:not([data-focus-modality="pointer"]) [data-cx="pane-resizer"]:focus::after {
+    background: var(--cx-focus);
+  }
+  [data-dashboard] [data-cx="pane-resizer"]:focus {
+    outline: none;
+  }
+  [data-dashboard]:has([data-dragging]) {
+    cursor: col-resize;
+    user-select: none;
+  }
+}

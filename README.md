@@ -1,10 +1,11 @@
 # Effect + Alchemy Cloudflare starter
 
-A small reusable service template. **Development deploys to the real Cloudflare
-`dev` stage**, isolated from `prod`. Installing, linting, or building does not deploy.
+A small reusable service template. **Development runs locally by default.**
+Optional real-cloud `dev` is isolated from `prod`. Install, lint and build do not deploy.
 GitHub checks main/PRs and automatically deploys prod pushes through Alchemy.
 See [CI/CD setup](docs/github-cicd.md) for required secrets and branch protection.
 [Backend observability](docs/observability.md) covers native metrics, traces and safe logs.
+Opt-in [email/Slack](docs/integrations.md) and [Dodo/Polar billing](docs/billing-setup.md) use shared backend services.
 
 ## Stack
 
@@ -12,8 +13,8 @@ See [CI/CD setup](docs/github-cicd.md) for required secrets and branch protectio
 - Effect 4 HTTP API with schema-defined responses and session middleware.
 - Alchemy 2 beta owns the Worker, isolated D1 database, auth signing secret,
   additive auth migrations, and Cloudflare Access application.
-- Better Auth email/password sign-up, sign-in, sessions, and sign-out.
-- React + Vite + Tailwind 4, editable shadcn Button/Input/Card components.
+- Better Auth email/password auth and [admin portal](docs/admin-portal.md): OTA bootstrap, roles and email lookup.
+- React + Vite + Tailwind 4, assistant-ui [Pi Durable chat](docs/pi-chat.md) with model/files/manual voice, editable shadcn components.
 - Type-aware Oxlint, official Effect diagnostics, shadcn lint, Oxfmt, Lefthook,
   CI, and a 200-physical-line file limit.
 
@@ -23,12 +24,13 @@ See [CI/CD setup](docs/github-cicd.md) for required secrets and branch protectio
 apps/api       Effect Worker, /api/health and protected /api/me
 apps/web       React app and same-origin Better Auth client
 apps/infra     Alchemy stack composition
-packages/auth  Reusable auth service and Cloudflare D1 layer
+packages/auth          Reusable auth service and Cloudflare D1 layer
+packages/integrations  Opt-in Email/Slack and Dodo/Polar billing adapters
 scripts        Repository file-length gate
 ```
 
-One Worker serves the built frontend and API. `/api/*` always goes to the Worker;
-other requests use static assets with SPA fallback. Private cloud stages route
+One Worker serves the frontend/API; `/api/*` goes to the Worker.
+Other requests use SPA fallback. Private cloud stages route
 assets through the Worker too, so its fail-closed Access check protects all paths.
 This avoids cross-origin cookies, public backend URLs, and separate CORS setup.
 
@@ -53,17 +55,18 @@ Run `pnpm run` to list scripts:
 | `pnpm lint:effect`                     | Effect correctness diagnostics for API/auth/infra                         |
 | `pnpm lint:typecheck`                  | All workspace and root TypeScript checks                                  |
 | `pnpm build`                           | Build the frontend and Worker without deploying                           |
+| `pnpm dev`                             | Build, then run local Worker/D1 at localhost:1337 without Access OTP      |
 | `pnpm audit`                           | Audit production dependencies for high/critical advisories                |
 | `pnpm plan:dev` / `pnpm plan:prod`     | Lint, build, preview infrastructure changes                               |
 | `pnpm deploy:dev` / `pnpm deploy:prod` | Lint, build, deploy the chosen cloud stage                                |
 
 `pnpm lint` never applies formatting fixes. The commit hook runs it; CI runs a
-frozen install, audit, lint, and build. No local `dev` or separate `check` command
-is provided. Workspace `typecheck` scripts are internal Turbo tasks.
+frozen install, audit, lint, and build. See [local development](docs/local-development.md)
+for `pnpm dev`; workspace `typecheck` scripts are internal Turbo tasks.
 
-Install creates `packages/config/.env.dev` and `.env.prod` without overwriting
-edits. Both are gitignored and share `DEV_ACCESS_EMAILS`, `AUTH_BASE_URL`,
-and `ALLOW_PRODUCTION`; lint rejects missing or mismatched keys.
+Install creates `packages/config/.env.dev` and `.env.prod`, appending new default
+keys without overwriting edits. Both are gitignored and share `DEV_ACCESS_EMAILS`,
+`AUTH_BASE_URL`, `ALLOW_PRODUCTION`, `CHAT_GATEWAY_ID`, the chat model allowlist and nonsecret billing keys; lint rejects mismatches.
 Use the matching file for dev/prod; provider credentials stay in Alchemy profiles.
 Blank `AUTH_BASE_URL` uses the Worker origin. Alchemy determines execution mode;
 auth receives an automatically derived Worker binding, not a manual env flag.
@@ -73,13 +76,13 @@ classes. Configure it in `.oxlintrc.json`; arbitrary-value/restyling rules are
 opt-in. Official `@effect/tsgo` error-level correctness rules are configured in
 `tsconfig.base.json`. Style suggestions do not gate CI. This standalone checker
 does not patch TypeScript/Oxlint or activate Cursor's LSP. No unit-test framework
-is included. Narrow pinned dependency overrides address Alchemy toolchain advisories.
+is included. Narrow pinned overrides address Alchemy and transitive MCP OAuth advisories.
 
 The Worker build is an offline verification artifact using Alchemy's public
 bundler and Cloudflare plugin. Alchemy builds its deployment bundle again with
 stage metadata. Before the first deployment of a copied service, give
-`service.config.ts` a unique `serviceName` and update the root package name.
-Keep that identity stable after deploying: it identifies persistent resources.
+`service.config.ts` a unique `serviceName` and update the root package name. Keep that
+identity stable after deploying: it identifies persistent resources.
 
 ## Cloud development
 
@@ -88,12 +91,15 @@ Keep that identity stable after deploying: it identifies persistent resources.
 
    ```sh
    pnpm --filter @starter/infra exec alchemy profile create default
-   pnpm --filter @starter/infra exec alchemy profile edit --profile default --add cloudflare
+   pnpm --filter @starter/infra exec alchemy profile edit --profile default --add Cloudflare
    ```
 
 2. Set `DEV_ACCESS_EMAILS` in `packages/config/.env.dev` to your team's verified emails,
-   comma-separated. Configure Cloudflare Zero Trust/Access and an identity
-   provider (email one-time PIN is enough to start) in the account.
+   comma-separated. Complete Zero Trust onboarding; Alchemy provisions email PIN
+   and keeps dev access restricted to the allowlist. Account-scoped tokens need
+   Workers Admin, D1 Edit, Secrets Store Edit, Account Settings Edit, plus
+   Access: Apps and Policies Edit and Access: Organizations, Identity Providers,
+   and Groups Edit. Do not silently adopt an existing external PIN provider.
 3. Bootstrap Alchemy's shared, encrypted Cloudflare state store once:
 
    ```sh
@@ -154,7 +160,7 @@ Production scripts explicitly select `--stage prod --profile prod`. Before publi
 and recovery delivery; review sign-up policy, domains, and migrations. Auth rate
 limiting uses D1 and Cloudflare's client-IP header; cloud cookies are secure.
 For a custom auth origin, set `AUTH_BASE_URL` to its HTTPS origin without a path.
-No email sender, payment provider, or other product-specific service is enabled.
+[Cloudflare/Resend email](docs/email.md) and Slack adapters are opt-in; no auth delivery callbacks or email provider is enabled automatically.
 
 ## Manual checks after deployment
 
@@ -181,7 +187,6 @@ SQL migrations beyond Better Auth's additive schema need explicit review.
 `pnpm lint` rejects authored files exceeding 200 physical lines, including blanks
 and comments, across source, configuration, styles, SQL, and documentation.
 Lockfiles, generated output, dependencies, and scratch `var/` notes are excluded.
-Keep shadcn components small when adding them through the CLI.
 
 ## Ratstack patterns adopted
 
@@ -191,5 +196,5 @@ Studied [ratstack.sh](https://ratstack.sh), its
 [Alchemy guide](https://ratstack.sh/skills/learn-alchemy).
 Adopted typed services/layers, provider boundaries, co-owned infrastructure,
 exact dependency pins, and automated lint/type/build gates.
-Skipped generic capability projections, MCP, XState, devtools, analytics, and
+Skipped generic capability projections, MCP integration, XState, devtools, analytics, and
 vendoring: none are needed for a plain service starter.

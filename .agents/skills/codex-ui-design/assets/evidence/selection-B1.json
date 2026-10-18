@@ -1,0 +1,47 @@
+{
+  "questionId": "B1",
+  "sessionSlug": "codex-calibration-foundations",
+  "selected": "B",
+  "label": "Neutral equivalents",
+  "submissionType": "selection",
+  "why": "Everything good. Just that, the corners should be curved, not pointy. Also the icons are not so good. Check what is the best icon library and use it.",
+  "visualContract": {
+    "branch": "B1",
+    "question": "Foundations · level 1: which surface palette matches your Codex screenshot?",
+    "variantId": "B",
+    "label": "Neutral equivalents",
+    "category": "standard",
+    "screenshot": "screenshots/B1-B.jpg",
+    "source": {
+      "kind": "mockup-html",
+      "path": "mockups/B1-B.html",
+      "viewport": "1511x951",
+      "route": null
+    },
+    "sourceArtifact": {
+      "path": "var/codex-design-system/ui-ux-grill-me/codex-calibration-foundations/mockups/B1-B.html",
+      "sha256": "e456be5d7b38d138b122fb9ecef17a00718807dfe8abf035fcaf9e90cb348b5f"
+    },
+    "contract": {
+      "route": "mockups/B1-<option>.html",
+      "fixture": "Anonymous desktop conversation with sidebar, bubble, buttons, input, artifact card, empty composer",
+      "interactionState": "Default, idle, empty draft; send disabled",
+      "theme": "Dark screenshot reference only",
+      "container": "1511x951 CSS pixels; assumed 2x source scale; not measured native app bounds",
+      "requiredBehavior": [
+        "Local draft only; send requires non-whitespace text",
+        "One selected sidebar item",
+        "No network submission",
+        "Palette is the only variable in B1"
+      ],
+      "accessibility": [
+        "Visible keyboard focus",
+        "Accessible control names",
+        "Disabled controls are non-interactive",
+        "Status feedback announced politely",
+        "Color cannot be the only semantic indicator"
+      ]
+    }
+  },
+  "timestamp": "2026-10-08T19:28:44.244Z"
+}

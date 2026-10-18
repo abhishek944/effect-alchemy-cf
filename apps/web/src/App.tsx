@@ -1,6 +1,17 @@
+import AdminPortal from "@/components/admin/admin-portal";
 import AuthPanel from "@/components/auth-panel";
+import Workspace from "@/components/dashboard/workspace";
+import { authClient } from "@/lib/auth-client";
+import { usePathname } from "@/lib/router";
 
 export default function App() {
+  const pathname = usePathname();
+  const { data: session } = authClient.useSession();
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+
+  if (isAdminRoute) return <AdminPortal />;
+  if (session) return <Workspace user={session.user} pathname={pathname} />;
+
   return (
     <div className="min-h-svh bg-background text-foreground">
       <header className="mx-auto flex h-[76px] max-w-6xl items-center justify-between px-6 sm:px-8">

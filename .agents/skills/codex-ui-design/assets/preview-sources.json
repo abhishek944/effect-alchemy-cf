@@ -1,0 +1,18 @@
+{
+  "styles": [
+    "styles/01-recipes.css",
+    "styles/02-recipes.css",
+    "styles/03-recipes.css",
+    "styles/04-recipes.css",
+    "styles/05-recipes.css",
+    "styles/06-recipes.css",
+    "styles/07-recipes.css"
+  ],
+  "fragments": [
+    "preview/topbar.html",
+    "preview/rail.html",
+    "preview/sidebar.html",
+    "preview/workspace.html",
+    "preview/composer.html"
+  ]
+}

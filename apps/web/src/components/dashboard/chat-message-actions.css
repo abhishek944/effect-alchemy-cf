@@ -1,0 +1,146 @@
+/* Message hover/focus metadata: stored time, quiet speaker, Copy, rightmost dots. */
+[data-dashboard] [data-cx="chat-message"] [data-cx="chat-reply-actions"],
+[data-dashboard] [data-cx="chat-message"] [data-cx="chat-user-meta"] {
+  opacity: 0;
+  pointer-events: none;
+}
+[data-dashboard] [data-cx="chat-message"]:hover [data-cx="chat-reply-actions"],
+[data-dashboard] [data-cx="chat-message"]:focus-within [data-cx="chat-reply-actions"],
+[data-dashboard] [data-cx="chat-message"]:hover [data-cx="chat-user-meta"],
+[data-dashboard] [data-cx="chat-message"]:focus-within [data-cx="chat-user-meta"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  [data-dashboard] [data-cx="chat-message"] [data-cx="chat-reply-actions"],
+  [data-dashboard] [data-cx="chat-message"] [data-cx="chat-user-meta"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+[data-dashboard] [data-cx="chat-message"][data-role="user"] {
+  /* The stored time is an external anchor, so the bubble keeps baseline height. */
+  position: relative;
+}
+[data-dashboard] [data-cx="chat-user-meta"] {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="message-time"] {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="message-time"]:hover:not(:disabled) {
+  background: var(--cx-selected);
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="message-time"][data-state="unavailable"] {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+[data-dashboard] [data-cx="message-speak"],
+[data-dashboard] [data-cx="message-more"] {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="message-speak"]:hover:not(:disabled),
+[data-dashboard] [data-cx="message-more"]:hover {
+  background: var(--cx-selected);
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="message-speak"] [data-cx="icon"],
+[data-dashboard] [data-cx="message-more"] [data-cx="icon"] {
+  width: 16px;
+  height: 16px;
+}
+[data-dashboard] [data-cx="chat-message"] [data-cx="chat-reply-actions"] {
+  gap: 4px;
+}
+[data-dashboard] [data-cx="date-divider"] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 736px;
+  margin: 8px auto 20px;
+  color: var(--cx-muted);
+  font-size: 11px;
+}
+[data-dashboard] [data-cx="date-divider"] hr {
+  flex: 1;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--cx-line);
+}
+[data-dashboard] [data-cx="sent-files"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+[data-dashboard] [data-cx="sent-file-row"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--cx-hover);
+  border-radius: 10px;
+  font-size: 12px;
+}
+/* Filename ellipsizes on its own line; size facts stay stacked and unbroken. */
+[data-dashboard] [data-cx="sent-file-body"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+[data-dashboard] [data-cx="sent-file-name"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="sent-file-meta"] {
+  color: var(--cx-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-dashboard] [data-cx="sent-file-row"] [data-cx="file-action"] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="facts-note"] {
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="message-speak"][data-active="true"] {
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="chat-speak-status"] {
+  color: var(--cx-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}

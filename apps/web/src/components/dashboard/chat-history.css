@@ -1,0 +1,39 @@
+/* Bounded history controls reuse the approved Codex dark tokens. */
+[data-dashboard] [data-cx="history-controls"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 736px;
+  margin: 0 auto 16px;
+}
+[data-dashboard] [data-cx="history-action"] {
+  border: 1px solid var(--cx-hover);
+  border-radius: 16px;
+  padding: 5px 12px;
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="history-action"]:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="history-gap"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-card);
+  color: var(--cx-muted);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="history-text-status"] {
+  display: inline-block;
+  margin: 8px 12px 0 0;
+  color: var(--cx-muted);
+  font-size: 12px;
+}

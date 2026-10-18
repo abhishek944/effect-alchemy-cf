@@ -1,0 +1,47 @@
+{
+  "questionId": "B2",
+  "sessionSlug": "codex-calibration-foundations",
+  "selected": "B",
+  "label": "Rounded desktop frame",
+  "submissionType": "selection",
+  "why": "",
+  "visualContract": {
+    "branch": "B2",
+    "question": "Curves · level 2: which rounded-corner treatment matches the desktop UI?",
+    "variantId": "B",
+    "label": "Rounded desktop frame",
+    "category": "standard",
+    "screenshot": "screenshots/B2-B.jpg",
+    "source": {
+      "kind": "mockup-html",
+      "path": "mockups/B2-B.html",
+      "viewport": "1511x951",
+      "route": null
+    },
+    "sourceArtifact": {
+      "path": "var/codex-design-system/ui-ux-grill-me/codex-calibration-foundations/mockups/B2-B.html",
+      "sha256": "91b37f5516a58363a29fd0cb223227958e90fd6b9ab8b697d4ffda70921f3bea"
+    },
+    "contract": {
+      "route": "mockups/B2-<option>.html",
+      "fixture": "Anonymous desktop conversation with sidebar, bubble, buttons, input, artifact card, empty composer",
+      "interactionState": "Default, idle, empty draft; send disabled",
+      "theme": "Dark screenshot reference only",
+      "container": "1511x951 CSS pixels; assumed 2x source scale; not measured native app bounds",
+      "requiredBehavior": [
+        "Local draft only; send requires non-whitespace text",
+        "One selected sidebar item",
+        "No network submission",
+        "Approved B1-B neutral palette and Lucide icons remain fixed; corner geometry is the only variable in B2."
+      ],
+      "accessibility": [
+        "Visible keyboard focus",
+        "Accessible control names",
+        "Disabled controls are non-interactive",
+        "Status feedback announced politely",
+        "Color cannot be the only semantic indicator"
+      ]
+    }
+  },
+  "timestamp": "2026-10-08T19:47:31.839Z"
+}

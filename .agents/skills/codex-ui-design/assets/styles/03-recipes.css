@@ -1,0 +1,91 @@
+.recents {
+  margin-top: 42px;
+}
+.workspace {
+  position: relative;
+  padding: 32px 400px 140px 86px;
+  overflow: auto;
+  background: var(--canvas);
+}
+.conversation {
+  max-width: var(--conversation-max);
+  margin: auto;
+}
+.user-message {
+  max-width: var(--bubble-max);
+  margin-left: auto;
+  padding: 14px 16px;
+  background: var(--bubble);
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 22.5px;
+}
+.message-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 6px 5px 25px;
+}
+.metadata {
+  color: var(--muted);
+  line-height: 22px;
+}
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: 9px 0 16px;
+}
+.tool-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.tool-line .icon {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+.assistant-copy {
+  font-size: 14px;
+  line-height: 23px;
+  margin: 0 0 16px;
+}
+.code-inline {
+  padding: 1px 5px;
+  background: var(--bubble);
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+.specimen-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 26px 0 12px;
+}
+.button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.button {
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 9px;
+  background: var(--card);
+  font-weight: 500;
+}
+.button:hover {
+  background: var(--hover);
+}
+.button.primary {
+  background: #eeeeee;
+  color: #191919;
+  border-color: transparent;
+}
+.button.ghost {
+  background: transparent;
+  border-color: transparent;
+}

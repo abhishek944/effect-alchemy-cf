@@ -1,0 +1,35 @@
+@media (max-width: 760px) {
+  [data-dashboard] {
+    grid-template-columns: 44px 200px minmax(0, 1fr);
+  }
+  [data-dashboard][data-sidebar-open="false"] {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  [data-dashboard] [data-cx="toolbar-divider"] {
+    margin-left: 4px;
+  }
+}
+@media (max-width: 600px) {
+  [data-dashboard] {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  [data-dashboard] [data-cx="sidebar"] {
+    position: absolute;
+    z-index: 2;
+    left: 44px;
+    top: var(--cx-toolbar-height);
+    bottom: 4px;
+    width: min(238px, calc(100vw - 48px));
+    box-shadow: 12px 0 32px rgb(0 0 0 / 20%);
+  }
+  [data-dashboard] [data-cx="work-area"] {
+    grid-column: 2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-dashboard] *,
+  [data-dashboard] *::before,
+  [data-dashboard] *::after {
+    scroll-behavior: auto;
+  }
+}

@@ -1,6 +1,8 @@
 import { BetterAuth } from "@alchemy.run/better-auth";
 import { AlchemyContext } from "alchemy/AlchemyContext";
 import { Config, Context, Effect, Layer, Option } from "effect";
+import { adminOTA } from "./admin-ota.ts";
+import { billingSchema } from "./billing-schema.ts";
 
 const makeAuth = Effect.gen(function* () {
   // Alchemy owns mode: context during planning, derived Worker binding at runtime.
@@ -16,8 +18,17 @@ const makeAuth = Effect.gen(function* () {
     logger: { disabled: true },
     basePath: "/api/auth",
     baseURL: Option.getOrUndefined(baseURL)?.trim() || undefined,
-    trustedOrigins: local ? ["http://localhost:5173"] : [],
+    // A callback preserves Better Auth's inferred same-origin URL alongside local Vite.
+    trustedOrigins: () => (local ? ["http://localhost:5173"] : []),
     emailAndPassword: { enabled: true, minPasswordLength: 12 },
+    user: {
+      additionalFields: {
+        // Scalar type lets Better Auth safely backfill existing D1 users with the default.
+        role: { type: "string", defaultValue: "user", required: true, input: false },
+      },
+    },
+    session: { cookieCache: { enabled: false } },
+    plugins: [adminOTA, billingSchema],
     advanced: {
       useSecureCookies: !local,
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },

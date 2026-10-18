@@ -3,17 +3,25 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./worker": "./src/worker.ts"
+    "./worker": "./src/worker.ts",
+    "./chat-resources": "./src/chat-resources.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "node --experimental-strip-types build.ts"
   },
   "dependencies": {
+    "@earendil-works/pi-ai": "1.1.0",
+    "@earendil-works/pi-durable": "1.1.0",
     "@effect/platform-node": "4.0.1",
+    "@jsquash/webp": "1.5.0",
+    "@modelcontextprotocol/sdk": "1.31.0",
     "@starter/auth": "workspace:*",
+    "@starter/integrations": "workspace:*",
+    "agents": "0.27.0",
     "alchemy": "2.0.0-beta.80",
-    "effect": "4.0.1"
+    "effect": "4.0.1",
+    "jpeg-js": "0.4.4"
   },
   "devDependencies": {
     "@alchemy.run/cloudflare-runtime": "2.0.0-beta.80",

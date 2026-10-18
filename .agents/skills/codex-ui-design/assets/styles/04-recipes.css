@@ -1,0 +1,92 @@
+.button.primary:hover {
+  background: #d7d7d7;
+}
+.test-field {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 12px;
+}
+.test-field input {
+  background: var(--sidebar);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  width: 220px;
+}
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+.artifact {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 300px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 15px 20px;
+}
+.artifact .meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.artifact .changes {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.artifact .counts {
+  margin-left: auto;
+  font-size: 12px;
+}
+.positive {
+  color: var(--positive);
+}
+.negative {
+  color: var(--negative);
+}
+.composer-container {
+  position: fixed;
+  left: 376px;
+  right: 400px;
+  bottom: 22px;
+  max-width: var(--conversation-max);
+  margin: 0 auto;
+}
+.composer {
+  background: var(--composer);
+  border: 1px solid #ffffff06;
+  border-radius: 24px;
+  padding: 12px;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+}
+.composer textarea {
+  resize: none;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  font-size: 14px;
+  line-height: 22px;
+  width: 100%;
+}
+.composer textarea::placeholder {
+  color: var(--muted);
+}
+.composer:focus-within {
+  border-color: #ffffff20;
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.composer textarea:focus-visible {
+  outline: 0;
+}

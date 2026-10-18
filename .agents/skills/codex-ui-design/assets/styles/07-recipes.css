@@ -1,0 +1,21 @@
+.user-message {
+  border-radius: 16px;
+}
+.composer {
+  border-radius: 24px;
+}
+.row {
+  border-radius: 9px;
+}
+.button,
+.test-field input {
+  border-radius: 10px;
+}
+.artifact {
+  border-radius: 16px;
+}
+svg {
+  stroke-width: var(--icon-stroke) !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

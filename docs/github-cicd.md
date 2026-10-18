@@ -32,7 +32,16 @@ push code, or configure account settings. After publishing the repository:
    - `CLOUDFLARE_API_TOKEN`: an account-scoped CI deployment token.
 5. Optionally add environment variable `AUTH_BASE_URL`: an exact HTTPS origin,
    without path, query, credentials, or trailing slash. Leave blank for workers.dev.
-6. Protect main and prod: require PRs and the `Check` status, disallow force pushes,
+6. For production Pi chat, optionally set nonsecret environment variable
+   `CHAT_GATEWAY_ID` to a separate production gateway and `CHAT_MODEL_ALLOWLIST`
+   to a JSON array of exact enabled catalog IDs. Blank configuration disables
+   inference; never use dev resources. Provision enabled vendors' default BYOK
+   aliases securely in Cloudflare, not GitHub/stage env. Audio stays disabled in prod.
+7. For optional billing, set production variables `BILLING_PROVIDER`,
+   `BILLING_PRODUCTS`, `DODO_ACCOUNT_ID`, `POLAR_ACCOUNT_ID` and the environment
+   secret `BILLING_PROFILE_JSON` with matching live-mode credentials. See
+   [billing setup](billing-setup.md). The secret is passed only to the deploy step.
+8. Protect main and prod: require PRs and the `Check` status, disallow force pushes,
    and restrict direct prod pushes. Reviewers for production environment approvals
    are optional: enable them if deployment should pause for human approval.
 
@@ -51,7 +60,7 @@ The CI token needs the permissions used by this stack: Workers Scripts,
 D1, account settings/subdomain access, and the shared state's Secrets Store
 and edge-preview authentication. Use the [Alchemy CI guide](https://alchemy.run/environments/ci/)
 and scope the token to the intended account; a generic Workers-only token may
-not cover D1 or state access. Do not grant API-token-creation permissions to
+not cover D1, private chat-file R2 bucket management or state access. Do not grant API-token-creation permissions to
 normal deployment CI. Additional stack resources may require more permissions.
 
 Before enabling the workflow, bootstrap the **production account's** encrypted
@@ -74,7 +83,9 @@ The existing stack already uses shared Cloudflare state, not ephemeral local sta
 Env files remain ignored by Git. Install creates blank/default dev/prod files.
 On a prod push only, `scripts/configure-ci.mjs` reconstructs the runner's
 `.env.prod` with the same keys, `ALLOW_PRODUCTION=true`, blank
-Access allowlist (prod has no developer wall), and the optional auth origin.
+Access allowlist (prod has no developer wall), the optional auth origin and
+nonsecret `CHAT_GATEWAY_ID`, `CHAT_MODEL_ALLOWLIST` and billing production variables.
+Production speech allowlists stay blank and no audio token/profile is loaded.
 This does not change your local file. The explicit env file overrides shell
 values; the production opt-in must be written into that file.
 

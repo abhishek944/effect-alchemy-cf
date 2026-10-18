@@ -1,0 +1,180 @@
+{
+  "status": "calibrated-dark-default-reconstruction",
+  "source": "user screenshot 3022x1902; October 9, 2026",
+  "values": {
+    "canvas": {
+      "value": "#181818",
+      "type": "color",
+      "evidence": "raster-sampled",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "sidebar": {
+      "value": "#212121",
+      "type": "color",
+      "evidence": "user-calibrated neutral equivalent of screenshot sample",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "chrome": {
+      "value": "#303030",
+      "type": "color",
+      "evidence": "user-calibrated neutral equivalent of screenshot sample",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "bubble": {
+      "value": "#2f2f2f",
+      "type": "color",
+      "evidence": "user-calibrated neutral equivalent of screenshot sample",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "composer": {
+      "value": "#363636",
+      "type": "color",
+      "evidence": "raster-sampled",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "card": {
+      "value": "#2d2d2d",
+      "type": "color",
+      "evidence": "raster-sampled",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "selected": {
+      "value": "#323232",
+      "type": "color",
+      "evidence": "user-calibrated neutral equivalent of screenshot sample",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "text": {
+      "value": "#ffffff",
+      "type": "color",
+      "evidence": "raster-sampled",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "muted": {
+      "value": "#a3a3a3",
+      "type": "color",
+      "evidence": "raster-sampled",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    },
+    "positive": {
+      "value": "#6bc67f",
+      "type": "color",
+      "evidence": "raster-sampled",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B1=B"
+    }
+  },
+  "geometry": {
+    "railWidth": {
+      "value": 52,
+      "unit": "px",
+      "evidence": "inferred assuming 2x screenshot scale",
+      "userConfirmed": false
+    },
+    "sidebarWidth": {
+      "value": 238,
+      "unit": "px",
+      "evidence": "inferred assuming 2x screenshot scale",
+      "userConfirmed": false
+    },
+    "toolbarHeight": {
+      "value": 46,
+      "unit": "px",
+      "evidence": "inferred assuming 2x screenshot scale",
+      "userConfirmed": false
+    },
+    "conversationMax": {
+      "value": 736,
+      "unit": "px",
+      "evidence": "inferred assuming 2x screenshot scale",
+      "userConfirmed": false
+    },
+    "bubbleMax": {
+      "value": 515,
+      "unit": "px",
+      "evidence": "inferred assuming 2x screenshot scale",
+      "userConfirmed": false
+    },
+    "bubbleRadius": {
+      "value": 16,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    },
+    "composerRadius": {
+      "value": 24,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    },
+    "rowHeight": {
+      "value": 31,
+      "unit": "px",
+      "evidence": "inferred assuming 2x screenshot scale",
+      "userConfirmed": false
+    },
+    "sidebarRadius": {
+      "value": 16,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    },
+    "workspaceRadius": {
+      "value": 16,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    },
+    "rowRadius": {
+      "value": 9,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    },
+    "buttonRadius": {
+      "value": 10,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    },
+    "cardRadius": {
+      "value": 16,
+      "unit": "px",
+      "evidence": "user-calibrated reconstruction",
+      "userConfirmed": true,
+      "selection": "codex-calibration-foundations:B2=B"
+    }
+  },
+  "unobserved": [
+    "light theme",
+    "native hover/focus",
+    "native menus",
+    "native errors",
+    "native responsive breakpoints"
+  ],
+  "icons": {
+    "library": "lucide-static",
+    "version": "1.53.0",
+    "strokeWidth": 1.75,
+    "viewBox": "24x24",
+    "sizes": "16\u201318px normal, 10\u201312px micro",
+    "evidence": "user-calibrated reproduction",
+    "userConfirmed": true,
+    "selection": "codex-calibration-foundations:B3=B"
+  }
+}

@@ -1,0 +1,95 @@
+/* Dedicated Voice settings section. Scoped to the signed-in dashboard shell. */
+[data-dashboard] [data-cx="voice-intro"] {
+  margin: -20px 0 28px;
+  color: var(--cx-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+[data-dashboard] [data-cx="voice-select"] {
+  height: 36px;
+  max-width: 260px;
+  padding: 0 12px;
+  border: 1px solid var(--cx-hover);
+  border-radius: 10px;
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 13px;
+}
+
+[data-dashboard] [data-cx="voice-disclosure"] {
+  margin: 20px 0 0;
+  color: var(--cx-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+[data-dashboard] [data-cx="voice-notice"] {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--cx-line);
+  border-radius: 12px;
+  background: var(--cx-sidebar);
+  color: var(--cx-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+[data-dashboard] [data-cx="voice-notice"] strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--cx-text);
+  font-weight: 500;
+}
+
+[data-dashboard] [data-cx="voice-notice"] p {
+  margin: 0;
+}
+
+[data-dashboard] [data-cx="voice-notice"] button {
+  min-height: 34px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="voice-notice"] button:hover {
+  background: var(--cx-hover);
+}
+
+[data-dashboard] [data-cx="voice-status"] {
+  display: block;
+  min-height: 18px;
+  margin-top: 12px;
+  color: var(--cx-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+[data-dashboard] [data-cx="voice-retry"] {
+  min-height: 34px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="voice-retry"]:hover {
+  background: var(--cx-hover);
+}
+
+@media (max-width: 720px) {
+  [data-dashboard] [data-cx="voice-select"] {
+    width: 100%;
+    max-width: 100%;
+  }
+}

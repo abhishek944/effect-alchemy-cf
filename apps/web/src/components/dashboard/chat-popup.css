@@ -1,0 +1,89 @@
+[data-dashboard] [data-cx="chat-popup"] {
+  position: fixed;
+  left: var(--popup-left, 8px);
+  top: var(--popup-top, 8px);
+  width: var(--popup-width, 300px);
+  max-height: var(--popup-max-height, none);
+  margin: 0;
+  z-index: 60;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--cx-hover);
+  border-radius: 14px;
+  background: var(--cx-card);
+  box-shadow: 0 10px 32px #0004;
+  color: var(--cx-text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+[data-dashboard] [data-cx="chat-popup"][data-placed="false"] {
+  visibility: hidden;
+}
+[data-dashboard] [data-cx="chat-popup-title"] {
+  margin: 2px 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+[data-dashboard] [data-cx="chat-popup-search"] {
+  width: 100%;
+  height: 34px;
+  margin-bottom: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--cx-hover);
+  border-radius: 8px;
+  background: var(--cx-canvas);
+  color: var(--cx-text);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="chat-popup-search"]::placeholder {
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="chat-popup-group"] {
+  margin: 10px 8px 4px;
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="chat-popup-row"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-text);
+  font-size: 13px;
+  text-align: left;
+}
+[data-dashboard] [data-cx="chat-popup-row"]:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="chat-popup-row"][aria-selected="true"],
+[data-dashboard] [data-cx="chat-popup-row"][aria-checked="true"] {
+  background: var(--cx-selected);
+}
+[data-dashboard] [data-cx="chat-popup-row"][aria-disabled="true"] {
+  color: var(--cx-muted);
+  cursor: not-allowed;
+}
+[data-dashboard] [data-cx="chat-popup-note"] {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="chat-popup-foot"] {
+  margin: 8px 8px 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cx-hover);
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="chat-popup-alert"] {
+  margin: 8px 8px 2px;
+  color: var(--cx-negative);
+  font-size: 11px;
+}

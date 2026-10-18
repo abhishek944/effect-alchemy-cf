@@ -1,0 +1,176 @@
+/* Account billing panel. Every rule is scoped to the signed-in dashboard. */
+
+[data-dashboard] [data-cx="billing-card"] {
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-card);
+  background: var(--cx-sidebar);
+  overflow: hidden;
+}
+
+/* Every block after the first is separated by one quiet divider. */
+[data-dashboard] [data-cx="billing-card"] > * + * {
+  border-top: 1px solid var(--cx-line);
+}
+
+[data-dashboard] [data-cx="billing-section"] {
+  padding: 18px 20px;
+}
+
+[data-dashboard] [data-cx="billing-section-title"] {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--cx-text);
+}
+
+[data-dashboard] [data-cx="billing-muted"] {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cx-muted);
+}
+
+[data-dashboard] [data-cx="billing-list"] {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+[data-dashboard] [data-cx="billing-row"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding: 14px 0;
+}
+
+[data-dashboard] [data-cx="billing-row"]:first-child {
+  padding-top: 2px;
+}
+
+[data-dashboard] [data-cx="billing-row"] + [data-cx="billing-row"] {
+  border-top: 1px solid var(--cx-line);
+}
+
+[data-dashboard] [data-cx="billing-row-main"] {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 4px;
+  min-width: 0;
+}
+
+[data-dashboard] [data-cx="billing-row-title"] {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--cx-text);
+  overflow-wrap: anywhere;
+}
+
+[data-dashboard] [data-cx="billing-row-meta"] {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cx-muted);
+  overflow-wrap: anywhere;
+}
+
+[data-dashboard] [data-cx="billing-row-actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-dashboard] [data-cx="billing-button"] {
+  padding: 7px 14px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="billing-button"]:hover:not(:disabled) {
+  background: var(--cx-hover);
+}
+
+[data-dashboard] [data-cx="billing-button"][data-tone="primary"] {
+  border-color: transparent;
+  background: var(--cx-primary);
+  color: var(--cx-primary-text);
+}
+
+[data-dashboard] [data-cx="billing-button"][data-tone="primary"]:hover:not(:disabled) {
+  background: var(--cx-primary-hover);
+}
+
+[data-dashboard] [data-cx="billing-badge"] {
+  padding: 3px 9px;
+  border: 1px solid var(--cx-line);
+  border-radius: 999px;
+  background: var(--cx-card);
+  color: var(--cx-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+[data-dashboard] [data-cx="billing-badge"][data-tone="attention"] {
+  color: color-mix(in srgb, var(--cx-focus) 70%, var(--cx-text));
+}
+
+[data-dashboard] [data-cx="billing-notice"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 14px 20px;
+  background: var(--cx-card);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cx-text);
+}
+
+[data-dashboard] [data-cx="billing-status"] {
+  display: block;
+  padding: 12px 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--cx-muted);
+}
+
+/* The status region stays mounted but disappears while empty. */
+[data-dashboard] [data-cx="billing-status"]:empty {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  [data-dashboard] [data-cx="billing-section"] {
+    padding: 16px;
+  }
+
+  [data-dashboard] [data-cx="billing-notice"],
+  [data-dashboard] [data-cx="billing-status"] {
+    padding-inline: 16px;
+  }
+
+  [data-dashboard] [data-cx="billing-row-actions"] {
+    width: 100%;
+  }
+
+  [data-dashboard] [data-cx="billing-row-actions"] [data-cx="billing-button"] {
+    flex: 1 1 auto;
+  }
+}

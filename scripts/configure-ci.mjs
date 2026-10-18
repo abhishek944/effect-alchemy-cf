@@ -20,6 +20,12 @@ const values = {
   DEV_ACCESS_EMAILS: "",
   AUTH_BASE_URL: origin,
   ALLOW_PRODUCTION: "true",
+  CHAT_GATEWAY_ID: process.env.CHAT_GATEWAY_ID?.trim() ?? "",
+  CHAT_MODEL_ALLOWLIST: process.env.CHAT_MODEL_ALLOWLIST?.trim() ?? "",
+  BILLING_PROVIDER: process.env.BILLING_PROVIDER?.trim() ?? "",
+  BILLING_PRODUCTS: process.env.BILLING_PRODUCTS?.trim() || "{}",
+  DODO_ACCOUNT_ID: process.env.DODO_ACCOUNT_ID?.trim() ?? "",
+  POLAR_ACCOUNT_ID: process.env.POLAR_ACCOUNT_ID?.trim() ?? "",
 };
 writeFileSync(
   file,

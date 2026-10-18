@@ -1,0 +1,74 @@
+<main class="workspace">
+  <article class="conversation">
+    <div class="user-message">
+      Use this specimen to compare the desktop design system. We are checking the surface colors,
+      the sidebar selection, the message bubble, and the composer.<br /><br />These are sample
+      components with anonymous content. Match the reference first; then refine one visual detail at
+      a time.
+    </div>
+    <div class="message-tools">
+      <button
+        class="icon"
+        aria-label="Copy sample message"
+        data-feedback="Copy sample message: local visual specimen."
+      >
+        {{icon:copy}}
+      </button>
+      <button
+        class="icon"
+        aria-label="Edit sample message"
+        data-feedback="Edit sample message: local visual specimen."
+      >
+        {{icon:square-pen}}
+      </button>
+    </div>
+    <div class="metadata">Sample task paused</div>
+    <div class="divider"></div>
+    <div class="tool-line">
+      <button
+        class="icon"
+        aria-label="Tool status"
+        data-feedback="Tool status: local visual specimen."
+      >
+        {{icon:wrench}}</button
+      ><span>Read design system reference</span>
+    </div>
+    <p class="assistant-copy">
+      The interface puts the conversation first. Quiet surfaces separate the workspace, sidebar,
+      cards, and composer without heavy shadows.
+    </p>
+    <p class="assistant-copy">
+      This first specimen uses colors sampled from your screenshot. Typography, radii, spacing,
+      hover, and focus are <span class="code-inline">provisional</span> until you confirm them.
+    </p>
+    <div class="specimen-label">BUTTONS / INPUT / INTERACTION</div>
+    <div class="button-row">
+      <button class="button primary" data-feedback="Primary button activated locally.">
+        Continue</button
+      ><button class="button" data-feedback="Secondary button activated locally.">
+        Review changes</button
+      ><button class="button ghost" data-feedback="Ghost button activated locally.">Cancel</button
+      ><button class="button" disabled>Unavailable</button>
+    </div>
+    <label class="test-field"
+      ><span class="muted">Sample input</span
+      ><input placeholder="Name this component" aria-label="Sample component name"
+    /></label>
+    <p class="notice">
+      Screenshot-derived reconstruction. This is a calibration sample, not an official OpenAI
+      specification. No messages leave this page.
+    </p>
+    <div class="local-status" role="status" aria-live="polite"></div>
+  </article>
+  <aside class="artifact" aria-label="Sample changes card">
+    <div class="meta">
+      <span>Sample project</span><span aria-hidden="true">{{icon:ellipsis}}</span>
+    </div>
+    <div class="changes">
+      {{icon:folder-closed}}<span>Changes</span
+      ><span class="counts"
+        ><span class="positive">+24</span> <span class="negative">−3</span></span
+      >
+    </div>
+  </aside>
+</main>

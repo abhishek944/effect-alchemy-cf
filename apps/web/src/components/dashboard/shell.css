@@ -1,0 +1,181 @@
+/* Only the workspace owns viewport scrolling; auth/admin keep normal page flow. */
+html:has([data-dashboard]),
+body:has([data-dashboard]) {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior-y: none;
+}
+[data-dashboard] {
+  display: grid;
+  grid-template-columns: var(--cx-rail-width) var(--cx-sidebar-width) minmax(0, 1fr);
+  grid-template-rows: var(--cx-toolbar-height) minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 4px 4px 0;
+}
+[data-dashboard][data-sidebar-open="false"] {
+  grid-template-columns: var(--cx-rail-width) minmax(0, 1fr);
+}
+[data-dashboard] [data-cx="toolbar"] {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  min-width: 0;
+  background: var(--cx-chrome);
+}
+[data-dashboard][data-theme="midnight-black"] [data-cx="toolbar"] {
+  box-shadow: inset 0 -1px 0 #303030;
+}
+[data-dashboard] [data-cx="icon-button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-muted);
+  text-decoration: none;
+}
+[data-dashboard] [data-cx="icon-button"]:hover {
+  background: var(--cx-hover);
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="toolbar-title"] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  min-width: 0;
+}
+[data-dashboard] [data-cx="rail"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  background: var(--cx-chrome);
+}
+[data-dashboard] [data-cx="rail-link"] {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  color: var(--cx-muted);
+  text-decoration: none;
+}
+[data-dashboard] [data-cx="rail-link"]:hover {
+  background: var(--cx-hover);
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="rail-link"][aria-current] {
+  background: var(--cx-hover);
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="sidebar"] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 8px 8px;
+  background: var(--cx-sidebar);
+  border-radius: var(--cx-radius-frame) 0 0 var(--cx-radius-frame);
+  border-right: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="sidebar"][hidden] {
+  display: none;
+}
+[data-dashboard] [data-cx="sidebar-heading"] {
+  padding: 0 8px 16px;
+}
+[data-dashboard] [data-cx="sidebar-heading"] strong {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+[data-dashboard] [data-cx="sidebar-navigation"] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+[data-dashboard] [data-cx="group-label"] {
+  color: var(--cx-muted);
+  margin: 18px 8px 8px;
+}
+[data-dashboard] [data-cx="nav-row"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 9px;
+  border-radius: var(--cx-radius-row);
+  color: var(--cx-text);
+  text-decoration: none;
+}
+[data-dashboard] [data-cx="nav-row"]:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="nav-row"][aria-current] {
+  background: var(--cx-selected);
+}
+[data-dashboard] [data-cx="nav-row"] [data-cx="icon"] {
+  width: 16px;
+  height: 16px;
+}
+[data-dashboard] [data-cx="search-empty"] {
+  margin: 12px 8px;
+  color: var(--cx-muted);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="canvas"] {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--cx-canvas);
+  border-radius: 0 var(--cx-radius-frame) var(--cx-radius-frame) 0;
+  scrollbar-color: var(--cx-selected) transparent;
+}
+[data-dashboard] [data-cx="canvas"]:focus {
+  outline: none;
+}
+[data-dashboard] [data-cx="skip-link"] {
+  position: fixed;
+  z-index: 10;
+  top: 8px;
+  left: 8px;
+  padding: 8px 12px;
+  background: var(--cx-text);
+  color: var(--cx-canvas);
+  border-radius: 8px;
+  transform: translateY(-150%);
+}
+[data-dashboard] [data-cx="skip-link"]:focus {
+  transform: translateY(0);
+}
+
+/* Stop vertical edge gestures inside a panel instead of chaining to the page. */
+[data-dashboard]
+  :is(
+    [data-cx="sidebar-navigation"],
+    [data-cx="canvas"],
+    [data-cx="chat-viewport"],
+    [data-cx="chat-footer"],
+    [data-cx="right-section"]
+  ) {
+  overscroll-behavior-y: none;
+}
+
+[data-dashboard] [data-cx="sidebar-navigation"][hidden] {
+  display: none;
+}
+
+[data-dashboard] [data-cx="rail-link"] [data-icon-name="house"] {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.9;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@starter/integrations",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./email": "./src/email.ts",
+    "./slack": "./src/slack.ts",
+    "./error": "./src/error.ts",
+    "./resend": "./src/resend.ts",
+    "./cloudflare-email": "./src/cloudflare-email.ts",
+    "./slack-api": "./src/slack-api.ts",
+    "./billing": "./src/billing.ts",
+    "./billing-dodo": "./src/billing-dodo.ts",
+    "./billing-polar": "./src/billing-polar.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@polar-sh/sdk": "1.0.2",
+    "dodopayments": "2.54.2",
+    "effect": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.6"
+  }
+}

@@ -1,0 +1,128 @@
+/* Account menu for the signed-in dashboard. Every rule is scoped to [data-dashboard]. */
+
+[data-dashboard] [data-cx="account"] {
+  width: 100%;
+  min-width: 0;
+}
+
+[data-dashboard] [data-cx="account-trigger"] {
+  anchor-name: --cx-account;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: var(--cx-radius-row);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="account-trigger"]:hover {
+  background: var(--cx-hover);
+}
+
+/* Native popover, anchored above the trigger; inset: auto resets native popover styles. */
+[data-dashboard] [data-cx="account-popover"] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(300px, calc(100vw - 20px));
+  overflow-y: auto;
+  padding: 6px;
+  /* Fallback placement and size, then anchor positioning where available. */
+  left: 60px;
+  bottom: 10px;
+  max-height: calc(100dvh - 96px);
+  position-anchor: --cx-account;
+  left: clamp(10px, calc(anchor(right) + 10px), calc(100vw - 310px));
+  bottom: max(10px, anchor(bottom));
+  background: color-mix(in srgb, var(--cx-card) 94%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--cx-text) 10%, var(--cx-line));
+  border-radius: 24px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  color: var(--cx-text);
+}
+
+[data-dashboard] img[data-cx="avatar"] {
+  object-fit: cover;
+  background: none;
+}
+
+[data-dashboard] [data-cx="account-header"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  color: var(--cx-text);
+  text-decoration: none;
+}
+
+[data-dashboard] [data-cx="account-header"] [data-cx="avatar"] {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+
+[data-dashboard] [data-cx="account-header-email"] {
+  font-size: 13px;
+}
+
+[data-dashboard] [data-cx="account-separator"] {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--cx-line);
+}
+
+[data-dashboard] [data-cx="account-row"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--cx-radius-row);
+  background: transparent;
+  color: var(--cx-text);
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="account-row"]:hover {
+  background: var(--cx-hover);
+}
+
+[data-dashboard] [data-cx="account-row"] [data-cx="icon"] {
+  color: var(--cx-muted);
+}
+
+[data-dashboard] [data-cx="account-row"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-dashboard] [data-cx="account-header"]:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="account-header-text"] {
+  display: grid;
+  min-width: 0;
+  line-height: 1.4;
+}
+[data-dashboard] [data-cx="account-header-name"] {
+  font-size: 16px;
+  font-weight: 500;
+}
+[data-dashboard] [data-cx="account-header-email"] {
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="account-header-text"] span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

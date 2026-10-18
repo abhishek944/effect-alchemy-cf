@@ -1,0 +1,178 @@
+/* Approved Codex UI neutral palette, scoped to the signed-in workspace. */
+[data-dashboard] {
+  color-scheme: dark;
+  --cx-canvas: #181818;
+  --cx-sidebar: #212121;
+  --cx-chrome: #303030;
+  --cx-bubble: #2f2f2f;
+  --cx-composer: #363636;
+  --cx-card: #2d2d2d;
+  --cx-selected: #323232;
+  --cx-text: #ffffff;
+  --cx-muted: #a3a3a3;
+  --cx-line: #333232;
+  --cx-hover: #3b3a3a;
+  --cx-focus: #b8c7e0;
+  --cx-positive: #6bc67f;
+  --cx-negative: #ed5f58;
+  --cx-avatar-bg: #287fa0;
+  --cx-avatar-text: #ffffff;
+  --cx-resizer: #737373;
+  --cx-primary: #eeeeee;
+  --cx-primary-hover: #ffffff;
+  --cx-primary-text: #191919;
+  --cx-rail-width: 52px;
+  --cx-sidebar-width: 238px;
+  --cx-toolbar-height: 46px;
+  --cx-radius-frame: 16px;
+  --cx-radius-card: 16px;
+  --cx-radius-row: 9px;
+  --cx-radius-button: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--cx-chrome);
+  color: var(--cx-text);
+}
+
+/*
+ * Light theme. Neutral values mirror the approved dark surface relationships; the
+ * dark block above stays the untouched reference appearance. Avatar tokens do not
+ * change so initials keep white text on the fixed blue fill in both themes.
+ */
+[data-dashboard][data-theme="light"] {
+  color-scheme: light;
+  --cx-canvas: #ffffff;
+  --cx-sidebar: #f4f4f4;
+  --cx-chrome: #ececec;
+  --cx-bubble: #ececec;
+  --cx-composer: #f1f1f1;
+  --cx-card: #f0f0f0;
+  --cx-selected: #d6d6d6;
+  --cx-text: #1b1b1b;
+  --cx-muted: #5f5f5f;
+  --cx-line: #dcdcdc;
+  --cx-hover: #e2e2e2;
+  --cx-focus: #35618f;
+  --cx-positive: #1a7f37;
+  --cx-negative: #b42318;
+  --cx-resizer: #808080;
+  --cx-primary: #1b1b1b;
+  --cx-primary-hover: #000000;
+  --cx-primary-text: #ffffff;
+}
+[data-dashboard] :is(button, input, select) {
+  font: inherit;
+}
+[data-dashboard] button {
+  color: inherit;
+}
+[data-dashboard] :is(button, select, a):focus {
+  outline: none;
+  box-shadow: none;
+}
+[data-dashboard]:not([data-focus-modality="pointer"]) :is(button, select, a):focus-visible {
+  outline: 1px solid var(--cx-resizer);
+  outline-offset: -2px;
+}
+[data-dashboard] input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+[data-dashboard] :is(button, input, select):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+[data-dashboard] [data-cx="icon"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+[data-dashboard] [data-cx="avatar"] {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cx-avatar-bg);
+  color: var(--cx-avatar-text);
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+[data-dashboard] ::selection {
+  background: var(--cx-selected);
+  color: var(--cx-text);
+}
+
+[data-dashboard][data-theme="midnight-black"] {
+  color-scheme: dark;
+  --cx-canvas: #0a0a0a;
+  --cx-sidebar: #000000;
+  --cx-chrome: #0a0a0a;
+  --cx-bubble: #141414;
+  --cx-composer: #111111;
+  --cx-card: #111111;
+  --cx-selected: #111111;
+  --cx-text: #f5f5f5;
+  --cx-muted: #818181;
+  --cx-line: #191919;
+  --cx-hover: #191919;
+  --cx-focus: #346bf1;
+  --cx-positive: #6bc67f;
+  --cx-negative: #ff6467;
+  --cx-avatar-bg: #287fa0;
+  --cx-avatar-text: #ffffff;
+  --cx-resizer: #818181;
+  --cx-primary: #346bf1;
+  --cx-primary-hover: #3061d9;
+  --cx-primary-text: #ffffff;
+}
+
+[data-dashboard][data-theme="dusk"] {
+  color-scheme: dark;
+  --cx-canvas: #171412;
+  --cx-sidebar: #201b18;
+  --cx-chrome: #261f1b;
+  --cx-bubble: #352c26;
+  --cx-composer: #2b2420;
+  --cx-card: #27201c;
+  --cx-selected: #44382e;
+  --cx-text: #eee7df;
+  --cx-muted: #b9ada2;
+  --cx-line: #514339;
+  --cx-hover: #3b3028;
+  --cx-focus: #d8b48a;
+  --cx-positive: #9bd79b;
+  --cx-negative: #ffa197;
+  --cx-avatar-bg: #287fa0;
+  --cx-avatar-text: #ffffff;
+  --cx-resizer: #ad9581;
+  --cx-primary: #eee4d7;
+  --cx-primary-hover: #fff7ec;
+  --cx-primary-text: #241d18;
+}
+
+[data-dashboard][data-theme="paper"] {
+  color-scheme: light;
+  --cx-canvas: #faf7f0;
+  --cx-sidebar: #f2eee5;
+  --cx-chrome: #e9e3d9;
+  --cx-bubble: #e6dfd3;
+  --cx-composer: #e8e2d6;
+  --cx-card: #eee7dc;
+  --cx-selected: #d7cbb9;
+  --cx-text: #29251f;
+  --cx-muted: #62594f;
+  --cx-line: #c8bcaa;
+  --cx-hover: #ded4c6;
+  --cx-focus: #765a38;
+  --cx-positive: #246b38;
+  --cx-negative: #a32d20;
+  --cx-avatar-bg: #287fa0;
+  --cx-avatar-text: #ffffff;
+  --cx-resizer: #84745f;
+  --cx-primary: #362d23;
+  --cx-primary-hover: #1e1812;
+  --cx-primary-text: #fffaf1;
+}

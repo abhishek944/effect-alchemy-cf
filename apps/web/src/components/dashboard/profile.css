@@ -1,0 +1,147 @@
+/*
+ * Profile section layout and the private photo control. Geometry, spacing,
+ * control sizes and radii follow the selected visual source (B9-A); only the
+ * scoping attributes differ so the rest of the shell stays untouched. There is
+ * no upload button and no badge, fill or shadow on the pencil.
+ */
+[data-dashboard] [data-cx="settings-panel"][data-section="profile"] {
+  padding-top: 36px;
+}
+
+[data-dashboard] [data-cx="profile"] {
+  max-width: 560px;
+  margin-inline: auto;
+}
+
+[data-dashboard] [data-cx="profile-head"] {
+  margin-bottom: 26px;
+}
+
+[data-dashboard] [data-cx="profile-title"] {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+[data-dashboard] [data-cx="profile-subtitle"] {
+  margin: 7px 0 0;
+  color: var(--cx-muted);
+  font-size: 13px;
+}
+
+[data-dashboard] [data-cx="profile-photo"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  margin-bottom: 26px;
+}
+
+[data-dashboard] [data-cx="profile"][data-state="photo-error"] [data-cx="profile-photo"] {
+  margin-bottom: 22px;
+}
+
+[data-dashboard] [data-cx="profile-portrait"] {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
+[data-dashboard] [data-cx="profile-portrait"] > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+[data-dashboard] [data-cx="profile-initials"] {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--cx-avatar-bg);
+  color: var(--cx-avatar-text);
+  font-size: 44px;
+  font-weight: 500;
+}
+
+[data-dashboard] [data-cx="profile-edit"] {
+  position: absolute;
+  top: -3px;
+  right: -13px;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: var(--cx-text);
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="profile-edit"]:hover {
+  opacity: 0.65;
+}
+
+[data-dashboard] [data-cx="profile-edit"]:focus-visible {
+  outline: 1px solid var(--cx-resizer);
+  outline-offset: -1px;
+}
+
+[data-dashboard] [data-cx="profile-edit"] [data-cx="icon"] {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.5;
+}
+
+[data-dashboard] [data-cx="profile-caption"] {
+  font-size: 12px;
+  color: var(--cx-muted);
+}
+
+[data-dashboard] [data-cx="profile-file"] {
+  display: none;
+}
+
+[data-dashboard] [data-cx="profile-menu"] {
+  position: absolute;
+  right: -124px;
+  top: 30px;
+  z-index: 5;
+  width: 184px;
+  border: 1px solid var(--cx-line);
+  border-radius: 12px;
+  padding: 5px;
+  background: var(--cx-card);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 13%);
+}
+
+[data-dashboard] [data-cx="profile-menu"] button {
+  display: block;
+  text-align: left;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--cx-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="profile-menu"] button:hover {
+  background: var(--cx-hover);
+}
+
+[data-dashboard] [data-cx="profile-menu"] p {
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--cx-muted);
+  margin: 0;
+}

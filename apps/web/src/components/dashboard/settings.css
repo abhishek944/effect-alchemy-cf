@@ -1,0 +1,154 @@
+/* Settings main content. Selectors stay scoped to the signed-in dashboard. */
+[data-dashboard] [data-cx="settings-panel"] {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+  padding: 68px 32px 104px;
+}
+
+[data-dashboard] [data-cx="settings-title"] {
+  margin: 0 0 36px;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--cx-text);
+}
+
+[data-dashboard] [data-cx="settings-group"] + [data-cx="settings-group"] {
+  margin-top: 56px;
+}
+
+[data-dashboard] [data-cx="settings-group-title"] {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--cx-text);
+}
+
+[data-dashboard] [data-cx="settings-card"] {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-card);
+  background: var(--cx-sidebar);
+  overflow: hidden;
+}
+
+[data-dashboard] [data-cx="settings-row"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 24px;
+  align-items: start;
+  padding: 18px 20px;
+}
+
+[data-dashboard] [data-cx="settings-row"] + [data-cx="settings-row"] {
+  border-top: 1px solid var(--cx-line);
+}
+
+[data-dashboard] [data-cx="settings-row-label"] {
+  display: grid;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--cx-text);
+}
+
+[data-dashboard] [data-cx="settings-row-description"] {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--cx-muted);
+}
+
+[data-dashboard] [data-cx="settings-row-control"] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: 320px;
+  margin: 0;
+  text-align: right;
+}
+
+[data-dashboard] [data-cx="settings-value"] {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--cx-text);
+  overflow-wrap: anywhere;
+}
+
+[data-dashboard] [data-cx="settings-disabled"] {
+  padding: 6px 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-composer);
+  color: var(--cx-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* Keep the explicit "Not configured" label readable while still inert. */
+[data-dashboard] [data-cx="settings-disabled"]:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+[data-dashboard] [data-cx="theme-select"] {
+  padding: 6px 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+[data-dashboard] [data-cx="theme-note"] {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cx-muted);
+  overflow-wrap: anywhere;
+}
+
+[data-dashboard] [data-cx="theme-note"] [data-cx="theme-retry"] {
+  margin-left: 8px;
+  padding: 2px 8px;
+  min-height: 24px;
+  border: 1px solid var(--cx-line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  [data-dashboard] [data-cx="settings-panel"] {
+    padding: 48px 24px 80px;
+  }
+
+  [data-dashboard] [data-cx="settings-title"] {
+    margin-bottom: 28px;
+    font-size: 26px;
+  }
+
+  [data-dashboard] [data-cx="settings-row"] {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  [data-dashboard] [data-cx="settings-row-control"] {
+    align-items: flex-start;
+    max-width: 100%;
+    text-align: left;
+  }
+}

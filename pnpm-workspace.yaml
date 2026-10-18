@@ -8,6 +8,10 @@ overrides:
   "@hono/node-server": 1.19.15
   lodash: 4.18.1
   valibot: 1.4.2
+  # Pi/Agents transitive MCP OAuth pins need the issuer-validation security fixes.
+  "agents>@modelcontextprotocol/client": 2.2.0
+  "agents>@modelcontextprotocol/sdk": 1.31.0
+  "@google/genai>@modelcontextprotocol/sdk": 1.31.0
 
 onlyBuiltDependencies:
   - lefthook

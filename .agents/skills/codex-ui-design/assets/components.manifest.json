@@ -1,0 +1,106 @@
+{
+  "scope": "Review artifact, not an OpenDesign-derived component cache",
+  "appearanceContract": "B3-B default fixture",
+  "components": [
+    {
+      "id": "window-toolbar",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "workspace-rail",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "sidebar-heading",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "project-row",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "conversation-row",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "selected-row",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "user-message",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "message-actions",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "assistant-paragraph",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "tool-activity",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "status-divider",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "primary-button",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "secondary-button",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "ghost-button",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "disabled-button",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "text-input",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "changes-card",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "composer",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "send-button",
+      "appearance": "user-calibrated default fixture",
+      "nativeBehavior": "unverified"
+    },
+    {
+      "id": "model-popover",
+      "appearance": "proposed and local-tested; native unknown",
+      "nativeBehavior": "unverified"
+    }
+  ]
+}

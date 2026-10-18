@@ -1,0 +1,137 @@
+[data-dashboard] [data-cx="chat-markdown"] {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--cx-text);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="chat-markdown"] :is(p, ul, ol, blockquote, pre, hr),
+[data-dashboard] [data-cx="chat-markdown-table"] {
+  margin: 0 0 16px;
+}
+[data-dashboard] [data-cx="chat-markdown"] > :first-child {
+  margin-top: 0;
+}
+[data-dashboard] [data-cx="chat-markdown"] > :last-child {
+  margin-bottom: 0;
+}
+[data-dashboard] [data-cx="chat-markdown"] :is(h1, h2, h3, h4, h5, h6) {
+  margin: 24px 0 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+[data-dashboard] [data-cx="chat-markdown"] h1 {
+  font-size: 1.65em;
+}
+[data-dashboard] [data-cx="chat-markdown"] h2 {
+  font-size: 1.4em;
+}
+[data-dashboard] [data-cx="chat-markdown"] h3 {
+  font-size: 1.2em;
+}
+[data-dashboard] [data-cx="chat-markdown"] :is(h4, h5, h6) {
+  font-size: 1em;
+}
+[data-dashboard] [data-cx="chat-markdown"] strong {
+  font-weight: 600;
+}
+[data-dashboard] [data-cx="chat-markdown"] em {
+  font-style: italic;
+}
+[data-dashboard] [data-cx="chat-markdown"] del {
+  text-decoration: line-through;
+}
+[data-dashboard] [data-cx="chat-markdown"] :is(ul, ol) {
+  padding-inline-start: 24px;
+}
+[data-dashboard] [data-cx="chat-markdown"] ul {
+  list-style-type: disc;
+}
+[data-dashboard] [data-cx="chat-markdown"] ol {
+  list-style-type: decimal;
+}
+[data-dashboard] [data-cx="chat-markdown"] li {
+  margin: 4px 0;
+}
+[data-dashboard] [data-cx="chat-markdown"] li > :is(p, ul, ol) {
+  margin: 8px 0;
+}
+[data-dashboard] [data-cx="chat-markdown"] blockquote {
+  padding-inline-start: 16px;
+  border-inline-start: 3px solid var(--cx-line);
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="chat-markdown"] blockquote > :last-child {
+  margin-bottom: 0;
+}
+[data-dashboard] [data-cx="chat-markdown"] a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+[data-dashboard] [data-cx="chat-markdown"] code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--cx-card);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.9em;
+  white-space: break-spaces;
+}
+[data-dashboard] [data-cx="chat-markdown"] pre {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-card);
+  line-height: 1.5;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+[data-dashboard] [data-cx="chat-markdown"] pre code {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+[data-dashboard] [data-cx="chat-markdown-table"] {
+  max-width: 100%;
+  overflow: auto;
+}
+[data-dashboard] [data-cx="chat-markdown-table"] table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+[data-dashboard] [data-cx="chat-markdown"] :is(th, td) {
+  padding: 8px 12px;
+  border: 1px solid var(--cx-line);
+  text-align: start;
+}
+[data-dashboard] [data-cx="chat-markdown"] th {
+  background: var(--cx-card);
+  font-weight: 600;
+}
+[data-dashboard] [data-cx="chat-markdown"] hr {
+  border: 0;
+  border-top: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="chat-markdown"] .task-list-item {
+  list-style-type: none;
+}
+[data-dashboard] [data-cx="chat-markdown"] input[type="checkbox"] {
+  margin-inline-end: 8px;
+  accent-color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="chat-markdown"] :is(pre, [data-cx="chat-markdown-table"]):focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+[data-dashboard] [data-cx="chat-markdown-image"] {
+  color: var(--cx-muted);
+}

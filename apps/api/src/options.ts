@@ -1,11 +1,17 @@
 import { fileURLToPath, URL } from "node:url";
+import * as Cloudflare from "alchemy/Cloudflare";
 import { AlchemyContext } from "alchemy/AlchemyContext";
 import { Stack } from "alchemy/Stack";
-import { Config, Effect } from "effect";
+import { Config, Effect, Redacted } from "effect";
+import { serviceName } from "../../../service.config.ts";
+import { chatWorkerSource } from "./chat-objects-entry.ts";
+import { ChatFilesBucket } from "./chat-resources.ts";
 
 export const workerOptions = Effect.gen(function* () {
   if (globalThis.__ALCHEMY_RUNTIME__) return {};
   const stack = yield* Stack;
+  const chatFiles = yield* ChatFilesBucket;
+  const modelAllowlist = yield* Config.String("CHAT_MODEL_ALLOWLIST").pipe(Config.withDefault(""));
   const { dev: local } = yield* AlchemyContext;
   const production = stack.stage === "prod";
   const allowProduction = yield* Config.Boolean("ALLOW_PRODUCTION").pipe(Config.withDefault(false));
@@ -25,8 +31,39 @@ export const workerOptions = Effect.gen(function* () {
   if (!local && !production && emails.length === 0) {
     throw new Error("Cloud development requires DEV_ACCESS_EMAILS for Cloudflare Access.");
   }
+  const devIdps =
+    !local && !production
+      ? [
+          (yield* Cloudflare.Access.IdentityProvider("DevEmailPin", {
+            type: "onetimepin",
+          })).identityProviderId.as<string>(),
+        ]
+      : undefined;
   const revision = yield* Config.String("GITHUB_SHA").pipe(Config.withDefault("unversioned"));
   const release = /^[a-f0-9]{40}$/.test(revision) ? revision : "unversioned";
+  // Stage isolation: local may only use the managed dev gateway when it is
+  // explicitly configured, cloud dev derives that id, prod needs its own id.
+  const expectedDevGateway = `${serviceName.toLowerCase()}-dev-chat`;
+  const requestedGateway = yield* Config.String("CHAT_GATEWAY_ID").pipe(Config.withDefault(""));
+  if (
+    !local &&
+    !production &&
+    requestedGateway.length > 0 &&
+    requestedGateway !== expectedDevGateway
+  ) {
+    throw new Error(
+      `Cloud development must use the managed dev chat gateway ${expectedDevGateway}.`,
+    );
+  }
+  const chatGatewayId = local
+    ? requestedGateway === expectedDevGateway
+      ? expectedDevGateway
+      : ""
+    : production
+      ? requestedGateway.length > 0 && requestedGateway !== expectedDevGateway
+        ? requestedGateway
+        : ""
+      : expectedDevGateway;
   return {
     observability: {
       enabled: true,
@@ -34,24 +71,53 @@ export const workerOptions = Effect.gen(function* () {
       logs: { enabled: true, invocationLogs: true, headSamplingRate: 1, persist: true },
       traces: { enabled: true, headSamplingRate: 1, persist: true },
     },
-    main: fileURLToPath(new URL("./worker.ts", import.meta.url)),
-    compatibility: { date: "2026-10-05", flags: ["nodejs_compat"] },
+    // Only data crosses dev RPC; the provider creates native export hooks.
+    source: chatWorkerSource(),
+    compatibility: {
+      date: local ? "2026-09-25" : "2026-10-05",
+      // nodejs_compat is default from 2026-08-04; workerd rejects the
+      // redundant runtime flag, while Alchemy tooling still materializes
+      // Node support from the compatibility date.
+      ...((local ? "2026-09-25" : "2026-10-05") >= "2026-08-04"
+        ? { flags: [] }
+        : { flags: ["nodejs_compat"] }),
+    },
     assets: {
       directory: fileURLToPath(new URL("../../web/dist", import.meta.url)),
       notFoundHandling: "single-page-application" as const,
       runWorkerFirst: !local && !production ? true : ["/api/*"],
     },
-    dev: { port: 1337 },
+    dev: { host: "localhost", port: 1337, strictPort: true },
     env: {
-      REQUIRE_ACCESS: !local && !production,
-      AUTH_LOCAL: local,
+      // Non-JSON boolean literals survive Alchemy runtime env unpacking as strings.
+      REQUIRE_ACCESS: !local && !production ? "yes" : "no",
+      AUTH_LOCAL: local ? "yes" : "no",
       OBS_SERVICE: stack.name,
       OBS_STAGE: stack.stage,
       OBS_RELEASE: release,
+      CHAT_GATEWAY_ID: chatGatewayId,
+      CHAT_MODEL_ALLOWLIST: modelAllowlist,
+      CHAT_FILES: chatFiles,
+      // Speech is nonproduction-only; production binds no audio credential.
+      ...(!production
+        ? {
+            OPENROUTER_API_KEY: Config.Redacted("OPENROUTER_API_KEY").pipe(
+              Config.withDefault(Redacted.make("")),
+            ),
+          }
+        : {}),
+      BILLING_ENVIRONMENT: production ? "live" : "test",
+      BILLING_NAMESPACE: `${stack.name}:${stack.stage}`,
+      // Custom sources suppress the local automatic ASSETS hook.
+      ...(local ? { ASSETS: { kind: "Cloudflare.Workers.Assets" as const } } : {}),
+      // No remote AI binding without an explicitly configured gateway id.
+      ...(chatGatewayId.length > 0 ? { AI: Cloudflare.Workers.AI() } : {}),
     },
     ...(!local && !production
       ? {
           access: {
+            allowedIdps: devIdps,
+            autoRedirectToIdentity: true,
             policies: [{ decision: "allow" as const, include: emails.map((email) => ({ email })) }],
           },
         }

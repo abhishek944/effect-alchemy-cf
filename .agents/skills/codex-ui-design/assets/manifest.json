@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "codex-desktop-calibration/v1",
+  "name": "Codex Desktop \u2014 calibrated dark reconstruction",
+  "date": "2026-10-09",
+  "source": "User screenshot plus three saved visual decisions",
+  "viewport": {
+    "width": 1511,
+    "height": 951,
+    "unit": "CSS px",
+    "sourceScale": "2x assumed; native bounds unverified"
+  },
+  "files": {
+    "design": "../references/DESIGN.md",
+    "tokens": "tokens.css",
+    "components": "dist/components.html",
+    "recipeSources": "preview-sources.json",
+    "behavior": "playground.js",
+    "designTokens": "design-tokens.json",
+    "evidence": "token-evidence.json",
+    "usage": "../references/USAGE.md"
+  },
+  "notRegisteredInOpenDesign": true,
+  "selectedBranches": {
+    "B1": "B",
+    "B2": "B",
+    "B3": "B"
+  },
+  "generatedFiles": ["dist/components.html"]
+}

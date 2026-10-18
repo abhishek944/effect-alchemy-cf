@@ -1,0 +1,91 @@
+@media (max-width: 1200px) {
+  .workspace {
+    padding: 32px 24px 150px;
+  }
+  .artifact {
+    display: none;
+  }
+  .composer-container {
+    left: 314px;
+    right: 24px;
+  }
+}
+@media (max-width: 700px) {
+  .shell {
+    grid-template-columns: 44px 1fr;
+  }
+  .sidebar {
+    display: none;
+  }
+  .workspace {
+    padding: 20px 16px 170px;
+  }
+  .composer-container {
+    left: 60px;
+    right: 16px;
+  }
+  .topbar .spacer {
+    display: none;
+  }
+  .user-message {
+    max-width: 95%;
+  }
+  .test-field {
+    flex-wrap: wrap;
+  }
+  .topbar {
+    gap: 8px;
+  }
+  .window-tools {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+svg {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon svg,
+.row svg {
+  stroke-width: 2;
+}
+.model,
+.permission {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.model svg,
+.permission svg {
+  width: 12px;
+  height: 12px;
+}
+.side-heading .muted svg {
+  width: 10px;
+  height: 10px;
+}
+.composer-container .send svg {
+  stroke-width: 2;
+}
+.shell {
+  background: var(--chrome);
+}
+
+:root {
+  --sidebar: #212121;
+  --chrome: #303030;
+  --bubble: #2f2f2f;
+  --selected: #323232;
+}
+.sidebar {
+  border-radius: 16px 0 0 16px;
+}
+.workspace {
+  border-radius: 0 16px 16px 0;
+}

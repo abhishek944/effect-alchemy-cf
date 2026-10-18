@@ -1,0 +1,145 @@
+[data-dashboard] [data-cx="tooltip-wrap"] {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+[data-dashboard] [data-cx="tooltip"] {
+  display: none;
+  position: fixed;
+  overflow: visible;
+  inset: auto;
+  margin: 0;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-wrap: anywhere;
+  padding: 4px 10px;
+  border: 1px solid var(--cx-line);
+  border-radius: 12px;
+  background: var(--cx-card);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+  color: var(--cx-text);
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.6;
+}
+[data-dashboard] [data-cx="tooltip"]:popover-open {
+  display: block;
+}
+[data-dashboard] [data-cx="tooltip-text"] {
+  display: block;
+  max-height: calc(100dvh - 26px);
+  overflow: auto;
+}
+[data-dashboard] [data-cx="tooltip"]::backdrop {
+  pointer-events: none;
+}
+[data-dashboard] [data-cx="tooltip"]::before {
+  content: "";
+  position: absolute;
+}
+[data-dashboard] [data-cx="tooltip"][data-placement="bottom"]::before {
+  inset: -10px 0 auto;
+  height: 10px;
+}
+[data-dashboard] [data-cx="tooltip"][data-placement="top"]::before {
+  inset: auto 0 -10px;
+  height: 10px;
+}
+[data-dashboard] [data-cx="tooltip"][data-placement="right"]::before {
+  inset: 0 auto 0 -10px;
+  width: 10px;
+}
+[data-dashboard] [data-cx="tooltip"][data-placement="left"]::before {
+  inset: 0 -10px 0 auto;
+  width: 10px;
+}
+[data-dashboard] [data-cx="chat-connection"]:empty {
+  display: none;
+}
+[data-dashboard] [data-cx="toolbar-actions"] {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+[data-dashboard] [data-cx="toolbar-title"] span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="toolbar-actions"] [data-cx="icon-button"] {
+  background: var(--cx-selected);
+}
+[data-dashboard] [data-cx="rail-account"] {
+  margin-top: auto;
+  width: 40px;
+}
+[data-dashboard] [data-cx="rail-account"] [data-cx="account-trigger"] {
+  padding: 5px;
+  background: var(--cx-selected);
+  border-radius: 11px;
+}
+[data-dashboard]
+  [data-cx="rail-account"]
+  :is([data-cx="account-trigger-text"], [data-cx="account-trigger"] > [data-cx="icon"]) {
+  display: none;
+}
+[data-dashboard] [data-cx="work-area"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0 var(--cx-radius-frame) var(--cx-radius-frame) 0;
+}
+[data-dashboard][data-right-open="true"] [data-cx="work-area"] {
+  grid-template-columns: minmax(320px, 44%) minmax(0, 1fr);
+}
+[data-dashboard] [data-cx="canvas"] {
+  border-radius: 0;
+}
+[data-dashboard] [data-cx="right-section"] {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--cx-canvas);
+  border-left: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="right-section"][hidden] {
+  display: none;
+}
+[data-dashboard][data-full-view="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+[data-dashboard][data-full-view="true"]
+  :is([data-cx="rail"], [data-cx="sidebar"], [data-cx="canvas"]) {
+  display: none;
+}
+[data-dashboard][data-full-view="true"] [data-cx="work-area"] {
+  grid-column: 1;
+  grid-template-columns: minmax(0, 1fr);
+  border-radius: var(--cx-radius-frame);
+}
+[data-dashboard][data-full-view="true"] [data-cx="right-section"] {
+  border-left: 0;
+}
+@media (max-width: 760px) {
+  [data-dashboard] [data-cx="toolbar"] {
+    gap: 4px;
+    padding: 0 6px;
+  }
+  [data-dashboard][data-right-open="true"] [data-cx="work-area"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-dashboard][data-right-open="true"][data-full-view="false"] [data-skip="main"] {
+    display: none;
+  }
+  [data-dashboard][data-right-open="true"] [data-cx="canvas"] {
+    display: none;
+  }
+  [data-dashboard][data-full-view="true"] [data-cx="work-area"] {
+    grid-column: 1;
+  }
+  [data-dashboard] [data-cx="toolbar-divider"] {
+    margin: 0 2px;
+  }
+}

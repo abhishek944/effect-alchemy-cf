@@ -1,0 +1,91 @@
+.composer-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+.permission {
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: #d28a4a;
+  font-size: 12px;
+}
+.model {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.send {
+  background: #eee;
+  color: #191919;
+  border: 0;
+  border-radius: 50%;
+  height: 28px;
+  width: 28px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+.send svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+}
+.send:not(:disabled):hover {
+  background: white;
+}
+.send:disabled {
+  background: #555;
+  color: #bbb;
+}
+.caption {
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  margin: 7px 0 0;
+}
+.notice {
+  font-size: 11px;
+  color: var(--muted);
+  border-left: 2px solid var(--line);
+  padding-left: 10px;
+  margin: 24px 0;
+}
+.local-status {
+  margin-top: 14px;
+  min-height: 23px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.popover {
+  position: absolute;
+  bottom: 65px;
+  right: 40px;
+  min-width: 200px;
+  background: var(--sidebar);
+  border: 1px solid var(--line);
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #0005;
+}
+.popover[hidden] {
+  display: none;
+}
+.popover button {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  border-radius: 6px;
+  padding: 9px;
+}
+.popover button:hover {
+  background: var(--hover);
+}

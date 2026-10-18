@@ -1,0 +1,80 @@
+[data-dashboard] [data-cx="error-notice"] {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 28px;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: 10px;
+  background: var(--cx-card);
+  color: var(--cx-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="error-notice-icon"] {
+  margin-top: 2px;
+  color: var(--cx-negative);
+}
+[data-dashboard] [data-cx="error-notice-content"] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="error-notice-content"] strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12px;
+  font-weight: 600;
+}
+[data-dashboard] [data-cx="error-notice-content"] p {
+  margin: 0;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="error-notice-action"] {
+  min-height: 24px;
+  border: 0;
+  padding: 5px 0 0;
+  background: transparent;
+  color: var(--cx-text);
+  font-size: 12px;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="error-notice-dismiss"] {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cx-text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="error-notice-dismiss"]:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard]:not([data-focus-modality="pointer"])
+  :is([data-cx="error-notice-action"], [data-cx="error-notice-dismiss"]):focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 2px;
+}
+[data-dashboard] [data-cx="catalog-action-notice"] {
+  margin-bottom: 12px;
+}
+[data-dashboard] [data-cx="sidebar-navigation"] > [data-cx="error-notice"] {
+  margin: 12px 0;
+}
+[data-dashboard] [data-cx="billing-error-host"] {
+  padding: 16px 22px;
+}
+[data-dashboard] [data-cx="account-error-host"] {
+  margin: 6px 4px 2px;
+}
+@media (max-width: 760px) {
+  [data-dashboard] [data-cx="billing-error-host"] {
+    padding-inline: 16px;
+  }
+}

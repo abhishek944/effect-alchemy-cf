@@ -1,0 +1,89 @@
+/* Shallow numeric usage tray tucked below the composer's lower silhouette. */
+[data-dashboard] [data-cx="usage-tray"] {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  margin: -8px 16px 0;
+  padding: 12px 10px 3px;
+  border: 1px solid var(--cx-line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: var(--cx-card);
+  color: var(--cx-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+/* Release the open host's stacking context so its fixed ledger outranks the
+   composer without lifting the tray's negative-margin strip over the input.
+   The closed tray keeps its original z-index 0 tuck. */
+[data-dashboard] [data-cx="usage-tray"][data-open] {
+  z-index: auto;
+}
+[data-dashboard] [data-cx="usage-tray"][data-state="loading"],
+[data-dashboard] [data-cx="usage-tray"][data-state="error"] {
+  justify-content: flex-start;
+  min-height: 20px;
+  padding: 10px 12px 6px;
+}
+[data-dashboard] [data-cx="usage-figure"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--cx-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="usage-figure"]:hover,
+[data-dashboard] [data-cx="usage-figure"]:focus-visible {
+  background: var(--cx-hover);
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="usage-action"] {
+  border: 0;
+  background: transparent;
+  color: var(--cx-text);
+  text-decoration: underline;
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="usage-details"] {
+  padding: 0 2px 2px;
+}
+[data-dashboard] [data-cx="usage-detail-lede"] {
+  margin: 0 8px 8px;
+  color: var(--cx-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="usage-detail-list"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+[data-dashboard] [data-cx="usage-detail-row"] {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px;
+}
+[data-dashboard] [data-cx="usage-detail-row"] dt {
+  color: var(--cx-muted);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="usage-detail-row"] dd {
+  margin: 0;
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}

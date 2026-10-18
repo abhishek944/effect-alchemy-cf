@@ -1,0 +1,125 @@
+/*
+ * Profile control and recovery styles: buttons, inline errors, the photo-upload
+ * failure block, the stale-save alert and the leave dialog. Nothing here adds a
+ * notification, a success banner or an Undo surface.
+ */
+[data-dashboard] [data-cx="profile-btn"] {
+  border: 1px solid var(--cx-line);
+  border-radius: 10px;
+  background: transparent;
+  padding: 7px 14px;
+  min-height: 36px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--cx-text);
+}
+
+[data-dashboard] [data-cx="profile-btn"][data-variant="primary"] {
+  background: var(--cx-primary);
+  color: var(--cx-primary-text);
+  border-color: transparent;
+  min-width: 119px;
+}
+
+[data-dashboard] [data-cx="profile-btn"][data-variant="ghost"] {
+  border-color: transparent;
+}
+
+[data-dashboard] [data-cx="profile-error"] {
+  color: var(--cx-negative);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+[data-dashboard] [data-cx="profile-note"] {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--cx-muted);
+  margin: 0;
+}
+
+[data-dashboard] [data-cx="profile-feedback"] {
+  margin-top: 10px;
+}
+
+[data-dashboard] [data-cx="profile-feedback"] p {
+  margin: 0 0 4px;
+}
+
+[data-dashboard] [data-cx="profile-feedback"] [data-cx="profile-btn"] {
+  font-size: 12px;
+  padding: 2px 8px;
+  min-height: 28px;
+}
+
+[data-dashboard] [data-cx="profile-feedback"][role="alert"] {
+  color: var(--cx-negative);
+}
+
+[data-dashboard] [data-cx="profile-dialog-backdrop"] {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 32%);
+  display: grid;
+  place-items: center;
+  z-index: 30;
+  padding: 20px;
+}
+
+[data-dashboard] [data-cx="profile-dialog"] {
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  background: var(--cx-card);
+  border: 1px solid var(--cx-line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
+}
+
+[data-dashboard] [data-cx="profile-dialog"] h2 {
+  font-size: 18px;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+[data-dashboard] [data-cx="profile-dialog"] p {
+  font-size: 14px;
+  color: var(--cx-muted);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+[data-dashboard] [data-cx="profile-dialog-actions"] {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  [data-dashboard] [data-cx="settings-panel"][data-section="profile"] {
+    padding: 28px 20px 72px;
+  }
+
+  [data-dashboard] [data-cx="profile-menu"] {
+    right: -65px;
+  }
+
+  [data-dashboard] [data-cx="profile-footer"] {
+    flex-wrap: wrap;
+  }
+
+  [data-dashboard] [data-cx="profile-status"] {
+    width: 100%;
+  }
+}
+
+[data-dashboard] [data-cx="profile"][data-state="load-error"] {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}

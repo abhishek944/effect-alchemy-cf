@@ -5,6 +5,12 @@ const defaults = {
   DEV_ACCESS_EMAILS: "",
   AUTH_BASE_URL: "",
   ALLOW_PRODUCTION: "false",
+  CHAT_GATEWAY_ID: "",
+  CHAT_MODEL_ALLOWLIST: "",
+  BILLING_PROVIDER: "",
+  BILLING_PRODUCTS: "{}",
+  DODO_ACCOUNT_ID: "",
+  POLAR_ACCOUNT_ID: "",
 };
 const files = ["dev", "prod"].map((stage) => new URL(`.env.${stage}`, import.meta.url));
 const template = [
@@ -16,7 +22,19 @@ const template = [
 
 if (process.argv.includes("--init")) {
   for (const file of files) {
-    if (!existsSync(file)) writeFileSync(file, template, { flag: "wx", mode: 0o600 });
+    if (!existsSync(file)) {
+      writeFileSync(file, template, { flag: "wx", mode: 0o600 });
+    } else {
+      const content = readFileSync(file, "utf8");
+      const current = parseEnv(content);
+      const missing = Object.entries(defaults).filter(([key]) => !(key in current));
+      if (missing.length > 0) {
+        const additions = missing
+          .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+          .join("\n");
+        writeFileSync(file, `${content.trimEnd()}\n${additions}\n`, { mode: 0o600 });
+      }
+    }
   }
 }
 

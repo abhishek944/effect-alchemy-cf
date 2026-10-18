@@ -70,6 +70,9 @@
                   "@starter/auth/*",
                   "@starter/api/*",
                   "@starter/infra/*",
+                  "@starter/integrations",
+                  "@starter/integrations/*",
+                  "**/packages/integrations/**",
                   "@alchemy.run/*"
                 ],
                 "message": "Keep cloud credentials and server code out of the browser."
