@@ -6,11 +6,13 @@ import { Config, Effect, Redacted } from "effect";
 import { serviceName } from "../../../service.config.ts";
 import { chatWorkerSource } from "./chat-objects-entry.ts";
 import { ChatFilesBucket } from "./chat-resources.ts";
+import { OfficeStorage } from "./office-resources.ts";
 
 export const workerOptions = Effect.gen(function* () {
   if (globalThis.__ALCHEMY_RUNTIME__) return {};
   const stack = yield* Stack;
   const chatFiles = yield* ChatFilesBucket;
+  const office = yield* OfficeStorage;
   const modelAllowlist = yield* Config.String("CHAT_MODEL_ALLOWLIST").pipe(Config.withDefault(""));
   const { dev: local } = yield* AlchemyContext;
   const production = stack.stage === "prod";
@@ -98,6 +100,10 @@ export const workerOptions = Effect.gen(function* () {
       CHAT_GATEWAY_ID: chatGatewayId,
       CHAT_MODEL_ALLOWLIST: modelAllowlist,
       CHAT_FILES: chatFiles,
+      OFFICE_D1: office.database,
+      OFFICE_R2: office.bucket,
+      // Operator-supplied immutable application image (host + fixed job entries).
+      OFFICE_IMAGE_REF: Config.String("OFFICE_IMAGE_REF"),
       // Speech is nonproduction-only; production binds no audio credential.
       ...(!production
         ? {

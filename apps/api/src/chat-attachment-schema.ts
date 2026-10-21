@@ -12,11 +12,13 @@
  */
 import { Schema } from "effect";
 import { DomainUuid, IsoTimestamp } from "./chat-capabilities.ts";
+import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "./chat-office-media.ts";
 
 export const MAX_ATTACHMENTS_PER_MESSAGE = 5;
 export const MAX_IMAGE_BYTES = 10_485_760;
 export const MAX_IMAGE_PIXELS = 16_000_000;
 export const MAX_TEXT_FILE_BYTES = 1_048_576;
+export const MAX_OFFICE_BYTES = 10_485_760;
 export const MAX_MESSAGE_ATTACHMENT_BYTES = 20_971_520;
 export const MAX_QUOTED_TEXT_CHARS = 100_000;
 export const MAX_EXCERPT_CHARS = 2_000;
@@ -34,7 +36,7 @@ const Pixel = Schema.Number.check(
 );
 const unique = (values: readonly string[]): boolean => new Set(values).size === values.length;
 
-export const FILE_KINDS = ["image", "text"] as const;
+export const FILE_KINDS = ["image", "text", "office"] as const;
 export const FileKind = Schema.Literals(FILE_KINDS);
 export type FileKind = typeof FileKind.Type;
 
@@ -42,9 +44,13 @@ export const FILE_STATES = ["uploading", "ready", "failed", "expired", "unavaila
 export const FileState = Schema.Literals(FILE_STATES);
 export type FileState = typeof FileState.Type;
 
-/** Allowlisted media families: the three image formats plus UTF-8 text and JSON. */
+/** Allowlisted image, UTF-8 text/JSON and the three supported Office containers. */
 export const FileMediaType = Schema.String.check(
-  Schema.isPattern(/^(image\/(jpeg|png|webp)|application\/json|text\/[a-z0-9][a-z0-9.+-]{0,63})$/),
+  Schema.isPattern(
+    new RegExp(
+      `^(image\\/(jpeg|png|webp)|${OFFICE_MEDIA_PATTERN}|application\\/json|text\\/[a-z0-9][a-z0-9.+-]{0,63})$`,
+    ),
+  ),
 );
 export type FileMediaType = typeof FileMediaType.Type;
 
@@ -76,7 +82,7 @@ export const AttachmentReferences = Schema.Array(AttachmentId).check(
 export type AttachmentReferences = typeof AttachmentReferences.Type;
 
 const maxBytesFor = (kind: FileKind): number =>
-  kind === "image" ? MAX_IMAGE_BYTES : MAX_TEXT_FILE_BYTES;
+  kind === "image" ? MAX_IMAGE_BYTES : kind === "office" ? MAX_OFFICE_BYTES : MAX_TEXT_FILE_BYTES;
 
 /** Safe display metadata for one owner- and chat-scoped original. */
 export const FileDescriptor = Schema.Struct({
@@ -97,12 +103,16 @@ export const FileDescriptor = Schema.Struct({
   Schema.makeFilter((file) => {
     if (file.byteSize > maxBytesFor(file.kind)) return false;
     if ((file.kind === "image") !== file.mediaType.startsWith("image/")) return false;
+    if (file.kind === "office" && !isOfficeMediaType(file.mediaType)) return false;
+    if (file.kind !== "office" && isOfficeMediaType(file.mediaType)) return false;
     if (file.width !== null && file.height !== null && file.width * file.height > MAX_IMAGE_PIXELS)
       return false;
     if (file.state !== "ready") return true;
-    return file.kind === "image"
-      ? file.width !== null && file.height !== null && file.excerpt === null
-      : file.excerpt !== null && file.width === null && file.height === null;
+    if (file.kind === "image")
+      return file.width !== null && file.height !== null && file.excerpt === null;
+    if (file.kind === "office")
+      return file.width === null && file.height === null && file.excerpt === null;
+    return file.excerpt !== null && file.width === null && file.height === null;
   }),
 );
 export type FileDescriptor = typeof FileDescriptor.Type;

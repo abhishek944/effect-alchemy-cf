@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
-import { chatPath, isChatLanding } from "@/lib/chat-route";
+import { chatPath, chatIdFromPath, isChatLanding } from "@/lib/chat-route";
 import { navigate } from "@/lib/router";
 import { useChatSelection } from "./use-chat-selection";
 import { ChatStoreContext, type ChatStoreValue, type PendingSend } from "@/lib/chat-store-context";
@@ -11,7 +11,8 @@ import { useChatPreferences } from "./use-chat-preferences";
 import { useChatSend } from "./use-chat-send";
 import { useChatStop } from "./use-chat-stop";
 import { useChatStream } from "./use-chat-stream";
-import { useChatUsage } from "./use-chat-usage";
+import { useChatStoreUsage } from "./use-chat-store-usage";
+import { useChatReferenceDrafts } from "./use-chat-reference-drafts";
 import { useOperationReceipt } from "./use-operation-receipt";
 import { useChatMetadataRefresh } from "./use-chat-metadata-refresh";
 import { useSendAcceptance } from "./use-send-acceptance";
@@ -48,9 +49,25 @@ export default function ChatStoreProvider({
 
   const preferences = useChatPreferences(selectedId);
   const stagedFiles = useChatFiles(selectedId);
+  const referenceDrafts = useChatReferenceDrafts({
+    chatId: selectedId,
+    scope: `${generation}:${reloadKey}`,
+    active:
+      selectedId !== null && (chatIdFromPath(pathname) === selectedId || isChatLanding(pathname)),
+    archived: chats.find((chat) => chat.id === selectedId)?.archived ?? true,
+    lockedIds:
+      pendingSend?.chatId === selectedId && pendingSend.phase !== "accepted"
+        ? (pendingSend.frozen?.references ?? [])
+        : [],
+    staged: stagedFiles.files,
+    model: preferences.entry,
+    reportError: setActionError,
+  });
+  const references = referenceDrafts.references;
   const { acceptFiles, onAccepted, settle, acknowledgeOperations } = useSendAcceptance(
     pendingSend,
     stagedFiles.commit,
+    referenceDrafts.commit,
     setPendingSend,
   );
   const attachment = `${generation}:${reloadKey}`;
@@ -60,25 +77,7 @@ export default function ChatStoreProvider({
     connectionError,
   } = useChatStream(selectedId, attachment, settle);
   useChatMetadataRefresh(liveSnapshot, refreshList);
-  const usageState = useChatUsage(
-    selectedId,
-    Boolean(liveSnapshot?.isRunning),
-    attachment,
-    preferences.selection?.model ?? null,
-    liveSnapshot?.usageRevision ?? null,
-    liveSnapshot?.history.ceilingEntryId ?? null,
-  );
-  /** Model-mismatch recovery: refresh authoritative preferences, then usage. */
-  const retryPreferences = preferences.retry;
-  const reloadUsage = usageState.reload;
-  const reconcileUsage = useCallback(() => {
-    reloadUsage();
-    retryPreferences();
-  }, [reloadUsage, retryPreferences]);
-  const usage = useMemo(
-    () => ({ ...usageState, reconcile: reconcileUsage }),
-    [usageState, reconcileUsage],
-  );
+  const usage = useChatStoreUsage(selectedId, liveSnapshot, attachment, preferences);
 
   /** Latest catalog rename/archive/title wins until a newer event carries metadata. */
   const snapshot = useMemo<ChatSnapshot | null>(() => {
@@ -113,6 +112,7 @@ export default function ChatStoreProvider({
     selection: preferences.selection,
     selectionReady: preferences.selectionReady,
     stagedFiles,
+    references,
     acceptFiles,
     refreshList,
     setActionError,
@@ -145,6 +145,7 @@ export default function ChatStoreProvider({
       creating,
       preferences,
       stagedFiles,
+      references,
       usage,
       select,
       startNewChat,
@@ -176,6 +177,7 @@ export default function ChatStoreProvider({
       creating,
       preferences,
       stagedFiles,
+      references,
       usage,
       select,
       startNewChat,

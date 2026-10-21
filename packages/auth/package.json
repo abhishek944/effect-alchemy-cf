@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/auth.ts",
     "./database": "./src/database.ts",
+    "./office-session": "./src/office-session.ts",
     "./admin-users": "./src/admin-users.ts",
     "./cloudflare": "./src/cloudflare.ts",
     "./billing-store": "./src/billing-store.ts",

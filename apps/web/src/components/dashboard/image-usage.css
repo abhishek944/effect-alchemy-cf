@@ -1,0 +1,109 @@
+/* Accounting grows naturally; the owning popup remeasures and these regions only bound scrolling. */
+[data-dashboard] [data-cx="usage-details"]:has([data-cx="image-usage"]) {
+  max-height: min(360px, 55dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+[data-dashboard] [data-cx="usage-details"]:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+[data-dashboard] [data-cx="image-usage"] {
+  min-width: 0;
+  margin: 10px 0 0;
+  padding: 8px 0 2px;
+  border-top: 1px solid var(--cx-line);
+  color: var(--cx-text);
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+}
+/* Empty/loading/error states stay compact while expanded evidence remains scroll-bounded. */
+[data-dashboard] [data-cx="image-usage"][data-bounded="true"] {
+  max-height: min(192px, 32dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+[data-dashboard] [data-cx="image-usage"]:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+[data-dashboard] [data-cx="image-usage"] h3 {
+  margin: 0 8px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+[data-dashboard] [data-cx="image-usage"] [data-cx="usage-detail-row"] {
+  align-items: start;
+  gap: 8px;
+}
+[data-dashboard] [data-cx="image-usage"] dt {
+  flex: 1;
+  min-width: 0;
+}
+[data-dashboard] [data-cx="image-usage"] dd {
+  min-width: 0;
+  max-width: 48%;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="image-cost-note"] {
+  display: block;
+  margin: 6px 8px;
+  color: var(--cx-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="image-cost-recent"] {
+  margin: 8px;
+}
+[data-dashboard] [data-cx="image-cost-request"] {
+  margin: 8px 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="image-usage"] summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="image-usage"] summary small {
+  display: block;
+  margin-left: 12px;
+  font-size: 10px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="image-usage"] summary:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 1px;
+}
+[data-dashboard] [data-cx="image-cost-read-error"] {
+  margin: 8px;
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="image-cost-read-error"] :is(span, small) {
+  display: block;
+}
+[data-dashboard] [data-cx="image-cost-read-error"] button {
+  min-height: 28px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--cx-text);
+  text-decoration: underline;
+  font-size: 11px;
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="image-cost-read-error"] button:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+[data-dashboard] [data-cx="usage-tray"][data-native-unavailable="true"] {
+  flex-wrap: wrap;
+}
+[data-dashboard] [data-cx="image-usage-native-status"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-basis: 100%;
+}

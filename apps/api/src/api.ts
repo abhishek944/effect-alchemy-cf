@@ -7,6 +7,9 @@ import { AdminApi } from "./admin-api.ts";
 import { Authentication } from "./authentication.ts";
 import { ChatApi } from "./chat-api.ts";
 import { ChatCapabilitiesApi } from "./chat-capability-api.ts";
+import { ImagePreferencesApi } from "./chat-image-preference-public.ts";
+import { ChatLibraryApi } from "./chat-library-public.ts";
+import { ChatImageReadsApi } from "./chat-image-read-public.ts";
 import { BillingApi, BillingAdminApi } from "./billing-api.ts";
 import { User } from "./model.ts";
 
@@ -26,6 +29,9 @@ export class Api extends HttpApi.make("starter")
   .add(AdminApi)
   .add(ChatApi)
   .add(ChatCapabilitiesApi)
+  .add(ImagePreferencesApi)
+  .add(ChatLibraryApi)
+  .add(ChatImageReadsApi)
   .add(AccountApi)
   .add(BillingApi)
   .add(BillingAdminApi) {}

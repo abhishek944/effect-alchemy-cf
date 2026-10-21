@@ -1,0 +1,64 @@
+[data-cx="chat-library-query"] {
+  padding: 12px 20px;
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+[data-cx="chat-library-search"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border: 1px solid var(--cx-line);
+  border-radius: 8px;
+  background: var(--cx-sidebar);
+  flex: 1;
+  min-width: 0;
+}
+[data-cx="chat-library-search"] svg {
+  width: 16px;
+  height: 16px;
+  color: var(--cx-muted);
+}
+[data-cx="chat-library-search"] input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cx-text);
+  font-size: 12px;
+}
+[data-cx="chat-library-search"]:focus-within {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+[data-cx="chat-library-filters"] {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+[data-cx="chat-library-filters"] select {
+  border: 1px solid var(--cx-line);
+  border-radius: 7px;
+  background: var(--cx-sidebar);
+  color: var(--cx-text);
+  padding: 6px;
+  min-width: 0;
+  font-size: 11px;
+}
+@container (max-width: 580px) {
+  [data-cx="chat-library-query"] {
+    flex-wrap: wrap;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  [data-cx="chat-library-search"] {
+    flex-basis: 100%;
+  }
+  [data-cx="chat-library-filters"] {
+    width: 100%;
+  }
+  [data-cx="chat-library-filters"] select {
+    flex: 1;
+  }
+}

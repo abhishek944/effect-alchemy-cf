@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { ImagePanel, previewMeta, TextPanel } from "./chat-file-panels";
+import { ImagePanel, OfficePanel, previewMeta, TextPanel } from "./chat-file-panels";
 import type { PreviewFile, PreviewLease } from "./chat-file-preview-types";
 import "./chat-file-preview.css";
 
@@ -138,7 +138,9 @@ export default function ChatFilePreview({
       <p data-cx="preview-meta">{previewMeta(active)}</p>
       <section
         data-cx="preview-panel"
-        aria-label={`${active.kind === "image" ? "Image" : "Text"} content for ${active.name}`}
+        aria-label={`${
+          active.kind === "image" ? "Image" : active.kind === "office" ? "Office" : "Text"
+        } content for ${active.name}`}
       >
         {active.kind === "image" ? (
           <ImagePanel
@@ -147,6 +149,8 @@ export default function ChatFilePreview({
             allowed={allowed}
             withheldReason={withheldReason}
           />
+        ) : active.kind === "office" ? (
+          <OfficePanel file={active} />
         ) : (
           <TextPanel
             file={active}

@@ -1,6 +1,7 @@
 import type { ChatUsageAmount } from "@/lib/chat-capability-usage-types";
 import PopupPanel from "./chat-popup";
 import { exactTokens, formatCost } from "./chat-usage-format";
+import { ImageUsageResponse } from "./image-usage-response";
 
 function Row({ label, value, note }: { label: string; value: string; note?: string | undefined }) {
   return (
@@ -70,6 +71,7 @@ export default function ChatMessageFacts({
           ? `${usage.provenance} · ${usage.completeness}. Reasoning is part of output; cache read is part of input.`
           : "Reported counters only; unavailable values are never estimated here."}
       </p>
+      <ImageUsageResponse pending={pending} />
     </PopupPanel>
   );
 }

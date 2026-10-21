@@ -27,6 +27,8 @@ export type AccountPreparationDeps = {
   readonly accountOperation: (operationId: string) => AccountOperationView | null;
   readonly catalog: (ownerId: string) => ChatCatalogStub;
   readonly storage: () => Storage;
+  readonly dispatchGate: (operationId: string) => Promise<void>;
+  readonly dispatchFence: (operationId: string) => string | null;
 };
 
 /** Owner is the server-assigned object name, confirmed against the durable binding. */
@@ -45,6 +47,8 @@ export const accountToolAccess = (deps: AccountPreparationDeps): AccountToolAcce
   return {
     resolveOperation: (api, context) => resolveAccountOperation(api, context, access),
     catalog: (ownerId) => deps.catalog(ownerId),
+    dispatchGate: (operationId) => deps.dispatchGate(operationId),
+    dispatchFence: (operationId) => deps.dispatchFence(operationId),
   };
 };
 

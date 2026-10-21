@@ -40,14 +40,25 @@ export default function PopupPanel({
   useLayoutEffect(() => {
     const panel = panelRef.current;
     if (!panel || !anchor) return undefined;
+    const pane = anchor.closest('[data-cx="chat-page"]') ?? document.documentElement;
+    let frame: number | null = null;
+    let disposed = false;
     const measure = () => {
-      const pane = anchor.closest('[data-cx="chat-page"]') ?? document.documentElement;
+      frame = null;
+      if (disposed || !panel.isConnected || !anchor.isConnected) return;
       const paneRect = pane.getBoundingClientRect();
       const rect = anchor.getBoundingClientRect();
       const available = Math.max(160, paneRect.width - INSET * 2);
       const effective = Math.min(width, available);
+      const oldWidth = panel.style.width;
+      const oldMaxHeight = panel.style.maxHeight;
+      const scrollTop = panel.scrollTop;
       panel.style.width = `${effective}px`;
+      // Placement uses natural height, not the previous cap that could alternate cap/none.
+      panel.style.maxHeight = "none";
       const height = panel.offsetHeight;
+      panel.style.width = oldWidth;
+      panel.style.maxHeight = oldMaxHeight;
       const left = Math.min(
         Math.max(rect.left, paneRect.left + INSET),
         Math.max(paneRect.left + INSET, paneRect.right - INSET - effective),
@@ -62,16 +73,28 @@ export default function PopupPanel({
           maxHeight = `${Math.max(120, paneRect.bottom - INSET - top)}px`;
         }
       }
-      panel.style.width = "";
       panel.style.setProperty("--popup-left", `${left}px`);
       panel.style.setProperty("--popup-top", `${top}px`);
       panel.style.setProperty("--popup-width", `${effective}px`);
       panel.style.setProperty("--popup-max-height", maxHeight);
+      panel.scrollTop = scrollTop;
       panel.dataset.placed = "true";
     };
+    const schedule = () => {
+      if (!disposed && frame === null) frame = requestAnimationFrame(measure);
+    };
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    const observer = new ResizeObserver(schedule);
+    observer.observe(panel);
+    observer.observe(pane);
+    observer.observe(anchor);
+    window.addEventListener("resize", schedule);
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [anchor, width]);
 
   const close = useCallback(

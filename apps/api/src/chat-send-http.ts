@@ -25,6 +25,8 @@ import {
 } from "./chat-model.ts";
 import { CurrentUser } from "./model.ts";
 import { sendIdentity } from "./chat-send-identity.ts";
+import { publicApplicationOrigin } from "./chat-public-origin.ts";
+import { chatOfficeSessionHeaders, CurrentChatOfficeSession } from "./chat-office-session.ts";
 
 export const sendChat = (
   ns: Context.Service.Shape<typeof ChatNamespaces>,
@@ -32,11 +34,16 @@ export const sendChat = (
   payload: typeof SendMessage.Type,
 ) =>
   Effect.gen(function* () {
-    if (payload.text.length === 0 && payload.attachments.length === 0)
+    if (
+      payload.text.length === 0 &&
+      payload.attachments.length === 0 &&
+      (payload.references?.length ?? 0) === 0
+    )
       return yield* Effect.fail(new ChatInvalid({ message: "Write a message or attach a file." }));
     const identity = sendIdentity(payload);
     const user = yield* CurrentUser;
     const chat = yield* requireOwnedChat(ns, user.id, id);
+    const applicationOrigin = yield* publicApplicationOrigin;
     if (chat.archived) return yield* Effect.fail(new ChatArchived());
     // Metadata only: an unavailable object cannot fail the accepted message, and
     // the bounded title model call runs in the catalog after this quick claim.
@@ -126,9 +133,12 @@ export const sendChat = (
     // Catalog identity is still checked/repaired; native accepted retries never recharge or resubmit.
     if (decision.reason === "duplicate" && !nativeAccepted)
       return yield* Effect.fail(new ChatUnavailable());
+    const officeHeaders = chatOfficeSessionHeaders(yield* CurrentChatOfficeSession);
     const call = yield* doCall(ns.conversation(user.id, chat.id), "POST", "/messages", payload, {
       ...chatHeader(chat),
       "x-chat-owner": user.id,
+      "x-chat-application-origin": applicationOrigin,
+      ...officeHeaders,
     });
     if (call.status === 409 || call.status === 400) {
       yield* doCall(ns.catalog(user.id), "POST", "/release", {
@@ -146,13 +156,26 @@ export const sendChat = (
           }),
         );
       }
+      if (call.status === 409) {
+        const fenced = decodeOption(
+          Schema.Struct({
+            message: Schema.String.check(Schema.isMaxLength(256)),
+            code: Schema.optional(Schema.String.check(Schema.isMaxLength(64))),
+          }),
+          call.body,
+        );
+        if (fenced?.code === "skills_not_admitted")
+          return yield* Effect.fail(new ChatInvalid({ message: fenced.message }));
+      }
       return yield* Effect.fail(new ChatBusy());
     }
     if (call.status === 503) {
       const failure = decodeOption(SendFailure, call.body);
       if (failure?.code === "inference_unconfigured")
         return yield* Effect.fail(new InferenceUnavailable({ message: INFERENCE_UNCONFIGURED }));
-      return yield* Effect.fail(new SubmissionFailed({ message: SUBMISSION_FAILED }));
+      return yield* Effect.fail(
+        new SubmissionFailed({ message: failure?.message ?? SUBMISSION_FAILED }),
+      );
     }
     if (call.status !== 200) return yield* Effect.fail(new ChatUnavailable());
     const accepted = yield* decodeOrFail(AcceptedResponse, call.body);

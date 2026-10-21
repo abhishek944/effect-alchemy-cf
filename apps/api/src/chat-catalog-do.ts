@@ -1,6 +1,8 @@
 import { Agent, type AgentContext } from "agents";
 import { ChatAdmission } from "./chat-admission.ts";
 import { ChatCatalogData } from "./chat-catalog-data.ts";
+import { catalogAdmissionRequest } from "./chat-catalog-admission-http.ts";
+import { ChatCatalogImages } from "./chat-catalog-images.ts";
 import { ChatCatalogFiles, type CatalogFilesEnv } from "./chat-catalog-files.ts";
 import { catalogPreferences, configuredChatPolicy } from "./chat-preferences-http.ts";
 import { ChatPreferencesStore } from "./chat-preferences-store.ts";
@@ -8,21 +10,14 @@ import { profileCatalog, sweepProfileObjects } from "./profile-catalog-http.ts";
 import { ProfileObjects } from "./profile-objects.ts";
 import { reconcileAvatarOrphans } from "./profile-orphan-scan.ts";
 import { ProfileStore } from "./profile-store.ts";
+import { handleSkillsCatalog } from "./skills-catalog-http.ts";
+import { SkillsCatalog } from "./skills-store.ts";
 import { themeCatalog } from "./theme-catalog-http.ts";
 import { ThemeStore } from "./theme-store.ts";
-import { resolveChatSelectionValue, type StageModelPolicy } from "./chat-capability-policy.ts";
+import type { StageModelPolicy } from "./chat-capability-policy.ts";
 import { ChatCatalogSpeech } from "./chat-catalog-speech.ts";
 import { reportTitleUsage } from "./chat-external-usage.ts";
-import {
-  CatalogAdmitBody,
-  CatalogOperationBody,
-  CatalogReleaseBody,
-  CatalogTitleClaimBody,
-  decodeOption,
-  digestText,
-  json,
-  requestBody,
-} from "./chat-internal.ts";
+import { json } from "./chat-internal.ts";
 import { type ChatTitleEnv, ChatTitles } from "./chat-title-store.ts";
 
 type ChatEnv = ChatTitleEnv & CatalogFilesEnv & { CHAT_MODEL_ALLOWLIST?: string };
@@ -38,6 +33,8 @@ export class ChatCatalog extends Agent<ChatEnv> {
   private readonly policy: StageModelPolicy;
   private readonly data: ChatCatalogData;
   private readonly files: ChatCatalogFiles;
+  private readonly images: ChatCatalogImages;
+  private readonly skills: SkillsCatalog;
   private readonly speech: ChatCatalogSpeech;
 
   constructor(ctx: AgentContext, env: ChatEnv) {
@@ -56,6 +53,8 @@ export class ChatCatalog extends Agent<ChatEnv> {
       (id) => this.data.find(id),
       () => this.data.ownerId(),
     );
+    this.images = new ChatCatalogImages(ctx, env.CHAT_FILES, (id) => this.data.find(id));
+    this.skills = new SkillsCatalog({ storage: ctx.storage, scope: this.ctx.id.toString() });
     this.titles = new ChatTitles({
       db: ctx.storage.sql,
       env,
@@ -95,26 +94,28 @@ export class ChatCatalog extends Agent<ChatEnv> {
       scope: this.ctx.id.toString(),
     });
   }
+  /** Abandoned unpublished skill versions, retired to permanent markers. */
+  async expireSkillObjects(): Promise<void> {
+    await this.skills.cleanup(this.env.CHAT_FILES, Date.now());
+  }
 
   async onRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const route = `${request.method} ${url.pathname}`;
     try {
       const owner = request.headers.get("x-chat-owner");
       if (owner !== null && !(await this.data.bindOwner(owner)))
         return json({ message: "Invalid owner" }, 400);
-      if (
-        url.pathname.startsWith("/files/") &&
-        request.method === "POST" &&
-        this.env.CHAT_FILES !== undefined
-      )
-        await this.scheduleEvery(3600, "expireChatFiles");
-      if (
-        (url.pathname === "/profile/photo" || url.pathname === "/profile/photo/reserve") &&
-        request.method === "POST" &&
-        this.env.CHAT_FILES !== undefined
-      )
-        await this.scheduleEvery(3600, "expireProfileObjects");
+      if (request.method === "POST" && this.env.CHAT_FILES !== undefined) {
+        if (url.pathname.startsWith("/files/")) await this.scheduleEvery(3600, "expireChatFiles");
+        if (url.pathname === "/profile/photo" || url.pathname === "/profile/photo/reserve")
+          await this.scheduleEvery(3600, "expireProfileObjects");
+        if (
+          url.pathname === "/skills/reserve" ||
+          url.pathname === "/skills/publish" ||
+          url.pathname === "/skills/cancel"
+        )
+          await this.scheduleEvery(3600, "expireSkillObjects");
+      }
       const profile = await profileCatalog(
         request,
         this.profile,
@@ -125,8 +126,12 @@ export class ChatCatalog extends Agent<ChatEnv> {
       if (profile !== null) return profile;
       const theme = await themeCatalog(request, this.themes);
       if (theme !== null) return theme;
+      const images = await this.images.handle(request);
+      if (images !== null) return images;
       const files = await this.files.handle(request);
       if (files !== null) return files;
+      const skills = await handleSkillsCatalog(this.skills, request, this.env.CHAT_FILES);
+      if (skills !== null) return skills;
       const speech = await this.speech.handle(request);
       if (speech !== null) return speech;
       const preferences = await catalogPreferences(
@@ -138,56 +143,12 @@ export class ChatCatalog extends Agent<ChatEnv> {
       if (preferences !== null) return preferences;
       const metadata = await this.data.handle(request, this.titles);
       if (metadata !== null) return metadata;
-      switch (route) {
-        case "POST /title/claim": {
-          const body = decodeOption(CatalogTitleClaimBody, await requestBody(request));
-          if (body === null) return json({ message: "Invalid request" }, 400);
-          if (!resolveChatSelectionValue(this.policy, body.selection).ok)
-            return json({ claimed: false });
-          const claimed = await this.titles.claim(
-            body.operationId,
-            body.id,
-            body.text,
-            body.identity,
-            body.selection,
-          );
-          return json({ claimed });
-        }
-        case "POST /admit": {
-          const body = decodeOption(CatalogAdmitBody, await requestBody(request));
-          if (body === null) return json({ message: "Invalid request" }, 400);
-          // No await between authoritative archive read and synchronous admission.
-          const textHash = await digestText(body.identity);
-          const chat = this.data.find(body.chatId);
-          if (chat === null) return json({ message: "Not found" }, 404);
-          if (chat.archived)
-            return json({ admitted: false, duplicate: false, reason: "archived", attemptId: null });
-          return json(
-            this.admission.admit(
-              body.operationId,
-              body.chatId,
-              textHash,
-              body.now,
-              body.nativeAccepted,
-              body.attemptId,
-            ),
-          );
-        }
-        case "POST /finalize": {
-          const body = decodeOption(CatalogOperationBody, await requestBody(request));
-          if (body === null) return json({ message: "Invalid request" }, 400);
-          this.admission.finalize(body.operationId, body.now);
-          return json({ ok: true });
-        }
-        case "POST /release": {
-          const body = decodeOption(CatalogReleaseBody, await requestBody(request));
-          if (body === null) return json({ message: "Invalid request" }, 400);
-          this.admission.release(body.operationId, body.attemptId);
-          return json({ ok: true });
-        }
-        default:
-          return json({ message: "Not found" }, 404);
-      }
+      return await catalogAdmissionRequest(request, {
+        admission: this.admission,
+        data: this.data,
+        titles: this.titles,
+        policy: this.policy,
+      });
     } catch {
       return json({ message: "Chat catalog unavailable" }, 503);
     }

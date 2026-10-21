@@ -1,0 +1,142 @@
+[data-dashboard] [data-cx="image-preferences"] {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+[data-dashboard] [data-cx="image-preferences-intro"] {
+  margin: -20px 0 28px;
+  color: var(--cx-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+[data-dashboard] [data-cx="image-preferences"] [data-cx="settings-row"] {
+  align-items: center;
+}
+
+[data-dashboard] [data-cx="image-preferences-select"] {
+  height: 36px;
+  min-width: 148px;
+  max-width: 260px;
+  border: 1px solid var(--cx-hover);
+  border-radius: 10px;
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font-size: 13px;
+}
+
+[data-dashboard] [data-cx="image-preferences-select"]:disabled {
+  opacity: 0.65;
+}
+
+[data-dashboard] [data-cx="image-preferences"] :is(select, button):focus-visible {
+  outline: 2px solid var(--cx-text);
+  outline-offset: 2px;
+}
+
+[data-dashboard] [data-cx="image-preferences"] [data-cx="settings-card"] {
+  overflow: visible;
+}
+
+[data-dashboard] [data-cx="image-preferences-disclosure"] {
+  margin: 20px 0 0;
+  color: var(--cx-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] {
+  max-width: 100%;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--cx-line);
+  border-radius: 12px;
+  background: var(--cx-sidebar);
+  color: var(--cx-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] strong {
+  display: block;
+  color: var(--cx-text);
+  font-weight: 500;
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] p {
+  margin: 5px 0;
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] button {
+  min-height: 34px;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: 10px;
+  background: var(--cx-composer);
+  color: var(--cx-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] button:hover:not(:disabled) {
+  background: var(--cx-hover);
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+[data-dashboard] [data-cx="image-preferences-notice"] + [data-cx="image-preferences-disclosure"] {
+  margin-top: 18px;
+}
+
+[data-dashboard] [data-cx="image-preferences-status"] {
+  display: block;
+  min-height: 18px;
+  margin-top: 16px;
+  color: var(--cx-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@container (max-width: 520px) {
+  [data-dashboard] [data-cx="image-preferences"] [data-cx="settings-row"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px;
+  }
+
+  [data-dashboard] [data-cx="image-preferences"] [data-cx="settings-row-control"] {
+    align-items: stretch;
+    max-width: none;
+    text-align: left;
+  }
+
+  [data-dashboard] [data-cx="image-preferences"] [data-cx="select-wrap"],
+  [data-dashboard] [data-cx="image-preferences-select"] {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  [data-dashboard] [data-cx="settings-panel"]:has(> [data-cx="image-preferences"]) {
+    padding: 36px 20px 60px;
+  }
+
+  [data-dashboard]
+    [data-cx="settings-panel"]:has(> [data-cx="image-preferences"])
+    [data-cx="settings-title"] {
+    font-size: 26px;
+  }
+
+  [data-dashboard] [data-cx="image-preferences-intro"],
+  [data-dashboard] [data-cx="image-preferences"] [data-cx="settings-row-description"] {
+    font-size: 13px;
+  }
+}

@@ -19,6 +19,10 @@ export type AccountToolAccess = {
     context: ToolContext,
   ) => Promise<ResolveResult>;
   readonly catalog: (ownerId: string) => ChatCatalogStub;
+  /** Full async integrity check for the exact proven operation. */
+  readonly dispatchGate: (operationId: string) => Promise<void>;
+  /** Synchronous final known-failure fence; null means allowed. */
+  readonly dispatchFence: (operationId: string) => string | null;
 };
 
 /** Transport failure or cancellation after dispatch: the outcome is unknown. */

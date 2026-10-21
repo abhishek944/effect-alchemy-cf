@@ -6,6 +6,7 @@
  * decisions) stays in `chat-files-catalog.ts`.
  */
 import type { ChatSqlStorage } from "./chat-ledger.ts";
+import { ensureImageStorageSchema } from "./chat-image-storage-table.ts";
 import { CHAT_FILE_STATES, type ChatFileRecord, type ChatFileState } from "./chat-files-model.ts";
 
 type RawFileRow = {
@@ -50,11 +51,15 @@ export const COLUMNS = [
 
 const asState = (value: string): ChatFileState =>
   CHAT_FILE_STATES.find((state) => state === value) ?? "deleted";
+const asKind = (value: string): ChatFileRecord["kind"] => {
+  if (value === "image" || value === "text" || value === "office") return value;
+  throw new Error("Unknown chat file kind");
+};
 
 const toRecord = (row: RawFileRow): ChatFileRecord => ({
   fileId: row.file_id,
   chatId: row.chat_id,
-  kind: row.kind === "image" ? "image" : "text",
+  kind: asKind(row.kind),
   name: row.name,
   mediaType: row.media_type,
   byteSize: row.byte_size,
@@ -72,6 +77,7 @@ const toRecord = (row: RawFileRow): ChatFileRecord => ({
 });
 
 export const ensureChatFilesSchema = (db: ChatSqlStorage): void => {
+  ensureImageStorageSchema(db);
   db.exec(
     `CREATE TABLE IF NOT EXISTS files (
       file_id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, kind TEXT NOT NULL,
@@ -122,7 +128,8 @@ export const usageBytes = (db: ChatSqlStorage): UsageBytes =>
       `SELECT
         COALESCE(SUM(CASE WHEN state = 'accepted' THEN byte_size ELSE 0 END), 0) AS retained,
         COALESCE(SUM(CASE WHEN state = 'ready' THEN byte_size ELSE 0 END), 0) AS staged,
-        COALESCE(SUM(CASE WHEN state = 'uploading' THEN byte_size ELSE 0 END), 0) AS reserved,
+        (COALESCE(SUM(CASE WHEN state = 'uploading' THEN byte_size ELSE 0 END), 0)
+          + (SELECT COALESCE(SUM(remaining_bytes), 0) FROM image_calls)) AS reserved,
         COALESCE(SUM(CASE WHEN state = 'failed'
             OR (state IN ('deleted', 'expired') AND expires_at IS NOT NULL)
           THEN byte_size ELSE 0 END), 0) AS pending

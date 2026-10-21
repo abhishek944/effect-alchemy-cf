@@ -10,7 +10,9 @@ import {
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PIXELS,
   MAX_TEXT_FILE_BYTES,
+  MAX_OFFICE_BYTES,
 } from "@/lib/chat-capability-file-types";
+import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "@/lib/chat-office-media";
 import {
   isBoundedText,
   isIsoTimestamp,
@@ -21,8 +23,9 @@ import { isRecord, isUuid } from "@/lib/chat-validate-base";
 
 export { MAX_ATTACHMENTS_PER_MESSAGE } from "@/lib/chat-capability-file-types";
 
-const mediaTypePattern =
-  /^(image\/(jpeg|png|webp)|application\/json|text\/[a-z0-9][a-z0-9.+-]{0,63})$/;
+const mediaTypePattern = new RegExp(
+  `^(image\\/(jpeg|png|webp)|${OFFICE_MEDIA_PATTERN}|application\\/json|text\\/[a-z0-9][a-z0-9.+-]{0,63})$`,
+);
 const fileStates: readonly ChatFileDescriptor["state"][] = [
   "uploading",
   "ready",
@@ -46,7 +49,7 @@ export function parseAttachmentIds(value: unknown): string[] | null {
 
 export function parseChatFileDescriptor(value: unknown): ChatFileDescriptor | null {
   if (!isRecord(value) || !isUuid(value.id) || !isUuid(value.chatId)) return null;
-  if (value.kind !== "image" && value.kind !== "text") return null;
+  if (value.kind !== "image" && value.kind !== "text" && value.kind !== "office") return null;
   if (!listed(fileStates, value.state)) return null;
   if (!isBoundedText(value.name, 255) || value.name.length < 1) return null;
   if (value.name.trim() !== value.name || value.name.includes("/") || value.name.includes("\\"))
@@ -57,7 +60,14 @@ export function parseChatFileDescriptor(value: unknown): ChatFileDescriptor | nu
   }
   if (!isBoundedText(value.mediaType, 128) || !mediaTypePattern.test(value.mediaType)) return null;
   if ((value.kind === "image") !== value.mediaType.startsWith("image/")) return null;
-  const maxBytes = value.kind === "image" ? MAX_IMAGE_BYTES : MAX_TEXT_FILE_BYTES;
+  if (value.kind === "office" && !isOfficeMediaType(value.mediaType)) return null;
+  if (value.kind !== "office" && isOfficeMediaType(value.mediaType)) return null;
+  const maxBytes =
+    value.kind === "image"
+      ? MAX_IMAGE_BYTES
+      : value.kind === "office"
+        ? MAX_OFFICE_BYTES
+        : MAX_TEXT_FILE_BYTES;
   if (!isPositiveCount(value.byteSize) || value.byteSize > maxBytes) return null;
   if (value.width !== null && !isPositiveCount(value.width)) return null;
   if (value.height !== null && !isPositiveCount(value.height)) return null;
@@ -74,7 +84,9 @@ export function parseChatFileDescriptor(value: unknown): ChatFileDescriptor | nu
     const complete =
       value.kind === "image"
         ? value.width !== null && value.height !== null && value.excerpt === null
-        : value.excerpt !== null && value.width === null && value.height === null;
+        : value.kind === "office"
+          ? value.width === null && value.height === null && value.excerpt === null
+          : value.excerpt !== null && value.width === null && value.height === null;
     if (!complete) return null;
   }
   return {

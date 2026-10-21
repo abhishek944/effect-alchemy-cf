@@ -2,16 +2,14 @@ import { useEffect, useMemo, type RefObject } from "react";
 import {
   AssistantRuntimeProvider,
   MessageNotSentError,
-  ThreadPrimitive,
   useExternalStoreRuntime,
   type AppendMessage,
 } from "@assistant-ui/react";
 import { useChatStore } from "@/lib/chat-store-context";
 import { useSpeechAdapters } from "@/lib/chat-speech-adapters";
-import ChatFooter from "./chat-footer";
-import ChatMessageList from "./chat-message-list";
-import { HistoryControls, HistoryUiProvider } from "./chat-history-ui";
-import ChatNotices from "./chat-notices";
+import { HistoryUiProvider } from "./chat-history-ui";
+import { ChatConversationView } from "./chat-conversation-view";
+import { ChatReferenceFocusProvider } from "./chat-reference-focus";
 import { appendText, convertMessage, projectMessages } from "./chat-projection";
 import { composerSendLabel, composerStatus } from "./chat-composer-status";
 import { useChatFacts } from "./use-chat-facts";
@@ -55,7 +53,7 @@ export default function ChatConversation({
     [history.rows, history.live, history.textFor, pending, selectedId],
   );
   const voice = useSpeechAdapters({ chatId: () => selectedId });
-  const { attachmentsFor, factsFor, stampFor } = useChatFacts(
+  const { attachmentsFor, generatedFor, factsFor, stampFor } = useChatFacts(
     history.rows,
     history.live,
     Boolean(snapshot?.isRunning),
@@ -141,6 +139,8 @@ export default function ChatConversation({
       value={{
         textFor: history.textForById,
         attachmentsFor,
+        generatedFor,
+        active,
         stampFor,
         factsFor,
         working,
@@ -148,52 +148,33 @@ export default function ChatConversation({
       }}
     >
       <VoiceProvider bundle={voice}>
-        <AssistantRuntimeProvider runtime={runtime}>
-          <ThreadPrimitive.Root data-cx="chat-thread" aria-label="Assistant chat">
-            <ThreadPrimitive.Viewport data-cx="chat-viewport">
-              <HistoryControls
-                gap={history.gap}
-                newerUnloaded={history.newerUnloaded}
-                hasOlder={history.hasOlder}
-                loading={history.loading}
-                error={history.error}
-                onLoadOlder={history.loadOlder}
-                onLoadMissing={history.loadMissing}
-                onReturnToLatest={history.returnToLatest}
-              />
-              <ChatMessageList />
-              {snapshot && history.rows.length + history.live.length === 0 && !running && (
-                <p data-cx="chat-empty">
-                  {archived ? "This chat has no messages." : "Ask anything to start this chat."}
-                </p>
-              )}
-            </ThreadPrimitive.Viewport>
-            {runError && (
-              <p data-cx="chat-error" role="alert">
-                {runError}
-              </p>
-            )}
-            {store.actionError && (
-              <p data-cx="chat-error" data-kind="action" role="alert">
-                {store.actionError}
-              </p>
-            )}
-            <ChatNotices chatId={chatId} otherTitle={otherTitle} />
-            <ChatFooter
-              archived={archived}
-              chatId={chatId}
+        <ChatReferenceFocusProvider>
+          <AssistantRuntimeProvider runtime={runtime}>
+            <ChatConversationView
+              history={history}
+              snapshot={snapshot}
               running={running}
-              status={status}
-              announcement={announcement}
-              announce={!runError && pending?.phase !== "failed"}
-              stopLabel={stopLabel}
-              sendLabel={sendLabel}
-              stopping={stoppingHere}
-              onStop={onStop}
-              onRetry={connection === "error" ? store.reload : undefined}
+              archived={archived}
+              runError={runError}
+              actionError={store.actionError}
+              chatId={chatId}
+              otherTitle={otherTitle}
+              footer={{
+                archived,
+                chatId,
+                running,
+                status,
+                announcement,
+                announce: !runError && pending?.phase !== "failed",
+                stopLabel,
+                sendLabel,
+                stopping: stoppingHere,
+                onStop,
+                onRetry: connection === "error" ? store.reload : undefined,
+              }}
             />
-          </ThreadPrimitive.Root>
-        </AssistantRuntimeProvider>
+          </AssistantRuntimeProvider>
+        </ChatReferenceFocusProvider>
       </VoiceProvider>
     </HistoryUiProvider>
   );

@@ -13,6 +13,7 @@ import { hasOperation, type PendingSend } from "@/lib/chat-store-context";
 export function useSendAcceptance(
   pendingSend: PendingSend | null,
   commit: (chatId: string, attachments: readonly string[]) => void,
+  commitReferences: (chatId: string, references: readonly string[]) => void,
   setPendingSend: Dispatch<SetStateAction<PendingSend | null>>,
 ) {
   const pendingRef = useRef<PendingSend | null>(pendingSend);
@@ -20,12 +21,22 @@ export function useSendAcceptance(
     pendingRef.current = pendingSend;
   }, [pendingSend]);
 
-  /** Releases exactly the named frozen files for a confirmed acceptance. */
+  const released = useRef<string | null>(null);
+  /** One global in-flight send; repeated receipt paths release its tuple only once. */
   const acceptFiles = useCallback(
-    (chatId: string, attachments: readonly string[]) => {
+    (
+      chatId: string,
+      operationId: string,
+      attachments: readonly string[],
+      references: readonly string[],
+    ) => {
+      const key = `${chatId}/${operationId}`;
+      if (released.current === key) return;
+      released.current = key;
       commit(chatId, attachments);
+      commitReferences(chatId, references);
     },
-    [commit],
+    [commit, commitReferences],
   );
 
   /** Releases the current pending operation's files; terminal also clears it. */
@@ -33,13 +44,18 @@ export function useSendAcceptance(
     (chatId: string, operationId: string, terminal: boolean) => {
       const current = pendingRef.current;
       if (!current || current.chatId !== chatId || current.operationId !== operationId) return;
-      commit(chatId, current.frozen?.attachments ?? []);
+      acceptFiles(
+        chatId,
+        operationId,
+        current.frozen?.attachments ?? [],
+        current.frozen?.references ?? [],
+      );
       if (terminal)
         setPendingSend((cur) =>
           cur?.chatId === chatId && cur.operationId === operationId ? null : cur,
         );
     },
-    [commit, setPendingSend],
+    [acceptFiles, setPendingSend],
   );
   const acceptRef = useRef(acceptCurrent);
   useEffect(() => {

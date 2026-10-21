@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useAui, useAuiState } from "@assistant-ui/react";
 import { useChatStore, type ChatSelectionControls } from "@/lib/chat-store-context";
+import { useChatSkillsReadiness } from "./use-chat-skills-readiness";
 
 const DICTATION_REASON = "Stop or cancel dictation before sending.";
 
@@ -50,9 +51,13 @@ export function useChatSubmit({
   const dictation = useAuiState((state) => state.composer.dictation);
   const connected = Boolean(store.snapshot) && store.connection === "live";
   const archived = Boolean(store.snapshot?.chat.archived);
+  // Known-unavailable skills block Send; an unknown probe never does.
+  const skills = useChatSkillsReadiness(chatId, connected && !archived);
   const busy = running || stopping || Boolean(store.pendingSend);
   const currentReadiness = () =>
-    connected && !archived ? chatReadinessReason(store.preferences) : null;
+    connected && !archived
+      ? (chatReadinessReason(store.preferences) ?? skills.blockedReason)
+      : null;
   const readiness = busy ? null : currentReadiness();
   const [attemptedReadiness, setAttemptedReadiness] = useState<string | null>(null);
   // Transient readiness never occupies or clears the persistent operation-error slot.
@@ -64,15 +69,22 @@ export function useChatSubmit({
     !busy &&
     !dictation &&
     store.preferences.selectionReady &&
-    (text.trim().length > 0 || store.stagedFiles.files.length > 0) &&
-    !store.stagedFiles.blockedReason;
-  const blockedReason = dictation ? DICTATION_REASON : readiness;
+    (text.trim().length > 0 ||
+      store.stagedFiles.files.length > 0 ||
+      store.references.ids.length > 0) &&
+    !store.stagedFiles.blockedReason &&
+    !store.references.blockedReason &&
+    skills.blockedReason === null;
+  const blockedReason = dictation
+    ? DICTATION_REASON
+    : (readiness ?? store.references.blockedReason ?? store.stagedFiles.blockedReason);
 
   /** Shared by the form and the button; never clears the draft unless dispatched. */
   const submit = async (): Promise<void> => {
     const composer = aui.composer.getState();
     const draft = composer.text;
-    if (!draft.trim() && store.stagedFiles.files.length === 0) return;
+    if (!draft.trim() && store.stagedFiles.files.length === 0 && store.references.ids.length === 0)
+      return;
     if (composer.dictation) {
       store.reportError(DICTATION_REASON);
       return;
@@ -84,6 +96,8 @@ export function useChatSubmit({
     const unready = currentReadiness();
     if (unready) {
       setAttemptedReadiness(unready);
+      // A blocked send verifies recovery instead of assuming it.
+      if (skills.status === "unavailable") void skills.recheck();
       return;
     }
     const outcome = await store.send(draft, chatId);
@@ -94,5 +108,13 @@ export function useChatSubmit({
     aui.composer.setText("");
   };
 
-  return { submit, canSend, blockedReason, readinessFeedback };
+  return {
+    submit,
+    canSend,
+    blockedReason,
+    readinessFeedback,
+    skillsNotice: skills.blockedReason,
+    skillsChecking: skills.checking,
+    recheckSkills: skills.recheck,
+  };
 }

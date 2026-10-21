@@ -1,0 +1,184 @@
+[data-dashboard] [data-cx="toolbar"]:has([data-cx="workspace-preview-tabs"]) {
+  position: relative;
+}
+[data-dashboard] [data-cx="workspace-preview-tabs"] {
+  position: absolute;
+  top: 5px;
+  left: var(--cx-tabs-left, 0px);
+  width: var(--cx-tabs-width, 0px);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+[data-dashboard] [data-cx="workspace-preview-tabs"][hidden] {
+  display: none;
+}
+[data-dashboard] [data-cx="workspace-tab-list"] {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: calc(100% - 34px);
+  height: 36px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+[data-dashboard] [data-cx="workspace-tab-shell"] {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 34px;
+  min-width: 116px;
+  max-width: 150px;
+  border-radius: 10px;
+  background: transparent;
+}
+[data-dashboard] [data-cx="workspace-tab-shell"][data-active="true"] {
+  min-width: 190px;
+  max-width: 190px;
+  background: var(--cx-canvas);
+}
+[data-dashboard] [data-cx="workspace-tab-shell"][data-kind="image"][data-active="false"] {
+  min-width: 44px;
+  max-width: 44px;
+}
+[data-dashboard] [data-cx="workspace-tab-shell"] > [role="tab"] {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  min-width: 0;
+  padding: 4px 8px;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="workspace-tab-shell"] > [role="tab"] > [data-cx="workspace-tab-label"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="workspace-tab-shell"] :is(svg, img) {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 3px;
+}
+[data-dashboard] [data-cx="workspace-tab-shell"] [data-cx="chat-library-thumbnail"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+[data-dashboard]
+  [data-kind="image"][data-active="false"]
+  > [role="tab"]
+  > [data-cx="workspace-tab-label"],
+[data-dashboard] [data-kind="image"][data-active="false"] > [data-cx="workspace-tab-close"] {
+  display: none;
+}
+[data-dashboard] :is([data-cx="workspace-tab-close"], [data-cx="workspace-tab-add"]) {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="workspace-tab-close"] {
+  margin-right: 3px;
+}
+[data-dashboard] [data-cx="workspace-tab-add"] {
+  width: 30px;
+  height: 30px;
+}
+[data-dashboard] [data-cx="workspace-tab-add"] svg {
+  width: 17px;
+  height: 17px;
+}
+[data-dashboard] [data-cx="workspace-tab-close"] svg {
+  width: 14px;
+  height: 14px;
+}
+[data-dashboard] [data-cx="workspace-preview-tabs"] button {
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="workspace-preview-tabs"] button:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="workspace-preview-tabs"] button:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+[data-dashboard] [data-cx="workspace-tools"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 24px;
+}
+[data-dashboard] [data-cx="workspace-tools"] h2 {
+  margin: 0 0 14px;
+  color: var(--cx-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+[data-dashboard] [data-cx="workspace-tools"] button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 168px;
+  min-height: 120px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cx-sidebar);
+  color: var(--cx-text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="workspace-tools"] button:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="workspace-tools"] button:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 2px;
+}
+[data-dashboard] [data-cx="workspace-tools"] svg {
+  width: 26px;
+  height: 26px;
+}
+@media (max-width: 760px) {
+  [data-dashboard]:has([data-cx="workspace-preview-tabs"]:not([hidden]))
+    [data-cx="toolbar-chat-title"] {
+    visibility: hidden;
+  }
+  [data-dashboard] [data-cx="workspace-tab-shell"] {
+    min-width: 106px;
+    max-width: 125px;
+  }
+  [data-dashboard] [data-cx="workspace-tab-shell"][data-active="true"] {
+    min-width: 120px;
+    max-width: 135px;
+  }
+  [data-dashboard] [data-cx="workspace-tab-shell"][data-kind="image"][data-active="false"] {
+    min-width: 34px;
+    max-width: 34px;
+  }
+}

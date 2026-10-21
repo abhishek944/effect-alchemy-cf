@@ -5,7 +5,9 @@ import ChatComposerActions from "./chat-composer-actions";
 import ChatComposerFiles from "./chat-composer-files";
 import { useVoice } from "./chat-voice-bridge";
 import { useChatSubmit } from "./use-chat-submit";
+import ChatSkillsReadinessNotice from "./chat-skills-readiness-notice";
 import VoiceRecorder from "./voice-recorder";
+import { ChatReferenceInput } from "./chat-reference-input";
 import "./chat-composer.css";
 
 type Props = {
@@ -31,11 +33,15 @@ export default function ChatComposer({ chatId, running, stopping, ...actions }: 
   const { stagedFiles } = store;
   const voice = useVoice();
   const [dragging, setDragging] = useState(false);
-  const { submit, canSend, blockedReason, readinessFeedback } = useChatSubmit({
-    chatId,
-    running,
-    stopping,
-  });
+  const {
+    submit,
+    canSend,
+    blockedReason,
+    readinessFeedback,
+    skillsNotice,
+    skillsChecking,
+    recheckSkills,
+  } = useChatSubmit({ chatId, running, stopping });
 
   const addFiles = (files: File[]) => {
     if (files.length > 0) stagedFiles.add(files);
@@ -53,61 +59,62 @@ export default function ChatComposer({ chatId, running, stopping, ...actions }: 
   };
 
   return (
-    <div
-      data-cx="composer-shell"
-      data-dragging={dragging ? "true" : undefined}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={onDrop}
-      onPaste={onPaste}
-    >
-      <ComposerPrimitive.Root
-        data-cx="chat-composer"
-        onSubmit={(event) => {
-          // Preventing the native handler replaces assistant-ui's empty runtime
-          // attachment gate, which could not see the composer's staged files.
+    <>
+      <ChatSkillsReadinessNotice
+        message={skillsNotice}
+        checking={skillsChecking}
+        onRetry={() => void recheckSkills()}
+      />
+      <div
+        data-cx="composer-shell"
+        data-dragging={dragging ? "true" : undefined}
+        onDragOver={(event) => {
           event.preventDefault();
-          void submit();
+          setDragging(true);
         }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onPaste={onPaste}
       >
-        <ChatComposerFiles
-          files={stagedFiles.files}
-          lockedIds={
-            store.pendingSend?.chatId === chatId
-              ? (store.pendingSend.frozen?.attachments ?? [])
-              : []
-          }
-          notice={stagedFiles.notice}
-          onRemove={stagedFiles.remove}
-          onRetry={stagedFiles.retry}
-          onClearNotice={stagedFiles.clearNotice}
-        />
-        {voice && <VoiceRecorder bundle={voice.bundle} />}
-        <ComposerPrimitive.Input
-          data-cx="chat-input"
-          aria-label="Message your assistant"
-          aria-describedby="chat-connection"
-          placeholder="Message your assistant"
-          rows={2}
-        />
-        <ChatComposerActions
-          {...actions}
-          running={running}
-          stopping={stopping}
-          submit={submit}
-          canSend={canSend}
-          blockedReason={blockedReason}
-          addFiles={addFiles}
-        />
-        {readinessFeedback && (
-          <p data-cx="setup-error" role="alert">
-            {readinessFeedback}
-          </p>
-        )}
-      </ComposerPrimitive.Root>
-    </div>
+        <ComposerPrimitive.Root
+          data-cx="chat-composer"
+          onSubmit={(event) => {
+            // Preventing the native handler replaces assistant-ui's empty runtime
+            // attachment gate, which could not see the composer's staged files.
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <ChatComposerFiles
+            files={stagedFiles.files}
+            lockedIds={
+              store.pendingSend?.chatId === chatId
+                ? (store.pendingSend.frozen?.attachments ?? [])
+                : []
+            }
+            notice={stagedFiles.notice}
+            onRemove={stagedFiles.remove}
+            onRetry={stagedFiles.retry}
+            onClearNotice={stagedFiles.clearNotice}
+          />
+          {voice && <VoiceRecorder bundle={voice.bundle} />}
+          <ChatReferenceInput chatId={chatId} />
+          <ChatComposerActions
+            {...actions}
+            running={running}
+            stopping={stopping}
+            submit={submit}
+            canSend={canSend}
+            blockedReason={blockedReason}
+            addFiles={addFiles}
+          />
+          {readinessFeedback && (
+            <p data-cx="setup-error" role="alert">
+              {readinessFeedback}
+            </p>
+          )}
+        </ComposerPrimitive.Root>
+      </div>
+    </>
   );
 }

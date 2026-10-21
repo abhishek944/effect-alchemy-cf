@@ -1,0 +1,14 @@
+@import "@univerjs/design/lib/index.css";
+@import "@univerjs/ui/lib/index.css";
+@import "@univerjs/sheets-ui/lib/index.css";
+@import "@univerjs/docs-ui/lib/index.css";
+@import "@univerjs-pro/slides-ui/lib/index.css";
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}

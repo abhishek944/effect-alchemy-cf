@@ -6,6 +6,7 @@ import Tooltip from "./tooltip";
 type Props = {
   title: string;
   chatTitle?: ReactNode;
+  previewTabs?: ReactNode;
   sidebarOpen: boolean;
   rightOpen: boolean;
   fullView: boolean;
@@ -47,6 +48,7 @@ function Control({
 export default function Toolbar({
   title,
   chatTitle,
+  previewTabs,
   sidebarOpen,
   rightOpen,
   fullView,
@@ -73,6 +75,7 @@ export default function Toolbar({
           <span>{title}</span>
         </div>
       )}
+      {previewTabs}
       <div data-cx="toolbar-actions">
         <Control
           label={fullView ? "Exit full view" : "Enter full view"}

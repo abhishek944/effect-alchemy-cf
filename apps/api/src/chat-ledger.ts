@@ -1,6 +1,6 @@
-import type { AgentContext } from "agents";
+import type { SqlStorage } from "@cloudflare/workers-types";
 
-export type ChatSqlStorage = AgentContext["storage"]["sql"];
+export type ChatSqlStorage = SqlStorage;
 
 export type LedgerStatus = "tentative" | "accepted" | "done" | "unanswered" | "stopped";
 export type LatestOperation = { readonly operationId: string; readonly status: LedgerStatus };

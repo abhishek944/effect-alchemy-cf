@@ -40,6 +40,14 @@ export function projectMessages(
       id: message.id,
       role: message.role,
       content: textFor(message).text,
+      // Empty tool-calling assistant rows still own their persisted image receipts.
+      metadata: {
+        custom: {
+          hasGeneratedFiles: message.hasGeneratedFiles,
+          attemptOf: message.attemptOf,
+          incomplete: message.incomplete,
+        },
+      },
       ...(createdAt ? { createdAt } : {}),
     };
   });

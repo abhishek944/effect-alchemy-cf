@@ -149,3 +149,15 @@ export function previewMeta(file: PreviewFile): string {
     file.width && file.height ? ` · ${file.width}×${file.height}` : ""
   }${file.readOnly ? " · Read-only sent original" : " · Local until Send"}`;
 }
+
+/** Office originals are opaque until Send; this panel never reads binary bytes. */
+export function OfficePanel({ file }: { file: PreviewFile }) {
+  return (
+    <div data-cx="preview-status">
+      <strong>Office file original</strong>
+      <span>
+        {file.name} · {formatFileSize(file.byteSize)} · uploads unchanged on Send.
+      </span>
+    </div>
+  );
+}

@@ -1,13 +1,8 @@
-import { useMemo } from "react";
 import { MessagePartPrimitive, MessagePrimitive, useAuiState } from "@assistant-ui/react";
-import { chatAttachmentUrl } from "@/lib/chat-capability-api";
-import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
-import { formatFileSize } from "@/lib/chat-file-local";
 import { ChatMarkdown } from "./chat-markdown";
 import { MessageText, useHistoryText } from "./chat-history-ui";
 import { AssistantActions, UserActions } from "./chat-message-actions";
-import ChatFilePreview, { type PreviewFile } from "./chat-file-preview";
-import { usePreviewReservation } from "./use-preview-reservation";
+import { SentSavedFiles, AssistantSavedFiles } from "./chat-message-files";
 import "./chat-feedback.css";
 import "./chat-message-actions.css";
 
@@ -19,77 +14,28 @@ function useOptimistic(): boolean {
   });
 }
 
-function previewOf(file: ChatFileDescriptor): PreviewFile {
-  const url = chatAttachmentUrl(file.chatId, file.id);
-  return {
-    id: file.id,
-    name: file.name,
-    kind: file.kind,
-    mediaType: file.mediaType,
-    byteSize: file.byteSize,
-    width: file.width,
-    height: file.height,
-    url: file.kind === "image" ? url : null,
-    loadText:
-      file.kind === "text"
-        ? async () => {
-            const response = await fetch(url, { credentials: "same-origin" });
-            if (!response.ok) throw new Error(`Preview failed (${response.status}).`);
-            return response.text();
-          }
-        : null,
-    reserved: false,
-    reservationKey: null,
-    readOnly: true,
-  };
-}
-
-/** Read-only originals attached to a sent user message; preview loads on demand. */
-function SentFiles() {
-  const messageId = useAuiState((state) => state.message.id);
-  const { attachmentsFor } = useHistoryText();
-  const files = attachmentsFor(messageId);
-  const previews = useMemo(() => files.map(previewOf), [files]);
-  const preview = usePreviewReservation(previews);
-  if (files.length === 0) return null;
-  return (
-    <div data-cx="sent-files">
-      {files.map((file, index) => (
-        <div key={file.id} data-cx="sent-file-row">
-          <span data-cx="sent-file-body">
-            <span data-cx="sent-file-name">{file.name}</span>
-            <small data-cx="sent-file-meta">
-              {formatFileSize(file.byteSize)}
-              {file.width && file.height ? ` · ${file.width}×${file.height}` : ""}
-            </small>
-          </span>
-          <button
-            type="button"
-            data-cx="file-action"
-            aria-label={`Preview ${file.name}`}
-            onClick={() => preview.select(index)}
-          >
-            Preview
-          </button>
-        </div>
-      ))}
-      {preview.index !== null && (
-        <ChatFilePreview
-          files={previews}
-          index={preview.index}
-          allowed={preview.allowed}
-          withheldReason={preview.withheldReason}
-          lease={preview.lease}
-          onIndexChange={(index) => preview.select(index)}
-          onClose={preview.close}
-        />
-      )}
-    </div>
-  );
-}
-
 function UserText() {
   return <MessagePartPrimitive.Text component="p" smooth={false} />;
+}
+
+/** Truthful per-answer marker; never hides the partial text it describes. */
+function IncompleteNote() {
+  const incomplete = useAuiState((state) => {
+    const metadata = state.message.metadata;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
+    const custom: unknown = Reflect.get(metadata, "custom");
+    if (!custom || typeof custom !== "object" || Array.isArray(custom)) return false;
+    return Reflect.get(custom, "incomplete") === true;
+  });
+  if (!incomplete) return null;
+  return (
+    <span
+      data-cx="chat-incomplete"
+      title="This answer could not load its skills and is incomplete."
+    >
+      Incomplete
+    </span>
+  );
 }
 
 const assistantParts = { Text: ChatMarkdown };
@@ -126,7 +72,7 @@ export function UserMessage() {
   return (
     <MessagePrimitive.Root data-cx="chat-message" data-role="user">
       <MessagePrimitive.Parts components={userParts} />
-      {!optimistic && <SentFiles />}
+      {!optimistic && <SentSavedFiles />}
       <MessageTail />
       <UserActions optimistic={optimistic} />
     </MessagePrimitive.Root>
@@ -143,7 +89,9 @@ export function ChatMessage({ messageRole = "assistant" }: { messageRole?: "user
       <MessageTail />
       {messageRole === "assistant" && (
         <>
+          <IncompleteNote />
           <WorkingDots />
+          <AssistantSavedFiles />
           <AssistantActions optimistic={optimistic} />
         </>
       )}

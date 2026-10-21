@@ -1,0 +1,53 @@
+{
+  "name": "@starter/office-server",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/core/index.ts",
+    "./ports": "./src/ports/index.ts",
+    "./executor": "./src/executor/index.ts",
+    "./jobs": "./src/jobs/index.ts",
+    "./job-worker": "./src/jobs/worker.ts",
+    "./cli": "./src/cli/index.ts",
+    "./native-protocol": "./src/protocol/index.ts",
+    "./native-remote": "./src/storage-remote/index.ts",
+    "./native-codec": "./src/storage-remote/node-codec.ts",
+    "./native-doc-read": "./src/storage-remote/doc-read.ts",
+    "./render-page": "./src/render-page/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.1",
+    "@starter/office-contract": "workspace:*",
+    "@univer-cli/content-execution": "1.0.3",
+    "@univer-cli/content-inspection": "1.0.3",
+    "@univer-cli/headless-univer": "1.0.3",
+    "@univer-cli/unit-screenshot": "1.0.3",
+    "@univer-cli/univer-collaboration-runtime": "1.0.3",
+    "@univer-cli/univer-render-page": "1.0.3",
+    "@univer-cli/univer-render-runtime": "1.0.3",
+    "@univerjs-pro/collaboration": "1.0.3",
+    "@univerjs-pro/collaboration-endpoint": "1.0.3",
+    "@univerjs-pro/collaboration-service": "1.0.3",
+    "@univerjs-pro/collaboration-transport-node": "1.0.3",
+    "@univerjs-pro/collaboration-worktree-endpoint": "1.0.3",
+    "@univerjs-pro/collaboration-worktree-service": "1.0.3",
+    "@univerjs-pro/docs-history": "1.0.3",
+    "@univerjs-pro/edit-history": "1.0.3",
+    "@univerjs-pro/exchange-node": "1.0.3",
+    "@univerjs-pro/sheets-history": "1.0.3",
+    "@univerjs-pro/slides-history": "1.0.3",
+    "@univerjs/core": "1.0.3",
+    "@univerjs/protocol": "1.0.3",
+    "effect": "4.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.6"
+  }
+}

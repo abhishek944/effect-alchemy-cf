@@ -12,19 +12,15 @@ import {
   hasOperation,
   type ChatConnection,
   type ChatFilesControls,
-  type OperationRef,
   type PendingSend,
   type SendOutcome,
   type SendSnapshot,
   type StopTarget,
 } from "@/lib/chat-store-context";
 import { dispatchSend } from "./chat-dispatch";
+import type { ChatReferences } from "./use-chat-references";
+import { useChatSendRecovery } from "./use-chat-send-recovery";
 import { sendBlockReason, textTooLong } from "./chat-send-policy";
-const matches = (pending: PendingSend | null, expected: OperationRef): pending is PendingSend =>
-  pending !== null &&
-  pending.chatId === expected.chatId &&
-  pending.operationId === expected.operationId;
-const BUSY = "Another send is waiting for Retry or Discard before a new message can be sent.";
 const STOPPING = "An answer is being stopped. Try again once it is acknowledged.";
 type Options = {
   pendingSend: PendingSend | null;
@@ -35,8 +31,14 @@ type Options = {
   selection: ChatSelection | null;
   selectionReady: boolean;
   stagedFiles: ChatFilesControls;
+  references: ChatReferences;
   /** Idempotent release of one operation's frozen files (pending stays). */
-  acceptFiles: (chatId: string, attachments: readonly string[]) => void;
+  acceptFiles: (
+    chatId: string,
+    operationId: string,
+    attachments: readonly string[],
+    references: readonly string[],
+  ) => void;
   refreshList: () => void;
   setActionError: Dispatch<SetStateAction<string | null>>;
   setPendingSend: Dispatch<SetStateAction<PendingSend | null>>;
@@ -51,6 +53,7 @@ export function useChatSend({
   selection,
   selectionReady,
   stagedFiles,
+  references,
   acceptFiles,
   refreshList,
   setActionError,
@@ -59,10 +62,12 @@ export function useChatSend({
   const inFlightRef = useRef<string | null>(null);
   const pendingRef = useRef<PendingSend | null>(pendingSend);
   const filesRef = useRef(stagedFiles);
+  const referencesRef = useRef(references);
   useLayoutEffect(() => {
     pendingRef.current = pendingSend;
     filesRef.current = stagedFiles;
-  }, [pendingSend, stagedFiles]);
+    referencesRef.current = references;
+  }, [pendingSend, stagedFiles, references]);
   const failPending = useCallback(
     (operationId: string, message: string) => {
       setPendingSend((current) =>
@@ -87,7 +92,7 @@ export function useChatSend({
       }
       // Confirmed acceptance releases only this operation's files; the
       // accepted/waiting record (and its Stop identity) stays until evidence settles it.
-      acceptFiles(chatId, frozen.attachments);
+      acceptFiles(chatId, operationId, frozen.attachments, frozen.references ?? []);
       setPendingSend((current) => {
         if (current?.operationId !== operationId) return current;
         const latest = snapshotRef.current;
@@ -128,12 +133,14 @@ export function useChatSend({
         connection,
         selectionReady: selectionReady && Boolean(selection),
         files,
+        references: referencesRef.current,
         text: trimmed,
       });
       if (reason || !selection) return blocked(reason ?? STOPPING);
       const frozen: SendSnapshot = {
         selection,
         attachments: files.files.map((file) => file.id),
+        references: [...referencesRef.current.ids],
       };
       const operationId = newOperationId();
       setPendingSend({
@@ -159,42 +166,15 @@ export function useChatSend({
       submit,
     ],
   );
-  const retrySend = useCallback(
-    async (expected: OperationRef): Promise<SendOutcome> => {
-      const blocked = (message: string): SendOutcome => {
-        setActionError(message);
-        return { status: "blocked", message };
-      };
-      const failed = pendingRef.current;
-      if (stoppingRef.current) return blocked(STOPPING);
-      if (inFlightRef.current) return blocked(BUSY);
-      if (!failed || failed.phase !== "failed") return blocked("Nothing is waiting to be retried.");
-      if (failed.chatId !== expected.chatId || failed.operationId !== expected.operationId)
-        return blocked("This send is no longer waiting to be retried.");
-      if (!failed.frozen)
-        return blocked("This send lost its frozen settings. Discard and send again.");
-      if (selectionRef.current !== failed.chatId)
-        return blocked("This chat is no longer selected. Open it to retry.");
-      setPendingSend((current) =>
-        current?.operationId === failed.operationId
-          ? { ...current, phase: "posting", error: null }
-          : current,
-      );
-      await submit(failed.chatId, failed.text, failed.operationId, failed.frozen);
-      return { status: "dispatched" };
-    },
-    [selectionRef, setActionError, setPendingSend, stoppingRef, submit],
-  );
-  const discardSend = useCallback(
-    (expected: OperationRef) => {
-      // Chat and exact operation must match before any file mutation.
-      const current = pendingRef.current;
-      if (!matches(current, expected)) return;
-      setActionError(null);
-      filesRef.current.discard(expected.chatId, current.frozen?.attachments ?? []);
-      setPendingSend((cur) => (matches(cur, expected) ? null : cur));
-    },
-    [setActionError, setPendingSend],
-  );
+  const { retrySend, discardSend } = useChatSendRecovery({
+    pendingRef,
+    filesRef,
+    selectionRef,
+    stoppingRef,
+    inFlightRef,
+    submit,
+    setActionError,
+    setPendingSend,
+  });
   return { send, retrySend, discardSend };
 }

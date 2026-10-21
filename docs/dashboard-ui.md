@@ -27,8 +27,8 @@ color pairing is 4.29:1, not a blanket contrast-compliance guarantee.
   survive reload and email sign-in. `/` and `/dashboard` open the remembered chat
   or the first saved chat and replace the landing URL.
   Signed-out visitors see the existing signup/signin screen.
-- `/settings/general`, `/settings/profile`, `/settings/appearance` and
-  `/settings/account`: grouped settings inside the same dark frame.
+- `/settings/general`, `/settings/skills`, `/settings/profile`, `/settings/appearance`,
+  `/settings/images` and `/settings/account`: grouped settings in the same frame.
 - `/admin`: existing separate admin portal with its access checks preserved.
 
 Dashboard navigation lists private saved chats, rename and archive/unarchive
@@ -64,7 +64,7 @@ The same-origin Pi Durable
 backend supplies saved transcripts and streamed snapshots. The composer shows
 connection/recovery state, GPT-6 Luna with high thinking, and explicit Stop/Retry
 controls. File and voice controls follow their configured capability gates; see
-[private files](chat-files.md) and [voice](chat-voice.md). No API credential enters
+[private files](chat-files.md), [Skills](skills.md) and [voice](chat-voice.md). No API credential enters
 the browser. Inference requires explicit Gateway/BYOK setup and is remotely
 billable even on localhost. See [Pi chat setup and acceptance](pi-chat.md).
 The message renderer supports user bubbles and assistant prose on the canvas.
@@ -96,6 +96,15 @@ history without reloading the document. Internal dashboard links preserve the
 shell and session, including modifier-click/new-tab behavior. Chat drafts and
 pane choices survive Home/Settings switches in the current page; reloads still
 clear drafts. Home and Settings each retain their own right-pane layout.
+
+The existing top toolbar contains neutral right-pane tabs: Files keeps its folder
+icon and text, images open exact preview tabs, and + creates an empty Tools tab.
+Files search/filter/sort the saved collection, independent of loaded messages;
+images appear above details, while nonimages are download-only. Compact message
+file actions prepare exact @ references without sending; upper-draft chips retain
+identity and offer read-only recovery. Image preferences live only in Settings →
+Images. Existing Response facts and Cost details keep image costs separate from
+text/voice totals. See [chat images](chat-images.md) for behavior and limits.
 Tooltip bubbles use the native top layer on hover or keyboard focus, escape panel
 clipping, and dismiss on click, Escape, resize or external scroll. Internal tooltip
 scrolling remains available. Unsupported browsers retain accessible descriptions.

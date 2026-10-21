@@ -34,6 +34,15 @@ export const userDetailsTool = (access: AccountToolAccess): ToolRegistration =>
       const resolved = await access.resolveOperation(api, context);
       abortIfRequested(context);
       if (!resolved.ok) return unavailable(resolved.message);
+      try {
+        await access.dispatchGate(resolved.value.operationId);
+      } catch (error) {
+        return unavailable(
+          error instanceof Error
+            ? error.message
+            : "The skill state for this request is unavailable.",
+        );
+      }
       const response = await catalogCall(
         access,
         resolved.value.ownerId,

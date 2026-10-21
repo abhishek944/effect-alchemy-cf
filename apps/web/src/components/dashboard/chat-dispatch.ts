@@ -25,6 +25,7 @@ export async function dispatchSend(
       text,
       selection: frozen.selection,
       attachments: frozen.attachments,
+      references: frozen.references ?? [],
     });
     return receipt.accepted
       ? { ok: true }

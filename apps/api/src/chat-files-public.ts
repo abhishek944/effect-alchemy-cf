@@ -8,7 +8,8 @@ import type { ChatFilesFailure } from "./chat-files-model.ts";
 /** Safe, non-diagnostic messages; the code remains the machine contract. */
 export const PUBLIC_MESSAGES: Record<ChatFilesFailure, string> = {
   invalid_input: "That attachment request was not valid.",
-  unsupported_type: "That file type is not supported. Attach JPEG, PNG, WebP, or UTF-8 text/code.",
+  unsupported_type:
+    "That file type is not supported. Attach JPEG, PNG, WebP, UTF-8 text/code, or XLSX/DOCX/PPTX.",
   invalid_content: "The file content does not match its name or could not be read safely.",
   file_too_large: "The file is larger than the allowed limit for its type.",
   too_many_files: "Attach at most 5 files to one message.",

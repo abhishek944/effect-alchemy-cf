@@ -1,4 +1,5 @@
 import { Auth } from "@starter/auth";
+import { OfficeSessionEpochs } from "@starter/auth/office-session";
 import { RuntimeContext } from "alchemy";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
@@ -6,6 +7,7 @@ import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatForbidden } from "./chat-model.ts";
 import { AuthenticationUnavailable, CurrentUser, Unauthorized } from "./model.ts";
+import { CurrentChatOfficeSession, makeChatOfficeSessionCapture } from "./chat-office-session.ts";
 
 /**
  * Authenticates chat traffic, rejects untrusted cross-origin mutations and
@@ -13,7 +15,7 @@ import { AuthenticationUnavailable, CurrentUser, Unauthorized } from "./model.ts
  */
 export class ChatAuthentication extends HttpApiMiddleware.Service<
   ChatAuthentication,
-  { provides: CurrentUser }
+  { provides: CurrentUser | CurrentChatOfficeSession }
 >()("starter/ChatAuthentication", {
   error: [Unauthorized, ChatForbidden, AuthenticationUnavailable],
 }) {
@@ -21,6 +23,7 @@ export class ChatAuthentication extends HttpApiMiddleware.Service<
     ChatAuthentication,
     Effect.gen(function* () {
       const auth = yield* Auth;
+      const captureOffice = yield* makeChatOfficeSessionCapture;
       return (httpEffect) =>
         Effect.gen(function* () {
           const request = yield* HttpServerRequest.HttpServerRequest;
@@ -35,16 +38,25 @@ export class ChatAuthentication extends HttpApiMiddleware.Service<
             Effect.catchDefect(() => Effect.fail(new AuthenticationUnavailable())),
           );
           if (session === null) return yield* Effect.fail(new Unauthorized());
+          const officeSession =
+            request.method === "POST" &&
+            /^\/api\/chats\/[^/]+\/messages$/.test(request.url.split("?")[0] ?? "")
+              ? yield* captureOffice(
+                  session.user.id,
+                  (yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie)).headers,
+                )
+              : null;
           return yield* Effect.provideService(httpEffect, CurrentUser, {
             id: session.user.id,
             name: session.user.name,
             email: session.user.email,
           }).pipe(
+            Effect.provideService(CurrentChatOfficeSession, officeSession),
             Effect.map((response) =>
               HttpServerResponse.setHeader(response, "cache-control", "no-store"),
             ),
           );
         }).pipe(Effect.provide(RuntimeContext.phantom));
     }),
-  );
+  ).pipe(Layer.provide(OfficeSessionEpochs.layer));
 }

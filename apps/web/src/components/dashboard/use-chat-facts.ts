@@ -28,6 +28,14 @@ export function useChatFacts(rows: ChatMessage[], live: ChatMessage[], running: 
     [rows, live],
   );
 
+  const generatedFor = useCallback(
+    (messageId: string): boolean =>
+      [...rows, ...live].some(
+        (row) => row.id === messageId && row.role === "assistant" && row.hasGeneratedFiles,
+      ),
+    [rows, live],
+  );
+
   const stamps = useMemo(() => {
     const map = new Map<string, string>();
     for (const row of [...rows, ...live]) map.set(row.id, row.createdAt);
@@ -47,5 +55,5 @@ export function useChatFacts(rows: ChatMessage[], live: ChatMessage[], running: 
     [rows, live, lastAssistantId, running],
   );
 
-  return { attachmentsFor, factsFor, stampFor };
+  return { attachmentsFor, generatedFor, factsFor, stampFor };
 }

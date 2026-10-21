@@ -12,11 +12,11 @@ import type { ChatSelection } from "./chat-capabilities.ts";
 import type { ContextUsage } from "./chat-usage-schema.ts";
 
 export const estimateChatContext = (
-  messages: readonly Message[],
+  messages: readonly Message[] | null,
   selection: ChatSelection | null,
 ): ContextUsage => {
   const catalog = selection === null ? null : installedChatModel(selection.model);
-  if (selection === null || catalog === null)
+  if (selection === null || catalog === null || messages === null)
     return { provenance: "unknown", model: null, estimatedTokens: null, contextWindow: null };
   return {
     provenance: "estimated",

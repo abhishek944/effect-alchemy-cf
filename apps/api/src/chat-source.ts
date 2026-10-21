@@ -11,6 +11,7 @@ import {
 } from "./chat-contract.ts";
 import type { Chat, ChatSnapshot } from "./chat-model.ts";
 import { INFERENCE_FAILURE } from "./chat-model.ts";
+import type { SkillRecovery } from "./skills-model.ts";
 import { buildWindow } from "./chat-projection.ts";
 import { type ChatRuntime, PI_BACKGROUND } from "./chat-runtime.ts";
 import { sliceText, textInfo, textPage } from "./chat-text.ts";
@@ -25,8 +26,23 @@ export class ChatSource {
   private ready: Promise<void> | null = null;
   private readonly listeners = new Set<() => void>();
   private readonly runtime: ChatRuntime;
-  constructor(runtime: ChatRuntime) {
+  private readonly recovery: () => SkillRecovery | null;
+  private readonly hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean;
+  private readonly attemptState: (
+    operationId: string,
+  ) => { readonly logicalOperationId: string; readonly incomplete: boolean } | null;
+  constructor(
+    runtime: ChatRuntime,
+    recovery: () => SkillRecovery | null = () => null,
+    hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean = () => false,
+    attemptState: (
+      operationId: string,
+    ) => { readonly logicalOperationId: string; readonly incomplete: boolean } | null = () => null,
+  ) {
     this.runtime = runtime;
+    this.recovery = recovery;
+    this.hasGeneratedFiles = hasGeneratedFiles;
+    this.attemptState = attemptState;
   }
   async initialize(): Promise<void> {
     if (this.ready === null) {
@@ -55,7 +71,6 @@ export class ChatSource {
       }
     }
   }
-
   invalidateUsage(): void {
     this.usageRevision += 1;
     this.publish();
@@ -109,6 +124,8 @@ export class ChatSource {
               operationId: null,
               createdAt: storedMessageTime(partial?.timestamp),
               attachments: [],
+              attemptOf: null,
+              incomplete: false,
               usage: null,
               text: preview.text,
               ...textInfo(chat.id, live.messageId, live.textRevision, preview),
@@ -121,6 +138,7 @@ export class ChatSource {
         : isRunning
           ? null
           : await this.runtime.settlementError();
+    const recovery = this.recovery();
     const selection = await this.runtime.selection();
     const selectedModel = selection === null ? null : installedChatModel(selection.model);
     const base = {
@@ -128,10 +146,11 @@ export class ChatSource {
       messages,
       isRunning,
       activeOperationId: live.operation,
-      error,
+      error: !isRunning && recovery !== null ? recovery.message : error,
       model: selectedModel?.name ?? "Unknown",
       thinking: selection?.effort ?? "Unknown",
       usageRevision: `${this.epoch}:${this.usageRevision}`,
+      skillRecovery: recovery,
       history: { ceilingEntryId: null, through: null, historyCursor: null },
     };
     const window = await buildWindow(
@@ -144,6 +163,8 @@ export class ChatSource {
       FRAME_BYTES - encodedBytes(base) - 64,
       128 - (preview?.visited ?? 0),
       79,
+      this.hasGeneratedFiles,
+      this.attemptState,
     );
     if (live.revision !== this.revision) throw new RefreshFence();
     const result = {

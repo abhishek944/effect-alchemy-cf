@@ -1,4 +1,5 @@
 import type { ChatSnapshot } from "@/lib/chat-api";
+import type { ChatReferences } from "./use-chat-references";
 import type { ChatFilesControls, PendingSend, StopTarget } from "@/lib/chat-store-context";
 
 const BUSY = "Another send is waiting for Retry or Discard before a new message can be sent.";
@@ -27,6 +28,7 @@ export function sendBlockReason(input: {
   connection: string;
   selectionReady: boolean;
   files: ChatFilesControls;
+  references: ChatReferences;
   text: string;
 }): string | null {
   if (!input.selectionMatches) return "This chat is no longer selected. Your draft is kept.";
@@ -40,6 +42,8 @@ export function sendBlockReason(input: {
     return "This chat is archived. Unarchive it to send new messages.";
   if (!input.selectionReady) return NO_SETTINGS;
   if (input.files.blockedReason) return input.files.blockedReason;
-  if (!input.text && input.files.files.length === 0) return "Enter a message before sending.";
+  if (input.references.blockedReason) return input.references.blockedReason;
+  if (!input.text && input.files.files.length === 0 && input.references.ids.length === 0)
+    return "Enter a message before sending.";
   return null;
 }

@@ -11,6 +11,8 @@ type HistoryUiValue = {
   textFor: (messageId: string) => HistoryTextState;
   /** Sent originals of one committed user message; empty when none were sent. */
   attachmentsFor: (messageId: string) => ChatFileDescriptor[];
+  generatedFor: (messageId: string) => boolean;
+  active: boolean;
   /**
    * Raw stored creation timestamp for one message. Empty means unavailable:
    * the runtime's synthesized createdAt is never displayed.
@@ -45,6 +47,8 @@ export function useHistoryText(): HistoryUiValue {
         revision: null,
       }),
       attachmentsFor: () => [],
+      generatedFor: () => false,
+      active: false,
       stampFor: () => "",
       factsFor: () => ({ usage: null, pending: false }),
       working: false,

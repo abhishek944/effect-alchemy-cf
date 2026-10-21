@@ -1,0 +1,30 @@
+{
+  "name": "@starter/office-cloudflare",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./native": "./src/native/index.ts",
+    "./native-doc-read": "./src/doc-read-http.ts",
+    "./metadata": "./src/metadata/index.ts",
+    "./coordinator-control": "./src/metadata/coordinator/index.ts",
+    "./bytes": "./src/bytes/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "3.1.3",
+    "@starter/office-contract": "workspace:*",
+    "@starter/office-server": "workspace:*",
+    "@univerjs-pro/collaboration-service": "1.0.3",
+    "@univerjs-pro/collaboration-worktree-service": "1.0.3",
+    "@univerjs/protocol": "1.0.3",
+    "alchemy": "2.0.0-beta.80",
+    "effect": "4.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260918.1",
+    "@types/node": "24.13.6"
+  }
+}

@@ -11,7 +11,9 @@ import {
   MAX_IMAGE_BYTES,
   MAX_MESSAGE_ATTACHMENT_BYTES,
   MAX_TEXT_FILE_BYTES,
+  MAX_OFFICE_BYTES,
 } from "./chat-attachment-schema.ts";
+import { isOfficeMediaType } from "./chat-office-media.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { SWEEP_BATCH_LIMIT } from "./chat-files-model.ts";
 
@@ -64,11 +66,14 @@ const consistent = (input: {
   readonly excerpt: string | null;
 }): boolean => {
   const image = input.kind === "image";
-  if (input.byteSize > (image ? MAX_IMAGE_BYTES : MAX_TEXT_FILE_BYTES)) return false;
+  const office = input.kind === "office";
+  const limit = image ? MAX_IMAGE_BYTES : office ? MAX_OFFICE_BYTES : MAX_TEXT_FILE_BYTES;
+  if (input.byteSize > limit) return false;
   if (image !== input.mediaType.startsWith("image/")) return false;
-  return image
-    ? input.width !== null && input.height !== null && input.excerpt === null
-    : input.width === null && input.height === null && input.excerpt !== null;
+  if (office !== isOfficeMediaType(input.mediaType)) return false;
+  if (image) return input.width !== null && input.height !== null && input.excerpt === null;
+  if (office) return input.width === null && input.height === null && input.excerpt === null;
+  return input.width === null && input.height === null && input.excerpt !== null;
 };
 
 export const ChatFilesReserve = Schema.Struct({

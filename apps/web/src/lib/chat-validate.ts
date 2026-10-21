@@ -1,6 +1,21 @@
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
+import type { SkillRecovery } from "@/lib/chat-skills-api";
 import { parseCoverage, parseMessage } from "@/lib/chat-history-validate";
 import { isIsoDate, isRecord, isText, isUuid } from "@/lib/chat-validate-base";
+
+/** Absent is legacy null; a present malformed value rejects the whole snapshot. */
+const parseSkillRecovery = (value: unknown): SkillRecovery | null | undefined => {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value)) return undefined;
+  if (!isUuid(value.logicalOperationId) || !isUuid(value.failedAttemptId)) return undefined;
+  if (typeof value.canRetry !== "boolean" || !isText(value.message)) return undefined;
+  return {
+    logicalOperationId: value.logicalOperationId,
+    failedAttemptId: value.failedAttemptId,
+    canRetry: value.canRetry,
+    message: value.message,
+  };
+};
 
 export function parseChat(value: unknown): Chat | null {
   if (!isRecord(value)) return null;
@@ -46,6 +61,8 @@ export function parseSnapshotValue(value: unknown): ChatSnapshot | null {
   if (value.error !== null && !isText(value.error)) return null;
   if (!isText(value.model) || !isText(value.thinking)) return null;
   if (!isText(value.usageRevision)) return null;
+  const skillRecovery = parseSkillRecovery(value.skillRecovery);
+  if (skillRecovery === undefined) return null;
   return {
     chat,
     messages,
@@ -56,6 +73,7 @@ export function parseSnapshotValue(value: unknown): ChatSnapshot | null {
     model: value.model,
     thinking: value.thinking,
     usageRevision: value.usageRevision,
+    skillRecovery,
   };
 }
 

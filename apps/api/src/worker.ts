@@ -12,6 +12,7 @@ import { ChatNamespaces, ChatNamespacesLive, declareChatObjects } from "./chat-b
 import { handleChatEvents } from "./chat-http-events.ts";
 import { handleChatMedia, isChatMediaPath } from "./chat-media-http.ts";
 import { handleProfilePhoto, isProfilePhotoPath } from "./profile-photo-http.ts";
+import { handleSkills, isSkillsPath } from "./skills-http.ts";
 import { limitChatBody } from "./chat-ingress.ts";
 import { isChatPath } from "./chat-internal.ts";
 import { HttpLive } from "./http.ts";
@@ -25,6 +26,9 @@ import {
   webhookProvider,
 } from "./billing-ingress.ts";
 import { observeRequest, TelemetryLive } from "./observability.ts";
+import OfficeHostLive, { makeOfficeHumanRegistrar } from "./office-host-object.ts";
+import { isOfficePath, makeOfficeHttp } from "./office-http.ts";
+import { officePrivateNamespace } from "./office-private-bindings.ts";
 
 export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
   "Api",
@@ -37,11 +41,20 @@ export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
     const namespaces = yield* ChatNamespaces;
     yield* declareChatObjects;
     const http = yield* HttpRouter.toHttpEffect(HttpLive);
+    const office = yield* makeOfficeHttp({
+      registry: yield* makeOfficeHumanRegistrar,
+      // Raw platform binding is resolved per authenticated Office request, never at build time.
+      namespace: officePrivateNamespace,
+    });
     const chatMedia = handleChatMedia.pipe(
       Effect.provideService(Auth, auth),
       Effect.provideService(ChatNamespaces, namespaces),
     );
     const profilePhoto = handleProfilePhoto.pipe(
+      Effect.provideService(Auth, auth),
+      Effect.provideService(ChatNamespaces, namespaces),
+    );
+    const skills = handleSkills.pipe(
       Effect.provideService(Auth, auth),
       Effect.provideService(ChatNamespaces, namespaces),
     );
@@ -57,7 +70,9 @@ export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
           // pass it to `new URL` without a base.
           const initialPath = initial.url.split("?")[0] ?? "";
           const chatPath = isChatPath(initialPath);
+          const officePath = isOfficePath(initialPath);
           const billingPath = isBillingPath(initialPath);
+          const skillsPath = isSkillsPath(initialPath);
           const response = yield* Http.safeHttpEffect(
             Effect.gen(function* () {
               const accessRequired = yield* Config.Boolean("REQUIRE_ACCESS").pipe(Effect.orDie);
@@ -69,6 +84,8 @@ export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
               if (pathname === "/api/auth" || pathname.startsWith("/api/auth/")) {
                 return yield* auth.fetch.pipe(Effect.withSpan("auth.handle"));
               }
+              // Authenticated Office surface: real CurrentOfficeSession plus the registrar.
+              if (isOfficePath(pathname)) return yield* office;
               if (isBillingPath(pathname)) {
                 const provider = webhookProvider(pathname);
                 const run = provider === undefined ? http : handleBillingWebhook(provider);
@@ -79,6 +96,7 @@ export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
                 return yield* run.pipe(Effect.provideService(HttpServerRequest, limited));
               }
               if (isProfilePhotoPath(pathname)) return yield* profilePhoto;
+              if (isSkillsPath(pathname)) return yield* skills;
               if (isChatPath(pathname)) {
                 if (isChatMediaPath(pathname)) return yield* chatMedia;
                 if (request.method !== "GET" && request.method !== "HEAD") {
@@ -101,7 +119,7 @@ export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
           );
           // Every chat response, including auth/Origin/Access/schema/500 paths,
           // is non-cacheable after the outer safe-response encoding.
-          return chatPath || billingPath
+          return chatPath || billingPath || skillsPath || officePath
             ? HttpServerResponse.setHeader(response, "cache-control", "no-store")
             : response;
         }).pipe(
@@ -117,6 +135,9 @@ export default class ApiWorker extends Cloudflare.Worker<ApiWorker>()(
         AuthLive,
         TelemetryLive,
         ChatNamespacesLive,
+        // Actual DO layer: registers the OfficeHost export and provides the namespace tag
+        // the real session registrar resolves once per Worker, never per request.
+        OfficeHostLive,
         BillingStore.layer,
         BillingRuntime.layer,
         BillingHooks.layer,

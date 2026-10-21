@@ -7,9 +7,10 @@ The application owns private chat metadata and authorization.
 
 The initial model is **GPT-6 Luna / High**. Installed OpenAI and Anthropic models
 and supported reasoning levels are selectable through an explicit stage allowlist,
-with per-chat settings and account defaults. There are no tools, shell or workspace.
-See [models and usage](chat-models-usage.md), [private image/text files](chat-files.md)
-and [manual dictation/read aloud](chat-voice.md). Queueing, Fast and PDF are absent.
+with per-chat settings and account defaults. Owner-scoped account, Skills and
+image tools use the native harness; there is no shell or filesystem workspace.
+See [models and usage](chat-models-usage.md), [Skills](skills.md), [private files](chat-files.md),
+[image generation and saved references](chat-images.md) and [voice](chat-voice.md). Queueing, Fast and PDF are absent.
 Titles use one bounded first-send-model naming call; see [automatic titles](chat-titles.md).
 
 ## Chat lifecycle and identity
@@ -44,7 +45,7 @@ Paid submissions are bounded per user across chats: ten per minute, plus six
 expiring reservations over five minutes. Reservations are approximate, not an
 exact count of active runs; completed runs may still occupy capacity until expiry.
 Retries bind the operation ID to the original chat, text, model, effort and ordered
-file UUIDs. One active response is allowed; busy sends are rejected, not queued.
+upload/reference UUIDs. Saved references remain separate from staged uploads. One active response is allowed; busy sends are rejected, not queued.
 Exact native acceptance
 is checked before quota, so a lost catalog acknowledgment can be repaired without
 another submission. Rejection releases only its owned tentative reservation.

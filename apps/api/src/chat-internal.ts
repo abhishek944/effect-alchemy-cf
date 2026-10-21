@@ -59,7 +59,7 @@ export const ConversationReceiptBody = Schema.Struct({
 });
 export const SendFailure = Schema.Struct({
   message: Schema.String,
-  code: Schema.Literals(["inference_unconfigured", "submission_failed"]),
+  code: Schema.Literals(["inference_unconfigured", "submission_failed", "skills_unavailable"]),
 });
 
 export const json = (value: unknown, status = 200): Response =>
@@ -85,6 +85,7 @@ export const chatFromHeader = (raw: string | null): Chat | null => {
 
 export const isChatPath = (pathname: string): boolean =>
   pathname === "/api/chats" ||
+  pathname === "/api/account/images/preferences" ||
   pathname.startsWith("/api/chats/") ||
   pathname.startsWith("/api/chat/");
 

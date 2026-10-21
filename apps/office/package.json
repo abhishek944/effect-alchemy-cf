@@ -1,0 +1,36 @@
+{
+  "name": "@starter/office-runtime",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/server.ts",
+    "./host": "./src/host.ts",
+    "./worker": "./src/worker.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "build:image:prepare": "node --experimental-strip-types src/build-foundation.ts",
+    "build:jobs:prepare": "node --experimental-strip-types src/build-jobs.ts"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.1",
+    "@starter/office-contract": "workspace:*",
+    "@starter/office-server": "workspace:*",
+    "@univer-cli/univer-render-page": "1.0.3",
+    "@univerjs-pro/collaboration-endpoint": "1.0.3",
+    "@univerjs-pro/collaboration-service": "1.0.3",
+    "@univerjs-pro/collaboration-transport-node": "1.0.3",
+    "@univerjs-pro/exchange-node": "1.0.3",
+    "@univerjs/core": "1.0.3",
+    "@univerjs/protocol": "1.0.3",
+    "effect": "4.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.6",
+    "vite": "8.3.2"
+  }
+}

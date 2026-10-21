@@ -1,0 +1,64 @@
+[data-office="review"],
+[data-office="native"],
+[data-office="draft-controls"] {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+}
+[data-office="review"],
+[data-office="native"] {
+  --office-bg: var(--cx-canvas, #181818);
+  --office-panel: var(--cx-sidebar, #212121);
+  --office-selected: var(--cx-selected, #323232);
+  --office-text: var(--cx-text, #ffffff);
+  --office-muted: var(--cx-muted, #a3a3a3);
+  --office-line: var(--cx-line, #333232);
+  --office-focus: var(--cx-focus, #b8c7e0);
+  --office-positive: var(--cx-positive, #6bc67f);
+  --office-negative: var(--cx-negative, #ed5f58);
+  color: var(--office-text);
+  background: var(--office-bg);
+  font:
+    14px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color-scheme: dark;
+}
+[data-office="review"][data-office-theme="light"],
+[data-office="native"][data-office-theme="light"] {
+  --office-bg: var(--cx-canvas, #ffffff);
+  --office-panel: var(--cx-sidebar, #f4f4f4);
+  --office-selected: var(--cx-selected, #d6d6d6);
+  --office-text: var(--cx-text, #1b1b1b);
+  --office-muted: var(--cx-muted, #5f5f5f);
+  --office-line: var(--cx-line, #dcdcdc);
+  --office-focus: var(--cx-focus, #35618f);
+  --office-positive: var(--cx-positive, #1a7f37);
+  --office-negative: var(--cx-negative, #b42318);
+  color-scheme: light;
+}
+[data-office="review"] button,
+[data-office="draft-controls"] button {
+  border: 1px solid var(--office-line, var(--cx-line));
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: var(--office-panel, var(--cx-card));
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+[data-office="review"] button:disabled,
+[data-office="draft-controls"] button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+[data-office="review"] button:focus-visible,
+[data-office="draft-controls"] button:focus-visible {
+  outline: 2px solid var(--office-focus, var(--cx-focus));
+  outline-offset: 2px;
+}

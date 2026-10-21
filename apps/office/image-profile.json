@@ -1,0 +1,13 @@
+{
+  "baseImage": "node@sha256:650d460b4e6b02411caa0e563838f07fafc9792314d5091859d837d8b070712b",
+  "platform": "linux/amd64",
+  "nodeVersion": "22.21.1",
+  "pnpmVersion": "10.33.4",
+  "sdkVersion": "1.0.3",
+  "chromiumVersion": "155.0.8059.79-1~deb12u1",
+  "dejavuVersion": "2.37-6",
+  "liberationVersion": "1:1.07.4-11",
+  "latexAssetVersion": "0.1.13",
+  "latexAssetUrl": "https://registry.npmjs.org/ratex-wasm/-/ratex-wasm-0.1.13.tgz",
+  "latexAssetIntegrity": "sha512-awHBCOv53XLgQHL3nI6Dqps3UclmTPx1KR7sNG3MJEolhUh28XUaTjAjqsm2JhU67RYKIT3QilWKZtAKu299SQ=="
+}

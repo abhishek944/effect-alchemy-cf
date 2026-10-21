@@ -3,9 +3,10 @@
  * this module only classifies, validates and reads display metadata, and never
  * uploads or stores anything. Classification follows the exact server filename
  * allowlist, never an operating-system MIME guess, and content is validated:
- * fatal UTF-8 with the control policy for text, real structure for
- * JPEG/PNG/WebP. A thumbnail is created only when the tab budget grants a
- * reservation; otherwise the file stays staged and sendable without a preview.
+ * fatal UTF-8 with the control policy for text, real image structure for
+ * JPEG/PNG/WebP, and bounded OOXML structure for Office. A thumbnail is created
+ * only when the tab budget grants a reservation; Office stays staged without a
+ * browser preview.
  */
 import type { ChatFileDescriptor, FileKind } from "@/lib/chat-capability-file-types";
 import {
@@ -13,7 +14,9 @@ import {
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PIXELS,
   MAX_TEXT_FILE_BYTES,
+  MAX_OFFICE_BYTES,
 } from "@/lib/chat-capability-file-types";
+import { isOfficeContainer } from "@/lib/chat-office-media";
 import { readImageInfo } from "@/lib/chat-file-image-policy";
 import {
   ALLOWED_EXTENSIONS,
@@ -58,7 +61,7 @@ export type LocalFile = {
 };
 
 export const UNSUPPORTED_REASON =
-  "Only JPEG, PNG, WebP and allowlisted text, Markdown, CSV, JSON, config or code files can be added.";
+  "Only JPEG, PNG, WebP, allowlisted text/code and XLSX/DOCX/PPTX files can be added.";
 
 export const FILE_ACCEPT = ALLOWED_EXTENSIONS.map((extension) => `.${extension}`).join(",");
 
@@ -116,11 +119,26 @@ export async function prepareLocalFile(
   const media = resolveMedia(file.name);
   if (media === null) return rejected(file, id, UNSUPPORTED_REASON);
   const base = baseRow(file, id, media.mediaType, media.kind);
-  const limit = media.kind === "image" ? MAX_IMAGE_BYTES : MAX_TEXT_FILE_BYTES;
+  const limit =
+    media.kind === "image"
+      ? MAX_IMAGE_BYTES
+      : media.kind === "office"
+        ? MAX_OFFICE_BYTES
+        : MAX_TEXT_FILE_BYTES;
   if (file.size <= 0 || file.size > limit) {
     return { ...base, state: "failed", error: fileSizeReason(media.kind, file.size, limit) };
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
+  if (media.kind === "office") {
+    const extension = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
+    if (!isOfficeContainer(bytes, extension))
+      return {
+        ...base,
+        state: "unsupported",
+        error: "The file content does not match a supported Office container.",
+      };
+    return { ...base, state: "ready" };
+  }
   if (media.kind === "text") {
     if (hasImageSignature(bytes))
       return { ...base, state: "unsupported", error: "Image content cannot be added as text." };
@@ -162,7 +180,7 @@ export async function prepareLocalFile(
 }
 
 function fileSizeReason(kind: FileKind, size: number, limit: number): string {
-  const label = kind === "image" ? "Images" : "Text files";
+  const label = kind === "image" ? "Images" : kind === "office" ? "Office files" : "Text files";
   return `${label} must be between 1 byte and ${formatFileSize(limit)}; this one is ${formatFileSize(size)}.`;
 }
 

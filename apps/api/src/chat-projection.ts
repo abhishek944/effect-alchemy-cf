@@ -32,6 +32,10 @@ export const buildWindow = async (
   byteBudget = FRAME_BYTES,
   blockBudget = MAX_BLOCK_VISITS,
   candidateBudget = MAX_MODEL_CANDIDATES,
+  hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean = () => false,
+  attemptState?: (
+    operationId: string,
+  ) => { readonly logicalOperationId: string; readonly incomplete: boolean } | null,
 ): Promise<HistoryPage> => {
   let ceiling = cursor?.ceiling ?? null;
   let after = cursor?.after ?? null;
@@ -70,7 +74,21 @@ export const buildWindow = async (
     if (indexResume !== null && indexResume >= models.length) throw new InvalidCursor();
     const start = indexResume ?? models.length - 1;
     const role = publicRole(entry);
-    const input = role === "user" ? await inputForEntry(entry.id) : null;
+    const input = await inputForEntry(entry.id);
+    const attempt =
+      input === null || attemptState === undefined ? null : attemptState(input.operationId);
+    const attemptOf =
+      attempt !== null && input !== null && attempt.logicalOperationId !== input.operationId
+        ? attempt.logicalOperationId
+        : null;
+    const incomplete = role === "assistant" && attempt?.incomplete === true;
+    // An explicit retry copies the original user command; keep one logical
+    // command in history and let its attempt answers carry the retries.
+    const groupedCopy =
+      role === "user" &&
+      input !== null &&
+      input.logicalOperationId !== null &&
+      input.logicalOperationId !== input.operationId;
     let finished = true;
     for (let i = start; i >= 0; i -= 1) {
       if (candidates >= candidateBudget || blocks >= blockBudget || messages.length >= limit) {
@@ -80,6 +98,10 @@ export const buildWindow = async (
         break;
       }
       candidates += 1;
+      if (groupedCopy) {
+        through = { entryId: entry.id, modelIndex: i };
+        continue;
+      }
       const message = models[i];
       if (message === undefined || role === null || message.role !== role) {
         through = { entryId: entry.id, modelIndex: i };
@@ -94,7 +116,7 @@ export const buildWindow = async (
         break;
       }
       const slice = sliceText(
-        publicInputMessage(message, input),
+        publicInputMessage(message, role === "user" ? input : null),
         0,
         0,
         units,
@@ -109,6 +131,9 @@ export const buildWindow = async (
         createdAt: storedMessageTime(message.timestamp),
         operationId: input?.operationId ?? null,
         attachments: input?.files ?? [],
+        attemptOf,
+        incomplete,
+        hasGeneratedFiles: role === "assistant" && hasGeneratedFiles(entry.id, i),
         usage: message.role === "assistant" ? messageUsage(message) : null,
         ...textInfo(chat.id, id, `e${entry.id}`, slice),
       };

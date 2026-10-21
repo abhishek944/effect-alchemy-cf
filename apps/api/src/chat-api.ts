@@ -32,6 +32,20 @@ import {
   SubmissionFailed,
   RefreshRequired,
 } from "./chat-model.ts";
+import {
+  SkillAttemptAccepted,
+  SkillAttemptNoAdmission,
+  SkillNewSendRequest,
+  SkillRetryRequest,
+} from "./skills-model.ts";
+
+/** Side-effect-free readiness response; values are strictly bounded. */
+export const SkillReadinessResponse = Schema.Struct({
+  ready: Schema.Boolean,
+  message: Schema.String.check(Schema.isMaxLength(256)),
+  revision: Schema.NullOr(Schema.String.check(Schema.isMaxLength(64))),
+  files: Schema.Number.check(Schema.isInt(), Schema.isBetween({ minimum: 0, maximum: 32 })),
+});
 
 export class ChatApi extends HttpApiGroup.make("chat")
   .add(
@@ -109,6 +123,51 @@ export class ChatApi extends HttpApiGroup.make("chat")
       payload: StopChat,
       success: Stopped,
       error: [ChatForbidden, ChatNotFound, ChatUnavailable],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("skillReadiness", "/api/chats/:id/skills/readiness", {
+      params: ChatIdParams,
+      success: SkillReadinessResponse,
+      error: [ChatForbidden, ChatNotFound, ChatUnavailable],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("retrySkill", "/api/chats/:id/skills/retry", {
+      params: ChatIdParams,
+      payload: SkillRetryRequest,
+      success: SkillAttemptAccepted,
+      error: [
+        SkillAttemptNoAdmission,
+        ChatForbidden,
+        ChatNotFound,
+        ChatBusy,
+        ChatArchived,
+        ChatInvalid,
+        ChatRateLimited,
+        InferenceUnavailable,
+        SubmissionFailed,
+        ChatUnavailable,
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("newSkillSend", "/api/chats/:id/skills/new-send", {
+      params: ChatIdParams,
+      payload: SkillNewSendRequest,
+      success: SkillAttemptAccepted,
+      error: [
+        SkillAttemptNoAdmission,
+        ChatForbidden,
+        ChatNotFound,
+        ChatBusy,
+        ChatArchived,
+        ChatInvalid,
+        ChatRateLimited,
+        InferenceUnavailable,
+        SubmissionFailed,
+        ChatUnavailable,
+      ],
     }),
   )
   .middleware(ChatAuthentication) {}

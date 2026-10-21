@@ -1,4 +1,5 @@
 import type * as cf from "@cloudflare/workers-types";
+import type { ReadImageContextEvidence } from "./chat-image-context.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import { createChatFilesCatalogClient } from "./chat-files-client.ts";
 import { prepareChatFiles } from "./chat-files-native.ts";
@@ -27,6 +28,8 @@ export const prepareConversationFiles = async (
   scope: ChatSendScope,
   model: ChatCatalogModel,
 ): Promise<PreparedChatSend> => {
+  if (input.references?.length)
+    throw new ChatInvalid({ message: "Saved references require the compact input path." });
   if (input.attachments.length === 0) return { content: input.text, files: [] };
   const { bucket, catalog } = filesFor(env, scope.ownerId);
   const result = await prepareChatFiles({
@@ -73,13 +76,22 @@ export const retainConversationFiles = async (
 export const validateChatImageContext = async (
   runtime: ChatRuntime,
   model: ChatCatalogModel,
+  readEvidence: ReadImageContextEvidence,
 ): Promise<void> => {
   await runtime.reconcile();
   const view = await (await runtime.conversation()).context(PI_BACKGROUND);
-  const images = view.messages.some(
-    (message) =>
-      Array.isArray(message.content) && message.content.some((part) => part.type === "image"),
-  );
+  const evidence = await readEvidence(view);
+  if (evidence === null)
+    throw new ChatInvalid({
+      message: "File metadata is still being reconciled. Reload this chat before changing models.",
+    });
+  const originals = evidence.flatMap((occurrence) => occurrence.originals);
+  const images =
+    originals.some((file) => file.kind === "image") ||
+    view.messages.some(
+      (message) =>
+        Array.isArray(message.content) && message.content.some((part) => part.type === "image"),
+    );
   if (!images) return;
   if (!model.imageInput)
     throw new ChatInvalid({
@@ -101,7 +113,7 @@ export const validateChatImageContext = async (
       });
     files.push(...input.files);
   }
-  const result = chatFilesImageCompatibility(files, model);
+  const result = chatFilesImageCompatibility([...files, ...originals], model);
   if (!result.ok)
     throw new ChatInvalid({
       message:

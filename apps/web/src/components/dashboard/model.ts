@@ -1,5 +1,12 @@
 export type DashboardUser = { id: string; name: string; email: string };
-export type SettingsSection = "general" | "voice" | "profile" | "appearance" | "account";
+export type SettingsSection =
+  | "general"
+  | "voice"
+  | "images"
+  | "skills"
+  | "profile"
+  | "appearance"
+  | "account";
 
 export function userInitials(user: DashboardUser): string {
   const name = user.name.trim();

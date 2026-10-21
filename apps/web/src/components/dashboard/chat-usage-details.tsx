@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Keyboard scrolling of the bounded existing cost-details body. */
 import type {
   ChatAttemptCategory,
   ChatUsage,
@@ -5,6 +6,7 @@ import type {
 } from "@/lib/chat-capability-usage-types";
 import { ATTEMPT_CATEGORIES } from "@/lib/chat-capability-usage-types";
 import { completenessLabel, exactTokens, formatCost, formatPercent } from "./chat-usage-format";
+import { ImageUsageDetails } from "./image-usage-details";
 
 const CATEGORY_LABELS: Record<ChatAttemptCategory, string> = {
   reply: "Replies",
@@ -35,17 +37,27 @@ function amountLine(amount: ChatUsageAmount, label: string) {
 }
 
 /** Categorized accounting shown only after an explicit details activation. */
-export default function ChatUsageDetails({ usage }: { usage: ChatUsage }) {
+export default function ChatUsageDetails({ usage }: { usage: ChatUsage | null }) {
+  if (!usage)
+    return (
+      <div data-cx="usage-details" tabIndex={0} aria-label="Usage and separate cost breakdown">
+        <p data-cx="usage-detail-lede">
+          Native text and speech usage is unavailable. Image accounting is read separately; missing
+          native usage is not zero.
+        </p>
+        <ImageUsageDetails key="image-costs" />
+      </div>
+    );
   const categories = ATTEMPT_CATEGORIES.map((category) => ({
     category,
     attempts: usage.attempts.filter((attempt) => attempt.category === category),
   })).filter((entry) => entry.attempts.length > 0);
 
   return (
-    <div data-cx="usage-details">
+    <div data-cx="usage-details" tabIndex={0} aria-label="Usage and separate cost breakdown">
       <p data-cx="usage-detail-lede">
-        {completenessLabel(usage.completeness)}. Estimates use installed catalog prices and the
-        server context, never an invoice.
+        Text and speech: {completenessLabel(usage.completeness)}. Estimates use installed catalog
+        prices and the server context, never an invoice. Image accounting is separate below.
       </p>
       <dl data-cx="usage-detail-list">
         <div data-cx="usage-detail-row">
@@ -99,6 +111,7 @@ export default function ChatUsageDetails({ usage }: { usage: ChatUsage }) {
           </dd>
         </div>
       </dl>
+      <ImageUsageDetails key="image-costs" />
     </div>
   );
 }

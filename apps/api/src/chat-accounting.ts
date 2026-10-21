@@ -9,7 +9,6 @@
  * explicit external title/speech writes propagate storage failures instead of
  * pretending success.
  */
-import type { Message } from "@earendil-works/pi-ai";
 import type { Models } from "@earendil-works/pi-ai/models";
 import {
   defineExtension,
@@ -30,15 +29,13 @@ import {
 import { amountOfUsage } from "./chat-accounting-amount.ts";
 import { aggregateChatUsage } from "./chat-accounting-aggregate.ts";
 import { installCompactionObserver } from "./chat-accounting-compaction-observer.ts";
-import { estimateChatContext } from "./chat-accounting-context.ts";
 import { ChatAccountingStore } from "./chat-accounting-store.ts";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
-import type { ChatUsage, SpeechUsage } from "./chat-usage-schema.ts";
+import type { ChatUsage, ContextUsage, SpeechUsage } from "./chat-usage-schema.ts";
 
 /** Everything `usage()` needs from the native conversation, already read by the parent. */
 export type ChatAccountingSource = {
-  readonly selection: ChatSelection | null;
-  readonly messages: readonly Message[];
+  readonly context: ContextUsage;
   readonly nativeUsage: Readonly<UsageState> | null;
 };
 
@@ -144,7 +141,7 @@ export class ChatAccounting {
         speech: lifetime.speech,
         recent: this.store.recentAttempts(ACCOUNTING_RECENT_ATTEMPTS),
         nativeModels: source.nativeUsage?.models ?? null,
-        context: estimateChatContext(source.messages, source.selection),
+        context: source.context,
       }),
     );
   }

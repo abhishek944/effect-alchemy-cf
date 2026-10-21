@@ -1,4 +1,5 @@
 import { useChatStore } from "@/lib/chat-store-context";
+import ChatSkillsRecovery from "./chat-skills-recovery";
 
 /**
  * Pending-send notices. Every action carries the frozen chat/operation pair
@@ -22,6 +23,7 @@ export default function ChatNotices({
 
   return (
     <>
+      <ChatSkillsRecovery chatId={chatId} />
       {failed && (
         <div data-cx="chat-retry" role="alert">
           <span>{failed.error ?? "The message was not accepted."}</span>

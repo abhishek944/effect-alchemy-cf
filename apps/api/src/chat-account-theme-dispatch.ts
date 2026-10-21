@@ -10,6 +10,7 @@ import {
   AccountCallUncertain,
   catalogCall,
   toolResult,
+  unavailable,
   type AccountToolAccess,
 } from "./chat-account-tool-kit.ts";
 import {
@@ -92,11 +93,34 @@ export const dispatchThemeCommand = async (
   access: AccountToolAccess,
   context: ToolContext,
   ownerId: string,
+  /** Exact executing native operation for skills health; never the frozen action id. */
+  executingOperationId: string,
   command: ThemeCommand,
   path: string,
   body: { readonly origin: string; readonly command: ThemeCommand },
 ): Promise<ToolExecutionResult> => {
   abortIfRequested(context);
+  // An existing exact receipt is the recorded original result: report it as
+  // historical instead of re-applying under a new turn.
+  try {
+    const existing = await receiptFor(access, context, ownerId, body.origin, command);
+    if (existing !== null) return report(existing, true);
+  } catch (error) {
+    if (!(error instanceof AccountCallUncertain)) throw error;
+  }
+  abortIfRequested(context);
+  // Exact proven operation only; a latched or corrupt skill state stops the
+  // mutation before any catalog write.
+  try {
+    await access.dispatchGate(executingOperationId);
+  } catch (error) {
+    return unavailable(
+      error instanceof Error ? error.message : "The skill state for this request is unavailable.",
+    );
+  }
+  abortIfRequested(context);
+  const blocked = access.dispatchFence(executingOperationId);
+  if (blocked !== null) return unavailable(blocked);
   try {
     const response = await catalogCall(access, ownerId, "POST", path, body, undefined, context);
     const decoded =

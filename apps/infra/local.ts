@@ -1,7 +1,7 @@
 import * as Alchemist from "alchemy/Alchemist";
 import { runMain } from "alchemy/Util/PlatformServices";
 import { Effect } from "effect";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
 import type * as StackModule from "./alchemy.run.ts";
 
 // Unlike the CLI's dev command, this runner never watches or reloads the stack.

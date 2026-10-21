@@ -11,6 +11,8 @@ export class ChatNamespaces extends Context.Service<
   {
     readonly catalog: (ownerId: string) => ChatCatalogStub;
     readonly conversation: (ownerId: string, chatId: string) => ChatConversationStub;
+    /** Configuration presence only; never account entitlement or a paid health probe. */
+    readonly imageConfigured: () => boolean;
   }
 >()("starter/ChatNamespaces") {}
 
@@ -57,6 +59,29 @@ export const ChatNamespacesLive = Layer.effect(
       catalog: (ownerId) => namespace("ChatCatalog").getByName(`owner:${ownerId}`),
       conversation: (ownerId, chatId) =>
         namespace("ChatConversation").getByName(`chat:${ownerId}:${chatId}`),
+      imageConfigured: () => {
+        const ai = env.AI;
+        const bucket = env.CHAT_FILES;
+        const gateway = env.CHAT_GATEWAY_ID;
+        return (
+          typeof ai === "object" &&
+          ai !== null &&
+          "run" in ai &&
+          typeof ai.run === "function" &&
+          typeof bucket === "object" &&
+          bucket !== null &&
+          "get" in bucket &&
+          typeof bucket.get === "function" &&
+          "head" in bucket &&
+          typeof bucket.head === "function" &&
+          "put" in bucket &&
+          typeof bucket.put === "function" &&
+          typeof gateway === "string" &&
+          gateway.length > 0 &&
+          gateway.length <= 128 &&
+          gateway.trim() === gateway
+        );
+      },
     };
   }),
 );

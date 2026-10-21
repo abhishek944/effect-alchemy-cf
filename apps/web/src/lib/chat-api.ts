@@ -1,7 +1,9 @@
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import type { ChatSelection } from "@/lib/chat-capability-types";
 import type { ChatUsageAmount } from "@/lib/chat-capability-usage-types";
+import { rejectionOf, type NoAdmissionRejection } from "@/lib/chat-api-rejection";
 import type { Coverage, TextInfo } from "@/lib/chat-history-types";
+import type { SkillRecovery } from "@/lib/chat-skills-api";
 import {
   parseAccepted,
   parseChat,
@@ -29,6 +31,12 @@ export type ChatMessage = {
   operationId: string | null;
   /** Staged originals submitted with this user message; empty on replies. */
   attachments: ChatFileDescriptor[];
+  /** True only for actual saved receipts tied to this exact assistant entry/model slot. */
+  hasGeneratedFiles: boolean;
+  /** Logical operation a retry answer belongs to; null for an original send. */
+  attemptOf: string | null;
+  /** True only for an answer whose pinned attempt failed; partials stay visible. */
+  incomplete: boolean;
   /** Message-specific reported/estimated counters; null while streaming or unknown. */
   usage: ChatUsageAmount | null;
 } & TextInfo;
@@ -46,18 +54,21 @@ export type ChatSnapshot = {
   thinking: string;
   /** Source epoch:counter bumped only after a real accounting write. */
   usageRevision: string;
+  /** Present only while a pinned skill attempt still needs an explicit recovery action. */
+  skillRecovery: SkillRecovery | null;
 };
 
 export class ChatApiError extends Error {
   readonly status: number;
+  readonly rejection: NoAdmissionRejection | null;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, rejection: NoAdmissionRejection | null = null) {
     super(message);
     this.name = "ChatApiError";
     this.status = status;
+    this.rejection = rejection;
   }
 }
-
 const statusMessages: Record<number, string> = {
   400: "That request was not valid. Check the message and try again.",
   401: "You are signed out. Sign in again to use chats.",
@@ -92,6 +103,7 @@ export async function request(path: string, init?: RequestInit): Promise<unknown
   });
   if (!response.ok) {
     let message = statusMessages[response.status] ?? `Request failed (${response.status}).`;
+    let rejection: NoAdmissionRejection | null = null;
     try {
       const body: unknown = await response.json();
       if (
@@ -103,10 +115,11 @@ export async function request(path: string, init?: RequestInit): Promise<unknown
       ) {
         message = body.message;
       }
+      rejection = rejectionOf(body, response.status);
     } catch {
       // Keep the safe status message when the body is not JSON.
     }
-    throw new ChatApiError(response.status, message);
+    throw new ChatApiError(response.status, message, rejection);
   }
   if (response.status === 204) return undefined;
   const body: unknown = await response.json();
@@ -164,6 +177,7 @@ export async function sendMessage(
     text: string;
     selection: ChatSelection;
     attachments: string[];
+    references: string[];
   },
 ): Promise<{ accepted: boolean }> {
   const accepted = parseAccepted(

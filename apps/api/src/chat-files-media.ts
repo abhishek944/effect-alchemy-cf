@@ -1,24 +1,18 @@
-/**
- * Filename-to-media allowlist and actual content validation.
- *
- * Extension and bytes must agree: a declared MIME type or filename alone is not
- * evidence of content. JPEG/PNG/WebP are parsed structurally; text/code must be
- * valid UTF-8 within the control policy. Nothing is resized, truncated or
- * re-interpreted as active markup.
- */
+/** Filename-to-media allowlist and actual content validation. */
 import {
   type FileKind,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_PIXELS,
   MAX_TEXT_FILE_BYTES,
+  MAX_OFFICE_BYTES,
   MAX_EXCERPT_CHARS,
 } from "./chat-attachment-schema.ts";
+import { isOfficeContainer, officeMediaType } from "./chat-office-media.ts";
 import { readImageInfo } from "./chat-files-image.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
 import { decodeTextFile } from "./chat-files-text.ts";
 
 type Media = { readonly kind: FileKind; readonly mediaType: string };
-
 const TEXT_TYPES: Readonly<Record<string, string>> = {
   txt: "text/plain",
   log: "text/plain",
@@ -100,20 +94,20 @@ const IMAGE_TYPES: Readonly<
   webp: { format: "webp", mediaType: "image/webp" },
 };
 
-/** Resolves the allowlisted kind and media type from the exact filename extension. */
 export const resolveMedia = (name: string): Media | null => {
   const dot = name.lastIndexOf(".");
   if (dot <= 0 || dot === name.length - 1) return null;
   const extension = name.slice(dot + 1).toLowerCase();
   const image = IMAGE_TYPES[extension];
   if (image !== undefined) return { kind: "image", mediaType: image.mediaType };
+  const office = officeMediaType(extension);
+  if (office !== null) return { kind: "office", mediaType: office };
   const text = TEXT_TYPES[extension];
   return text === undefined ? null : { kind: "text", mediaType: text };
 };
 
 const formatOf = (mediaType: string): string | null =>
   Object.values(IMAGE_TYPES).find((entry) => entry.mediaType === mediaType)?.format ?? null;
-
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 const RIFF = [0x52, 0x49, 0x46, 0x46] as const;
 const WEBP = [0x57, 0x45, 0x42, 0x50] as const;
@@ -126,11 +120,7 @@ const hasBytes = (bytes: Uint8Array, offset: number, expected: readonly number[]
   return true;
 };
 
-/**
- * Full binary image signatures only: a text file starting with plain ASCII
- * letters such as "RISK" must not be misread as an image. Any other binary
- * content is still rejected by fatal UTF-8 decoding and the control policy.
- */
+/** Full image signatures only; text must not be misread as an image. */
 const hasImageSignature = (bytes: Uint8Array): boolean =>
   (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
   hasBytes(bytes, 0, PNG_SIGNATURE) ||
@@ -175,6 +165,20 @@ export const validateFileBytes = async (
       mediaType: media.mediaType,
       width: info.width,
       height: info.height,
+      excerpt: null,
+      chars: 0,
+      digest,
+    });
+  }
+  if (media.kind === "office") {
+    if (bytes.byteLength > MAX_OFFICE_BYTES) return filesFail("file_too_large");
+    const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+    if (!isOfficeContainer(bytes, extension)) return filesFail("unsupported_type");
+    return filesOk({
+      kind: "office",
+      mediaType: media.mediaType,
+      width: null,
+      height: null,
       excerpt: null,
       chars: 0,
       digest,

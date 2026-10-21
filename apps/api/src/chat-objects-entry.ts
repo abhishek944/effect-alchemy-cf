@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from "node:url";
+import { officeObjectExports } from "./office-objects-entry.ts";
 import type * as Bundle from "alchemy/Bundle";
 import type { WorkerSourceDescriptor } from "../node_modules/alchemy/lib/Cloudflare/Workers/Worker.js";
 
@@ -13,7 +14,7 @@ export const chatWorkerSource = (): WorkerSourceDescriptor => ({
 export const chatObjectsModule = fileURLToPath(new URL("./chat-objects.ts", import.meta.url));
 
 /** Re-export line appended to any generated entry so the native classes survive. */
-export const chatObjectExports = `export { ChatCatalog, ChatConversation } from ${JSON.stringify(chatObjectsModule)};`;
+export const chatObjectExports = `export { ChatCatalog, ChatConversation } from ${JSON.stringify(chatObjectsModule)};\n${officeObjectExports}`;
 
 type Plugins = NonNullable<NonNullable<Bundle.BundleConfig["input"]>["plugins"]>;
 type RolldownPluginOption = Plugins extends readonly (infer Item)[] ? Item : Plugins;

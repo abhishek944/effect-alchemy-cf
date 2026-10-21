@@ -10,6 +10,7 @@ import type {
 import type { ChatUsage } from "@/lib/chat-capability-usage-types";
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
 import type { LocalFile } from "@/lib/chat-file-local";
+import type { ChatReferences } from "@/components/dashboard/use-chat-references";
 
 export type ChatConnection = "idle" | "connecting" | "live" | "reconnecting" | "error";
 export type SendPhase = "posting" | "accepted" | "failed";
@@ -19,6 +20,7 @@ export type ListState = "loading" | "ready" | "error";
 export type SendSnapshot = {
   selection: ChatSelection;
   attachments: string[];
+  references: string[];
 };
 
 export type PendingSend = {
@@ -99,6 +101,7 @@ export type ChatStoreValue = {
   creating: boolean;
   preferences: ChatSelectionControls;
   stagedFiles: ChatFilesControls;
+  references: ChatReferences;
   usage: ChatUsageControls;
   select: (id: string | null) => void;
   startNewChat: () => Promise<void>;

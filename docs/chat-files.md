@@ -20,11 +20,12 @@ quota live in the owner's catalog actor; bytes live in the stage's private R2
 browser-supplied chat/file IDs. No public domain, public URL, CORS, provider key,
 base64 payload or owner identifier is exposed in the public descriptor/history.
 
-Previews are on demand. Text is escaped and original downloads are forced to
-plain-text attachment with `nosniff`, no-store and sandbox policy. Image originals
-are served only as their validated image format. The model receives quoted
-untrusted file text or native image blocks; visible user bubbles show the typed
-caption plus compact file rows, not the full internal quoted file prompt.
+Previews are on demand in the right-pane Files library and exact image tabs.
+Nonimages are download-only there; downloads use plain-text attachment with
+`nosniff`, no-store and sandbox policy. Image originals retain their validated
+format. At the proven model-request boundary, the model receives quoted untrusted
+text or transient native image blocks; visible bubbles keep the caption and
+compact file rows. No complete file body is stored in new native inputs.
 
 Uncommitted uploads expire after24h, with scheduled bounded cleanup. An upload
 bound to uncertain native acceptance is retained until acceptance can be
@@ -48,16 +49,18 @@ there is no permanent-erasure or immediate retained-quota recovery promise.
 Actual model dimensions/modalities and runtime ceilings can be stricter. No
 silent resizing, truncation or dropping historical images is permitted.
 
-### Native SQLite ceiling
+### Compact native inputs and request memory
 
-Cloudflare limits a SQLite row/string/BLOB to2MB. The installed Pi Durable
-storage writes a complete native input into one row, without chunked images.
-Therefore this starter caps serialized native input at1.75MiB with0.25MiB of
-row-envelope reserve. Base64 overhead leaves roughly1.3MiB of original image
-bytes per message, minus text and structure. A larger original can be staged and
-previewed within the upload limits but cannot be accepted into the native
-message; it remains unchanged/uncommitted and subject to abandoned expiry.
-Choose smaller originals or remove files. The app does not downscale them.
+Cloudflare's SQLite row limit is not used as a new-image byte allowance. New
+inputs freeze compact caption/reference metadata within128KiB and hydrate exact
+private originals only for the proven provider request. The old1.75MiB inline
+builder is not used for new sends; historical inline rows remain unchanged.
+
+Worker memory, model image/context limits and the separate generation execution
+profile can still refuse an otherwise valid upload. There is no silent resizing
+or promise that a10MiB original fits every Worker request. See
+[chat images and saved references](chat-images.md) for the4MiB generation/3MiB edit
+profile, honest post-charge failures, per-chat library/@ behavior and accounting.
 
 Models may also impose smaller image dimensions or encoded-byte limits. Existing
 images in the authoritative model context must be compatible with the next
@@ -65,6 +68,15 @@ selected model. Choose another model or a new chat when they are not; changing
 models never rewrites accepted history.
 
 Source: [Cloudflare Durable Object limits](https://developers.cloudflare.com/durable-objects/platform/limits/).
+
+## Saved references
+
+Files contains accepted uploads and generated images, independent of loaded
+transcript pages. Select exact same-chat files with @; saved references are frozen
+separately from new uploads, never rebound or deleted when removed from a draft.
+The existing five-file/20MiB input policy covers both. Archive keeps read access,
+and missing originals keep identity with read-only Retry. Generated edits are
+separate immutable files with source links; no persistent storage meter is shown.
 
 ## Setup and acceptance
 

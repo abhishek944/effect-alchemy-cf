@@ -1,7 +1,13 @@
 import { Schema } from "effect";
+import { OfficeSendTarget } from "@starter/office-contract";
 import { ChatSelection } from "./chat-capabilities.ts";
-import { AttachmentReferences, FileDescriptor } from "./chat-attachment-schema.ts";
+import {
+  AttachmentReferences,
+  FileDescriptor,
+  MAX_ATTACHMENTS_PER_MESSAGE,
+} from "./chat-attachment-schema.ts";
 import { UsageAmount } from "./chat-usage-schema.ts";
+import { SkillRecovery } from "./skills-model.ts";
 
 const Uuid = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
@@ -46,10 +52,15 @@ export const ChatMessage = Schema.Struct({
   createdAt: Schema.String,
   operationId: Schema.NullOr(OperationId),
   attachments: Schema.Array(FileDescriptor).check(Schema.isMaxLength(5)),
+  hasGeneratedFiles: Schema.optionalKey(Schema.Boolean),
   usage: Schema.NullOr(UsageAmount),
   textState: Schema.Literals(["complete", "preview"]),
   textRevision: Schema.String,
   textCursor: Schema.NullOr(Schema.String),
+  /** Logical operation a retry answer belongs to; null for an original send. */
+  attemptOf: Schema.NullOr(OperationId),
+  /** True only for an answer whose pinned attempt failed; partials stay visible. */
+  incomplete: Schema.Boolean,
 });
 export type ChatMessage = typeof ChatMessage.Type;
 
@@ -63,6 +74,8 @@ export const ChatSnapshot = Schema.Struct({
   model: Schema.String.check(Schema.isMaxLength(128)),
   thinking: Schema.String.check(Schema.isMaxLength(40)),
   usageRevision: Schema.String.check(Schema.isMaxLength(128)),
+  /** Present only while a pinned skill attempt still needs an explicit recovery action. */
+  skillRecovery: Schema.NullOr(SkillRecovery),
 });
 export type ChatSnapshot = typeof ChatSnapshot.Type;
 
@@ -86,7 +99,14 @@ export const SendMessage = Schema.Struct({
   operationId: OperationId,
   selection: ChatSelection,
   attachments: AttachmentReferences,
-});
+  references: Schema.optionalKey(AttachmentReferences),
+  officeTarget: Schema.optionalKey(OfficeSendTarget),
+}).check(
+  Schema.makeFilter((input) => {
+    const ids = [...input.attachments, ...(input.references ?? [])];
+    return ids.length <= MAX_ATTACHMENTS_PER_MESSAGE && new Set(ids).size === ids.length;
+  }),
+);
 
 export const StopChat = Schema.Struct({ operationId: OperationId });
 

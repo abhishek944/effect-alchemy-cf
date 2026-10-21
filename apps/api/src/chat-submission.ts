@@ -1,69 +1,36 @@
-import { ConversationBusy, type UserInput } from "@earendil-works/pi-durable";
-import { ROOT_SESSION, type PiHarness, type PiSubmitOptions } from "agents/harness/pi";
-import type { AccountOperationRecord } from "./chat-account-operations.ts";
-import type { FileDescriptor } from "./chat-attachment-schema.ts";
-import type { Chat } from "./chat-model.ts";
-import type { ChatCatalogModel } from "./chat-capabilities.ts";
-import { resolveChatSelectionValue, type StageModelPolicy } from "./chat-capability-policy.ts";
+import { ConversationBusy } from "@earendil-works/pi-durable";
+import { ROOT_SESSION, type PiSubmitOptions } from "agents/harness/pi";
+import { resolveChatSelectionValue } from "./chat-capability-policy.ts";
 import { digestText, json } from "./chat-internal.ts";
-import type { ChatLedger } from "./chat-ledger.ts";
+import { SkillRuntimeError } from "./chat-skills-errors.ts";
+import { noAdmissionBody } from "./chat-skills-no-admission.ts";
 import {
   ChatInvalid,
   INFERENCE_UNCONFIGURED,
   SUBMISSION_FAILED,
   type SendMessage,
 } from "./chat-model.ts";
-import { PI_BACKGROUND, type ChatRuntime } from "./chat-runtime.ts";
+import { PI_BACKGROUND } from "./chat-runtime.ts";
 import { sendIdentity } from "./chat-send-identity.ts";
-import type { ChatSendRecords } from "./chat-send-records.ts";
-import { validateChatImageContext } from "./chat-conversation-files.ts";
-
-export type PreparedChatSend = { content: UserInput; files: readonly FileDescriptor[] };
-export type ChatSendScope = { chat: Chat; ownerId: string };
-type Options = {
-  harness: PiHarness;
-  runtime: ChatRuntime;
-  ledger: ChatLedger;
-  records: ChatSendRecords;
-  policy: StageModelPolicy;
-  enabled: boolean;
-  prepare: (
-    input: typeof SendMessage.Type,
-    scope: ChatSendScope,
-    model: ChatCatalogModel,
-  ) => Promise<PreparedChatSend>;
-  /**
-   * Prepares the immutable account evidence for this exact send. Runs before
-   * native admission and is stored in the same insert as the send record, so a
-   * rejected, busy or duplicated delivery can never amend another operation's
-   * authority.
-   */
-  prepareAccount: (
-    input: typeof SendMessage.Type,
-    scope: ChatSendScope,
-  ) => Promise<AccountOperationRecord | null>;
-  retain: (input: typeof SendMessage.Type, scope: ChatSendScope) => Promise<void>;
-  release: (input: typeof SendMessage.Type, scope: ChatSendScope) => Promise<void>;
-};
+import type { ChatSendScope, ChatSubmissionOptions as Options } from "./chat-submission-types.ts";
+export type { PreparedChatSend, ChatSendScope, ChatSkillsPort } from "./chat-submission-types.ts";
 
 /** A concurrent Send is rejected, never saved as future work. */
 export class ChatSubmission {
-  private submitting = false;
   private readonly options: Options;
   constructor(options: Options) {
     this.options = options;
   }
 
   async send(input: typeof SendMessage.Type, scope: ChatSendScope): Promise<Response> {
-    if (this.submitting) return json({ message: "Chat is busy" }, 409);
-    this.submitting = true;
+    if (!this.options.fence.tryEnter()) return json({ message: "Chat is busy" }, 409);
     try {
       return await this.submit(input, scope);
     } catch (error) {
       if (error instanceof ChatInvalid) return json({ message: error.message }, 400);
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     } finally {
-      this.submitting = false;
+      this.options.fence.leave();
     }
   }
 
@@ -81,6 +48,9 @@ export class ChatSubmission {
       ledger.accepted(input.operationId, Date.now());
       return json({ accepted: true, duplicate: true });
     }
+    // Accepted-native repair above stays first; a fenced UUID is never revived.
+    const fenced = this.options.noAdmissions.find(input.operationId);
+    if (fenced !== null) return json(noAdmissionBody(fenced), 409);
     if (!this.options.enabled)
       return json({ message: INFERENCE_UNCONFIGURED, code: "inference_unconfigured" }, 503);
     const resolved = resolveChatSelectionValue(policy, input.selection);
@@ -89,16 +59,35 @@ export class ChatSubmission {
         { message: "This model or effort is not enabled in this stage.", code: resolved.code },
         400,
       );
-    if (input.text.length === 0 && input.attachments.length === 0)
+    if (input.text.length === 0 && input.attachments.length === 0 && !input.references?.length)
       return json({ message: "Write a message or attach a file." }, 400);
     const session = harness.session(ROOT_SESSION);
     if (await session.busy()) return json({ message: "Chat is busy" }, 409);
     const conversation = await runtime.conversation();
-    await validateChatImageContext(runtime, resolved.model);
     const prepared = await this.options.prepare(input, scope, resolved.model);
     if (await session.busy()) {
       await this.options.release(input, scope);
       return json({ message: "Chat is busy" }, 409);
+    }
+    // The verified library candidate is durable before native admission; a lost
+    // finalize stays repairable and a definite busy rejection releases it.
+    try {
+      await this.options.skills.prepareNew({
+        ownerId: scope.ownerId,
+        attemptId: input.operationId,
+        content: prepared.content,
+      });
+    } catch (error) {
+      await this.options.release(input, scope);
+      if (error instanceof SkillRuntimeError)
+        return json(
+          {
+            message: error.message,
+            code: error.code === "invalid" ? "submission_failed" : "skills_unavailable",
+          },
+          error.code === "invalid" ? 400 : 503,
+        );
+      throw error;
     }
     if (
       !records.bind(
@@ -110,8 +99,11 @@ export class ChatSubmission {
           files: prepared.files,
         },
         (await this.options.prepareAccount(input, scope)) ?? undefined,
+        undefined,
+        scope.officeSession,
       )
     ) {
+      this.options.skills.release(input.operationId);
       await this.options.release(input, scope);
       return json({ message: "Operation identity does not match this message." }, 400);
     }
@@ -125,6 +117,7 @@ export class ChatSubmission {
       );
     } catch (error) {
       // No native submission was attempted, so releasing staged bindings is safe.
+      this.options.skills.release(input.operationId);
       await this.options.release(input, scope);
       throw error;
     }
@@ -136,15 +129,21 @@ export class ChatSubmission {
       const receipt = await session.submit(prepared.content, options);
       ledger.accepted(input.operationId, Date.now());
       const accepted = await runtime.inputRecord(input.operationId);
-      if (accepted !== undefined && "entry" in accepted)
-        ledger.recordEntry(input.operationId, accepted.entry, Date.now());
+      if (accepted !== undefined) {
+        // Exact native input evidence: the candidate is now an immutable pin.
+        this.options.skills.accept(input.operationId);
+        if ("entry" in accepted) ledger.recordEntry(input.operationId, accepted.entry, Date.now());
+      }
       await this.options.retain(input, scope);
       return json({ accepted: true, duplicate: !receipt.accepted });
     } catch (error) {
       if (error instanceof ConversationBusy) {
+        // Native admission refused before writing; release only this candidate.
+        this.options.skills.release(input.operationId);
         await this.options.release(input, scope);
         return json({ message: "Chat is busy" }, 409);
       }
+      // Uncertain admission: the candidate and bytes stay for reconciliation.
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     }
   }

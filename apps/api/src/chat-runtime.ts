@@ -1,4 +1,5 @@
 import {
+  LiveDoc,
   ROOT_CONVERSATION_ID,
   type Conversation,
   type ConversationId,
@@ -17,17 +18,12 @@ import type { ChatSendRecords } from "./chat-send-records.ts";
 import { publicInputEntry } from "./chat-input-projection.ts";
 import type { PiContext } from "./chat-projection.ts";
 import { ChatStop } from "./chat-stop.ts";
-
-/** Minimal background context matching the shape PiHarness itself uses. */
 export const PI_BACKGROUND: PiContext = Object.freeze({
   abortSignal: undefined,
   value: () => undefined,
   toString: () => "[chat conversation background]",
 });
-
 type ChatStorage = Awaited<ReturnType<PiHarness["storage"]>>;
-
-/** Native operation identity, initialization and durable recovery projection. */
 export class ChatRuntime {
   private readonly harness: PiHarness;
   private readonly ledger: ChatLedger;
@@ -35,30 +31,24 @@ export class ChatRuntime {
   private readonly operationCache = new Map<string, string>();
   private repaired = false;
   private readonly stops: ChatStop;
-
   constructor(harness: PiHarness, ledger: ChatLedger, sends: ChatSendRecords) {
     this.harness = harness;
     this.ledger = ledger;
     this.sends = sends;
     this.stops = new ChatStop(this, ledger);
   }
-
   async pi(): Promise<Harness> {
     return this.harness.pi();
   }
-
   async conversation(): Promise<Conversation> {
     return this.harness.conversation(ROOT_SESSION);
   }
-
   async storage(): Promise<ChatStorage> {
     return this.harness.storage();
   }
-
   async publicInput(entryId: number) {
     return this.sends.forEntry(entryId);
   }
-
   async selection() {
     const agent = await (await this.conversation()).agent(PI_BACKGROUND);
     return decodeOption(ChatSelection, {
@@ -67,19 +57,14 @@ export class ChatRuntime {
       effort: agent.thinkingLevel,
     });
   }
-
   async conversationId(): Promise<ConversationId> {
     return (await this.conversation()).id;
   }
-
-  /** Scoped native entry read for text pages; never a global lookup. */
   async entryFor(entryId: EntryId): Promise<EntryRecord | undefined> {
     const storage = await this.storage();
     const entry = (await storage.entry(ROOT_CONVERSATION_ID, entryId, PI_BACKGROUND))?.entry;
     return entry === undefined ? undefined : publicInputEntry(entry, this.sends);
   }
-
-  /** Exact scoped input status; no result/answer entry or full text is constructed. */
   async inputRecord(
     operationId: string,
   ): Promise<Extract<SubmissionRecord, { type: "input" }> | undefined> {
@@ -91,8 +76,16 @@ export class ChatRuntime {
     );
     return record?.type === "input" && record.requestId === operationId ? record : undefined;
   }
-
-  /** True only for the oldest native input; a later send can never claim naming. */
+  async liveInput(): Promise<{ readonly run: boolean; readonly operationId: string | null }> {
+    const pi = await this.pi();
+    const id = await this.conversationId();
+    const native = await pi.snapshot(LiveDoc, id, PI_BACKGROUND);
+    const run = native?.run;
+    if (run === undefined) return { run: false, operationId: null };
+    const input = run.inputs[0];
+    if (input === undefined) return { run: true, operationId: null };
+    return { run: true, operationId: await this.operationIdOf(input) };
+  }
   async firstAcceptedInput(operationId: string): Promise<boolean> {
     if ((await this.inputRecord(operationId)) === undefined) return false;
     const storage = await this.storage();
@@ -100,19 +93,15 @@ export class ChatRuntime {
     const page = await storage.scanSubmissions(query, 16, undefined, PI_BACKGROUND);
     return page.items.find((item) => item.type === "input")?.requestId === operationId;
   }
-
   async receiptRecord(operationId: string): Promise<SubmissionRecord | undefined> {
     await this.stops.settled(operationId);
     const record = await this.inputRecord(operationId);
     await this.stops.settled(operationId);
     return record;
   }
-
   stop(operationId: string): Promise<boolean> {
     return this.stops.stop(operationId);
   }
-
-  /** Reads never replace explicit or active model configuration. */
   async ensureRoot(): Promise<void> {
     if (this.repaired) return;
     try {
@@ -120,17 +109,12 @@ export class ChatRuntime {
       const agent = await conversation.agent(PI_BACKGROUND);
       const configured = agent.model?.provider !== undefined && agent.model.modelId !== undefined;
       if (!configured) {
-        // Never rewrite configuration mid-run; a later request retries.
         if (await this.harness.session(ROOT_SESSION).busy()) return;
         await conversation.configure(this.harness.agentDefaults(), PI_BACKGROUND);
       }
       this.repaired = true;
-    } catch {
-      // Leave repaired unset; no diagnostics escape to the client.
-    }
+    } catch {}
   }
-
-  /** Bounded wraparound repair prevents older unmapped entries starving. */
   async reconcile(): Promise<void> {
     const page = this.ledger.unmappedPage(6);
     if (page.length === 0) return;
@@ -147,11 +131,8 @@ export class ChatRuntime {
         }
       }
       this.ledger.advance(page.at(-1)?.rowid ?? 0);
-    } catch {
-      // Best effort; the cursor stays so this page retries next time.
-    }
+    } catch {}
   }
-
   private async submissionRecord(id: SubmissionId): Promise<SubmissionRecord | null> {
     try {
       const pi = await this.pi();
@@ -162,8 +143,6 @@ export class ChatRuntime {
       return null;
     }
   }
-
-  /** Native submission record to public operation UUID, with entry mapping. */
   async operationIdOf(submission: SubmissionId): Promise<string | null> {
     const key = String(submission);
     const cached = this.operationCache.get(key);
@@ -179,8 +158,6 @@ export class ChatRuntime {
     );
     return record.requestId;
   }
-
-  /** Durable safe failure of the latest operation, independent of any viewer. */
   async settlementError(): Promise<string | null> {
     const latest = this.ledger.latest();
     if (latest === null) return null;

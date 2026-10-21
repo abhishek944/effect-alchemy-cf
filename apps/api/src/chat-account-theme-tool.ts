@@ -109,6 +109,7 @@ export const themeTool = (access: AccountToolAccess): ToolRegistration =>
         access,
         context,
         resolved.value.ownerId,
+        resolved.value.operationId,
         intent,
         intent.kind === "apply" ? "/theme/apply" : "/theme/undo",
         { origin, command: intent },

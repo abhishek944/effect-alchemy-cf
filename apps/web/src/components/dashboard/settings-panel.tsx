@@ -2,8 +2,10 @@ import "./settings.css";
 import type { ReactNode } from "react";
 import BillingPanel from "./billing-panel";
 import { DropdownSelect } from "./dropdown";
+import ImagePreferencesSettings from "./image-preferences-settings";
 import type { DashboardUser, SettingsSection } from "./model";
 import ProfileSettings from "./profile-settings";
+import SkillsSettings from "./skills-settings";
 import { DASHBOARD_THEMES, parseDashboardTheme, useDashboardTheme } from "./theme";
 import VoiceSettings from "./voice-settings";
 
@@ -25,6 +27,8 @@ const NOT_CONFIGURED = "Not configured";
 const sectionTitles: Record<SettingsSection, string> = {
   general: "General",
   voice: "Voice",
+  images: "Images",
+  skills: "Skills",
   profile: "Profile",
   appearance: "Appearance",
   account: "Account",
@@ -167,11 +171,14 @@ function AccountSettings({ user }: { user: DashboardUser }) {
 }
 
 export default function SettingsPanel({ user, section }: SettingsPanelProps) {
+  const titled = section !== "profile" && section !== "skills";
   return (
     <div data-cx="settings-panel" data-section={section}>
-      {section === "profile" ? null : <h1 data-cx="settings-title">{sectionTitles[section]}</h1>}
+      {titled ? <h1 data-cx="settings-title">{sectionTitles[section]}</h1> : null}
       {section === "general" ? <GeneralSettings /> : null}
       {section === "voice" ? <VoiceSettings /> : null}
+      {section === "images" ? <ImagePreferencesSettings /> : null}
+      {section === "skills" ? <SkillsSettings key={user.id} userId={user.id} /> : null}
       {section === "profile" ? (
         <ProfileSettings email={user.email} fallbackName={user.name} />
       ) : null}

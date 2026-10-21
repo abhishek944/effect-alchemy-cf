@@ -1,13 +1,5 @@
-/**
- * Native preparation: real structured text/image content from owned originals.
- *
- * The selected model's installed image metadata is enforced here (no silent
- * resize). Every submission must fit the verified 2 MiB Durable Object SQL row
- * limit, so content is capped at 1.75 MiB serialized with a 0.25 MiB envelope
- * reserve; larger images fail explicitly as `native_storage_limit` while their
- * R2 originals stay retained at the approved product size. Nothing is
- * truncated or downscaled. Text files become quoted untrusted data with a
- * random boundary; images become native base64 image blocks.
+/** Legacy inline preparation retains its1.75MiB native row ceiling, without resizing.
+ * New sends use compact image-input preparation and request-only hydration instead.
  */
 import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 import type { UserInput } from "@earendil-works/pi-durable";
@@ -15,8 +7,6 @@ import type * as cf from "@cloudflare/workers-types";
 import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   MAX_EXCERPT_CHARS,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
   MAX_MESSAGE_ATTACHMENT_BYTES,
   MAX_QUOTED_TEXT_CHARS,
   type FileDescriptor,
@@ -28,11 +18,20 @@ import {
   filesFail,
   filesOk,
   MAX_NATIVE_SERIALIZED_BYTES,
-  type ChatFilesFailure,
   type ChatFilesResult,
 } from "./chat-files-model.ts";
 import { readOwnedOriginal } from "./chat-files-store.ts";
-import { attachmentBoundary, decodeTextFile, quotedAttachmentBlock } from "./chat-files-text.ts";
+import {
+  attachmentBoundary,
+  decodeTextFile,
+  officeAttachmentBlock,
+  quotedAttachmentBlock,
+} from "./chat-files-text.ts";
+import {
+  chatFilesImageCompatibility,
+  imageBase64Bytes as base64Bytes,
+} from "./chat-files-image-policy.ts";
+export { chatFilesImageCompatibility } from "./chat-files-image-policy.ts";
 
 export type NativeContent = {
   readonly content: UserInput;
@@ -47,8 +46,6 @@ export type NativeAttachment = {
 
 const DIGEST = /^[0-9a-f]{64}$/;
 
-const base64Bytes = (raw: number): number => 4 * Math.ceil(raw / 3);
-
 const base64Of = (bytes: Uint8Array): string => {
   let binary = "";
   const chunk = 0x8000;
@@ -58,30 +55,7 @@ const base64Of = (bytes: Uint8Array): string => {
   return btoa(binary);
 };
 
-const imageFailure = (file: FileDescriptor, model: ChatCatalogModel): ChatFilesFailure | null => {
-  if (file.byteSize > MAX_IMAGE_BYTES) return "file_too_large";
-  const pixels = (file.width ?? 0) * (file.height ?? 0);
-  if (pixels > MAX_IMAGE_PIXELS) return "file_too_large";
-  const resize = model.imageResize;
-  if (resize === null) return null;
-  if ((file.width ?? 0) > resize.maxWidth || (file.height ?? 0) > resize.maxHeight)
-    return "model_image_limits";
-  return base64Bytes(file.byteSize) > resize.maxBytes ? "model_image_limits" : null;
-};
-/** Capability check for images already in conversation context and for new files. */
-export const chatFilesImageCompatibility = (
-  files: readonly FileDescriptor[],
-  model: ChatCatalogModel,
-): ChatFilesResult<null> => {
-  const images = files.filter((file) => file.kind === "image");
-  if (images.length > 0 && !model.imageInput) return filesFail("model_image_unsupported");
-  for (const file of images) {
-    const failure = imageFailure(file, model);
-    if (failure !== null) return filesFail(failure);
-  }
-  return filesOk(null);
-};
-/** Builds the exact native input; reads originals one at a time and verifies digests. */
+/** Exact native input: image/text bytes verify digests; Office contributes compact refs only. */
 export const buildNativeInput = async (input: {
   readonly text: string;
   readonly attachments: readonly NativeAttachment[];
@@ -102,9 +76,27 @@ export const buildNativeInput = async (input: {
   if (input.text.length > 0) blocks.push({ type: "text", text: input.text });
   const boundary = attachmentBoundary();
   const textTotal = files.filter((file) => file.kind === "text").length;
+  const officeTotal = files.filter((file) => file.kind === "office").length;
   let quotedChars = 0;
   let textIndex = 0;
+  let officeIndex = 0;
   for (const attachment of input.attachments) {
+    if (attachment.file.kind === "office") {
+      blocks.push({
+        type: "text",
+        text: officeAttachmentBlock({
+          boundary,
+          index: officeIndex,
+          total: officeTotal,
+          fileRef: attachment.file.id,
+          name: attachment.file.name,
+          mediaType: attachment.file.mediaType,
+          byteSize: attachment.file.byteSize,
+        }),
+      });
+      officeIndex += 1;
+      continue;
+    }
     const bytes = await input.read(attachment.file.id);
     if (bytes === null || bytes.byteLength !== attachment.file.byteSize)
       return filesFail("unavailable");

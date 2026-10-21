@@ -1,5 +1,6 @@
 import ApiWorker from "@starter/api/worker";
 import { ChatFilesBucket } from "@starter/api/chat-resources";
+import { OfficeStorage } from "@starter/api/office-resources";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { AlchemyContext } from "alchemy/AlchemyContext";
@@ -57,7 +58,18 @@ export default Alchemy.Stack(
       cors: [],
       forceDestroy: false,
     });
-    const api = yield* ApiWorker.pipe(Effect.provideService(ChatFilesBucket, chatFiles));
+    const officeDatabase = yield* Cloudflare.D1.Database("OfficeDatabase");
+    const officeData = yield* Cloudflare.R2.Bucket("OfficeData", {
+      publicAccess: false,
+      domains: [],
+      cors: [],
+      lifecycleRules: [],
+      forceDestroy: false,
+    });
+    const api = yield* ApiWorker.pipe(
+      Effect.provideService(ChatFilesBucket, chatFiles),
+      Effect.provideService(OfficeStorage, { database: officeDatabase, bucket: officeData }),
+    );
     return { url: api.url };
   }),
 );

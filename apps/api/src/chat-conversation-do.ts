@@ -1,10 +1,10 @@
-import type { Ai } from "@cloudflare/workers-types";
-import type * as cf from "@cloudflare/workers-types";
-import { createModels } from "@earendil-works/pi-ai/models";
-import { createRegistry, Harness, type Storage } from "@earendil-works/pi-durable";
 import { Agent, type AgentContext } from "agents";
-import { PiHarness } from "agents/harness/pi";
-import { createAI } from "agents/models/pi-ai";
+import type * as cf from "@cloudflare/workers-types";
+import type { ChatImageCallStore } from "./chat-image-call-store.ts";
+import type { ConversationImages } from "./chat-image-runtime.ts";
+import { readConversationImages } from "./chat-image-read-http.ts";
+import { conversationCatalogStub } from "./chat-conversation-catalog.ts";
+import { conversationOwner } from "./chat-tool-authorization.ts";
 import {
   ConversationSendBody,
   ConversationStopBody,
@@ -14,36 +14,30 @@ import {
   json,
   requestBody,
 } from "./chat-internal.ts";
-import { ChatLedger } from "./chat-ledger.ts";
-import { CHAT_MODEL, SUBMISSION_FAILED } from "./chat-model.ts";
 import { readChat } from "./chat-reads.ts";
-import { ChatSource, RefreshFence } from "./chat-source.ts";
-import { ChatRuntime } from "./chat-runtime.ts";
+import { RefreshFence } from "./chat-source.ts";
+import type { ChatSource } from "./chat-source.ts";
+import type { ChatRuntime } from "./chat-runtime.ts";
 import { streamChat } from "./chat-sse.ts";
-import { ChatSubmission } from "./chat-submission.ts";
-import { ChatAccounting } from "./chat-accounting.ts";
-import { accountTools } from "./chat-account-tools.ts";
-import {
-  accountToolAccess,
-  prepareAccountOperation,
-  type AccountPreparationDeps,
-} from "./chat-account-preparation.ts";
-import { ChatOwnerBinding } from "./chat-tool-authorization.ts";
+import { SUBMISSION_FAILED } from "./chat-model.ts";
+import { conversationApplicationOrigin } from "./chat-public-origin.ts";
+import type { ChatAccounting } from "./chat-accounting.ts";
+import type { ChatLedger } from "./chat-ledger.ts";
+import type { ChatSubmission } from "./chat-submission.ts";
+import type { ChatOwnerBinding } from "./chat-tool-authorization.ts";
 import { conversationUsage } from "./chat-usage-http.ts";
-import { ChatSendRecords } from "./chat-send-records.ts";
-import { configuredChatPolicy } from "./chat-preferences-http.ts";
+import type { ChatSkillsRecovery } from "./chat-skills-recovery.ts";
+import { conversationSkillsEndpoint } from "./chat-skills-conversation.ts";
 import {
-  prepareConversationFiles,
-  retainConversationFiles,
-  releaseConversationFiles,
-  type ConversationFileEnv,
-} from "./chat-conversation-files.ts";
+  createChatConversationServices,
+  type SkillConversationEnv,
+} from "./chat-conversation-services.ts";
+import type { ConversationSkills } from "./chat-skills-runtime.ts";
+import { chatOfficeSessionFromRequest } from "./chat-office-session.ts";
+import { chatOfficeTaskEndpoint } from "./chat-office-task-http.ts";
+import type { ChatOfficeTaskBroker } from "./chat-office-task-broker.ts";
 
-type ChatEnv = ConversationFileEnv & {
-  AI?: Ai;
-  CHAT_GATEWAY_ID?: string;
-  CHAT_MODEL_ALLOWLIST?: string;
-};
+type ChatEnv = SkillConversationEnv;
 
 /**
  * One private conversation per owner and public chat id. Pi owns the
@@ -52,80 +46,40 @@ type ChatEnv = ConversationFileEnv & {
  * targeted cancellation and event attachment.
  */
 export class ChatConversation extends Agent<ChatEnv> {
-  private readonly harness: PiHarness;
   private readonly ledger: ChatLedger;
   private readonly runtime: ChatRuntime;
   private readonly submission: ChatSubmission;
   private readonly source: ChatSource;
   private readonly accounting: ChatAccounting;
   private readonly owners: ChatOwnerBinding;
-  private readonly records: ChatSendRecords;
-  private readonly account: AccountPreparationDeps;
-  private toolStorageRef: Storage | null = null;
+  private readonly skillRecovery: ChatSkillsRecovery;
+  private readonly imageCalls: ChatImageCallStore;
+  private readonly images: ConversationImages;
+  private readonly officeTasks: ChatOfficeTaskBroker;
+  private readonly imageCatalog: () => cf.DurableObjectStub;
+  private readonly skills: ConversationSkills;
 
   constructor(ctx: AgentContext, env: ChatEnv) {
     super(ctx, env);
-    const gatewayId =
-      typeof env.CHAT_GATEWAY_ID === "string" && env.CHAT_GATEWAY_ID.length > 0
-        ? env.CHAT_GATEWAY_ID
-        : null;
-    const ai =
-      gatewayId !== null && env.AI !== undefined
-        ? createAI({ binding: env.AI, id: gatewayId })
-        : null;
-    const records = new ChatSendRecords(ctx.storage.sql);
-    this.records = records;
-    this.ledger = new ChatLedger(ctx.storage.sql);
-    this.owners = new ChatOwnerBinding(ctx.storage);
-    this.accounting = new ChatAccounting(ctx.storage.sql, () => this.source.invalidateUsage());
-    this.account = {
-      owners: this.owners,
-      chatName: () => this.ctx.id.name,
-      chatScope: () => this.ctx.id.toString(),
-      conversationId: async () => String(await this.runtime.conversationId()),
-      accountOperation: (operationId) => this.records.account(operationId),
-      catalog: (ownerId) => this.catalogStub(ownerId),
-      storage: () => {
-        if (this.toolStorageRef === null)
-          throw new Error("Account tools require an open harness storage");
-        return this.toolStorageRef;
-      },
+    const services = createChatConversationServices(ctx, env);
+    this.ledger = services.ledger;
+    this.runtime = services.runtime;
+    this.submission = services.submission;
+    this.source = services.source;
+    this.accounting = services.accounting;
+    this.owners = services.owners;
+    this.skillRecovery = services.recovery;
+    this.imageCalls = services.imageCalls;
+    this.images = services.images;
+    this.officeTasks = services.officeTasks;
+    this.imageCatalog = () => {
+      const owner = conversationOwner(ctx.id.name);
+      if (owner === null || this.owners.owner() !== owner)
+        throw new Error("Image owner binding is unavailable");
+      return conversationCatalogStub(env, owner);
     };
-    this.harness = new PiHarness({
-      harness: async ({ storage, context }) => {
-        const models = createModels();
-        if (ai !== null) models.setProvider(ai.provider);
-        this.accounting.observeCompactions(models);
-        this.toolStorageRef = storage;
-        const tools = accountTools(accountToolAccess(this.account));
-        const registry = createRegistry();
-        registry.install(this.accounting.extension(() => this.runtime.selection()));
-        registry.install(tools);
-        return Harness.open(storage, { models, registry }, context);
-      },
-      defaults: { model: CHAT_MODEL, thinkingLevel: "high" },
-    });
-    this.runtime = new ChatRuntime(this.harness, this.ledger, records);
-    this.submission = new ChatSubmission({
-      harness: this.harness,
-      runtime: this.runtime,
-      ledger: this.ledger,
-      records,
-      enabled: ai !== null,
-      policy: configuredChatPolicy(env.CHAT_MODEL_ALLOWLIST),
-      prepare: (input, scope, model) => prepareConversationFiles(env, input, scope, model),
-      prepareAccount: (input, scope) => prepareAccountOperation(this.account, input, scope),
-      retain: (input, scope) => retainConversationFiles(env, input, scope),
-      release: (input, scope) => releaseConversationFiles(env, input, scope),
-    });
-    this.source = new ChatSource(this.runtime);
-    this.lifecycle.use(this.harness);
-  }
-
-  private catalogStub(ownerId: string): cf.DurableObjectStub {
-    const namespace = this.env.ChatCatalog;
-    if (namespace === undefined) throw new Error("Missing chat catalog binding");
-    return namespace.getByName(`owner:${ownerId}`);
+    this.skills = services.skills;
+    this.lifecycle.use(services.harness);
   }
 
   private async stop(operationId: string): Promise<Response> {
@@ -141,11 +95,28 @@ export class ChatConversation extends Agent<ChatEnv> {
 
   async onRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    const office = await chatOfficeTaskEndpoint(request, this.officeTasks);
+    if (office !== null) return office;
     const chat = chatFromHeader(request.headers.get("x-chat-json"));
     if (chat === null) return json({ message: "Missing chat identity" }, 400);
     try {
-      const usage = await conversationUsage(request, chat, this.runtime, this.accounting);
+      const usage = await conversationUsage(
+        request,
+        chat,
+        this.runtime,
+        this.accounting,
+        (view) => this.images.contextEvidence(view),
+        () => this.skills.projectionSections(),
+      );
       if (usage !== null) return usage;
+      const images = await readConversationImages({
+        request,
+        chat,
+        runtime: this.runtime,
+        calls: this.imageCalls,
+        catalog: this.imageCatalog,
+      });
+      if (images !== null) return images;
       if (request.method === "GET" && url.pathname === "/events") {
         await this.source.initialize();
         return streamChat(
@@ -166,8 +137,17 @@ export class ChatConversation extends Agent<ChatEnv> {
         this.runtime,
         this.source,
         this.ledger,
+        (entry, index) => this.imageCalls.hasAssistantFiles(entry, index),
       );
       if (read !== null) return read;
+      const skills = await conversationSkillsEndpoint({
+        request,
+        pathname: url.pathname,
+        owners: this.owners,
+        chat,
+        recovery: this.skillRecovery,
+      });
+      if (skills !== null) return skills;
       if (request.method === "POST" && url.pathname === "/title") {
         const body = decodeOption(ConversationTitleBody, await requestBody(request));
         if (body === null) return json({ message: "Invalid request" }, 400);
@@ -181,7 +161,15 @@ export class ChatConversation extends Agent<ChatEnv> {
           return json({ message: "Missing owner identity" }, 400);
         if (!this.owners.bind(ownerId, Date.now()))
           return json({ message: "Owner identity does not match this conversation." }, 400);
-        return await this.submission.send(body, { chat, ownerId });
+        const applicationOrigin = conversationApplicationOrigin(request);
+        if (applicationOrigin === null) return json({ message: "Missing application origin" }, 400);
+        const officeSession = chatOfficeSessionFromRequest(request, ownerId);
+        return await this.submission.send(body, {
+          chat,
+          ownerId,
+          applicationOrigin,
+          ...(officeSession === null ? {} : { officeSession }),
+        });
       }
       if (request.method === "POST" && url.pathname === "/stop") {
         const body = decodeOption(ConversationStopBody, await requestBody(request));

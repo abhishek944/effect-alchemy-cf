@@ -10,6 +10,7 @@ import {
   type WorkerBuildOptions,
 } from "../node_modules/alchemy/lib/Cloudflare/Workers/Sources/Rolldown.js";
 import { chatObjectsEntryPlugin } from "./chat-objects-entry.ts";
+import { optionalPeerBuildPlugin } from "./optional-peer-build.ts";
 import { profileWebpPlugin } from "./profile-webp-build.ts";
 
 const Options = Schema.Struct({ main: Schema.String });
@@ -23,7 +24,12 @@ const withNativeExports = <T extends SourceContext>(ctx: T): T => {
       ...options,
       input: {
         ...options.input,
-        plugins: [options.input?.plugins, chatObjectsEntryPlugin(), profileWebpPlugin()],
+        plugins: [
+          options.input?.plugins,
+          chatObjectsEntryPlugin(),
+          profileWebpPlugin(),
+          optionalPeerBuildPlugin(),
+        ],
       },
     },
   };

@@ -49,7 +49,8 @@ function FileRow({
 }) {
   const failed = file.state === "failed" || file.state === "unsupported";
   const retryable = failed || file.state === "upload_failed";
-  const previewable = !failed && (file.kind === "text" || Boolean(file.previewUrl));
+  const previewable =
+    !failed && (file.kind === "text" || file.kind === "office" || Boolean(file.previewUrl));
   const lockNote = locked ? "Waiting for the frozen send to settle." : undefined;
   return (
     <li data-cx="file-row" data-state={file.state}>

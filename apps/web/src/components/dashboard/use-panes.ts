@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function usePanes(chatWorkspace = false) {
   const [sidebarOpen, setSidebarOpen] = useState(
@@ -12,6 +12,7 @@ export function usePanes(chatWorkspace = false) {
   const [settingsFullView, setSettingsFullView] = useState(false);
   const rightOpen = chatWorkspace ? chatRightOpen : settingsRightOpen;
   const setRightOpen = chatWorkspace ? setChatRightOpen : setSettingsRightOpen;
+  const openRight = useCallback(() => setRightOpen(true), [setRightOpen]);
   const fullView = chatWorkspace ? chatFullView : settingsFullView;
   const setFullView = chatWorkspace ? setChatFullView : setSettingsFullView;
   const workspace = chatWorkspace ? "chat" : "settings";
@@ -45,6 +46,7 @@ export function usePanes(chatWorkspace = false) {
     rightOpen,
     fullView,
     rightRef,
+    openRight,
     toggleSidebar: () => {
       setFullView(false);
       if (fullView) setRightOpen(previousRight.current[workspace]);

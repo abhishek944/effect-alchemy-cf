@@ -27,6 +27,7 @@ export const readChat = async (
   runtime: ChatRuntime,
   source: ChatSource,
   ledger: ChatLedger,
+  hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean = () => false,
 ): Promise<Response | null> => {
   if (request.method !== "POST" || !["/history", "/text", "/receipt"].includes(path)) return null;
   const raw = await requestBody(request);
@@ -50,6 +51,10 @@ export const readChat = async (
         cursor,
         Math.min(HISTORY_MAX_LIMIT, Math.max(1, Math.trunc(body.limit))),
         (entry) => runtime.publicInput(entry),
+        undefined,
+        undefined,
+        undefined,
+        hasGeneratedFiles,
       );
       if (encodedBytes(page) > FRAME_BYTES) throw new Error("History budget exceeded");
       return json(page);

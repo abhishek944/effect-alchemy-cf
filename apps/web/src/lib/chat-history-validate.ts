@@ -51,6 +51,15 @@ export function parseMessage(value: unknown): ChatMessage | null {
   if (value.createdAt !== "" && !isIsoDate(value.createdAt)) return null;
   if (value.operationId !== null && !isUuid(value.operationId)) return null;
   if (!Array.isArray(value.attachments)) return null;
+  if (value.hasGeneratedFiles !== undefined && typeof value.hasGeneratedFiles !== "boolean")
+    return null;
+  const hasGeneratedFiles = value.hasGeneratedFiles ?? false;
+  if (hasGeneratedFiles && value.role !== "assistant") return null;
+  if (value.attemptOf !== undefined && value.attemptOf !== null && !isUuid(value.attemptOf))
+    return null;
+  const attemptOf = value.attemptOf ?? null;
+  if (value.incomplete !== undefined && typeof value.incomplete !== "boolean") return null;
+  const incomplete = value.incomplete === true;
   const attachments = [];
   for (const item of value.attachments) {
     const file = parseChatFileDescriptor(item);
@@ -70,6 +79,9 @@ export function parseMessage(value: unknown): ChatMessage | null {
     createdAt: value.createdAt,
     operationId: value.operationId,
     attachments,
+    hasGeneratedFiles,
+    attemptOf,
+    incomplete,
     usage,
     ...textInfo,
   };

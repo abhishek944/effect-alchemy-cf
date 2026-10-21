@@ -1,12 +1,17 @@
 import RouteLink from "@/lib/route-link";
-import { useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import PaneResizer from "./pane-resizer";
-import SearchField from "./search-field";
+import SettingsNavigation from "./settings-navigation";
 import "./pane-resizer.css";
 import { usePanes } from "./use-panes";
 import { useFocusModality } from "./use-focus-modality";
-import { Icon, type IconName } from "./icon";
+import { Icon } from "./icon";
 import type { SettingsSection } from "./model";
+import { ChatLibraryWorkspace } from "./chat-library-workspace";
+import { ChatLibraryThumbnail } from "./chat-library-thumbnail";
+import { useWorkspacePreview } from "./workspace-preview-context";
+import { WorkspacePreviewTabs } from "./workspace-preview-tabs";
+
 import { useDashboardTheme } from "./theme";
 import Toolbar from "./toolbar";
 import Tooltip from "./tooltip";
@@ -24,13 +29,6 @@ type Props = {
   notFound?: boolean;
   homeHref?: string;
 };
-const settingsLinks: { title: string; section: SettingsSection; icon: IconName }[] = [
-  { title: "General", section: "general", icon: "sliders-horizontal" },
-  { title: "Voice", section: "voice", icon: "mic" },
-  { title: "Profile", section: "profile", icon: "square-pen" },
-  { title: "Appearance", section: "appearance", icon: "wrench" },
-  { title: "Account", section: "account", icon: "shield" },
-];
 
 export default function DashboardShell({
   section,
@@ -41,8 +39,19 @@ export default function DashboardShell({
   notFound = false,
   homeHref = "/dashboard",
 }: Props) {
-  const { sidebarOpen, rightOpen, fullView, rightRef, toggleSidebar, toggleRight, toggleFullView } =
-    usePanes(section === null && !notFound);
+  const chatWorkspace = section === null && !notFound;
+  const {
+    sidebarOpen,
+    rightOpen,
+    fullView,
+    rightRef,
+    openRight,
+    toggleSidebar,
+    toggleRight,
+    toggleFullView,
+  } = usePanes(chatWorkspace);
+  const { registerReveal } = useWorkspacePreview();
+  useEffect(() => registerReveal(openRight), [registerReveal, openRight]);
   const { theme } = useDashboardTheme();
   const focusRef = useFocusModality();
   const [search, setSearch] = useState("");
@@ -57,9 +66,6 @@ export default function DashboardShell({
   };
   const settings = section !== null;
   const title = settings ? "Settings" : notFound ? "Page not found" : "Dashboard";
-  const visibleLinks = settingsLinks.filter((item) =>
-    item.title.toLowerCase().includes(search.trim().toLowerCase()),
-  );
 
   return (
     <div
@@ -86,6 +92,15 @@ export default function DashboardShell({
       <Toolbar
         title={settings || notFound ? title : ""}
         chatTitle={chatTitle}
+        previewTabs={
+          chatWorkspace ? (
+            <WorkspacePreviewTabs
+              rightRef={rightRef}
+              thumbnail={ChatLibraryThumbnail}
+              active={rightOpen}
+            />
+          ) : undefined
+        }
         sidebarOpen={sidebarOpen && !fullView}
         rightOpen={rightOpen}
         fullView={fullView}
@@ -118,34 +133,7 @@ export default function DashboardShell({
       </nav>
       <aside id="workspace-sidebar" data-cx="sidebar" hidden={!sidebarOpen}>
         {settings ? (
-          <>
-            <div data-cx="sidebar-heading">
-              <strong>Settings</strong>
-            </div>
-            <SearchField
-              id="settings-search"
-              label="Search settings"
-              value={search}
-              onChange={setSearch}
-              status={`${visibleLinks.length} matching settings sections`}
-            />
-            <nav data-cx="sidebar-navigation" aria-label="Settings sections">
-              {visibleLinks.map((item) => (
-                <RouteLink
-                  key={item.section}
-                  href={`/settings/${item.section}`}
-                  data-cx="nav-row"
-                  aria-current={section === item.section ? "page" : undefined}
-                >
-                  <Icon name={item.icon} />
-                  <span>{item.title}</span>
-                </RouteLink>
-              ))}
-              {visibleLinks.length === 0 && (
-                <output data-cx="search-empty">No matching settings.</output>
-              )}
-            </nav>
-          </>
+          <SettingsNavigation section={section} search={search} onSearch={setSearch} />
         ) : (
           (sidebar ?? null)
         )}
@@ -183,7 +171,9 @@ export default function DashboardShell({
           aria-label="Right section"
           tabIndex={-1}
           hidden={!rightOpen}
-        />
+        >
+          <ChatLibraryWorkspace active={chatWorkspace && rightOpen} />
+        </section>
       </div>
     </div>
   );

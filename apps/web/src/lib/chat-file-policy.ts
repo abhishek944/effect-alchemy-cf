@@ -5,10 +5,11 @@
  * validation matches it deterministically. Classification is by the exact
  * filename extension only — an operating-system MIME guess (.ts as video/mp2t,
  * .js as application/javascript, .yaml as application/yaml) is never trusted.
- * Content is still validated: fatal UTF-8 with the control policy for text, and
- * real image signatures/structure for JPEG/PNG/WebP.
+ * Content is still validated: fatal UTF-8 with the control policy for text, real
+ * image signatures for JPEG/PNG/WebP, and bounded OOXML structure for Office.
  */
 import type { FileKind } from "@/lib/chat-capability-file-types";
+import { officeMediaType } from "@/lib/chat-office-media";
 
 export type ResolvedMedia = { readonly kind: FileKind; readonly mediaType: string };
 
@@ -101,6 +102,8 @@ export const resolveMedia = (name: string): ResolvedMedia | null => {
   const extension = name.slice(dot + 1).toLowerCase();
   const image = IMAGE_TYPES[extension];
   if (image !== undefined) return { kind: "image", mediaType: image.mediaType };
+  const office = officeMediaType(extension);
+  if (office !== null) return { kind: "office", mediaType: office };
   const text = TEXT_TYPES[extension];
   return text === undefined ? null : { kind: "text", mediaType: text };
 };
@@ -112,6 +115,9 @@ export const imageFormatFor = (mediaType: string): "jpeg" | "png" | "webp" | nul
 export const ALLOWED_EXTENSIONS: readonly string[] = [
   ...Object.keys(IMAGE_TYPES),
   ...Object.keys(TEXT_TYPES),
+  "xlsx",
+  "docx",
+  "pptx",
 ];
 
 const allowedCode = (code: number): boolean => {

@@ -1,0 +1,43 @@
+import { UnitAction } from "@univerjs/protocol";
+
+/** Finite supported private content actions; sharing, ACL management, deletion and history remain denied. */
+export const nativeReadableActions: ReadonlySet<UnitAction> = new Set([
+  UnitAction.View,
+  UnitAction.Print,
+  UnitAction.Copy,
+  UnitAction.Export,
+  UnitAction.ViemRwHgtClWdt,
+  UnitAction.ViewFilter,
+  UnitAction.SelectProtectedCells,
+  UnitAction.SelectUnProtectedCells,
+]);
+export const nativeEditableActions: ReadonlySet<UnitAction> = new Set([
+  UnitAction.Edit,
+  UnitAction.MoveWorksheet,
+  UnitAction.DeleteWorksheet,
+  UnitAction.HideWorksheet,
+  UnitAction.RenameWorksheet,
+  UnitAction.CreateWorksheet,
+  UnitAction.SetWorksheetStyle,
+  UnitAction.EditWorksheetCell,
+  UnitAction.InsertHyperlink,
+  UnitAction.Sort,
+  UnitAction.Filter,
+  UnitAction.PivotTable,
+  UnitAction.RwHgtClWdt,
+  UnitAction.MoveSheet,
+  UnitAction.DeleteSheet,
+  UnitAction.HideSheet,
+  UnitAction.CopySheet,
+  UnitAction.RenameSheet,
+  UnitAction.CreateSheet,
+  UnitAction.SetCellStyle,
+  UnitAction.SetCellValue,
+  UnitAction.SetRowStyle,
+  UnitAction.SetColumnStyle,
+  UnitAction.InsertRow,
+  UnitAction.InsertColumn,
+  UnitAction.DeleteRow,
+  UnitAction.DeleteColumn,
+  UnitAction.EditExtraObject,
+]);
