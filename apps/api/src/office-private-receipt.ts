@@ -8,6 +8,8 @@ import type { NativeTarget, NativeWriteRecord, OfficeMetadata } from "@starter/o
 import type { HostControl } from "@starter/office-server/native-remote";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";
+import { assertOfficeTaskCommand, assertOfficeTaskReceipt } from "./office-task-command.ts";
+import { officeTaskActorPolicy } from "./office-task-actor-policy.ts";
 
 type ReceiptInput = typeof HostControl.observeReceipt.request.Type.input;
 /** Existing immutable journal/slot observation ONLY. No placement claim, turn, content or replay grant. */
@@ -20,8 +22,16 @@ export async function officePrivateReceipt(
 ) {
   await request.live();
   const actor = request.original.actor;
-  if (actor.capability !== "human" || !officeSame(input.target.owner, actor.owner))
-    throw officeDenied();
+  if (!officeSame(input.target.owner, actor.owner)) throw officeDenied();
+  const original = request.original;
+  if ("task" in original) {
+    if (request.command === null || request.file !== null) throw officeDenied();
+    assertOfficeTaskCommand(original.task.proof, request.command);
+    assertOfficeTaskReceipt(original.task.proof, {
+      method: "office.receipt",
+      input: { operationId: input.operationId },
+    });
+  } else if (actor.capability !== "human") throw officeDenied();
   const operation = await Effect.runPromise(metadata.operation(actor.owner, input.operationId));
   if (operation === null) return { state: "unknown" as const };
   if (operation.actor.principalId !== actor.principalId) throw officeDenied();
@@ -55,6 +65,20 @@ export async function officePrivateReceipt(
     !officeSame(write.receiptKey, input.receipt)
   )
     throw officeDenied();
+  if ("task" in original)
+    await Effect.runPromise(
+      officeTaskActorPolicy(
+        metadata,
+        request,
+        original,
+      )({
+        claims: operation.actor,
+        phase: "recovery-observe",
+        operationId: input.operationId,
+        intentDigest: operation.intentDigest,
+        target,
+      }),
+    );
   const document = { owner: target.owner, documentId: target.documentId, unitId: target.unitId };
   const base = {
     document,

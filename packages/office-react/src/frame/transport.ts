@@ -5,11 +5,12 @@ import type { FrameInit } from "./messages.ts";
 
 export function nativeTransport(input: FrameInit): Partial<IUniverCollaborationClientConfig> {
   const { view } = input;
-  const viewProtocol = `${location.origin}/api/office/views/${view.id}/protocol`;
+  const channel = `${location.origin}/api/office/channels/${encodeURIComponent(input.channelId)}/protocol`;
+  const viewProtocol = `/api/office/views/${view.id}/protocol`;
   const common = {
-    authzUrl: `${viewProtocol}/authz`,
-    signUrlServerUrl: `${viewProtocol}/images/{fileID}/sign-url`,
-    uploadFileServerUrl: `${viewProtocol}/images/upload`,
+    authzUrl: `${channel}${viewProtocol}/authz`,
+    signUrlServerUrl: `${channel}${viewProtocol}/images/{fileID}/sign-url`,
+    uploadFileServerUrl: `${channel}${viewProtocol}/images/upload`,
     downloadEndpointUrl: location.origin,
     socketService: BrowserCollaborationSocketService,
     enableAuthServer: true,
@@ -20,7 +21,7 @@ export function nativeTransport(input: FrameInit): Partial<IUniverCollaborationC
     return {
       ...common,
       enableCollaboration: false,
-      snapshotServerUrl: `${view.protocolPrefix}/snapshot`,
+      snapshotServerUrl: `${channel}${view.protocolPrefix}/snapshot`,
     };
   const origin = location.origin;
   const draft = view.nativeTarget.kind === "draft" ? view.nativeTarget.worktreeId : null;
@@ -29,20 +30,14 @@ export function nativeTransport(input: FrameInit): Partial<IUniverCollaborationC
   const config =
     draft === null
       ? {
-          snapshotServerUrl: `${viewProtocol}/snapshot`,
+          snapshotServerUrl: `${origin}${route}/snapshot`,
           collabSubmitChangesetUrl: `${origin}${route}/comb`,
         }
       : createWorktreeCollaborationConfig({ origin, worktreeID: draft });
-  for (const [value, suffix] of [
-    [config.snapshotServerUrl, "snapshot"],
-    [config.collabSubmitChangesetUrl, "comb"],
-  ]) {
+  const scoped = (value: string | undefined, suffix: "snapshot" | "comb") => {
     if (value === undefined) throw new Error("Native SDK route configuration is missing.");
     const url = new URL(value, origin);
-    const expectedPath =
-      draft === null && suffix === "snapshot"
-        ? `/api/office/views/${view.id}/protocol/snapshot`
-        : `${route}/${suffix}`;
+    const expectedPath = `${route}/${suffix}`;
     if (
       url.origin !== origin ||
       url.pathname !== expectedPath ||
@@ -52,14 +47,19 @@ export function nativeTransport(input: FrameInit): Partial<IUniverCollaborationC
       url.password
     )
       throw new Error("Native SDK route does not match its bound branch.");
-  }
-  const socket = new URL(`${route}/comb/connect`, origin);
+    return `${channel}${url.pathname}`;
+  };
+  const snapshotServerUrl = scoped(config.snapshotServerUrl, "snapshot");
+  const collabSubmitChangesetUrl = scoped(config.collabSubmitChangesetUrl, "comb");
+  const socket = new URL(`${channel}${route}/comb/connect`);
   socket.protocol = location.protocol === "https:" ? "wss:" : "ws:";
   return {
     ...config,
     ...common,
+    snapshotServerUrl,
+    collabSubmitChangesetUrl,
     enableCollaboration: true,
     collabWebSocketUrl: socket.href,
-    wsSessionTicketUrl: `${origin}/universer-api/user/session-ticket?channelId=${encodeURIComponent(input.channelId)}`,
+    wsSessionTicketUrl: `${channel}/universer-api/user/session-ticket`,
   };
 }

@@ -5,11 +5,15 @@ import { confirmedOfficeTaskTargets } from "./office-task-lineage.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { officeTaskTargetReads } from "./office-task-target-reads.ts";
 import { Effect } from "effect";
+import { readOfficeTaskReview, type OfficeTaskReview } from "./office-task-review.ts";
+import { readOfficeTaskDiscovery, type OfficeTaskDiscovery } from "./office-task-descriptor.ts";
 
 export type OfficeTaskTarget = {
   readonly target: DraftTarget | null;
   readonly fork: ViewRecord | null;
   readonly readView: ViewRecord | null;
+  readonly review?: OfficeTaskReview;
+  readonly discovery?: OfficeTaskDiscovery;
 };
 const empty: OfficeTaskTarget = Object.freeze({ target: null, fork: null, readView: null });
 
@@ -155,10 +159,24 @@ export async function resolveOfficeTaskTarget(
         )
           continue;
         const actual = await run(metadata.draft(owner, candidate.draftId));
-        if (actual?.worktreeId === review.worktreeId) return draft(candidate);
+        if (actual?.worktreeId === review.worktreeId)
+          return Object.freeze({
+            ...(await draft(candidate)),
+            review: await readOfficeTaskReview(metadata, review, candidate),
+          });
       }
       throw officeDenied();
     }
+    case "draft":
+      return Object.freeze({
+        ...empty,
+        discovery: await readOfficeTaskDiscovery(metadata, owner, { draftId: command.draftId }),
+      });
+    case "drafts":
+      return Object.freeze({
+        ...empty,
+        discovery: await readOfficeTaskDiscovery(metadata, owner, { cursor: command.cursor }),
+      });
     default:
       return empty; // Discovery/staging/new document/receipt has NO native target grant.
   }

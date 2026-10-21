@@ -14,6 +14,7 @@ import { progressMerge } from "./merge.ts";
 import { observeReadOutput } from "./read-jobs/observe.ts";
 import { verifyOperation } from "./claims.ts";
 import { officeFailure } from "./failure.ts";
+import { progressTransition } from "./transitions/progress.ts";
 
 const observeApproval = Effect.fn("Office.observeApproval")(function* (
   deps: OfficeDependencies,
@@ -44,13 +45,12 @@ const observeApproval = Effect.fn("Office.observeApproval")(function* (
 export function makeOfficeOperations(
   deps: OfficeDependencies,
   runtime: OfficeNativeRuntime,
-  transitions: Pick<OfficeService, "reopen" | "discard">,
 ): Pick<OfficeService, "receipt" | "cancel"> {
   const receipt = Effect.fn("Office.receipt")(function* (actor: Actor, value: string) {
     const id = yield* decodeWire(Id)(value).pipe(
       Effect.mapError(() => officeFailure("INVALID_INPUT")),
     );
-    const context = yield* operationCaller(deps, actor, id, null);
+    const context = yield* operationCaller(deps, actor, id, "receipt");
     const record = context.record;
     if (record === null) return yield* Effect.fail(officeFailure("NOT_FOUND", id));
     if (terminalReceipt(record.receipt.phase)) return record.receipt;
@@ -77,7 +77,7 @@ export function makeOfficeOperations(
       case "discard": {
         // Never initiate an unattempted lifecycle transition from an observation request.
         if ((yield* nativeWrites(deps, record)).length === 0) return record.receipt;
-        return yield* transitions[record.intent.kind](actor, record.intent.input);
+        return yield* progressTransition(deps, runtime, record, "recovery-observe");
       }
     }
     return yield* Effect.fail(officeFailure("INVALID_INPUT"));

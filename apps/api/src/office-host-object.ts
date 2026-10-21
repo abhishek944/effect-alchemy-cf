@@ -87,13 +87,13 @@ export const makeOfficeHumanRegistrar = Effect.gen(function* () {
 
 export default OfficeHost.make(
   Effect.gen(function* () {
-    const state = yield* Cloudflare.DurableObjectState;
     yield* officeApplicationBinding;
-    const imageRef = yield* Config.String("OFFICE_IMAGE_REF").pipe(Effect.orDie);
-    const stage = yield* Config.String("OBS_STAGE").pipe(Effect.orDie);
     const auth = yield* Auth;
     const epochs = yield* OfficeSessionEpochs;
-    return Effect.sync(() => {
+    return Effect.gen(function* () {
+      const state = yield* Cloudflare.DurableObjectState;
+      const imageRef = yield* Config.String("OFFICE_IMAGE_REF").pipe(Effect.orDie);
+      const stage = yield* Config.String("OBS_STAGE").pipe(Effect.orDie);
       const name = state.id.name;
       if (name === undefined) throw new OfficeForbidden(safeFailure("FORBIDDEN"));
       const role = decodeWireSync(Schema.fromJsonString(OfficeHostRole))(name);

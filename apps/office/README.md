@@ -114,6 +114,12 @@ resolver. It owns revoke-first request/socket/SDK cleanup; it does not supply th
 resolver, mount a SaaS host or enable writes/tickets/WSS. Source/static checks are
 not listener, authentication or runtime acceptance.
 
-T22/T11 still own genuine Worker/session/View/placement/delegation, image/startup
-and accepted-task/file resolver wiring, including the future application CLI entry.
-The fixed isolated worker remains separate; authenticated startup belongs to T10/T11.
+The application composes genuine Worker/session/View/task issuance, finite storage
+callbacks, native-bootstrap and fixed fresh-job roles from ONE application image.
+Use the `application` target in Dockerfile.jobs, not a historical smoke image.
+For ordinary local operation, start Docker and run `pnpm dev`: the launcher builds
+this target and binds its actual immutable local Docker image ID automatically.
+No application-image publication or Cloudflare deployment is needed locally.
+Cloud deployments remain separate approved operations requiring a registry digest.
+See [Office setup](../../docs/office.md) for original-file/Send/editor boundaries.
+Source integration and image build alone do not prove native runtime acceptance.

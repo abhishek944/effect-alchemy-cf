@@ -4,18 +4,22 @@ import type { RuntimeContext } from "alchemy";
 import { Clock, Effect } from "effect";
 import type { OfficeError } from "@starter/office-contract";
 import {
-  initializeOfficeMetadataSchema,
   createOfficeMetadata,
   readConfirmedTaskOperations,
 } from "@starter/office-cloudflare/metadata";
 import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
 import type { OwnerScope, TaskActor } from "@starter/office-server/ports";
 import type { OfficeTaskProofReader } from "./office-task-callback.ts";
-import type { OfficeTaskProof, OfficeTaskSelector } from "./office-task-proof.ts";
+import {
+  officeTaskSourceFile,
+  type OfficeTaskProof,
+  type OfficeTaskSelector,
+} from "./office-task-proof.ts";
 import { resolveOfficeTaskTarget, type OfficeTaskTarget } from "./office-task-target.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { assertOfficeTaskReceipt } from "./office-task-command.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
+import { initializeOfficeStorageSchema } from "./office-storage-schema.ts";
 
 export type OfficeTaskLive<A> = Effect.Effect<
   A,
@@ -58,7 +62,7 @@ export function prepareOfficeTask(
     )
       return yield* Effect.fail(officeDenied());
     yield* Effect.tryPromise({
-      try: () => initializeOfficeMetadataSchema(options.database),
+      try: () => initializeOfficeStorageSchema(options.database),
       catch: officeDenied,
     });
     const binding = yield* Effect.gen(function* () {
@@ -93,6 +97,7 @@ export function prepareOfficeTask(
     const now = yield* Clock.currentTimeMillis;
     const deadline = proof.lease.notAfter;
     if (deadline <= now || deadline > session.expiresAt) return yield* Effect.fail(officeDenied());
+    const sourceFile = officeTaskSourceFile(proof);
     const actor: TaskActor = {
       capability: "draft-task",
       owner,
@@ -101,6 +106,7 @@ export function prepareOfficeTask(
       invocationId: crypto.randomUUID(),
       expiresAt: deadline,
       target: binding.target,
+      ...(sourceFile === undefined ? {} : { sourceFile }),
       acceptedInput: proof.association.acceptedInput,
     };
     return freezeImageRequestValue(

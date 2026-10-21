@@ -1,0 +1,83 @@
+[data-dashboard] [data-cx="office-surface"] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="office-surface"] > [data-office="native"],
+[data-dashboard] [data-cx="office-surface"] > [data-office="review"] {
+  flex: 1;
+  min-height: 0;
+}
+[data-dashboard] [data-cx="office-actions"],
+[data-dashboard] [data-cx="office-files"] header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="office-actions"] strong {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="office-notice"] {
+  padding: 8px 12px;
+  color: var(--cx-muted);
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="office-files"] {
+  flex: 0 1 auto;
+  max-height: 45%;
+  overflow: auto;
+  padding: 8px;
+  border-bottom: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="office-files"] ul {
+  list-style: none;
+  padding: 0;
+}
+[data-dashboard] [data-cx="office-files"] button,
+[data-dashboard] [data-cx="office-actions"] button {
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  background: var(--cx-card);
+  color: var(--cx-text);
+  padding: 5px 10px;
+  margin: 3px 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="office-files"] button:focus-visible,
+[data-dashboard] [data-cx="office-actions"] button:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 2px;
+}
+[data-dashboard] [data-cx="office-files"] button:disabled,
+[data-dashboard] [data-cx="office-actions"] button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+[data-dashboard] [data-cx="office-files"] details {
+  margin: 4px 0 12px 12px;
+  color: var(--cx-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="office-files"] summary {
+  cursor: pointer;
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="office-files"] details a {
+  color: var(--cx-text);
+  text-underline-offset: 3px;
+}
+[data-dashboard] [data-cx="office-files"] :is(summary, a):focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 2px;
+}

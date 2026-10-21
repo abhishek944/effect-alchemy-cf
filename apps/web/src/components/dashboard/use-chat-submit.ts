@@ -105,7 +105,8 @@ export function useChatSubmit({
       store.reportError(outcome.message);
       return;
     }
-    aui.composer.setText("");
+    const latest = aui.composer.getState();
+    if (latest.text === draft && !latest.dictation) aui.composer.setText("");
   };
 
   return {

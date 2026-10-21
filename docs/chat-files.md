@@ -1,7 +1,9 @@
 # Private chat files
 
 Chat accepts JPEG, PNG, WebP and allowlisted safe UTF-8 text/Markdown/CSV/JSON/code
-files. PDF, Office documents, archives, SVG, audio and video are not attachments.
+files, plus modern XLSX, DOCX and PPTX originals in the Office source implementation.
+PDF, legacy XLS/DOC/PPT, generic archives, SVG, audio and video are not attachments.
+See [Office setup and boundaries](office.md): the new Office build/runtime is not yet accepted.
 The picker, drop and paste paths share validation; ordinary pasted text remains
 editable draft text. Nothing executes uploaded markup or code.
 
@@ -21,11 +23,13 @@ browser-supplied chat/file IDs. No public domain, public URL, CORS, provider key
 base64 payload or owner identifier is exposed in the public descriptor/history.
 
 Previews are on demand in the right-pane Files library and exact image tabs.
-Nonimages are download-only there; downloads use plain-text attachment with
-`nosniff`, no-store and sandbox policy. Image originals retain their validated
-format. At the proven model-request boundary, the model receives quoted untrusted
+Text originals download as plain text; Office originals retain their declared
+binary media type and filename. Downloads use attachment, `nosniff`, no-store and
+sandbox policy; images retain their validated inline format. At the proven model-request boundary, the model receives quoted untrusted
 text or transient native image blocks; visible bubbles keep the caption and
-compact file rows. No complete file body is stored in new native inputs.
+compact file rows. Office bytes are neither UTF-8 excerpts nor base64 model blocks:
+finite Office tools read proven accepted originals. No complete file body is stored
+in new native inputs. Attaching an Office file never creates a document automatically.
 
 Uncommitted uploads expire after24h, with scheduled bounded cleanup. An upload
 bound to uncertain native acceptance is retained until acceptance can be
@@ -40,6 +44,7 @@ there is no permanent-erasure or immediate retained-quota recovery promise.
 | Files per message                     | 5                          |
 | Original image                        | 10MiB /16MP                |
 | Original UTF-8 text file              | 1MiB                       |
+| Original XLSX/DOCX/PPTX               | 10MiB                      |
 | Originals per message                 | 20MiB                      |
 | Quoted text                           | 100,000 Unicode characters |
 | Retained/reserved originals per owner | 1GiB                       |

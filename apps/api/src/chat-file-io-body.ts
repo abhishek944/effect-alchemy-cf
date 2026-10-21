@@ -16,6 +16,10 @@ export const holdFileBody = async (
   signal?: AbortSignal,
 ): Promise<HeldFileBody> => {
   const reader = source.getReader();
+  const closed = reader.closed.then(
+    () => ({ ok: true as const }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
   let complete: ((valid: boolean) => void) | undefined;
   const completion = new Promise<boolean>((resolve) => {
     complete = resolve;
@@ -36,25 +40,33 @@ export const holdFileBody = async (
     complete?.(valid);
   };
   const stop = (): Promise<void> => {
+    if (stopping !== undefined) return stopping;
     if (ended) return Promise.resolve();
-    stopping ??= (async () => {
+    // Publish first, then cancel/join actual IO; never expose an errored wrapper before teardown.
+    stopping = Promise.resolve().then(async () => {
+      const results = await Promise.allSettled([
+        Promise.resolve().then(() => reader.cancel()),
+        reading,
+        closed,
+      ]);
+      finish();
       try {
         controller?.error(new ChatFileIOUnavailable());
       } catch {
         /* Already closed. */
       }
-      try {
-        await reader.cancel();
-      } catch {
-        /* Still wait for any actual read. */
-      }
-      await reading?.catch(() => undefined);
-      finish();
-    })();
+      const failures: unknown[] = [];
+      for (const result of results) if (result.status === "rejected") failures.push(result.reason);
+      const endedSource = await closed;
+      if (!endedSource.ok) failures.push(endedSource.error);
+      if (failures.length !== 0) throw new AggregateError(failures, "Original file cleanup failed");
+      return undefined;
+    });
     return stopping;
   };
   const abort = (): void => {
-    void stop();
+    // Observer only; stop() retains the same first promise for every actual closer.
+    void stop().catch(() => undefined);
   };
   try {
     void lease.track(() => completion).catch(() => undefined);
@@ -88,7 +100,6 @@ export const holdFileBody = async (
             used += part.value.byteLength;
             next.enqueue(part.value);
           } catch {
-            next.error(new ChatFileIOUnavailable());
             await stop();
           }
         },

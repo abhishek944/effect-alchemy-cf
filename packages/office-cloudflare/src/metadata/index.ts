@@ -19,6 +19,7 @@ export {
 } from "./schema.ts";
 export type { OfficeProviderOptions } from "./store.ts";
 export { readConfirmedTaskOperations } from "./task-lineage.ts";
+export { readOfficeDocumentSources } from "./document-sources.ts";
 /** One actual Office D1/R2 metadata bundle. Host initializes schema and supplies trusted stage/worker identity. */
 export function createOfficeMetadata(options: OfficeProviderOptions): OfficeMetadata {
   const db = new MetadataStore(options);

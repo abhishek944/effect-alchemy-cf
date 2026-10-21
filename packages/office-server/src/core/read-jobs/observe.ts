@@ -7,6 +7,7 @@ import { officeFailure } from "../failure.ts";
 import { storeJobState } from "../job-state.ts";
 import { operationCaller, operationTarget } from "../operation-caller.ts";
 import { boundedMetadataDigest, terminalReceipt } from "../operations.ts";
+import { requireIntent } from "../operation-read.ts";
 import { finishReadOutput } from "./publish.ts";
 
 const originalJob = Effect.fn("Office.readJobs.originalJob")(function* (
@@ -65,14 +66,10 @@ export const observeReadOutput = Effect.fn("Office.readJobs.observeOutput")(func
 ) {
   if (original.intent.kind !== "render" && original.intent.kind !== "export")
     return yield* Effect.fail(officeFailure("INVALID_INPUT"));
-  const context = yield* operationCaller(
-    deps,
-    actor,
-    original.receipt.operationId,
-    original.intent,
-  );
+  const context = yield* operationCaller(deps, actor, original.receipt.operationId, "receipt");
   const record = context.record;
   if (record === null) return yield* Effect.fail(officeFailure("NOT_FOUND"));
+  yield* requireIntent(deps, record, original.intent);
   if (terminalReceipt(record.receipt.phase)) return record.receipt;
   const target = yield* operationTarget(deps, record);
   const revalidate = () => verifyOperation(deps, record, target, "recovery-observe");

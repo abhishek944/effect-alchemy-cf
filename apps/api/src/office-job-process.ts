@@ -1,3 +1,4 @@
+import { officeImageReference } from "./office-image.ts";
 import type * as cf from "@cloudflare/workers-types";
 import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
 import { officePrivateStream } from "./office-private-stream.ts";
@@ -14,13 +15,9 @@ const observe = <A>(actual: Promise<A>): Promise<A> => {
   return actual;
 };
 /** One fresh private job instance, only AFTER the first original D1 claim ACK. */
-export function officeJobProcess(state: cf.DurableObjectState, imageRef: string) {
+export function officeJobProcess(state: cf.DurableObjectState, imageRef: string, stage: string) {
   const configured = state.container;
-  if (
-    configured === undefined ||
-    !/^registry\.cloudflare\.com\/[^\s@]+@sha256:[a-f0-9]{64}$/.test(imageRef)
-  )
-    throw unavailable();
+  if (configured === undefined || !officeImageReference(imageRef, stage)) throw unavailable();
   const native = configured;
   const boot = crypto.randomUUID(),
     stop = new AbortController();

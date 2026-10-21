@@ -46,7 +46,9 @@ export const officeHostFetch = (
     return yield* Effect.tryPromise({
       try: async () => {
         const native = officeNativeRequest(new Request(`${host}${path}`, init));
-        const response: unknown = await namespace.getByName(officeHostName(owner)).fetch(native);
+        const response: unknown = await namespace
+          .getByName(officeHostName({ stage: owner.stage, ownerId: owner.ownerId }))
+          .fetch(native);
         return officeWebResponse(response);
       },
       catch: unavailable,
@@ -64,7 +66,7 @@ export const officeHostRequest = (
     return yield* Effect.tryPromise({
       try: async () => {
         const response: unknown = await namespace
-          .getByName(officeHostName(owner))
+          .getByName(officeHostName({ stage: owner.stage, ownerId: owner.ownerId }))
           .fetch(officeNativeRequest(request));
         return officeWebResponse(response);
       },

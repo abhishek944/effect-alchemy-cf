@@ -3,6 +3,10 @@ import type { NativeAccess, OfficeMetadata } from "@starter/office-server/ports"
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { assertOfficeTaskCommand } from "./office-task-command.ts";
+import {
+  assertOfficeTaskDescriptor,
+  officeTaskDescriptorRequest,
+} from "./office-task-descriptor.ts";
 
 /** Scope only. Does not replace actual native placement/epoch/fence or View snapshot policy. */
 export async function assertOfficeTaskRead(
@@ -19,6 +23,11 @@ export async function assertOfficeTaskRead(
   )
     throw officeDenied();
   assertOfficeTaskCommand(original.task.proof, request.command);
+  if (officeTaskDescriptorRequest(request)) {
+    if (access.kind !== "read") throw officeDenied();
+    await assertOfficeTaskDescriptor(metadata, request, access.target);
+    return;
+  }
   if (access.kind !== "read") return; // Actual existing held turn + Task basis guard own writes.
   await request.live();
   const target = access.target;

@@ -50,6 +50,23 @@ export function officeBinaryResponse(
         }
       }
     },
-    cancel: () => resource.close(),
+    async cancel() {
+      const failures: unknown[] = [];
+      // Retire the reader before our own fetch abort, but still attempt every resource closer.
+      try {
+        await cursor.close();
+      } catch (error) {
+        failures.push(error);
+      }
+      try {
+        await resource.close();
+      } catch (error) {
+        failures.push(error);
+      }
+      if (failures.length > 0)
+        throw new AggregateError(failures, "Private response cancellation failed", {
+          cause: failures[0],
+        });
+    },
   });
 }

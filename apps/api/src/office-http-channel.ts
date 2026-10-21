@@ -1,23 +1,6 @@
 import { Option, Schema } from "effect";
-import { Count, Id } from "@starter/office-contract";
-
-/** Public channel creation body; the editor is optional read-only View access. */
-export const OfficeChannelRequest = Schema.Struct({
-  viewId: Id,
-  editorId: Schema.NullOr(Id),
-});
-export type OfficeChannelRequest = typeof OfficeChannelRequest.Type;
-/** Real canonical channel reply. The protocol base is not a credential by itself. */
-export const OfficeChannel = Schema.Struct({
-  channelId: Id,
-  expiresAt: Count,
-  protocolBase: Schema.String.check(
-    Schema.isPattern(/^\/api\/office\/channels\/[A-Za-z0-9_-]{16,96}$/),
-  ),
-}).check(
-  Schema.makeFilter((value) => value.protocolBase === `/api/office/channels/${value.channelId}`),
-);
-export type OfficeChannel = typeof OfficeChannel.Type;
+import { Id, OfficeChannel, OfficeChannelRequest } from "@starter/office-contract";
+export { OfficeChannel, OfficeChannelRequest } from "@starter/office-contract";
 const decodeId = (value: string | undefined): string | null =>
   value === undefined ? null : Option.getOrNull(Schema.decodeUnknownOption(Id)(value));
 const decodeChannel = (value: unknown) =>

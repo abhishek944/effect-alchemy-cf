@@ -13,7 +13,7 @@ import { officeNativePreparation } from "./office-native-preparation.ts";
 import { officeNativeProducer } from "./office-native-producer.ts";
 import { officeNativeBasis } from "./office-native-basis.ts";
 import { assertOfficeTaskBasis } from "./office-task-native-policy.ts";
-import type { OfficePrivateRequest } from "./office-private-authority.ts";
+import { officeDenied, type OfficePrivateRequest } from "./office-private-authority.ts";
 
 /** One actual strict writer for the FIRST acknowledged Core/SDK-member grant, never a guessed fence. */
 export async function officeNativeWriter(
@@ -52,7 +52,34 @@ export async function officeNativeWriter(
         : officeEditorPreparation(held, request.live),
     verifyProducer: (value, header, actual) => proof.verify(value, header, actual),
   });
-  const writer = storage.invocation(fence);
+  const birth =
+    held.kind === "core" &&
+    target.scope.kind === "draft" &&
+    held.turn.nativePlan === "fresh" &&
+    held.permit.expectedHead === null;
+  if (
+    birth &&
+    (target.scope.kind !== "draft" ||
+      fence.draft === undefined ||
+      fence.draft.generation !== target.scope.generation ||
+      fence.draft.generation !== 1 ||
+      fence.draft.head !== 0 ||
+      fence.draft.status !== "draft" ||
+      fence.draft.removed)
+  )
+    throw officeDenied();
+  // The verified head0 birth describes ABSENCE. Supplying draft here would require an existing row.
+  // createWorktree atomically establishes the actual present vector after its first publication.
+  const writer = storage.invocation(
+    birth
+      ? {
+          epoch: fence.epoch,
+          commandID: fence.commandID,
+          stepID: fence.stepID,
+          main: fence.main,
+        }
+      : fence,
+  );
   return {
     kind: held.kind,
     writer,

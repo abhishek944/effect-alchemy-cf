@@ -7,8 +7,9 @@ The application owns private chat metadata and authorization.
 
 The initial model is **GPT-6 Luna / High**. Installed OpenAI and Anthropic models
 and supported reasoning levels are selectable through an explicit stage allowlist,
-with per-chat settings and account defaults. Owner-scoped account, Skills and
-image tools use the native harness; there is no shell or filesystem workspace.
+with per-chat settings and account defaults. Owner-scoped account, Skills, image
+and [Office](office.md) tools use the native harness; there is no shell or filesystem workspace.
+Office source is implemented, but its published image/build/runtime acceptance remains pending.
 See [models and usage](chat-models-usage.md), [Skills](skills.md), [private files](chat-files.md),
 [image generation and saved references](chat-images.md) and [voice](chat-voice.md). Queueing, Fast and PDF are absent.
 Titles use one bounded first-send-model naming call; see [automatic titles](chat-titles.md).

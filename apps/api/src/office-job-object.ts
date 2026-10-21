@@ -16,7 +16,7 @@ export function officeJobRole(
   jobId: string,
   nodeId: string,
 ) {
-  const process = officeJobProcess(state, image);
+  const process = officeJobProcess(state, image, owner.stage);
   const metadata = createOfficeMetadata(resources);
   let issued = false;
   return {

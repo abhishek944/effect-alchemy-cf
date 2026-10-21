@@ -16,7 +16,13 @@ import "./workspace-preview-tabs.css";
 export const workspacePanelId = (id: string) => `workspace-preview-panel-${id}`;
 export const workspaceTabId = (id: string) => `workspace-preview-tab-${id}`;
 const labelOf = (tab: WorkspacePreviewTab) =>
-  tab.kind === "image" ? tab.file.name : tab.kind === "files" ? "Files" : "New tab";
+  tab.kind === "image"
+    ? tab.file.name
+    : tab.kind === "office"
+      ? tab.selection.title
+      : tab.kind === "files"
+        ? "Files"
+        : "New tab";
 /** The single top-toolbar tab strip; it never loads an original by itself. */
 export function WorkspacePreviewTabs({
   rightRef,
@@ -69,7 +75,11 @@ export function WorkspacePreviewTabs({
   };
   return (
     <div ref={anchor} data-cx="workspace-preview-tabs" style={style} hidden={!bounds}>
-      <div data-cx="workspace-tab-list" role="tablist" aria-label="Files and open image previews">
+      <div
+        data-cx="workspace-tab-list"
+        role="tablist"
+        aria-label="Files and open document previews"
+      >
         {preview.tabs.map((tab) => {
           const active = tab.id === preview.activeId;
           const label = labelOf(tab);
@@ -112,7 +122,7 @@ export function WorkspacePreviewTabs({
                     <ImageIcon />
                   )
                 ) : (
-                  <Icon name={tab.kind === "files" ? "folder-closed" : "plus"} />
+                  <Icon name={tab.kind === "tools" ? "plus" : "folder-closed"} />
                 )}
                 <span data-cx="workspace-tab-label">{label}</span>
               </button>

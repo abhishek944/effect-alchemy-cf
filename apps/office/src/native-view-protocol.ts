@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { Effect } from "effect";
+import { UniverType } from "@univerjs/protocol";
 import type { UnitRecord } from "@univerjs-pro/collaboration-service";
 import type { NodeHttpTransportContext } from "@univerjs-pro/collaboration-transport-node";
 import { OfficeForbidden, safeFailure } from "@starter/office-contract";
@@ -122,7 +123,12 @@ export function createOfficeViewProtocol(options: {
         readers,
         check,
       );
-      const kind = record.view.kind === "sheet" ? 1 : record.view.kind === "doc" ? 2 : 3;
+      const kind =
+        record.view.kind === "sheet"
+          ? UniverType.UNIVER_SHEET
+          : record.view.kind === "doc"
+            ? UniverType.UNIVER_DOC
+            : UniverType.UNIVER_SLIDE;
       const native = decodeNativeViewSnapshot(
         bytes,
         { unitID: record.target.unitId, type: kind, revision: record.view.revision },

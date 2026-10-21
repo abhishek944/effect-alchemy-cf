@@ -1,3 +1,4 @@
+import { officeImageReference } from "./office-image.ts";
 import type * as cf from "@cloudflare/workers-types";
 import {
   OfficeForbidden,
@@ -40,7 +41,7 @@ function lifetime(options: Options) {
   const policy = decodeWireSync(HostPolicy)(structuredClone(options.policy));
   const imageRef = options.imageRef;
   if (
-    !/^registry\.cloudflare\.com\/[^\s@]+@sha256:[a-f0-9]{64}$/.test(imageRef) ||
+    !officeImageReference(imageRef, owner.stage) ||
     imageRef.slice(imageRef.lastIndexOf("@") + 1) !== policy.imageDigest
   )
     throw forbidden();

@@ -60,10 +60,10 @@ export function createViewSnapshotDatabase(
       if (
         Number.isSafeInteger(range.from) &&
         Number.isSafeInteger(to) &&
-        range.from > to &&
-        to <= snapshot.rev
+        range.from === snapshot.rev &&
+        to === snapshot.rev
       )
-        return []; // Proven empty interval only. Artifact bytes grant NO native history.
+        return []; // SDK interval (rev, rev] is empty. Artifact bytes grant NO history.
       return denied();
     },
     commitChangeset: () => Promise.reject(new OfficeForbidden(safeFailure("FORBIDDEN"))),

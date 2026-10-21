@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, Digest, DraftTarget } from "@starter/office-contract";
+import { ArtifactRef, Count, Digest, DraftTarget, Id, Label } from "@starter/office-contract";
 import type { DocumentScope, OfficeError } from "@starter/office-contract";
 import type { Effect } from "effect";
 
@@ -21,6 +21,15 @@ const TaskClaims = Schema.Struct({
   ...PrincipalClaims.fields,
   capability: Schema.Literal("draft-task"),
   target: Schema.NullOr(DraftTarget),
+  /** Descriptive verified import origin, never a capability or content grant. */
+  sourceFile: Schema.optionalKey(
+    Schema.Struct({
+      chatId: Id,
+      fileRef: Id,
+      name: Label,
+      upload: Schema.Struct({ ...ArtifactRef.fields, kind: Schema.Literal("upload") }),
+    }),
+  ),
   acceptedInput: Schema.Struct({
     requestId: ClaimId,
     submissionId: ClaimId,

@@ -30,9 +30,9 @@ export class OfficeAuthentication extends HttpApiMiddleware.Service<
     Effect.gen(function* () {
       const auth = yield* Auth;
       const epochs = yield* OfficeSessionEpochs;
-      const stage = yield* Config.String("OBS_STAGE");
       return (httpEffect) =>
         Effect.gen(function* () {
+          const stage = yield* Config.String("OBS_STAGE").pipe(Effect.orDie);
           const request = yield* HttpServerRequest.HttpServerRequest;
           const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
           const origin = web.headers.get("origin");

@@ -10,7 +10,12 @@ import type {
 } from "../ports/index.ts";
 import { authorize, sameOwner, verifyOperation } from "./claims.ts";
 import { StoredView } from "./record-schemas.ts";
-import { operationRecord, requireExistingIntent, requireIntent } from "./operation-read.ts";
+import {
+  operationRecord,
+  requireExistingIntent,
+  requireIntent,
+  requireReceiptInput,
+} from "./operation-read.ts";
 import { nativeWrites } from "./native-complete.ts";
 import { officeFailure } from "./failure.ts";
 
@@ -100,7 +105,7 @@ export const operationCaller = Effect.fn("Office.operationCaller")(function* (
   deps: OfficeDependencies,
   actor: Actor,
   operationId: string,
-  intent: OperationIntent | null,
+  intent: OperationIntent | "receipt" | null,
 ) {
   const owner = yield* decodeWire(OwnerClaims)(actor.owner).pipe(
     Effect.mapError(() => officeFailure("FORBIDDEN")),
@@ -119,10 +124,11 @@ export const operationCaller = Effect.fn("Office.operationCaller")(function* (
       actor.expiresAt <= now
     )
       return yield* Effect.fail(officeFailure("FORBIDDEN", operationId));
-    if (intent !== null) yield* requireIntent(deps, record, intent);
+    if (intent !== null && intent !== "receipt") yield* requireIntent(deps, record, intent);
     yield* verifyOperation(deps, record, yield* operationTarget(deps, record), "recovery-observe");
   } else if (record !== null && claims !== null) {
-    yield* requireExistingIntent(deps, claims, record, intent ?? record.intent);
+    if (intent === "receipt") yield* requireReceiptInput(claims, record);
+    else yield* requireExistingIntent(deps, claims, record, intent ?? record.intent);
     yield* verifyOperation(deps, record, yield* operationTarget(deps, record), "recovery-observe");
   }
   return { claims, record };

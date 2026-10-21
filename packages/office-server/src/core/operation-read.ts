@@ -47,6 +47,28 @@ export const requireIntent = Effect.fn("Office.requireIntent")(function* (
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", record.receipt.operationId));
   return undefined;
 });
+/** Receipt correlation only AFTER genuine request authorization; never mutation identity. */
+export const requireReceiptInput = Effect.fn("Office.requireReceiptInput")(function* (
+  claims: ActorClaims,
+  record: OperationRecord,
+) {
+  if (!sameOwner(claims.owner, record.owner) || !sameOwner(record.actor.owner, record.owner))
+    return yield* Effect.fail(officeFailure("FORBIDDEN", record.receipt.operationId));
+  if (claims.capability === "draft-task") {
+    const previous = record.actor;
+    if (
+      previous.capability !== "draft-task" ||
+      previous.principalId !== claims.principalId ||
+      previous.sessionEpoch !== claims.sessionEpoch ||
+      previous.acceptedInput.requestId !== claims.acceptedInput.requestId ||
+      previous.acceptedInput.submissionId !== claims.acceptedInput.submissionId ||
+      previous.acceptedInput.conversationId !== claims.acceptedInput.conversationId ||
+      previous.acceptedInput.digest !== claims.acceptedInput.digest
+    )
+      return yield* Effect.fail(officeFailure("FORBIDDEN", record.receipt.operationId));
+  }
+  return undefined;
+});
 export const requireExistingIntent = Effect.fn("Office.requireExistingIntent")(function* (
   deps: OfficeDependencies,
   claims: ActorClaims,

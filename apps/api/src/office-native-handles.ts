@@ -7,6 +7,8 @@ import type { OfficePrivateTurns } from "./office-private-turns.ts";
 import type { OfficeEditorGrants } from "./office-editor-grants.ts";
 import { officeNativeWriter } from "./office-native-writer.ts";
 import { assertOfficeTaskRead } from "./office-task-read-policy.ts";
+import { officeTaskDescriptorRequest } from "./office-task-descriptor.ts";
+import type { HostNativeReads } from "@starter/office-server/native-remote";
 import { closeOfficeNativeHandle, type OfficeNativeHandle } from "./office-native-handle.ts";
 import {
   officePrivateAuthority,
@@ -127,6 +129,7 @@ export function officeNativeHandles(
           id,
           request,
           target,
+          descriptor: officeTaskDescriptorRequest(request),
           pair,
           reader,
           writer,
@@ -152,9 +155,15 @@ export function officeNativeHandles(
         throw error;
       }
     },
-    async use<A>(id: string, body: (handle: OfficeNativeHandle) => Promise<A>): Promise<A> {
+    async use<A>(
+      id: string,
+      body: (handle: OfficeNativeHandle) => Promise<A>,
+      method?: (typeof HostNativeReads)[keyof typeof HostNativeReads]["method"],
+    ): Promise<A> {
       const handle = handles.get(id);
       if (handle === undefined || !handle.active || Date.now() >= handle.deadline)
+        throw officeDenied();
+      if (handle.descriptor && !["core.unit", "draft.record", "draft.unit"].includes(method ?? ""))
         throw officeDenied();
       const actual = Promise.resolve()
         .then(request.live)

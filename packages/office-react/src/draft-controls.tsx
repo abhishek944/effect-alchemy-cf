@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { Draft, Editor, Receipt } from "@starter/office-contract";
 import type { OfficeEditorHandle } from "./connection.ts";
-import type { OfficeRuntime } from "./runtime.ts";
+import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 
-export type OfficeDraftControlsProps = OfficeRuntime & {
-  readonly draft: Draft;
-  readonly editor: Editor;
-  readonly native: OfficeEditorHandle;
-  readonly onOperation: (operationId: string) => void;
-  readonly onReceipt: (receipt: Receipt) => void;
-};
+export type OfficeDraftControlsProps = OfficeRuntime &
+  OfficeActionAdmission & {
+    readonly draft: Draft;
+    readonly editor: Editor;
+    readonly native: OfficeEditorHandle;
+    readonly onOperation: (operationId: string) => void;
+    readonly onReceipt: (receipt: Receipt) => void;
+    readonly onBusy?: (busy: boolean) => void;
+  };
 /** Host owns leave guarding and editor reacquisition. This control never installs a router guard. */
 function DraftControlSurface(props: OfficeDraftControlsProps) {
   const attempt = useRef<string | null>(null);
@@ -32,9 +34,12 @@ function DraftControlSurface(props: OfficeDraftControlsProps) {
     props.editor.view.documentId === props.draft.documentId &&
     target.generation === props.draft.generation;
   const act = async () => {
-    if (controller.current !== null || (!observe && !allowed)) return;
+    if (controller.current !== null || props.disabled || (!observe && !allowed)) return;
+    const release = props.admit?.();
+    if (props.admit !== undefined && typeof release !== "function") return;
     const active = new AbortController();
     controller.current = active;
+    props.onBusy?.(true);
     setBusy(true);
     try {
       let receipt: Receipt;
@@ -103,6 +108,8 @@ function DraftControlSurface(props: OfficeDraftControlsProps) {
         );
     } finally {
       controller.current = null;
+      props.onBusy?.(false);
+      release?.();
       if (!active.signal.aborted) setBusy(false);
     }
   };
@@ -111,7 +118,7 @@ function DraftControlSurface(props: OfficeDraftControlsProps) {
       <span>Draft · Main unchanged</span>
       <button
         type="button"
-        disabled={busy || (!allowed && !observe)}
+        disabled={busy || props.disabled || (!allowed && !observe)}
         onClick={(event) => {
           if (event.isTrusted) void act();
         }}

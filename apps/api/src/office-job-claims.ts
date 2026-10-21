@@ -6,6 +6,7 @@ import type { OfficeMetadataCall, OfficeMetadataResponse } from "./office-metada
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";
 import { officeJobControlUnit } from "./office-job-repair.ts";
+import { sameOfficeTaskInput } from "./office-task-lineage.ts";
 
 /** Tracks the actual original CAS result, never a job-id/constructor/queried-running substitute. */
 export function officeJobClaims(
@@ -75,7 +76,9 @@ export function officeJobClaims(
       !officeSame(old.job, record.job) ||
       !officeSame(old.dispatch, record.dispatch) ||
       operation.jobId !== id ||
-      operation.actor.capability !== "human" ||
+      ("task" in request.original
+        ? !sameOfficeTaskInput(request.original.task.proof, operation)
+        : operation.actor.capability !== "human") ||
       operation.actor.principalId !== request.original.actor.principalId ||
       operation.documentId !== record.job.binding.documentId ||
       !(await officeJobControlUnit(operation, record.job)) ||

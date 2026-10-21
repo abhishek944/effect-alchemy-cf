@@ -10,6 +10,7 @@ import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { assertOfficeTaskCommand, assertOfficeTaskObservedIntent } from "./office-task-command.ts";
 import { sameOfficeTaskInput } from "./office-task-lineage.ts";
+import { officeTaskReviewTarget } from "./office-task-review.ts";
 
 /** Current original Root registration only, never a decoded actor supplied by Node/model.
  * This is actor/target metadata policy, NOT serial head/native publication or file authority.
@@ -64,28 +65,22 @@ export function officeTaskActorPolicy(
           return yield* Effect.fail(officeDenied());
         return undefined;
       }
-      const readView = task.binding.readView;
-      if (readView !== null && officeSame(input, readView.target)) {
-        const actual = yield* metadata.view(actor.owner, readView.view.id);
-        if (
-          actual === null ||
-          actual.view.expiresAt <= Date.now() ||
-          !officeSame(actual.target, readView.target) ||
-          !officeSame(actual.source, readView.source) ||
-          actual.view.revision !== readView.view.revision
-        )
-          return yield* Effect.fail(officeDenied());
+      if (
+        yield* Effect.tryPromise({
+          try: () => officeTaskReviewTarget(metadata, request, input),
+          catch: officeDenied,
+        })
+      )
         return undefined;
-      }
-      const fork = task.binding.fork;
-      if (fork !== null && officeSame(input, fork.target)) {
-        const actual = yield* metadata.view(actor.owner, fork.view.id);
+      for (const selected of [task.binding.readView, task.binding.fork]) {
+        if (selected === null || !officeSame(input, selected.target)) continue;
+        const actual = yield* metadata.view(actor.owner, selected.view.id);
         if (
           actual === null ||
           actual.view.expiresAt <= Date.now() ||
-          !officeSame(actual.target, fork.target) ||
-          !officeSame(actual.source, fork.source) ||
-          actual.view.revision !== fork.view.revision
+          !officeSame(actual.target, selected.target) ||
+          !officeSame(actual.source, selected.source) ||
+          actual.view.revision !== selected.view.revision
         )
           return yield* Effect.fail(officeDenied());
         return undefined;

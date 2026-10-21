@@ -1,9 +1,10 @@
 import RouteLink from "@/lib/route-link";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type CSSProperties, type ReactNode } from "react";
 import PaneResizer from "./pane-resizer";
 import SettingsNavigation from "./settings-navigation";
 import "./pane-resizer.css";
 import { usePanes } from "./use-panes";
+import { useWorkspaceOffice } from "./workspace-office-context";
 import { useFocusModality } from "./use-focus-modality";
 import { Icon } from "./icon";
 import type { SettingsSection } from "./model";
@@ -40,6 +41,7 @@ export default function DashboardShell({
   homeHref = "/dashboard",
 }: Props) {
   const chatWorkspace = section === null && !notFound;
+  const { transition, setRoot, visibility } = useWorkspaceOffice();
   const {
     sidebarOpen,
     rightOpen,
@@ -49,7 +51,11 @@ export default function DashboardShell({
     toggleSidebar,
     toggleRight,
     toggleFullView,
-  } = usePanes(chatWorkspace);
+  } = usePanes(chatWorkspace, transition);
+  useLayoutEffect(() => {
+    setRoot(rightRef.current);
+    visibility(chatWorkspace && rightOpen);
+  }, [setRoot, visibility, rightRef, chatWorkspace, rightOpen]);
   const { registerReveal } = useWorkspacePreview();
   useEffect(() => registerReveal(openRight), [registerReveal, openRight]);
   const { theme } = useDashboardTheme();

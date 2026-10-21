@@ -6,6 +6,7 @@ import DocsUIEnUS from "@univerjs/docs-ui/locale/en-US";
 import UIEnUS from "@univerjs/ui/locale/en-US";
 import SlidesEnUS from "@univerjs-pro/slides/locale/en-US";
 import SlidesUIEnUS from "@univerjs-pro/slides-ui/locale/en-US";
+import CollaborationEnUS from "@univerjs-pro/collaboration-client-ui/locale/en-US";
 
 const value: Schema.Codec<LanguageValue> = Schema.suspend(() =>
   Schema.Union([
@@ -27,5 +28,6 @@ const merged: unknown = mergeLocales(
   UIEnUS,
   SlidesEnUS,
   SlidesUIEnUS,
+  CollaborationEnUS,
 );
 export const nativeLocales = { [LocaleType.EN_US]: decode(merged) };

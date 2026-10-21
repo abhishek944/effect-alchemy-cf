@@ -21,6 +21,7 @@ import {
   AuthzIoHttpService,
   CollaborationImageIoService,
 } from "@univerjs-pro/collaboration-client";
+import { UniverCollaborationClientUIPlugin } from "@univerjs-pro/collaboration-client-ui";
 import { nativePresets, nativeLocales } from "./presets.ts";
 import { OfficeFramePlugin } from "./injector-plugin.ts";
 import { nativeTransport } from "./transport.ts";
@@ -57,7 +58,8 @@ export function createNativeApplication(
   const plugins: IPresetPlugin[] = [[OfficeFramePlugin, capture]];
   if (transport !== undefined) {
     plugins.push(UniverCollaborationPlugin);
-    if (!pinned) plugins.push([UniverCollaborationClientPlugin, transport]);
+    if (!pinned)
+      plugins.push([UniverCollaborationClientPlugin, transport], UniverCollaborationClientUIPlugin);
   }
   const override: DependencyOverride = pinned
     ? [[IAuthzIoService, { useClass: AuthzIoHttpService }]]

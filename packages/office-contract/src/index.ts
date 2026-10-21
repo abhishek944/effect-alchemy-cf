@@ -5,6 +5,8 @@ export * from "./models.ts";
 export * from "./requests.ts";
 export * from "./import-into.ts";
 export * from "./send-target.ts";
+export * from "./channel.ts";
+export * from "./sources.ts";
 export * from "./content.ts";
 export * from "./review.ts";
 export * from "./commands.ts";

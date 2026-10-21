@@ -1,8 +1,6 @@
 import { Effect, Scope } from "effect";
-import {
-  createOfficeMetadata,
-  initializeOfficeMetadataSchema,
-} from "@starter/office-cloudflare/metadata";
+import { createOfficeMetadata } from "@starter/office-cloudflare/metadata";
+import { initializeOfficeStorageSchema } from "./office-storage-schema.ts";
 import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
 import type * as cf from "@cloudflare/workers-types";
 import type { OwnerScope } from "@starter/office-server/ports";
@@ -26,7 +24,7 @@ export async function officeHostRuntime(
   imageRef: string,
 ): Promise<OfficeHostRuntime> {
   const scope = await Effect.runPromise(Scope.make());
-  const policy = officeHostPolicy(imageRef);
+  const policy = officeHostPolicy(imageRef, owner.stage);
   const process = officeHostProcess(
     state,
     scope,
@@ -64,7 +62,7 @@ export async function officeHostRuntime(
     active() {
       if (root.closing || root.bootIO.isRevoked) return Promise.reject(officeDenied());
       active ??= Promise.resolve().then(async () => {
-        await initializeOfficeMetadataSchema(resources.database);
+        await initializeOfficeStorageSchema(resources.database);
         const actual = await process.start(); // Ready callback NEVER waits on this promise.
         if (root.closing || root.bootIO.isRevoked) throw officeDenied();
         const options = {
@@ -72,6 +70,7 @@ export async function officeHostRuntime(
           stage: owner.stage,
           limits: policy.limits,
           workerId: actual.bootId,
+          editorTtlMs: 120_000, // Initial channel is still capped by the original 120s invocation.
         };
         const metadata = createOfficeMetadata(options);
         const stop = () => {

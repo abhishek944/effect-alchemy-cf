@@ -36,6 +36,7 @@ import { officeNativeWrite } from "./office-native-write.ts";
 import { dispatchOfficeMetadata } from "./office-metadata-dispatch.ts";
 import { officeJobClaims } from "./office-job-claims.ts";
 import { officePrivateJobs } from "./office-private-jobs.ts";
+import { officeTaskStorage } from "./office-task-storage.ts";
 
 export { OfficePrivateCall, OfficePrivateReply };
 
@@ -54,7 +55,8 @@ export function officePrivateBackend(
   binding: OfficeEditorBinding | null,
 ) {
   const authority = officePrivateAuthority(metadata, request);
-  const bytes = createOfficeBytes(options);
+  const storage = officeTaskStorage(metadata, request, createOfficeBytes(options));
+  const bytes = storage.bytes;
   const turns = officePrivateTurns(
     options,
     metadata,
@@ -84,6 +86,7 @@ export function officePrivateBackend(
             metadata,
             (candidate) =>
               authority.authorize(candidate).pipe(
+                Effect.andThen(storage.authorize(candidate)),
                 Effect.andThen(
                   Effect.tryPromise({
                     try: async () => {
@@ -98,12 +101,17 @@ export function officePrivateBackend(
           ),
         );
         claims.after(response);
+        await storage.after(response);
         await request.live();
         return response;
       }
       let value: unknown;
       if (Schema.is(readRequest)(call))
-        value = await handles.use(call.input.handleId, (handle) => officeNativeRead(handle, call));
+        value = await handles.use(
+          call.input.handleId,
+          (handle) => officeNativeRead(handle, call),
+          call.method,
+        );
       else if (Schema.is(writeRequest)(call))
         value = await handles.use(call.input.handleId, (handle) => officeNativeWrite(handle, call));
       else if (Schema.is(HostNativePieces.register.request)(call))

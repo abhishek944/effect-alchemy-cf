@@ -16,6 +16,7 @@ export type OfficeNativeHandle = {
   readonly id: string;
   readonly request: OfficePrivateRequest;
   readonly target: NativeTarget;
+  readonly descriptor: boolean;
   readonly worktreeId: string | null;
   readonly baselineRevision: number | null;
   readonly deadline: number;

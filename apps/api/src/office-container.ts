@@ -1,16 +1,23 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
+import { AlchemyContext } from "alchemy/AlchemyContext";
+import { Stack } from "alchemy/Stack";
+import { officeImageReference } from "./office-image.ts";
 import { Config, Effect } from "effect";
 
-/** One operator-supplied immutable APPLICATION image, containing host AND fixed job entries.
+/** One immutable APPLICATION image, containing host AND fixed job entries.
  * This declares configuration only; inspect/boot/readiness checks remain runtime obligations.
  */
 export class OfficeApplication extends Cloudflare.Container<OfficeApplication>()(
   "OfficeApplication",
   Effect.gen(function* () {
     const image = yield* Config.String("OFFICE_IMAGE_REF");
-    if (!/^registry\.cloudflare\.com\/[^\s@]+@sha256:[a-f0-9]{64}$/.test(image))
-      throw new Error("Office requires an actual published immutable application image.");
+    const stack = yield* Stack;
+    const local = globalThis.__ALCHEMY_RUNTIME__
+      ? (yield* Config.String("AUTH_LOCAL")) === "yes"
+      : (yield* AlchemyContext).dev;
+    if (!officeImageReference(image, local ? stack.stage : "cloud"))
+      throw new Error("Office requires an immutable application image for the selected stage.");
     return {
       image,
       schedulingPolicy: "default" as const,
@@ -37,13 +44,17 @@ export const officeApplicationBinding = Effect.gen(function* () {
   const application = yield* OfficeApplication.Application;
   const namespace = yield* Cloudflare.DurableObjectScope;
   const worker = yield* Cloudflare.Worker;
+  const image = yield* Config.String("OFFICE_IMAGE_REF");
+  const stage = globalThis.__ALCHEMY_RUNTIME__
+    ? yield* Config.String("OBS_STAGE")
+    : (yield* Stack).stage;
   yield* application.bind`${namespace}`({ durableObjects: { namespaceId: namespace.namespaceId } });
   yield* worker.bind`${application.LogicalId}`({
     containers: [
       {
         className: namespace.name,
-        dev: application.dev,
-        hash: application.hash.pipe(Output.map((image) => image?.image)),
+        dev: stage === "dev_local" ? { tag: image } : application.dev,
+        hash: application.hash.pipe(Output.map((built) => built?.image)),
       },
     ],
   });

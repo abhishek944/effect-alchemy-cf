@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import {
   Count,
+  ArtifactRef,
   Digest,
   Id,
   OFFICE_LIMITS,
@@ -15,7 +16,8 @@ import { ImageOriginalBinding, ImageResponseIdentity } from "./chat-image-respon
 import { decodeChatOfficeSession } from "./chat-office-session.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 import type { OfficeTaskAssociation } from "./chat-office-task-association.ts";
-import { officeDenied } from "./office-private-authority.ts";
+import { officeDenied, officeSame } from "./office-private-authority.ts";
+import type { ArtifactRef as ArtifactReference } from "@starter/office-contract";
 
 /** Private callback selectors only. Never credentials or a browser/model grant request. */
 export const OfficeTaskSelector = Schema.Struct({
@@ -24,10 +26,22 @@ export const OfficeTaskSelector = Schema.Struct({
   leaseId: Id,
 });
 export type OfficeTaskSelector = typeof OfficeTaskSelector.Type;
+export const OfficeStageReceipt = Schema.Struct({
+  toolTaskId: OriginalActorClaims.members[1].fields.acceptedInput.fields.toolTaskId,
+  artifact: Schema.Struct({ ...ArtifactRef.fields, kind: Schema.Literals(["upload", "code"]) }),
+  fileRef: Schema.optionalKey(DomainUuid),
+}).check(
+  Schema.makeFilter(
+    (receipt) => receipt.artifact.kind === "upload" || receipt.fileRef === undefined,
+  ),
+);
+export type OfficeStageReceipt = typeof OfficeStageReceipt.Type;
+export const OfficeStageReceipts = Schema.Array(OfficeStageReceipt).check(Schema.isMaxLength(32));
 const Lease = Schema.Struct({ id: Id, notAfter: Count });
 const Intent = Schema.Struct({ operationId: Id, digest: Digest, command: Schema.Unknown });
 const Reply = Schema.Struct({
   lease: Lease,
+  stagedArtifacts: OfficeStageReceipts,
   association: Schema.Struct({
     session: Schema.Unknown,
     chatId: DomainUuid,
@@ -47,7 +61,7 @@ const StagedCode = Schema.Struct({
     bytes: Count.check(Schema.isLessThanOrEqualTo(OFFICE_LIMITS.codeBytes)),
   }),
 });
-function command(value: unknown): OfficeIntentCommand {
+function decodeCommand(value: unknown): OfficeIntentCommand {
   if (
     typeof value === "object" &&
     value !== null &&
@@ -62,7 +76,56 @@ function command(value: unknown): OfficeIntentCommand {
 export type OfficeTaskProof = {
   readonly lease: typeof Lease.Type;
   readonly association: OfficeTaskAssociation;
+  readonly stagedArtifacts: readonly OfficeStageReceipt[];
 };
+
+/** Content correlation only AFTER genuine callback/session proof. IDs and schema are not authentication. */
+export function officeTaskStagedRef(proof: OfficeTaskProof, ref: ArtifactReference): boolean {
+  const command = proof.association.intent.command;
+  const id =
+    command.command === "execute"
+      ? command.input.codeId
+      : command.command === "create" && command.input.source.kind === "office"
+        ? command.input.source.uploadId
+        : command.command === "import-into"
+          ? command.input.source.id
+          : null;
+  return (
+    ref.id === id &&
+    ref.kind === (command.command === "execute" ? "code" : "upload") &&
+    proof.stagedArtifacts.some((receipt) => officeSame(receipt.artifact, ref))
+  );
+}
+
+/** Descriptive source only from an actual immutable native stage ACK; never digest-based identity. */
+export function officeTaskSourceFile(proof: OfficeTaskProof) {
+  const command = proof.association.intent.command;
+  const id =
+    command.command === "create" && command.input.source.kind === "office"
+      ? command.input.source.uploadId
+      : command.command === "import-into"
+        ? command.input.source.id
+        : null;
+  if (id === null) return undefined;
+  const receipt = proof.stagedArtifacts.find((item) => item.artifact.id === id);
+  if (receipt?.fileRef === undefined) return undefined; // Historical identity is unknown, never guessed.
+  const file = proof.association.originals.find((item) => item.fileId === receipt.fileRef);
+  const upload = receipt.artifact;
+  if (
+    file?.kind !== "office" ||
+    upload.kind !== "upload" ||
+    upload.digest !== file.digest ||
+    upload.bytes !== file.byteSize ||
+    upload.mediaType !== "application/octet-stream"
+  )
+    throw officeDenied();
+  return {
+    chatId: proof.association.chatId,
+    fileRef: file.fileId,
+    name: file.name,
+    upload: { ...upload, kind: "upload" as const },
+  };
+}
 
 /** Structural private metadata only; caller MUST prove actual original callback binding first. */
 export function decodeOfficeTaskProof(input: unknown): OfficeTaskProof {
@@ -73,10 +136,11 @@ export function decodeOfficeTaskProof(input: unknown): OfficeTaskProof {
   return freezeImageRequestValue(
     {
       lease: decoded.lease,
+      stagedArtifacts: decoded.stagedArtifacts,
       association: {
         ...association,
         session,
-        intent: { ...association.intent, command: command(association.intent.command) },
+        intent: { ...association.intent, command: decodeCommand(association.intent.command) },
       },
     },
     true,

@@ -8,6 +8,9 @@ import { useChatLibraryOpen } from "./use-chat-library-open";
 import { useWorkspacePreview, type WorkspacePreviewTab } from "./workspace-preview-context";
 import { WorkspaceToolsLauncher, workspacePanelId, workspaceTabId } from "./workspace-preview-tabs";
 import "./chat-library-workspace.css";
+import { OfficeFiles } from "./office-files";
+import { OfficeSurface } from "./office-surface";
+import { useWorkspaceOffice } from "./workspace-office-context";
 
 type ViewProps = { chatId: string | null; active: boolean; archived: boolean };
 
@@ -24,6 +27,7 @@ function FilesView({ chatId, active, archived, title }: ViewProps & { title: str
     );
   return (
     <>
+      <OfficeFiles active={active} refreshKey={running ? "running" : "settled"} />
       <ChatLibraryPanel
         library={library}
         chatTitle={title}
@@ -82,6 +86,7 @@ function ImageView({
 export function ChatLibraryWorkspace({ active }: { active: boolean }) {
   const store = useChatStore();
   const preview = useWorkspacePreview();
+  const office = useWorkspaceOffice();
   const chatId = preview.chatId === store.selectedId ? store.selectedId : null;
   const chat =
     store.snapshot?.chat.id === chatId
@@ -89,6 +94,12 @@ export function ChatLibraryWorkspace({ active }: { active: boolean }) {
       : store.chats.find((value) => value.id === chatId);
   return (
     <div data-cx="chat-library-workspace" hidden={!active}>
+      {office.notice && (
+        <p data-cx="office-notice" role="alert">
+          {office.notice}
+        </p>
+      )}
+      {office.busy && <output data-cx="office-notice">Finishing acknowledged Office saves…</output>}
       {preview.tabs.map((tab) => {
         const visible = active && tab.id === preview.activeId;
         return (
@@ -100,7 +111,9 @@ export function ChatLibraryWorkspace({ active }: { active: boolean }) {
             aria-labelledby={workspaceTabId(tab.id)}
             hidden={!visible}
           >
-            {tab.kind === "files" ? (
+            {tab.kind === "office" && chatId !== null ? (
+              <OfficeSurface chatId={chatId} id={tab.id} selection={tab.selection} />
+            ) : tab.kind === "files" ? (
               <FilesView
                 chatId={chatId}
                 active={visible}

@@ -87,7 +87,7 @@ export const workerOptions = Effect.gen(function* () {
     assets: {
       directory: fileURLToPath(new URL("../../web/dist", import.meta.url)),
       notFoundHandling: "single-page-application" as const,
-      runWorkerFirst: !local && !production ? true : ["/api/*"],
+      runWorkerFirst: !local && !production ? true : ["/api/*", "/universer-api/*"],
     },
     dev: { host: "localhost", port: 1337, strictPort: true },
     env: {

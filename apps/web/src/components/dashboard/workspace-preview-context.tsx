@@ -8,36 +8,34 @@ import {
   type ReactNode,
 } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
-import type { SavedFile } from "@/lib/chat-library-types";
+import { useWorkspaceOffice } from "./workspace-office-context";
+import {
+  activatePreview,
+  closePreview,
+  initialPreview,
+  officeTabId,
+} from "./workspace-preview-model";
+import type {
+  OfficeSelection,
+  PreviewView,
+  WorkspaceImageFile,
+  WorkspacePreviewTab,
+} from "./workspace-preview-model";
+export type { WorkspaceImageFile, WorkspacePreviewTab } from "./workspace-preview-model";
 
-export type WorkspaceImageFile = SavedFile;
-export type WorkspacePreviewTab =
-  | { id: string; kind: "tools" | "files" }
-  | { id: string; kind: "image"; file: WorkspaceImageFile };
-type View = {
-  chatId: string | null;
-  tabs: WorkspacePreviewTab[];
-  activeId: string;
-  focus: { sequence: number; target: "tab" | "tools" };
-};
-const initial = (chatId: string | null, id: string): View => ({
-  chatId,
-  tabs: [{ id, kind: "tools" }],
-  activeId: id,
-  focus: { sequence: 0, target: "tab" },
-});
-type PreviewContext = View & {
+type PreviewContext = PreviewView & {
   active: WorkspacePreviewTab;
   select: (id: string) => void;
   close: (id: string) => void;
   add: () => void;
   showFiles: () => void;
   openImage: (file: WorkspaceImageFile) => void;
+  openOffice: (selection: OfficeSelection) => void;
   registerReveal: (reveal: () => void) => () => void;
 };
 const Context = createContext<PreviewContext | null>(null);
 
-/** Viewing state only. Switching chats never remounts the draft-owning subtree. */
+/** One existing tab hierarchy. Real Office saves gate every destructive UI transition. */
 export function WorkspacePreviewProvider({
   children,
   active,
@@ -46,14 +44,22 @@ export function WorkspacePreviewProvider({
   active: boolean;
 }) {
   const { selectedId } = useChatStore();
+  const office = useWorkspaceOffice();
+  const { activate } = office;
   const scope = useRef({ selectedId, active });
   useLayoutEffect(() => {
     scope.current = { selectedId, active };
   }, [selectedId, active]);
   const serial = useRef(0);
   const reveal = useRef<(() => void) | null>(null);
-  const [view, setView] = useState(() => initial(selectedId, "workspace-tab-0"));
-  if (view.chatId !== selectedId) setView(initial(selectedId, "workspace-tab-0"));
+  const [view, setView] = useState(() => initialPreview(selectedId, "workspace-tab-0"));
+  if (view.chatId !== selectedId) setView(initialPreview(selectedId, "workspace-tab-0"));
+  const activeTab = view.tabs.find((tab) => tab.id === view.activeId);
+  if (activeTab === undefined) throw new Error("The workspace tab selection is inconsistent.");
+  useLayoutEffect(() => {
+    activate(active && activeTab.kind === "office" ? activeTab.id : null);
+    return () => activate(null);
+  }, [active, activeTab.id, activeTab.kind, activate]);
   const nextId = () => `workspace-tab-${++serial.current}`;
   const registerReveal = useCallback((callback: () => void) => {
     reveal.current = callback;
@@ -61,94 +67,92 @@ export function WorkspacePreviewProvider({
       if (reveal.current === callback) reveal.current = null;
     };
   }, []);
-  const select = useCallback((id: string) => {
-    setView((current) =>
-      current.tabs.some((tab) => tab.id === id)
-        ? {
-            ...current,
-            activeId: id,
-            focus: { sequence: current.focus.sequence + 1, target: "tab" },
-          }
-        : current,
-    );
-  }, []);
-  const add = () => {
-    const id = nextId();
-    setView((current) => ({
-      ...current,
-      tabs: [...current.tabs, { id, kind: "tools" }],
-      activeId: id,
-      focus: { sequence: current.focus.sequence + 1, target: "tab" },
-    }));
-    reveal.current?.();
-  };
-  const close = (id: string) => {
-    const replacement = nextId();
-    setView((current) => {
-      const index = current.tabs.findIndex((tab) => tab.id === id);
-      if (index < 0) return current;
-      const tabs = current.tabs.filter((tab) => tab.id !== id);
-      if (tabs.length === 0)
-        return {
-          ...initial(current.chatId, replacement),
-          focus: { sequence: current.focus.sequence + 1, target: "tools" },
-        };
-      if (current.activeId !== id)
-        return { ...current, tabs, focus: { sequence: current.focus.sequence + 1, target: "tab" } };
-      const adjacent = tabs[Math.min(index, tabs.length - 1)];
-      if (!adjacent) return current;
-      return {
-        ...current,
-        tabs,
-        activeId: adjacent.id,
-        focus: { sequence: current.focus.sequence + 1, target: "tab" },
-      };
+  const change = (action: () => void) => {
+    const captured = scope.current;
+    void office.transition(() => {
+      if (scope.current === captured) action();
     });
   };
-  const showFiles = () => {
-    setView((current) => ({
-      ...current,
-      tabs: current.tabs.map((tab) =>
-        tab.id === current.activeId ? { id: tab.id, kind: "files" } : tab,
-      ),
-      focus: { sequence: current.focus.sequence + 1, target: "tab" },
-    }));
-    reveal.current?.();
+  const select = (id: string) => {
+    if (id === view.activeId) return;
+    change(() =>
+      setView((current) => {
+        const tab = current.tabs.find((value) => value.id === id);
+        return tab === undefined ? current : activatePreview(current, tab);
+      }),
+    );
   };
+  const close = (id: string) =>
+    change(() => {
+      const replacement = nextId();
+      setView((current) => closePreview(current, id, replacement));
+    });
+  const add = () =>
+    change(() => {
+      const id = nextId();
+      setView((current) => activatePreview(current, { id, kind: "tools" }));
+      reveal.current?.();
+    });
+  const showFiles = () =>
+    change(() => {
+      setView((current) => ({
+        ...current,
+        tabs: current.tabs.map((tab) =>
+          tab.id === current.activeId ? { id: tab.id, kind: "files" } : tab,
+        ),
+        focus: { sequence: current.focus.sequence + 1, target: "tab" },
+      }));
+      reveal.current?.();
+    });
   const openImage = (file: WorkspaceImageFile) => {
     if (!scope.current.active || file.kind !== "image" || file.chatId !== scope.current.selectedId)
       return;
-    const id = `workspace-image-${file.id}`;
-    setView((current) => {
-      if (current.chatId !== file.chatId) return current;
-      return {
-        ...current,
-        activeId: id,
-        tabs: current.tabs.some((tab) => tab.id === id)
-          ? current.tabs
-          : [...current.tabs, { id, kind: "image", file }],
-        focus: { sequence: current.focus.sequence + 1, target: "tab" },
-      };
+    change(() => {
+      setView((current) =>
+        current.chatId === file.chatId
+          ? activatePreview(current, { id: `workspace-image-${file.id}`, kind: "image", file })
+          : current,
+      );
+      reveal.current?.();
     });
-    reveal.current?.();
   };
-  const activeTab = view.tabs.find((tab) => tab.id === view.activeId);
-  if (!activeTab) throw new Error("The workspace tab selection is inconsistent.");
-  const value: PreviewContext = {
-    ...view,
-    active: activeTab,
-    select,
-    close,
-    add,
-    showFiles,
-    openImage,
-    registerReveal,
+  const openOffice = (selection: OfficeSelection) => {
+    if (!scope.current.active || scope.current.selectedId === null) return;
+    const id = officeTabId(selection);
+    if (
+      !view.tabs.some((tab) => tab.id === id) &&
+      view.tabs.filter((tab) => tab.kind === "office").length >= 8
+    ) {
+      office.report(
+        "Close a saved Office tab before opening another; eight native surfaces are the browser limit.",
+      );
+      return;
+    }
+    change(() => {
+      setView((current) => activatePreview(current, { id, kind: "office", selection }));
+      reveal.current?.();
+    });
   };
-  return <Context.Provider value={value}>{children}</Context.Provider>;
+  return (
+    <Context.Provider
+      value={{
+        ...view,
+        active: activeTab,
+        select,
+        close,
+        add,
+        showFiles,
+        openImage,
+        openOffice,
+        registerReveal,
+      }}
+    >
+      {children}
+    </Context.Provider>
+  );
 }
-
 export function useWorkspacePreview(): PreviewContext {
   const value = useContext(Context);
-  if (!value) throw new Error("Workspace previews require their workspace provider.");
+  if (value === null) throw new Error("Workspace previews require their workspace provider.");
   return value;
 }

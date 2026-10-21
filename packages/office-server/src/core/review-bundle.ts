@@ -5,38 +5,10 @@ import { SnapshotWithBlocksSchema } from "../jobs/snapshot-schema.ts";
 import { loadNativeArtifact } from "./bytes.ts";
 import { officeFailure } from "./failure.ts";
 import { metadataDigest } from "./operations.ts";
+import { reviewFingerprintInput } from "../storage-remote/review-identity.ts";
 
 export const reviewFingerprint = (review: Omit<FrozenReview, "fingerprint">): string =>
-  metadataDigest(
-    [
-      "office-review",
-      1,
-      review.owner.stage,
-      review.owner.ownerId,
-      review.id,
-      review.documentId,
-      review.unitId,
-      review.worktreeId,
-      review.generation,
-      review.baselineRevision,
-      review.draftRevision,
-      review.readyRevision,
-      review.mainRevision,
-      review.source,
-      review.removed,
-      review.destination.documentId,
-      review.destination.unitId,
-      review.destination.title,
-      review.main?.id ?? null,
-      review.baseline?.id ?? null,
-      review.draft.id,
-      review.result?.id ?? null,
-      review.preview?.digest ?? null,
-      review.sdkVersion,
-      review.policyVersion,
-    ],
-    16384,
-  );
+  metadataDigest(reviewFingerprintInput(review), 16384);
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const ReadyCapture = Schema.Struct({
   purpose: Schema.Literal("office-ready-capture"),

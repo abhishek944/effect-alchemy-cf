@@ -18,6 +18,11 @@ type Lease = {
   timer?: ReturnType<typeof setTimeout>;
   polling?: Promise<void>;
 };
+const documentKey = (value: OfficePlacement) => ({
+  owner: value.owner,
+  documentId: value.documentId,
+  unitId: value.unitId,
+});
 /** Hosting-only lease of the ACTUAL owned CF process. Never extends an Actor/View/native turn.
  * Fresh private self-events verify the physical cohort before each original unexpired renewal.
  */
@@ -137,7 +142,7 @@ export function officeHostPlacements(
           throw officeDenied();
         const provider = await control(documentId);
         lease.value = await Effect.runPromise(
-          provider.place(lease.value, {
+          provider.place(documentKey(lease.value), {
             kind: "renew",
             id: lease.value.id,
             serviceEpoch: lease.value.serviceEpoch,
@@ -176,7 +181,7 @@ export function officeHostPlacements(
             notAfter: Date.now() + 30_000,
           });
           await Effect.runPromise(
-            provider.place(lease.value, {
+            provider.place(documentKey(lease.value), {
               kind: "retire",
               id: lease.value.id,
               serviceEpoch: lease.value.serviceEpoch,

@@ -31,7 +31,8 @@ COPY --from=render-resources /resources/package/fonts /opt/office/render-page/as
 COPY --from=render-resources /resources/resource-identity.json /opt/office/render-resource-identity.json
 COPY provenance-source.json /opt/office/provenance-source.json
 COPY image-provenance.mjs /opt/office/dependencies/packages/office-server/image-provenance.mjs
-RUN node /opt/office/dependencies/packages/office-server/image-provenance.mjs > /opt/office/provenance.json
+RUN chmod -R a+rX /opt/office \
+    && node /opt/office/dependencies/packages/office-server/image-provenance.mjs > /opt/office/provenance.json
 USER 65532:65532
 WORKDIR /task
 

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { localOfficeImage } from "./local-office.mjs";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { billingProfileEnvironment } from "./billing-profile.mjs";
@@ -32,6 +33,7 @@ const childEnvironment = {
   AUTH_BASE_URL: "",
   ALLOW_PRODUCTION: "false",
   ALCHEMY_DEV: "true",
+  OFFICE_IMAGE_REF: localOfficeImage(),
 };
 delete childEnvironment.BILLING_ENVIRONMENT;
 delete childEnvironment.BILLING_NAMESPACE;

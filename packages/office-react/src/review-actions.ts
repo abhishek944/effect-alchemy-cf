@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Receipt } from "@starter/office-contract";
-import type { OfficeRuntime } from "./runtime.ts";
+import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 import { reviewBlocker, reviewIdentity, type ReviewEvidence } from "./review-data.ts";
 
 type Attempt = {
@@ -12,7 +12,7 @@ type Attempt = {
   done: boolean;
 };
 export function useReviewActions(
-  runtime: OfficeRuntime,
+  runtime: OfficeRuntime & OfficeActionAdmission,
   evidence: ReviewEvidence | null,
   onOperation: (id: string) => void,
   onReceipt: (receipt: Receipt) => void,
@@ -74,7 +74,9 @@ export function useReviewActions(
     }
   };
   const perform = async (observe: boolean) => {
-    if (controller.current !== null) return;
+    if (controller.current !== null || runtime.disabled) return;
+    const release = runtime.admit?.();
+    if (runtime.admit !== undefined && typeof release !== "function") return;
     setBusy(true);
     const active = new AbortController();
     controller.current = active;
@@ -147,6 +149,7 @@ export function useReviewActions(
         );
     } finally {
       controller.current = null;
+      release?.();
       if (!active.signal.aborted) setBusy(false);
     }
   };

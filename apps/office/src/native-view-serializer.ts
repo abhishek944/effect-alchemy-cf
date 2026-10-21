@@ -71,13 +71,6 @@ export async function serializeViewSnapshot(options: {
     transport.use((context, dispatch) => {
       const actual = Promise.resolve().then(() => {
         check();
-        if (
-          context.params.unitID !== native.snapshot.unitID ||
-          context.params.type !== String(native.snapshot.type) ||
-          (context.params.revision !== undefined &&
-            context.params.revision !== String(native.snapshot.rev))
-        )
-          throw new OfficeForbidden(safeFailure("FORBIDDEN"));
         context.userID = options.userId;
         return dispatch();
       });
@@ -97,7 +90,18 @@ export async function serializeViewSnapshot(options: {
           get(path, handler) {
             if (routes.has(path)) {
               installed++;
-              router.get(path, handler);
+              router.get(path, async (context) => {
+                check();
+                if (
+                  context.params.unitID !== native.snapshot.unitID ||
+                  context.params.type !== String(native.snapshot.type) ||
+                  (context.params.revision !== undefined &&
+                    context.params.revision !== String(native.snapshot.rev))
+                )
+                  throw new OfficeForbidden(safeFailure("FORBIDDEN"));
+                await handler(context);
+                check();
+              });
             }
           },
           // Registration is filtered; these routes are NOT installed and cannot report native success.

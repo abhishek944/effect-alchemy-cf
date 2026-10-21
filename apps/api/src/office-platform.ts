@@ -17,7 +17,8 @@ export const officeNativeSignal = Schema.decodeUnknownSync(NativeSignal);
 export const officeNativeRequest = Schema.decodeUnknownSync(NativeRequest);
 export function officeWebResponse(value: unknown): Response {
   if (!(value instanceof Response)) throw unavailable();
-  return value;
+  // Transfer the SAME body/socket; native Response init retains WebSocket101 and makes headers mutable.
+  return new Response(value.body, value);
 }
 export function officeReadable(value: unknown): ReadableStream<unknown> {
   if (!(value instanceof ReadableStream)) throw unavailable();

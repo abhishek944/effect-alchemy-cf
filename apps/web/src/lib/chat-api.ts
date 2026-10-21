@@ -1,3 +1,4 @@
+import type { OfficeSendTarget } from "@starter/office-contract";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import type { ChatSelection } from "@/lib/chat-capability-types";
 import type { ChatUsageAmount } from "@/lib/chat-capability-usage-types";
@@ -12,7 +13,6 @@ import {
   parseSnapshotValue,
 } from "@/lib/chat-validate";
 
-/** Same-origin chat client for the fixed Pi chat HTTP/SSE contract. */
 export type Chat = {
   id: string;
   title: string;
@@ -78,7 +78,6 @@ const statusMessages: Record<number, string> = {
   429: "Too many requests. Wait a moment and try again.",
   503: "The assistant is temporarily unavailable. Try again shortly.",
 };
-
 export function newOperationId(): string {
   return crypto.randomUUID();
 }
@@ -178,6 +177,7 @@ export async function sendMessage(
     selection: ChatSelection;
     attachments: string[];
     references: string[];
+    officeTarget?: OfficeSendTarget;
   },
 ): Promise<{ accepted: boolean }> {
   const accepted = parseAccepted(

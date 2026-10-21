@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { chatIdFromPath, chatPath, isChatLanding } from "@/lib/chat-route";
 import { navigate } from "@/lib/router";
+import { requestLeave } from "./account-leave-guard";
 
 function selectedChat(pathname: string, remembered: string | null): string | null {
   const requested = chatIdFromPath(pathname);
@@ -38,13 +39,12 @@ export function useChatSelection(pathname: string) {
   const select = useCallback((id: string | null) => {
     const path = id ? chatPath(id) : "/dashboard";
     if (window.location.pathname === path && selectionRef.current === id) return;
-    selectionRef.current = id;
-    setSelection((current) => ({
-      id,
-      remembered: id,
-      generation: current.generation + 1,
-    }));
-    navigate(path);
+    const action = () => {
+      selectionRef.current = id;
+      setSelection((current) => ({ id, remembered: id, generation: current.generation + 1 }));
+      navigate(path);
+    };
+    if (requestLeave({ intent: { kind: "route", path, via: "link" }, action })) action();
   }, []);
   return { selectedId: selection.id, generation: selection.generation, selectionRef, select };
 }

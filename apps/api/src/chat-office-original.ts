@@ -21,86 +21,96 @@ export async function readOfficeAcceptedFile(
   env: ConversationFileEnv,
   fileRef: string,
   cancellation: AbortSignal,
+  deadline: number,
 ): Promise<AcceptedOfficeFile> {
-  const signal =
-    resolution.context.abortSignal === undefined
-      ? cancellation
-      : AbortSignal.any([resolution.context.abortSignal, cancellation]);
-  signal.throwIfAborted();
-  const { api, context, intent } = resolution;
-  if (intent.command.command !== "stage-file" || intent.command.input.fileRef !== fileRef)
-    return unavailable();
-  const proof = await resolveOfficeCall(api, context, intent, access);
-  signal.throwIfAborted();
-  const original = proof?.current.candidate.originals.find((file) => file.fileId === fileRef);
-  if (proof === null || original?.kind !== "office") return unavailable();
-  if (env.ChatCatalog === undefined || env.CHAT_FILES === undefined) return unavailable();
-  // Repair only uploads already proved accepted by their actual native creator, never ready IDs.
-  await retainAcceptedImageInput(access, env, proof.current, context);
-  signal.throwIfAborted();
-  const stub = env.ChatCatalog.getByName(`owner:${access.ownerId}`);
-  const catalog = createChatFilesCatalogClient(stub);
-  const metadata = await createChatLibraryClient(stub).original(access.chatId, original.fileId);
-  signal.throwIfAborted();
-  if (metadata === null) return unavailable();
-  const file = metadata.file;
-  if (
-    metadata.digest !== original.digest ||
-    metadata.originOperationId !== original.originOperationId ||
-    file.chatId !== access.chatId ||
-    file.id !== original.fileId ||
-    file.state !== "ready" ||
-    file.expiresAt !== null ||
-    file.kind !== original.kind ||
-    file.name !== original.name ||
-    file.byteSize !== original.byteSize ||
-    file.mediaType !== original.mediaType ||
-    file.width !== original.width ||
-    file.height !== original.height
-  )
-    return unavailable();
-  const key = retainedObjectKey(catalog.scope, file.chatId, file.id);
-  const bucket = env.CHAT_FILES;
-  const head = await statFileObject(bucket, key, file);
-  signal.throwIfAborted();
-  if (head === null) return unavailable();
-  return withFileMemory(file.kind, file.byteSize, async (lease) => {
+  const expiry = new AbortController();
+  const signals = [cancellation, expiry.signal];
+  if (resolution.context.abortSignal !== undefined) signals.push(resolution.context.abortSignal);
+  const signal = AbortSignal.any(signals);
+  const timer = setTimeout(() => expiry.abort(), Math.max(0, deadline - Date.now()));
+  let heldOwnsTimer = false;
+  try {
     signal.throwIfAborted();
-    const object = await openFileObject(bucket, key, head, file);
-    if (object === null) return unavailable();
-    const held = await holdFileBody(object.body, file.byteSize, lease, signal);
-    try {
-      if (
-        object.key !== key ||
-        object.range !== undefined ||
-        (object.httpMetadata?.contentEncoding !== undefined &&
-          object.httpMetadata.contentEncoding !== "identity") ||
-        (object.customMetadata?.digest !== undefined &&
-          object.customMetadata.digest !== original.digest)
-      )
-        return unavailable();
-      const current = await resolveOfficeCall(api, context, intent, access);
+    if (!Number.isSafeInteger(deadline) || deadline <= Date.now()) return unavailable();
+    const { api, context, intent } = resolution;
+    if (intent.command.command !== "stage-file" || intent.command.input.fileRef !== fileRef)
+      return unavailable();
+    const proof = await resolveOfficeCall(api, context, intent, access);
+    signal.throwIfAborted();
+    const original = proof?.current.candidate.originals.find((file) => file.fileId === fileRef);
+    if (proof === null || original?.kind !== "office") return unavailable();
+    if (env.ChatCatalog === undefined || env.CHAT_FILES === undefined) return unavailable();
+    // Repair only uploads already proved accepted by their actual native creator, never ready IDs.
+    await retainAcceptedImageInput(access, env, proof.current, context);
+    signal.throwIfAborted();
+    const stub = env.ChatCatalog.getByName(`owner:${access.ownerId}`);
+    const catalog = createChatFilesCatalogClient(stub);
+    const metadata = await createChatLibraryClient(stub).original(access.chatId, original.fileId);
+    signal.throwIfAborted();
+    if (metadata === null) return unavailable();
+    const file = metadata.file;
+    if (
+      metadata.digest !== original.digest ||
+      metadata.originOperationId !== original.originOperationId ||
+      file.chatId !== access.chatId ||
+      file.id !== original.fileId ||
+      file.state !== "ready" ||
+      file.expiresAt !== null ||
+      file.kind !== original.kind ||
+      file.name !== original.name ||
+      file.byteSize !== original.byteSize ||
+      file.mediaType !== original.mediaType ||
+      file.width !== original.width ||
+      file.height !== original.height
+    )
+      return unavailable();
+    const key = retainedObjectKey(catalog.scope, file.chatId, file.id);
+    const bucket = env.CHAT_FILES;
+    const head = await statFileObject(bucket, key, file);
+    signal.throwIfAborted();
+    if (head === null) return unavailable();
+    return withFileMemory(file.kind, file.byteSize, async (lease) => {
       signal.throwIfAborted();
-      const next = current?.current.candidate.originals.find((entry) => entry.fileId === fileRef);
-      if (
-        current === null ||
-        current.submissionId !== proof.submissionId ||
-        current.generationTaskId !== proof.generationTaskId ||
-        next === undefined ||
-        Object.entries(original).some(([name, value]) => Reflect.get(next, name) !== value)
-      )
-        return unavailable();
-      // Expected digest is accepted metadata, not a claim this counted stream hashes content.
-      // The existing staging uploader must verify actual bytes before acknowledging that digest.
-      return {
-        filename: file.name,
-        bytes: file.byteSize,
-        digest: original.digest,
-        body: held.body,
-      };
-    } catch (error) {
-      await held.cancel();
-      throw error;
-    }
-  });
+      const object = await openFileObject(bucket, key, head, file);
+      if (object === null) return unavailable();
+      const held = await holdFileBody(object.body, file.byteSize, lease, signal);
+      heldOwnsTimer = true;
+      void held.done.then(() => clearTimeout(timer));
+      try {
+        if (
+          object.key !== key ||
+          object.range !== undefined ||
+          (object.httpMetadata?.contentEncoding !== undefined &&
+            object.httpMetadata.contentEncoding !== "identity") ||
+          (object.customMetadata?.digest !== undefined &&
+            object.customMetadata.digest !== original.digest)
+        )
+          return unavailable();
+        const current = await resolveOfficeCall(api, context, intent, access);
+        signal.throwIfAborted();
+        const next = current?.current.candidate.originals.find((entry) => entry.fileId === fileRef);
+        if (
+          current === null ||
+          current.submissionId !== proof.submissionId ||
+          current.generationTaskId !== proof.generationTaskId ||
+          next === undefined ||
+          Object.entries(original).some(([name, value]) => Reflect.get(next, name) !== value)
+        )
+          return unavailable();
+        // Expected digest is accepted metadata, not a claim this counted stream hashes content.
+        // The existing staging uploader must verify actual bytes before acknowledging that digest.
+        return {
+          filename: file.name,
+          bytes: file.byteSize,
+          digest: original.digest,
+          body: held.body,
+        };
+      } catch (error) {
+        await held.cancel();
+        throw error;
+      }
+    });
+  } finally {
+    if (!heldOwnsTimer) clearTimeout(timer);
+  }
 }

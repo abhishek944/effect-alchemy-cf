@@ -18,7 +18,7 @@ export const progressTransition = Effect.fn("Office.transitions.progress")(funct
   deps: OfficeDependencies,
   runtime: OfficeNativeRuntime,
   original: OperationRecord,
-  phase: "final-commit" | "recovery-dispatch",
+  phase: "final-commit" | "recovery-dispatch" | "recovery-observe",
 ) {
   const target = yield* operationTarget(deps, original);
   yield* verifyOperation(deps, original, target, "recovery-observe");
@@ -31,6 +31,7 @@ export const progressTransition = Effect.fn("Office.transitions.progress")(funct
   if (evidence === null && !["reserved", "queued", "admitted"].includes(original.receipt.phase))
     return yield* retainNativeUncertainty(deps, original);
   if (evidence === null) {
+    if (phase === "recovery-observe") return original.receipt;
     if (basis.draft.generation !== basis.generation)
       return yield* Effect.fail(officeFailure("STALE_BASIS", original.receipt.operationId));
     yield* verifyOperation(deps, original, target, phase);
@@ -67,6 +68,7 @@ export const progressTransition = Effect.fn("Office.transitions.progress")(funct
             return yield* finishTransition(deps, current, permit);
           }
           if (
+            phase === "recovery-observe" ||
             evidence !== null ||
             actual.draft.generation !== actual.generation ||
             !["reserved", "queued", "admitted"].includes(current.receipt.phase)

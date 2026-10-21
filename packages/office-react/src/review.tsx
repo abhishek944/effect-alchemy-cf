@@ -6,17 +6,18 @@ import { useReviewEvidence } from "./use-review-evidence.ts";
 import { ReviewTabs, type ReviewTab } from "./review-tabs.tsx";
 import { ReviewContent } from "./review-content.tsx";
 import type { NativeTheme, NativeUser, FrameStatus } from "./frame/messages.ts";
-import type { OfficeRuntime } from "./runtime.ts";
+import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 
-export type OfficeReviewProps = OfficeRuntime & {
-  readonly reviewId: string;
-  readonly user: NativeUser;
-  readonly theme: NativeTheme;
-  readonly frameUrl: string;
-  readonly onOperation: (operationId: string) => void;
-  readonly onReceipt: (receipt: Receipt) => void;
-  readonly onReopen?: () => void;
-};
+export type OfficeReviewProps = OfficeRuntime &
+  OfficeActionAdmission & {
+    readonly reviewId: string;
+    readonly user: NativeUser;
+    readonly theme: NativeTheme;
+    readonly frameUrl: string;
+    readonly onOperation: (operationId: string) => void;
+    readonly onReceipt: (receipt: Receipt) => void;
+    readonly onReopen?: () => void;
+  };
 function ReviewSurface(props: OfficeReviewProps) {
   const { evidence, loading, error, more, refresh } = useReviewEvidence(props, props.reviewId);
   const [tab, setTab] = useState<ReviewTab>("result");
@@ -94,6 +95,8 @@ function ReviewSurface(props: OfficeReviewProps) {
       >
         <ReviewContent
           key={`${tab}:${page?.fingerprint ?? "loading"}`}
+          client={props.client}
+          run={props.run}
           evidence={evidence}
           tab={tab}
           user={props.user}
@@ -118,7 +121,7 @@ function ReviewSurface(props: OfficeReviewProps) {
         {actions.pending ? (
           <button
             type="button"
-            disabled={actions.busy}
+            disabled={actions.busy || props.disabled}
             onClick={() => {
               void actions.observe();
             }}
@@ -129,7 +132,9 @@ function ReviewSurface(props: OfficeReviewProps) {
           <button
             type="button"
             data-office="primary"
-            disabled={blocked !== null || loading || actions.busy || actions.attempted}
+            disabled={
+              blocked !== null || loading || actions.busy || actions.attempted || props.disabled
+            }
             aria-describedby={`office-approval-${props.reviewId}`}
             onClick={(event) => {
               if (event.isTrusted) void actions.approve();

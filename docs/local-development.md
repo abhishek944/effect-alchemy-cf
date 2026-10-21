@@ -61,6 +61,19 @@ Gateway ID; leave it blank until that Gateway is provisioned. Restart after edit
 provision cloud proxy resources. Review them before starting changed stacks.
 Never run `alchemy dev --stage dev` or `--stage prod`.
 
+## Local Office container
+
+Docker must be running. `pnpm dev` prepares and builds the Office application
+image locally, inspects its immutable Docker image ID, and binds that existing
+image to the local Worker. It does not publish an image or deploy to Cloudflare.
+The first build downloads pinned base-image and package dependencies. Subsequent
+builds reuse Docker's cache. Normal `pnpm build` alone does not build the image.
+
+The launcher supplies `OFFICE_IMAGE_REF` from the actual local image inspection;
+do not configure a registry reference for local development. Cloud deployments
+still require their own immutable Cloudflare registry image. See [Office](office.md).
+Source/static checks alone do not prove container startup or Office functionality.
+
 ## Editing
 
 There is no automatic reload for the stack, Worker, API, auth, or frontend.

@@ -45,7 +45,7 @@ export function composeOffice(
     ...makeOfficeReviewRead(deps, runtime),
     ...reads,
     ...transitions,
-    ...makeOfficeOperations(deps, runtime, transitions),
+    ...makeOfficeOperations(deps, runtime),
   });
 }
 /** Caller owns all injected providers. Scope owns the constructed SDK services/guards, never document state. */

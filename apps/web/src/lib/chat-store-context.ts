@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react";
+import type { OfficeSendTarget } from "@starter/office-contract";
 import type { CapabilityLoadState } from "@/lib/chat-capability-api";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import type {
@@ -21,6 +22,7 @@ export type SendSnapshot = {
   selection: ChatSelection;
   attachments: string[];
   references: string[];
+  officeTarget?: OfficeSendTarget;
 };
 
 export type PendingSend = {

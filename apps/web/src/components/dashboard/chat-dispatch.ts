@@ -26,6 +26,7 @@ export async function dispatchSend(
       selection: frozen.selection,
       attachments: frozen.attachments,
       references: frozen.references ?? [],
+      ...(frozen.officeTarget === undefined ? {} : { officeTarget: frozen.officeTarget }),
     });
     return receipt.accepted
       ? { ok: true }

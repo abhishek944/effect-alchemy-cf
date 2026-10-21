@@ -9,6 +9,7 @@
 import type { Registry, Storage } from "@earendil-works/pi-durable";
 import { Harness, createRegistry } from "@earendil-works/pi-durable";
 import { createModels } from "@earendil-works/pi-ai/models";
+import { makeOfficeExtension, type OfficePiHost } from "@starter/office-pi";
 import type { MutableModels } from "@earendil-works/pi-ai/models";
 import type { PiHarnessFactory } from "agents/harness/pi";
 import type { ChatAccounting } from "./chat-accounting.ts";
@@ -103,6 +104,7 @@ export const conversationHarnessFactory =
     readonly account: AccountPreparationDeps;
     readonly skills: ConversationSkills;
     readonly images: ConversationImages;
+    readonly office: OfficePiHost;
     readonly selection: () => Promise<ChatSelection | null>;
     readonly setRegistry: (registry: Registry) => void;
     readonly setStorage: (storage: Storage) => void;
@@ -115,6 +117,7 @@ export const conversationHarnessFactory =
     deps.setRegistry(registry);
     registry.install(deps.accounting.extension(() => deps.selection()));
     registry.install(accountTools(accountToolAccess(deps.account)));
+    registry.install(makeOfficeExtension(deps.office));
     const prepare = deps.images.install(storage, context, registry, deps.skills);
     installSkillModelsGuard(models, {
       observeCompactions: () => deps.accounting.observeCompactions(models),

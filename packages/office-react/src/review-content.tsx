@@ -1,12 +1,15 @@
 import { useState } from "react";
 import type { View } from "@starter/office-contract";
-import { OfficeNativeEditor } from "./editor.tsx";
+import { ReviewNative } from "./review-native.tsx";
+import type { OfficeRuntime } from "./runtime.ts";
 import { OfficeChanges } from "./changes.tsx";
 import { pinnedReviewView, reviewBlocker, type ReviewEvidence } from "./review-data.ts";
 import type { NativeTheme, NativeUser, FrameStatus } from "./frame/messages.ts";
 import type { ReviewTab } from "./review-tabs.tsx";
 
 export function ReviewContent({
+  client,
+  run,
   evidence,
   tab,
   user,
@@ -15,7 +18,7 @@ export function ReviewContent({
   loading,
   more,
   onStatus,
-}: {
+}: OfficeRuntime & {
   readonly evidence: ReviewEvidence | null;
   readonly tab: ReviewTab;
   readonly user: NativeUser;
@@ -35,13 +38,15 @@ export function ReviewContent({
   };
   const view = tab === "preview" ? page.result : tab === "changes" ? context : page.draft;
   const native = (candidate: View) => (
-    <OfficeNativeEditor
+    <ReviewNative
+      key={candidate.id}
+      client={client}
+      run={run}
       view={candidate}
       user={user}
       theme={theme}
-      channelId={candidate.id}
       frameUrl={frameUrl}
-      onStatus={(status, revision) => onStatus(candidate.id, status, revision)}
+      onStatus={onStatus}
     />
   );
   if (tab === "changes" && context === null)

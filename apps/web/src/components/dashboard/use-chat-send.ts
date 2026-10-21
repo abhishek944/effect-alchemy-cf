@@ -1,11 +1,5 @@
-import {
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  type Dispatch,
-  type RefObject,
-  type SetStateAction,
-} from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
+import type * as React from "react";
 import { newOperationId, type ChatSnapshot } from "@/lib/chat-api";
 import type { ChatSelection } from "@/lib/chat-capability-types";
 import {
@@ -18,6 +12,7 @@ import {
   type StopTarget,
 } from "@/lib/chat-store-context";
 import { dispatchSend } from "./chat-dispatch";
+import { useWorkspaceOffice } from "./workspace-office-context";
 import type { ChatReferences } from "./use-chat-references";
 import { useChatSendRecovery } from "./use-chat-send-recovery";
 import { sendBlockReason, textTooLong } from "./chat-send-policy";
@@ -25,9 +20,9 @@ const STOPPING = "An answer is being stopped. Try again once it is acknowledged.
 type Options = {
   pendingSend: PendingSend | null;
   connection: ChatConnection;
-  selectionRef: RefObject<string | null>;
-  snapshotRef: RefObject<ChatSnapshot | null>;
-  stoppingRef: RefObject<StopTarget | null>;
+  selectionRef: React.RefObject<string | null>;
+  snapshotRef: React.RefObject<ChatSnapshot | null>;
+  stoppingRef: React.RefObject<StopTarget | null>;
   selection: ChatSelection | null;
   selectionReady: boolean;
   stagedFiles: ChatFilesControls;
@@ -40,8 +35,8 @@ type Options = {
     references: readonly string[],
   ) => void;
   refreshList: () => void;
-  setActionError: Dispatch<SetStateAction<string | null>>;
-  setPendingSend: Dispatch<SetStateAction<PendingSend | null>>;
+  setActionError: React.Dispatch<React.SetStateAction<string | null>>;
+  setPendingSend: React.Dispatch<React.SetStateAction<PendingSend | null>>;
 };
 /** A dispatch freezes its tuple and attachment ids; a retry reuses both. */
 export function useChatSend({
@@ -60,6 +55,8 @@ export function useChatSend({
   setPendingSend,
 }: Options) {
   const inFlightRef = useRef<string | null>(null);
+  const preparing = useRef(false);
+  const { prepareSend } = useWorkspaceOffice();
   const pendingRef = useRef<PendingSend | null>(pendingSend);
   const filesRef = useRef(stagedFiles);
   const referencesRef = useRef(references);
@@ -126,7 +123,7 @@ export function useChatSend({
       const reason = sendBlockReason({
         selectionMatches: selectionRef.current === originChatId,
         pending: pendingRef.current,
-        inFlight: Boolean(inFlightRef.current),
+        inFlight: Boolean(inFlightRef.current) || preparing.current,
         stopping: stoppingRef.current,
         snapshot: current,
         chatId: originChatId,
@@ -142,6 +139,26 @@ export function useChatSend({
         attachments: files.files.map((file) => file.id),
         references: [...referencesRef.current.ids],
       };
+      preparing.current = true;
+      try {
+        const target = await prepareSend(originChatId);
+        if (
+          selectionRef.current !== originChatId ||
+          stoppingRef.current !== null ||
+          pendingRef.current !== null ||
+          filesRef.current.files.map((file) => file.id).join(",") !==
+            frozen.attachments.join(",") ||
+          referencesRef.current.ids.join(",") !== frozen.references.join(",")
+        )
+          return blocked("The chat or staged files changed before Send. Nothing was uploaded.");
+        if (target !== null) frozen.officeTarget = target;
+      } catch {
+        return blocked(
+          "Office saves are unconfirmed. Save and reopen the displayed tab before sending.",
+        );
+      } finally {
+        preparing.current = false;
+      }
       const operationId = newOperationId();
       setPendingSend({
         chatId: originChatId,
@@ -164,6 +181,7 @@ export function useChatSend({
       snapshotRef,
       stoppingRef,
       submit,
+      prepareSend,
     ],
   );
   const { retrySend, discardSend } = useChatSendRecovery({

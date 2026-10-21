@@ -7,3 +7,8 @@ export type OfficeRunner = <A, E>(
   options: { readonly signal: AbortSignal },
 ) => Promise<A>;
 export type OfficeRuntime = { readonly client: OfficeClient; readonly run: OfficeRunner };
+/** UI serialization only, never a session or native authorization grant. */
+export type OfficeActionAdmission = {
+  readonly admit?: () => (() => void) | null;
+  readonly disabled?: boolean;
+};

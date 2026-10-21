@@ -40,11 +40,14 @@ import { conversationRecoveryAdmission } from "./chat-skills-recovery-admission.
 import { ChatImageCallStore } from "./chat-image-call-store.ts";
 import { ConversationImages } from "./chat-image-runtime.ts";
 import { ChatOfficeTaskBroker } from "./chat-office-task-broker.ts";
-export type SkillConversationEnv = ConversationFileEnv & {
-  AI?: Ai;
-  CHAT_GATEWAY_ID?: string;
-  CHAT_MODEL_ALLOWLIST?: string;
-};
+import { createOfficePiHost } from "./chat-office-host.ts";
+import type { OfficeTaskEnvironment } from "./chat-office-transport.ts";
+export type SkillConversationEnv = ConversationFileEnv &
+  OfficeTaskEnvironment & {
+    AI?: Ai;
+    CHAT_GATEWAY_ID?: string;
+    CHAT_MODEL_ALLOWLIST?: string;
+  };
 export type ChatConversationServices = {
   readonly ledger: ChatLedger;
   readonly runtime: ChatRuntime;
@@ -122,6 +125,7 @@ export const createChatConversationServices = (
       account,
       skills,
       images,
+      office: createOfficePiHost(env, () => images.nativeAccess(), officeTasks),
       selection: () => runtime.selection(),
       setRegistry: (registry) => {
         registryRef = registry;

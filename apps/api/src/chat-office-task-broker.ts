@@ -9,6 +9,9 @@ import {
   safeFailure,
 } from "@starter/office-contract";
 import type { OfficeResolution } from "@starter/office-pi";
+import type { ArtifactRef } from "@starter/office-contract";
+import type { OfficeStageReceipt } from "./office-task-proof.ts";
+import { readOfficeStageReceipts, recordOfficeStageReceipt } from "./chat-office-stage-receipts.ts";
 import type { ImageNativeAccess } from "./chat-image-request-types.ts";
 import { sameImageRequestValue } from "./chat-image-request-values.ts";
 import {
@@ -30,6 +33,7 @@ type Entry = {
   readonly lease: OfficeTaskLease;
   readonly resolution: OfficeResolution;
   readonly association: OfficeTaskAssociation;
+  readonly stagedArtifacts: readonly OfficeStageReceipt[];
   readonly abort: () => void;
   revoked: boolean;
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -91,6 +95,7 @@ export class ChatOfficeTaskBroker {
       throw denied();
     const current = await resolveOfficeTaskAssociation(resolution, this.#access(), this.#records);
     if (current === null || !sameImageRequestValue(association, current)) throw denied();
+    const stagedArtifacts = await readOfficeStageReceipts(resolution, current);
     const known = this.#entries.get(memo.id);
     if (known !== undefined) {
       if (
@@ -108,6 +113,7 @@ export class ChatOfficeTaskBroker {
       lease: Object.freeze({ id: memo.id, notAfter: memo.notAfter }),
       resolution,
       association: current,
+      stagedArtifacts,
       abort: () => this.#revoke(entry),
       revoked: false,
       timer: undefined,
@@ -131,6 +137,7 @@ export class ChatOfficeTaskBroker {
   async resolve(id: string): Promise<{
     readonly lease: OfficeTaskLease;
     readonly association: OfficeTaskAssociation;
+    readonly stagedArtifacts: readonly OfficeStageReceipt[];
   } | null> {
     const entry = this.#entries.get(id);
     if (
@@ -158,7 +165,28 @@ export class ChatOfficeTaskBroker {
       this.#revoke(entry);
       return null;
     }
-    return Object.freeze({ lease: entry.lease, association: entry.association });
+    return Object.freeze({
+      lease: entry.lease,
+      association: entry.association,
+      stagedArtifacts: entry.stagedArtifacts,
+    });
+  }
+
+  /** Actual host uploader only, after verified provider ACK; an ID alone cannot record a receipt. */
+  async acknowledge(lease: OfficeTaskLease, artifact: ArtifactRef): Promise<void> {
+    const entry = this.#entries.get(lease.id);
+    if (entry?.lease !== lease || (await this.resolve(lease.id)) === null) throw denied();
+    await recordOfficeStageReceipt(entry.resolution, entry.association, artifact, lease.notAfter);
+    // An admitted commit may settle after revocation. Keep its history, but never ACK stale eligibility.
+    const current = await this.resolve(lease.id);
+    if (
+      current?.lease !== lease ||
+      this.#entries.get(lease.id) !== entry ||
+      entry.revoked ||
+      entry.resolution.context.abortSignal?.aborted ||
+      lease.notAfter <= Date.now()
+    )
+      throw denied();
   }
 
   /** Exact in-process owner only; never expose an ID-only public release endpoint. */

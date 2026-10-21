@@ -149,13 +149,7 @@ export class OfficeInvocationRegistry {
    */
   claim(invocationId: string): OfficeInvocation {
     const entry = this.#issued.get(invocationId);
-    if (
-      entry === undefined ||
-      entry.phase !== "unused" ||
-      entry.original.deadline <= Date.now() ||
-      entry.original.actor.capability !== "human"
-    )
-      // Task consumption awaits its exact phase/native policy.
+    if (entry === undefined || entry.phase !== "unused" || entry.original.deadline <= Date.now())
       throw forbidden();
     entry.phase = "claimed";
     clearTimeout(entry.timer);

@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function usePanes(chatWorkspace = false) {
+export function usePanes(
+  chatWorkspace = false,
+  prepare?: (action: () => void) => Promise<boolean>,
+) {
+  const change = useCallback(
+    (action: () => void) => {
+      if (chatWorkspace && prepare !== undefined) void prepare(action);
+      else action();
+    },
+    [chatWorkspace, prepare],
+  );
   const [sidebarOpen, setSidebarOpen] = useState(
     () => window.matchMedia("(min-width: 601px)").matches,
   );
@@ -22,14 +32,15 @@ export function usePanes(chatWorkspace = false) {
   useEffect(() => {
     if (!fullView) return undefined;
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setFullView(false);
-        setRightOpen(previousRight.current[workspace]);
-      }
+      if (event.key === "Escape")
+        change(() => {
+          setFullView(false);
+          setRightOpen(previousRight.current[workspace]);
+        });
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [fullView, setFullView, setRightOpen, workspace]);
+  }, [fullView, setFullView, setRightOpen, workspace, change]);
   useEffect(() => {
     if (fullView) {
       previousFocus.current =
@@ -47,24 +58,27 @@ export function usePanes(chatWorkspace = false) {
     fullView,
     rightRef,
     openRight,
-    toggleSidebar: () => {
-      setFullView(false);
-      if (fullView) setRightOpen(previousRight.current[workspace]);
-      setSidebarOpen((open) => fullView || !open);
-    },
-    toggleRight: () => {
-      setFullView(false);
-      setRightOpen((open) => !open);
-    },
-    toggleFullView: () => {
-      if (fullView) {
+    toggleSidebar: () =>
+      change(() => {
         setFullView(false);
-        setRightOpen(previousRight.current[workspace]);
-      } else {
-        previousRight.current[workspace] = rightOpen;
-        setRightOpen(true);
-        setFullView(true);
-      }
-    },
+        if (fullView) setRightOpen(previousRight.current[workspace]);
+        setSidebarOpen((open) => fullView || !open);
+      }),
+    toggleRight: () =>
+      change(() => {
+        setFullView(false);
+        setRightOpen((open) => !open);
+      }),
+    toggleFullView: () =>
+      change(() => {
+        if (fullView) {
+          setFullView(false);
+          setRightOpen(previousRight.current[workspace]);
+        } else {
+          previousRight.current[workspace] = rightOpen;
+          setRightOpen(true);
+          setFullView(true);
+        }
+      }),
   };
 }

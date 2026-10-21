@@ -19,6 +19,7 @@ import { readOfficePrivateJson } from "./office-private-json.ts";
 import type { OfficeHostRuntime } from "./office-host-state.ts";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import { assertOfficeTaskRoute, assertOfficeTaskBody } from "./office-task-ingress.ts";
+import { officeHostSources } from "./office-host-sources.ts";
 
 const Channel = Schema.Struct({ viewId: Id, editorId: Schema.NullOr(Id) });
 const Upload = Schema.Struct({
@@ -35,7 +36,7 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
   let handed = false;
   return Effect.gen(function* () {
     const url = new URL(request.url);
-    const match = /^\/(core|channel|upload|download|artifact|protocol)\/([^/]+)(.*)$/.exec(
+    const match = /^\/(core|channel|upload|download|artifact|protocol|sources)\/([^/]+)(.*)$/.exec(
       url.pathname,
     );
     if (root.closing || match === null || match[1] === undefined || match[2] === undefined)
@@ -55,6 +56,11 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
     const active = yield* Effect.tryPromise({ try: () => root.active(), catch: uncertain });
     if (mode === "protocol")
       return yield* officeHostProtocol(root, active, original, request, suffix);
+    if (mode === "sources") {
+      if (suffix !== "") return yield* Effect.fail(officeDenied());
+      return yield* officeHostSources(root, active, original, request);
+      // No handed frame: finally releases the Human registration after actual IO joins.
+    }
     if (request.method !== "POST" || (!["download", "artifact"].includes(mode) && suffix !== ""))
       return yield* Effect.fail(officeDenied());
     if (mode === "channel") {

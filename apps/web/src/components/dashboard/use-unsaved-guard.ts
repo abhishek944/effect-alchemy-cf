@@ -17,7 +17,11 @@ import { registerLeaveGuard, type DeferredLeave, type LeaveIntent } from "./acco
 import { observeNavigation, type OwnedTraversal } from "./profile-history-restore";
 import { captureFocus, restoreFocus as focusIfPossible } from "./profile-focus";
 
-export function useUnsavedGuard(dirty: boolean, restoreRootRef: RefObject<HTMLElement | null>) {
+export function useUnsavedGuard(
+  dirty: boolean,
+  restoreRootRef: RefObject<HTMLElement | null>,
+  enabled = true,
+) {
   const [pending, setPending] = useState<DeferredLeave | null>(null);
   const [lastDirty, setLastDirty] = useState(dirty);
   if (lastDirty !== dirty) {
@@ -87,28 +91,30 @@ export function useUnsavedGuard(dirty: boolean, restoreRootRef: RefObject<HTMLEl
 
   // Native history, link interception and the native unload warning. The observer
   // outlives the dirty-only listeners, so a late compensation is still acknowledged.
-  useEffect(
-    () =>
-      observeNavigation({
-        owned,
-        atIndex,
-        queued,
-        dirty: () => dirtyRef.current,
-        defer,
-        setDecision,
-      }),
-    [defer, setDecision],
-  );
+  useEffect(() => {
+    if (!enabled) return undefined;
+    if (owned.current === null) atIndex.current = currentHistoryIndex();
+    return observeNavigation({
+      owned,
+      atIndex,
+      queued,
+      dirty: () => dirtyRef.current,
+      defer,
+      setDecision,
+    });
+  }, [defer, setDecision, enabled]);
 
   // Keep the gate alive through restoration, even if publication makes it clean.
   useEffect(
     () =>
-      registerLeaveGuard((leave) => {
-        if (!dirtyRef.current && owned.current === null) return true;
-        defer(leave.intent, leave.action);
-        return false;
-      }),
-    [defer],
+      enabled
+        ? registerLeaveGuard((leave) => {
+            if (!dirtyRef.current && owned.current === null) return true;
+            defer(leave.intent, leave.action);
+            return false;
+          })
+        : undefined,
+    [defer, enabled],
   );
 
   const keepEditing = () => {
