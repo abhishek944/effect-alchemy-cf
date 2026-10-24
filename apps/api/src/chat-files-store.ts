@@ -7,7 +7,7 @@
  * originals. Keys never leave server code.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { ChatFileIOUnavailable } from "./chat-file-io-memory.ts";
+import { fileIOUnavailable } from "./chat-file-io-limits.ts";
 import {
   readFileObjectBytes as readStoredObject,
   copyFileObject as copyToRetained,
@@ -45,18 +45,22 @@ export const putStagedObject = async (
   metadata: StagedMetadata,
 ): Promise<void> => {
   const buffer = bytes.buffer;
-  if (!(buffer instanceof ArrayBuffer)) throw new ChatFileIOUnavailable();
+  if (!(buffer instanceof ArrayBuffer)) throw fileIOUnavailable("integrity");
   const body = new Uint8Array(buffer, bytes.byteOffset, bytes.byteLength);
-  await bucket.put(key, body, {
-    sha256: metadata.digest,
-    httpMetadata: { contentType: metadata.contentType, cacheControl: "no-store" },
-    customMetadata: {
-      fileId: metadata.fileId,
-      chatId: metadata.chatId,
-      digest: metadata.digest,
-      name: metadata.name,
-    },
-  });
+  await bucket
+    .put(key, body, {
+      sha256: metadata.digest,
+      httpMetadata: { contentType: metadata.contentType, cacheControl: "no-store" },
+      customMetadata: {
+        fileId: metadata.fileId,
+        chatId: metadata.chatId,
+        digest: metadata.digest,
+        name: metadata.name,
+      },
+    })
+    .catch((error: unknown) => {
+      throw fileIOUnavailable("storage", error);
+    });
 };
 
 /** Reads an owned original by server-derived keys, staging first then retained. */
@@ -76,7 +80,9 @@ export const deleteStoredObjects = async (
   keys: readonly string[],
 ): Promise<void> => {
   if (keys.length === 0) return;
-  await bucket.delete([...keys]);
+  await bucket.delete([...keys]).catch((error: unknown) => {
+    throw fileIOUnavailable("storage", error);
+  });
 };
 
 /** Byte operations for the sweep and retain jobs over one private bucket. */

@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect, Layer, Schema } from "effect";
 import { Email, EmailMessage } from "./email.ts";
 import type { IntegrationError } from "./error.ts";
@@ -40,18 +41,18 @@ const knownCodes = new Set([
 ]);
 
 const nativeFailure = (cause: unknown): IntegrationError => {
-  // Never retain foreign messages/causes; even code access may be a throwing getter.
+  // Retain the native failure in memory only; never read foreign messages or bodies.
   try {
     if (typeof cause === "object" && cause !== null && "code" in cause) {
       const code = cause.code;
       if (typeof code === "string" && knownCodes.has(code)) {
-        return failure("cloudflare", "Rejected", null, null, code);
+        return withCause(failure("cloudflare", "Rejected", null, null, code), cause);
       }
     }
   } catch {
-    return failure("cloudflare", "Transport");
+    return withCause(failure("cloudflare", "Transport"), cause);
   }
-  return failure("cloudflare", "Transport");
+  return withCause(failure("cloudflare", "Transport"), cause);
 };
 
 const layer = (options: CloudflareEmailOptions): Layer.Layer<Email, IntegrationError> =>
@@ -66,7 +67,9 @@ const layer = (options: CloudflareEmailOptions): Layer.Layer<Email, IntegrationE
         send: Effect.fn("integrations.email.send")(function* (input: EmailMessage) {
           const message = yield* Schema.decodeUnknownEffect(EmailMessage, {
             onExcessProperty: "error",
-          })(input).pipe(Effect.mapError(() => failure("cloudflare", "InvalidInput")));
+          })(input).pipe(
+            Effect.mapError((cause) => withCause(failure("cloudflare", "InvalidInput"), cause)),
+          );
           const result = yield* Effect.tryPromise({
             try: () =>
               binding.send({
@@ -88,7 +91,7 @@ const layer = (options: CloudflareEmailOptions): Layer.Layer<Email, IntegrationE
             }),
           );
           const receipt = yield* Schema.decodeUnknownEffect(Result)(result).pipe(
-            Effect.mapError(() => failure("cloudflare", "InvalidResponse")),
+            Effect.mapError((cause) => withCause(failure("cloudflare", "InvalidResponse"), cause)),
           );
           return { id: receipt.messageId };
         }),

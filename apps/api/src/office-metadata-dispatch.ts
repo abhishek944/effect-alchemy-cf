@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+import { withCause } from "@starter/diagnostics";
 import {
   decodeWire,
   OfficeErrors,
@@ -32,9 +33,13 @@ export function dispatchOfficeMetadata(
 ): Effect.Effect<OfficeMetadataResponse, OfficeError> {
   return Effect.suspend(() => {
     let mutation = false;
-    const unavailable = () =>
-      new OfficeUnavailable(safeFailure(mutation ? "OUTCOME_UNKNOWN" : "UNAVAILABLE"));
-    const failure = (cause: unknown) => Effect.fail(isOfficeError(cause) ? cause : unavailable());
+    const unavailable = (cause?: unknown) =>
+      withCause(
+        new OfficeUnavailable(safeFailure(mutation ? "OUTCOME_UNKNOWN" : "UNAVAILABLE")),
+        cause,
+      );
+    const failure = (cause: unknown) =>
+      Effect.fail(isOfficeError(cause) ? cause : unavailable(cause));
     return Effect.gen(function* () {
       const call = yield* decodeWire(Request)(payload).pipe(
         Effect.mapError(() => new OfficeInvalid(safeFailure("INVALID_INPUT"))),

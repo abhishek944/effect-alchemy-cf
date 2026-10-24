@@ -60,8 +60,8 @@ main reads at their actual trunk baseline; newer main needs separate authorizati
 `@starter/office-cloudflare/native-doc-read` exports `createDocReadSession` for finite
 main-Doc control/piece reads. It requires matching native scope, live authorization,
 original signal, revision ceiling, private association, budgets and awaited disposal.
-Its Node peer is `@starter/office-server/native-doc-read`; neither mounts a host or
-supplies genuine session/View/placement authority. This lane is readonly/source-only.
+This source-only adapter mounts no host and supplies no session/View/placement
+authority. The historical standalone Node peer and readonly host have been retired.
 
 ## Atomic publication and recovery
 

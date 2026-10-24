@@ -3,8 +3,7 @@ import type { AgentContext } from "agents";
 import type { ImageStoreContext, Original } from "@abhishek944/pi-image-gen/core";
 import { ensureChatFilesSchema } from "./chat-files-table.ts";
 import { readBoundedBody } from "./body-limit.ts";
-import { ChatGeneratedMemory, generatedDeclaredBytes } from "./chat-generated-memory.ts";
-import { persistGeneratedOutput } from "./chat-generated-output.ts";
+import { generatedDeclaredBytes, persistGeneratedOutput } from "./chat-generated-output.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";
 import { ChatImageStorageLedger } from "./chat-image-storage-ledger.ts";
 import {
@@ -40,39 +39,24 @@ export type ChatGeneratedStorageOptions = {
 /** Owner-local quota/admission and immutable private originals; no provider logic. */
 export class ChatGeneratedStorage {
   private readonly ledger: ChatImageStorageLedger;
-  private readonly memory: ChatGeneratedMemory;
   private readonly options: ChatGeneratedStorageOptions;
   constructor(options: ChatGeneratedStorageOptions) {
     this.options = options;
     ensureChatFilesSchema(options.storage.sql);
     this.ledger = new ChatImageStorageLedger(options.storage, options.canGenerate);
-    this.memory = new ChatGeneratedMemory(options.scope);
   }
   reserve(input: ImageReservation): { fresh: boolean } {
     const value = requireImageValue(ImageReservation, input);
-    if (imageCall(this.options.storage.sql, value)?.state === "finished")
-      return this.ledger.reserve(value);
-    return this.memory.admit(value, value.maxOutputBytes, () => this.ledger.reserve(value));
+    return this.ledger.reserve(value);
   }
   /** Only dispatch:true may enter the package engine, exactly once. Lost ack means READ, not replay. */
   consume(key: ImageCallKey): { dispatch: boolean } {
     const value = requireImageValue(ImageCallKey, key);
-    if (imageCall(this.options.storage.sql, value)?.state !== "reserved")
-      return this.ledger.consume(value);
-    return this.memory.admit(value, this.ledger.request(value).maxOutputBytes, () =>
-      this.ledger.consume(value),
-    );
+    return this.ledger.consume(value);
   }
   finish(key: ImageCallKey): { pendingBytes: number } {
     const value = requireImageValue(ImageCallKey, key);
-    const result = this.ledger.finish(value);
-    this.memory.finish(value);
-    return result;
-  }
-  private capacity(key: ImageCallKey): number {
-    if (imageCall(this.options.storage.sql, key)?.state !== "running")
-      throw new ImageStorageError("not_admitted");
-    return this.ledger.request(key).maxOutputBytes;
+    return this.ledger.finish(value);
   }
   private persist(
     key: ImageCallKey,
@@ -93,20 +77,22 @@ export class ChatGeneratedStorage {
       context,
     );
   }
-  /** Private ingress: reserve/claim BEFORE reading, then track through hash/PUT/receipt. */
+  /** Private ingress keeps running-call authorization and durable output quota. */
   async ingest(input: ImageStoreQuery, request: Request): Promise<SavedFile> {
     const key = requireImageValue(ImageStoreQuery, input);
     const declared = generatedDeclaredBytes(request);
-    return this.memory.run(key, this.capacity(key), declared, async () => {
-      const bytes = await readBoundedBody(request, declared);
-      if (bytes === null || bytes.byteLength !== declared)
-        throw new ImageStorageError("invalid_output");
-      const mimeType = request.headers.get("content-type") ?? "";
-      return this.persist(key, { bytes, mimeType }, key.index, {
-        total: key.total,
-        signal: request.signal,
-        descriptor: { index: key.index, bytes: declared, mimeType },
-      });
+    if (imageCall(this.options.storage.sql, key)?.state !== "running")
+      throw new ImageStorageError("not_admitted");
+    if (declared > this.ledger.request(key).maxOutputBytes)
+      throw new ImageStorageError("invalid_output");
+    const bytes = await readBoundedBody(request, declared);
+    if (bytes === null || bytes.byteLength !== declared)
+      throw new ImageStorageError("invalid_output");
+    const mimeType = request.headers.get("content-type") ?? "";
+    return this.persist(key, { bytes, mimeType }, key.index, {
+      total: key.total,
+      signal: request.signal,
+      descriptor: { index: key.index, bytes: declared, mimeType },
     });
   }
   private objectKey(key: ImageCallKey, row: ImageOutputRow): string {

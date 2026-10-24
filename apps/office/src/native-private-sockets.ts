@@ -57,5 +57,5 @@ export function nativePrivateSocket(
       current.value.cleanupDeadline,
     ),
   );
-  invocations.own(actual);
+  invocations.own(actual, "socket-closed-report");
 }

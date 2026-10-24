@@ -1,3 +1,5 @@
+import { readResponseRequestId, serverReference, withReference } from "@/lib/browser-diagnostics";
+
 export type AdminRole = "user" | "admin";
 
 export type AdminIdentity = {
@@ -15,11 +17,19 @@ export type AdminUser = AdminIdentity & {
 
 export class AdminApiError extends Error {
   readonly status: number;
+  readonly requestId: string | null;
 
-  constructor(status: number, message: string) {
-    super(message);
+  constructor(
+    status: number,
+    message: string,
+    requestId: string | null = null,
+    operation = "admin.request",
+    responseStatus = status,
+  ) {
+    super(withReference(message, serverReference(operation, responseStatus, requestId)));
     this.name = "AdminApiError";
     this.status = status;
+    this.requestId = requestId;
   }
 }
 
@@ -64,20 +74,11 @@ function isAdminUser(value: unknown): value is AdminUser {
   );
 }
 
-async function readMessage(response: Response): Promise<string | null> {
-  try {
-    const body: unknown = await response.json();
-    if (isRecord(body)) {
-      if (typeof body.message === "string" && body.message) return body.message;
-      if (typeof body.error === "string" && body.error) return body.error;
-    }
-  } catch {
-    // Non-JSON error bodies fall back to a status-based message.
-  }
-  return null;
-}
-
-async function request(path: string, init?: RequestInit): Promise<unknown> {
+async function request(
+  path: string,
+  init: RequestInit | undefined,
+  operation: string,
+): Promise<{ body: unknown; requestId: string | null; status: number }> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -85,52 +86,77 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
       headers: { "content-type": "application/json" },
       ...init,
     });
-  } catch {
-    throw new AdminApiError(0, "Network unavailable. Check your connection and try again.");
+  } catch (cause) {
+    if (init?.signal?.aborted) throw cause;
+    throw new AdminApiError(
+      0,
+      "Network unavailable. Check your connection and try again.",
+      null,
+      operation,
+    );
   }
+  const requestId = readResponseRequestId(response);
   if (!response.ok) {
-    const message = (await readMessage(response)) ?? STATUS_MESSAGES[response.status];
-    throw new AdminApiError(response.status, message ?? `Request failed (${response.status}).`);
+    const message = STATUS_MESSAGES[response.status];
+    throw new AdminApiError(
+      response.status,
+      message ?? `Request failed (${response.status}).`,
+      requestId,
+      operation,
+    );
   }
-  if (response.status === 204) return null;
-  const body: unknown = await response.json().catch(() => null);
-  return body;
+  if (response.status === 204) return { body: null, requestId, status: response.status };
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch (cause) {
+    if (init?.signal?.aborted) throw cause;
+    throw new AdminApiError(502, UNEXPECTED_RESPONSE, requestId, operation, response.status);
+  }
+  return { body, requestId, status: response.status };
 }
 
 /** Server-verified admin identity for the current session. */
 export async function fetchAdminIdentity(): Promise<AdminIdentity> {
-  const body = await request("/api/admin/me");
-  if (!isIdentity(body)) throw new AdminApiError(500, UNEXPECTED_RESPONSE);
+  const { body, requestId, status } = await request("/api/admin/me", undefined, "admin.identity");
+  if (!isIdentity(body))
+    throw new AdminApiError(500, UNEXPECTED_RESPONSE, requestId, "admin.identity", status);
   return body;
 }
 
 /** Exact-email lookup; personal data stays out of URL logs. */
 export async function searchUserByEmail(email: string): Promise<AdminUser | null> {
-  const body = await request("/api/admin/users/search", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
-  if (!isRecord(body) || !("user" in body)) throw new AdminApiError(500, UNEXPECTED_RESPONSE);
+  const { body, requestId, status } = await request(
+    "/api/admin/users/search",
+    { method: "POST", body: JSON.stringify({ email }) },
+    "admin.user-search",
+  );
+  if (!isRecord(body) || !("user" in body))
+    throw new AdminApiError(500, UNEXPECTED_RESPONSE, requestId, "admin.user-search", status);
   const user = body.user;
   if (user === null) return null;
-  if (!isAdminUser(user)) throw new AdminApiError(500, UNEXPECTED_RESPONSE);
+  if (!isAdminUser(user))
+    throw new AdminApiError(500, UNEXPECTED_RESPONSE, requestId, "admin.user-search", status);
   return user;
 }
 
 export async function updateUserRole(id: string, role: AdminRole): Promise<void> {
-  const body = await request(`/api/admin/users/${encodeURIComponent(id)}/role`, {
-    method: "PATCH",
-    body: JSON.stringify({ role }),
-  });
-  if (!isRecord(body) || body.ok !== true) throw new AdminApiError(500, UNEXPECTED_RESPONSE);
+  const { body, requestId, status } = await request(
+    `/api/admin/users/${encodeURIComponent(id)}/role`,
+    { method: "PATCH", body: JSON.stringify({ role }) },
+    "admin.user-role",
+  );
+  if (!isRecord(body) || body.ok !== true)
+    throw new AdminApiError(500, UNEXPECTED_RESPONSE, requestId, "admin.user-role", status);
 }
 
 /** One-time access bootstrap; the server sets the standard Better Auth cookie. */
 export async function adminOtaLogin(token: string): Promise<void> {
-  await request("/api/auth/admin-ota-login", {
-    method: "POST",
-    body: JSON.stringify({ token }),
-  });
+  await request(
+    "/api/auth/admin-ota-login",
+    { method: "POST", body: JSON.stringify({ token }) },
+    "admin.ota-login",
+  );
 }
 
 export function adminErrorMessage(error: unknown): string {

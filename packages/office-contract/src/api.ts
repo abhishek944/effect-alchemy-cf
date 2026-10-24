@@ -5,7 +5,7 @@ import * as Group from "effect/http-api/HttpApiGroup";
 import { OfficeBinaryEndpoints } from "./binary-api.ts";
 import { ImportIntoEndpoint } from "./import-api.ts";
 import { OfficeChannelEndpoint } from "./channel.ts";
-import { OfficeSourcesEndpoint } from "./sources.ts";
+import { OfficeSourceEndpoints } from "./sources.ts";
 export { BINARY_UPLOAD_PATH, UploadHeaders } from "./binary-api.ts";
 import { OfficeErrors } from "./errors.ts";
 import {
@@ -192,7 +192,7 @@ export class OfficeGroup extends Group.make("office")
       success: EventPage,
     }),
   )
-  .add(ImportIntoEndpoint, OfficeChannelEndpoint, OfficeSourcesEndpoint)
+  .add(ImportIntoEndpoint, OfficeChannelEndpoint, ...OfficeSourceEndpoints)
   .add(...OfficeBinaryEndpoints) {}
 export class OfficeApi extends HttpApi.make("office")
   .add(OfficeGroup)

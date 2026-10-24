@@ -1,11 +1,9 @@
 import type { Api, Context, Model } from "@earendil-works/pi-ai";
-import type { UserInput } from "@earendil-works/pi-durable";
-import type { Registry } from "@earendil-works/pi-durable";
-import type { Harness, TaskId } from "@earendil-works/pi-durable";
+import type { Harness, Registry, TaskId, UserInput } from "@earendil-works/pi-durable";
 import type { ChatRuntime } from "./chat-runtime.ts";
 import { recoverSkillsBeforeResume, type SkillBootResult } from "./chat-skills-boot.ts";
 import { failSkillAttempt } from "./chat-skills-defect.ts";
-import { SKILLS_PINNED_UNAVAILABLE } from "./chat-skills-errors.ts";
+import { reportSkillRecovery, SKILLS_PINNED_UNAVAILABLE } from "./chat-skills-errors.ts";
 import { SkillAttempts, type PreparedSkillSend } from "./chat-skills-attempts.ts";
 import { canonicalSkillContext, type GuardedRequest } from "./chat-skills-guard.ts";
 import {
@@ -60,12 +58,17 @@ export class ConversationSkills {
   private fail(operationId: string, message: string): void {
     this.latched.set(operationId, message);
     pruneSkillLatch(this.options.store, this.latched);
+    this.persist(operationId, "skills_latch_persist_failed", () =>
+      this.options.store.incomplete(operationId, message),
+    );
+    this.persist(operationId, "skills_notify_failed", this.options.notify);
+  }
+  private persist(operationId: string, reason: string, run: () => void): void {
     try {
-      this.options.store.incomplete(operationId, message);
-    } catch {}
-    try {
-      this.options.notify();
-    } catch {}
+      run();
+    } catch (error) {
+      reportSkillRecovery(error, "defect.persist", reason, operationId);
+    }
   }
   private defect(
     attemptId: string,

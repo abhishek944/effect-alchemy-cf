@@ -106,20 +106,17 @@ credentials are not attachment authority.
 `createOfficeJobHost(options)` returns `jobs` and a metadata-only private request
 handler with injected authorization. These are exported injected compositions,
 not an already authenticated standalone server or application CLI. T22 supplies
-trusted scoped resources. `@starter/office-runtime/host` now exports
-`createOfficeReadonlyHost` for a private Node listener using the public SDK and the
-real readonly Doc adapter. It admits only positive-revision main Doc snapshot GETs,
-with explicit target/IP/port/concurrency/deadline and a required genuine delegated
-resolver. It owns revoke-first request/socket/SDK cleanup; it does not supply that
-resolver, mount a SaaS host or enable writes/tickets/WSS. Source/static checks are
-not listener, authentication or runtime acceptance.
+trusted scoped resources.
 
 The application composes genuine Worker/session/View/task issuance, finite storage
 callbacks, native-bootstrap and fixed fresh-job roles from ONE application image.
 Use the `application` target in Dockerfile.jobs, not a historical smoke image.
-For ordinary local operation, start Docker and run `pnpm dev`: the launcher builds
-this target and binds its actual immutable local Docker image ID automatically.
-No application-image publication or Cloudflare deployment is needed locally.
+For ordinary local operation, start Docker and run `pnpm dev:office` once (and
+after job/container changes) to build this target explicitly, then `pnpm dev` to
+bind its actual immutable local Docker image ID. `pnpm dev` never builds or pulls
+an image; restart it after rebuilding. The Vite frontend is the separate
+`pnpm dev:web` process. No application-image publication or Cloudflare deployment
+is needed locally.
 Cloud deployments remain separate approved operations requiring a registry digest.
 See [Office setup](../../docs/office.md) for original-file/Send/editor boundaries.
 Source integration and image build alone do not prove native runtime acceptance.

@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect, Schema } from "effect";
 import { billingError, type BillingError, type ResourceKind } from "./billing.ts";
 
@@ -76,5 +77,5 @@ export const dodoResourceId = (
 ): Effect.Effect<string | null, BillingError> =>
   Schema.decodeUnknownEffect(DodoResourceData)(data).pipe(
     Effect.map((decoded) => decoded[idFields[kind]] ?? null),
-    Effect.mapError(() => billingError("Provider")),
+    Effect.mapError((cause) => withCause(billingError("Provider"), cause)),
   );

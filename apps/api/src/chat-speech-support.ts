@@ -1,9 +1,5 @@
-/**
- * Shared validation for one authenticated speech operation: the OpenRouter
- * binding resolves before the durable one-attempt claim, and the claim freezes
- * the authoritative model/voice for this operation or read-aloud playback.
- * Nothing here accepts a browser-supplied model, voice or destination.
- */
+/** Shared authenticated speech admission, settlement and usage attribution. */
+import { reportFailure } from "@starter/diagnostics";
 import type { SpeechPreferences } from "./chat-speech-schema.ts";
 import { resolveSpeechRuntime, type SpeechRuntime } from "./chat-speech-runtime.ts";
 import type {
@@ -27,9 +23,7 @@ export type SpeechHandlerContext = {
 };
 
 export type SpeechHandlerServices = {
-  /** Confirms an optional chat id belongs to the authenticated owner. */
   readonly requireOwnedChat: (userId: string, chatId: string) => Promise<boolean>;
-  /** Durable one-attempt admission; returns the frozen authoritative preferences. */
   readonly claimOperation: (request: SpeechClaimRequest) => Promise<SpeechClaimDecision>;
   readonly settleOperation: (claimId: string, outcome: SpeechClaimOutcome) => Promise<void>;
   readonly recordUsage: SpeechUsageRecorder;
@@ -79,7 +73,18 @@ const CLAIM_FAILURES: Record<
     message: "Speech admission is unavailable. Try again.",
   },
 };
-
+const report = (
+  error: unknown,
+  operation: string,
+  operationId: string | undefined,
+  level?: "ERROR" | "WARN",
+): void =>
+  reportFailure(error, {
+    component: "chat-speech",
+    operation,
+    operationId,
+    ...(level === undefined ? {} : { level }),
+  });
 export type SpeechAdmission =
   | { readonly ok: true; readonly claimId: string; readonly preferences: SpeechPreferences }
   | { readonly ok: false; readonly response: Response };
@@ -91,11 +96,19 @@ export const admitSpeechOperation = async (
   request: Omit<SpeechClaimRequest, "userId">,
 ): Promise<SpeechAdmission> => {
   if (request.chatId !== null) {
-    let owned = false;
+    let owned: boolean;
     try {
       owned = await services.requireOwnedChat(context.userId, request.chatId);
-    } catch {
-      owned = false;
+    } catch (error) {
+      report(error, "ownership", request.operationId);
+      return {
+        ok: false,
+        response: speechResponse(
+          503,
+          CLAIM_FAILURES.unavailable.code,
+          CLAIM_FAILURES.unavailable.message,
+        ),
+      };
     }
     if (!owned)
       return {
@@ -106,7 +119,8 @@ export const admitSpeechOperation = async (
   let decision: SpeechClaimDecision;
   try {
     decision = await services.claimOperation({ ...request, userId: context.userId });
-  } catch {
+  } catch (error) {
+    report(error, "admission", request.operationId);
     return {
       ok: false,
       response: speechResponse(
@@ -127,16 +141,16 @@ export const settleSpeechOperation = async (
   services: SpeechHandlerServices,
   claimId: string,
   outcome: SpeechClaimOutcome,
+  operationId: string,
 ): Promise<void> => {
   try {
     await services.settleOperation(claimId, outcome);
-  } catch {
-    // Intentionally ignored: the durable in-flight claim becomes stale/uncertain
-    // and still prevents a retry, which is the fail-closed direction.
+  } catch (error) {
+    // The durable in-flight claim becomes stale/uncertain and still prevents a retry.
+    report(error, "settle", operationId, outcome === "completed" ? "WARN" : undefined);
   }
 };
 
-/** Base identity shared by both operations; unit and quantities are per attempt. */
 export type SpeechUsageBase = Omit<
   SpeechUsageInput,
   "reportedQuantity" | "estimatedQuantity" | "failed" | "unit"
@@ -152,24 +166,31 @@ export const recordSpeechUsage = (
     readonly reported: number | null;
     readonly estimated: number | null;
   },
+  level?: "ERROR" | "WARN",
 ): Promise<Response | null> =>
-  attributeSpeechUsage(services, {
-    ...base,
-    unit: values.unit,
-    reportedQuantity: values.reported,
-    estimatedQuantity: values.estimated,
-    failed: values.failed,
-  });
+  attributeSpeechUsage(
+    services,
+    {
+      ...base,
+      unit: values.unit,
+      reportedQuantity: values.reported,
+      estimatedQuantity: values.estimated,
+      failed: values.failed,
+    },
+    level,
+  );
 
-/** Records a speech operation; failed attribution fails the response closed. */
+/** Records a speech operation; a failed write is reported without replacing a known outcome. */
 export const attributeSpeechUsage = async (
   services: SpeechHandlerServices,
   input: SpeechUsageInput,
+  level?: "ERROR" | "WARN",
 ): Promise<Response | null> => {
   try {
     await services.recordUsage(speechUsageOf(input));
     return null;
-  } catch {
+  } catch (error) {
+    report(error, "usage", input.operationId, level);
     return speechResponse(
       503,
       "attribution_unavailable",

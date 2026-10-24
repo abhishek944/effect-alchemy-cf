@@ -2,92 +2,23 @@ import type { CatalogImageModelId } from "@abhishek944/pi-image-gen/core";
 import { Schema } from "effect";
 import { OfficeSendTarget } from "@starter/office-contract";
 import {
-  FileMediaType,
-  FileName,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
-  MAX_TEXT_FILE_BYTES,
-  MAX_OFFICE_BYTES,
-} from "./chat-attachment-schema.ts";
-import { isOfficeMediaType } from "./chat-office-media.ts";
+  AcceptedInputBinding,
+  AcceptedInputDigest,
+  AcceptedInputIdentity,
+  AcceptedOriginalBinding,
+} from "./chat-accepted-input-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { ImagePreferences } from "./chat-image-preference-schema.ts";
 import { isBoundedImageResponseJson } from "./chat-image-response-json.ts";
 
-export const ImageResponseDigest = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
-/** Application/native identifiers are not SDK brands and need not be UUIDs. */
-export const ImageResponseIdentity = Schema.String.check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(512),
-  Schema.makeFilter((value) =>
-    Array.from(value).every((character) => {
-      const code = character.codePointAt(0) ?? 0;
-      return code >= 32 && code !== 127;
-    }),
-  ),
-);
-export const ImageResponseIndex = Schema.Number.check(
-  Schema.makeFilter((value) => Number.isSafeInteger(value) && value >= 0),
-);
-const Positive = ImageResponseIndex.check(Schema.isGreaterThan(0));
-const LogicalUrl = Schema.String.check(
-  Schema.isMaxLength(2048),
-  Schema.makeFilter((value) => {
-    try {
-      const url = new URL(value);
-      return (
-        (url.protocol === "https:" || url.protocol === "http:") &&
-        url.username === "" &&
-        url.password === "" &&
-        url.search === "" &&
-        url.hash === "" &&
-        url.href === value
-      );
-    } catch {
-      return false;
-    }
-  }),
-);
-
-export const ImageOriginalBinding = Schema.Struct({
-  fileId: DomainUuid,
-  digest: ImageResponseDigest,
-  url: LogicalUrl,
-  originOperationId: Schema.NullOr(DomainUuid),
-  kind: Schema.Literals(["image", "text", "office"]),
-  name: FileName,
-  byteSize: Positive,
-  mediaType: FileMediaType,
-  width: Schema.NullOr(Positive),
-  height: Schema.NullOr(Positive),
-}).check(
-  Schema.makeFilter((file) => {
-    if (file.kind === "text")
-      return (
-        !file.mediaType.startsWith("image/") &&
-        !isOfficeMediaType(file.mediaType) &&
-        file.byteSize <= MAX_TEXT_FILE_BYTES &&
-        file.width === null &&
-        file.height === null
-      );
-    if (file.kind === "office")
-      return (
-        isOfficeMediaType(file.mediaType) &&
-        file.byteSize <= MAX_OFFICE_BYTES &&
-        file.width === null &&
-        file.height === null
-      );
-    return (
-      file.mediaType.startsWith("image/") &&
-      file.byteSize <= MAX_IMAGE_BYTES &&
-      file.width !== null &&
-      file.height !== null &&
-      file.width * file.height <= MAX_IMAGE_PIXELS
-    );
-  }),
-);
-export type ImageOriginalBinding = typeof ImageOriginalBinding.Type;
-
+/** Persisted image records reuse the neutral accepted-input identities and schemas unchanged. */
+export {
+  AcceptedInputBinding as ImageAcceptedBinding,
+  AcceptedInputDigest as ImageResponseDigest,
+  AcceptedInputIdentity as ImageResponseIdentity,
+  AcceptedInputIndex as ImageResponseIndex,
+  AcceptedOriginalBinding as ImageOriginalBinding,
+} from "./chat-accepted-input-schema.ts";
 const models = [
   "openai/gpt-image-2.5-flare",
   "openai/gpt-image-2.5-sunburst",
@@ -98,7 +29,7 @@ export const ImageResponseCapability = Schema.Union([
     state: Schema.Literal("ready"),
     preferences: ImagePreferences,
     model: Schema.Literals(models),
-    gatewayId: ImageResponseIdentity.check(Schema.isTrimmed(), Schema.isMaxLength(128)),
+    gatewayId: AcceptedInputIdentity.check(Schema.isTrimmed(), Schema.isMaxLength(128)),
   }).check(
     Schema.makeFilter((image) => image.model === `openai/gpt-image-2.5-${image.preferences.model}`),
   ),
@@ -126,15 +57,15 @@ export const ImageResponseCandidate = Schema.Struct({
   version: Schema.Literal(1),
   operationId: DomainUuid,
   logicalOperationId: DomainUuid,
-  identityHash: ImageResponseDigest,
-  ownerId: ImageResponseIdentity,
+  identityHash: AcceptedInputDigest,
+  ownerId: AcceptedInputIdentity,
   chatId: DomainUuid,
-  chatScope: ImageResponseIdentity,
-  conversationId: ImageResponseIdentity,
+  chatScope: AcceptedInputIdentity,
+  conversationId: AcceptedInputIdentity,
   applicationOrigin: ImageApplicationOrigin,
   image: ImageResponseCapability,
-  inputDigest: ImageResponseDigest,
-  originals: Schema.Array(ImageOriginalBinding),
+  inputDigest: AcceptedInputDigest,
+  originals: Schema.Array(AcceptedOriginalBinding),
   officeTarget: Schema.optionalKey(OfficeSendTarget),
 }).check(
   Schema.makeFilter(isBoundedImageResponseJson),
@@ -147,19 +78,9 @@ export const ImageResponseCandidate = Schema.Struct({
 );
 export type ImageResponseCandidate = typeof ImageResponseCandidate.Type;
 
-export const ImageAcceptedBinding = Schema.Struct({
-  operationId: DomainUuid,
-  submissionId: ImageResponseIdentity,
-  conversationId: ImageResponseIdentity,
-  entryId: Positive,
-  modelIndex: ImageResponseIndex,
-  inputDigest: ImageResponseDigest,
-});
-export type ImageAcceptedBinding = typeof ImageAcceptedBinding.Type;
-
 export const ImageBoundInput = Schema.Struct({
   candidate: ImageResponseCandidate,
-  binding: ImageAcceptedBinding,
+  binding: AcceptedInputBinding,
 }).check(
   Schema.makeFilter(
     ({ candidate, binding }) =>

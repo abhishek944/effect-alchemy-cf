@@ -10,7 +10,7 @@ import type { ChatImageCallStore } from "./chat-image-call-store.ts";
 import type { ImageCallFile, ImageCallUpdate } from "./chat-image-call-schema.ts";
 import type { ProvenImageCall } from "./chat-image-native-proof.ts";
 import type { ImageNativeAccess } from "./chat-image-request-types.ts";
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
+import type { ImageIOTracker } from "./chat-image-io.ts";
 import type { SavedOriginalMetadata } from "./chat-library-original.ts";
 import type { SavedFile } from "./chat-library-schema.ts";
 import type { ChatGeneratedClient } from "./chat-generated-client.ts";
@@ -56,7 +56,7 @@ export type ImageHostPlan = {
   readonly callPosition: number;
 };
 export type ImageHostLifetime = {
-  readonly lease: ImageMemoryLease;
+  readonly track: ImageIOTracker;
   drain(): Promise<void>;
 };
 export type ImageHostExecution = {
@@ -68,7 +68,6 @@ export type ImageHostExecution = {
   readonly responses: Set<Response>;
   readonly paidBlocked: () => boolean;
   readonly blockPaid: () => void;
-  retainedOutputBackingBytes: number;
   dispatched: boolean;
   storing: boolean;
   metadata?: ImageMetadata;

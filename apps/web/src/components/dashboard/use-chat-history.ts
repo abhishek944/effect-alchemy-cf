@@ -9,6 +9,8 @@ import { useAutoChatText } from "./use-auto-chat-text";
 
 export type HistoryTextState = {
   text: string;
+  /** False for a later bounded text section, whose global tool positions are unknown. */
+  isPrefix?: boolean;
   notice: string | null;
   complete: boolean;
   revision: string | null;
@@ -74,6 +76,7 @@ export function useChatHistory(
       const notice = noticeFor(row);
       return {
         text: effectiveText(row, view.chunks),
+        isPrefix: !chunk || chunk.initial,
         notice,
         revision: row.textRevision,
         complete:

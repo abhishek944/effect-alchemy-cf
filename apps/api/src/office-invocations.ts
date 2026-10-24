@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import type { Auth } from "@starter/auth";
 import type { RuntimeContext } from "alchemy";
 import {
@@ -16,15 +17,17 @@ import { Clock, Effect } from "effect";
 import type { OfficeError } from "@starter/office-contract";
 import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
 import type { OfficeTaskProofReader } from "./office-task-callback.ts";
+import { officeDeny, type OfficeDiagnosticMetadata } from "./office-diagnostic-report.ts";
 import { OfficeTaskSelector } from "./office-task-proof.ts";
 import {
   prepareOfficeTask,
   revalidateOfficeTask,
   type OfficeTaskInvocation,
 } from "./office-task-issuance.ts";
-
 /** Server-private record: never return the session association to Node/browser/model. */
+export type OfficeHumanPurpose = "request" | "channel";
 type HumanInvocation = {
+  readonly purpose: OfficeHumanPurpose;
   readonly actor: HumanActor;
   readonly session: OfficeSessionBinding;
   readonly deadline: number;
@@ -34,38 +37,40 @@ type Live<A> = Effect.Effect<A, OfficeError, Auth | OfficeSessionEpochs | Runtim
 type Registration = {
   readonly original: OfficeInvocation;
   phase: "unused" | "claimed" | "released";
+  readonly claimDeadline: number;
   timer: ReturnType<typeof setTimeout> | undefined;
 };
 const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
-
 /** Owned by the container DO, not a public session-ID authentication endpoint. */
 export class OfficeInvocationRegistry {
   readonly #owner: OwnerScope;
   readonly #issued = new Map<string, Registration>();
   #issuing = 0;
-
   constructor(owner: OwnerScope) {
     this.#owner = Object.freeze(decodeWireSync(OwnerClaims)(structuredClone(owner)));
   }
-
   #live(session: OfficeSessionBinding): Live<void> {
     if (session.stage !== this.#owner.stage || session.ownerId !== this.#owner.ownerId)
       return Effect.fail(forbidden());
     return revalidateOfficeSessionBinding(this.#owner.stage, session).pipe(
-      Effect.catchTag("OfficeSessionDenied", () => Effect.fail(forbidden())),
-      Effect.catchTag("OfficeSessionUnavailable", () =>
-        Effect.fail(new OfficeUnavailable(safeFailure("UNAVAILABLE"))),
+      Effect.catchTag("OfficeSessionDenied", (cause) => Effect.fail(withCause(forbidden(), cause))),
+      Effect.catchTag("OfficeSessionUnavailable", (cause) =>
+        Effect.fail(withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE")), cause)),
       ),
     );
   }
-
   /** Owner exists BEFORE returning any ACK. Only this exact still-unused original may expire. */
   #retain(original: OfficeInvocation): void {
     const id = original.actor.invocationId;
-    const entry: Registration = { original, phase: "unused", timer: undefined };
+    const entry: Registration = {
+      original,
+      phase: "unused",
+      claimDeadline: Math.min(original.deadline, Date.now() + 120_000),
+      timer: undefined,
+    };
     const expire = () => {
       if (this.#issued.get(id) !== entry || entry.phase !== "unused") return;
-      const remaining = original.deadline - Date.now();
+      const remaining = entry.claimDeadline - Date.now();
       if (remaining > 0) {
         entry.timer = setTimeout(expire, remaining); // Same immutable deadline, never renewal.
         return;
@@ -75,21 +80,26 @@ export class OfficeInvocationRegistry {
     };
     this.#issued.set(id, entry);
     try {
-      entry.timer = setTimeout(expire, Math.max(0, original.deadline - Date.now()));
+      entry.timer = setTimeout(expire, Math.max(0, entry.claimDeadline - Date.now()));
     } catch (error) {
       entry.phase = "released";
       this.#issued.delete(id);
       throw error;
     }
   }
-
   /** ONLY the authenticated Worker's private DO binding may register original51 metadata. */
-  registerHuman(original: OfficeSessionBinding): Live<HumanInvocation> {
+  registerHuman(
+    original: OfficeSessionBinding,
+    purpose: OfficeHumanPurpose,
+  ): Live<HumanInvocation> {
     const session = Object.freeze(structuredClone(original));
     return Effect.gen({ self: this }, function* () {
       yield* this.#live(session);
       const now = yield* Clock.currentTimeMillis;
-      const deadline = Math.min(session.expiresAt, now + 120_000);
+      if (purpose !== "request" && purpose !== "channel") return yield* Effect.fail(forbidden());
+      // An editor belongs to the real session; ordinary commands retain their finite work budget.
+      const deadline =
+        purpose === "channel" ? session.expiresAt : Math.min(session.expiresAt, now + 120_000);
       if (deadline <= now) return yield* Effect.fail(forbidden());
       if (this.#issued.size + this.#issuing >= 128)
         return yield* Effect.fail(new OfficeUnavailable(safeFailure("BUSY")));
@@ -101,26 +111,27 @@ export class OfficeInvocationRegistry {
         invocationId: crypto.randomUUID(),
         expiresAt: deadline,
       });
-      const record = Object.freeze({ actor, session, deadline });
+      const record = Object.freeze({ purpose, actor, session, deadline });
       this.#retain(record);
       return record;
     });
   }
-
   /** Actual Root event bindings only; own bounded slot through physical IO settlement. */
   registerTask(
     selector: OfficeTaskSelector,
     readProof: OfficeTaskProofReader,
     options: OfficeProviderOptions,
     observeOnly: boolean,
+    metadata: OfficeDiagnosticMetadata,
   ): Live<OfficeTaskInvocation> {
+    const base = { ...metadata, operation: "register-task" } as const;
     return Effect.uninterruptible(
       Effect.suspend(() => {
         let input: OfficeTaskSelector;
         try {
           input = Object.freeze(decodeWireSync(OfficeTaskSelector)(selector));
-        } catch {
-          return Effect.fail(forbidden());
+        } catch (cause) {
+          return Effect.fail(withCause(officeDeny({ ...base, reason: "selector-invalid" }), cause));
         }
         if (this.#issuing >= 4 || this.#issued.size + this.#issuing >= 128)
           return Effect.fail(new OfficeUnavailable(safeFailure("BUSY")));
@@ -132,6 +143,7 @@ export class OfficeInvocationRegistry {
           options,
           (session) => this.#live(session),
           observeOnly,
+          metadata,
         ).pipe(
           Effect.tap((original) => Effect.sync(() => this.#retain(original))),
           Effect.ensuring(
@@ -143,20 +155,16 @@ export class OfficeInvocationRegistry {
       }),
     );
   }
-
-  /** Private Root handoff ownership ONLY; binding/session association precedes selection.
-   * Synchronous claim fences unused cleanup before any await. It is NOT authentication or a grant.
-   */
+  /** Private exact-original claim fences unused cleanup before awaiting; never authentication. */
   claim(invocationId: string): OfficeInvocation {
     const entry = this.#issued.get(invocationId);
-    if (entry === undefined || entry.phase !== "unused" || entry.original.deadline <= Date.now())
+    if (entry === undefined || entry.phase !== "unused" || entry.claimDeadline <= Date.now())
       throw forbidden();
     entry.phase = "claimed";
     clearTimeout(entry.timer);
     entry.timer = undefined;
     return entry.original;
   }
-
   /** Caller proves original private association first; lookup neither authenticates nor consumes. */
   resolve(invocationId: string): Live<OfficeInvocation> {
     return Effect.gen({ self: this }, function* () {
@@ -179,7 +187,6 @@ export class OfficeInvocationRegistry {
       return original;
     });
   }
-
   /** Logical exact-original release ONLY AFTER its claimed owner joins all actual work/cleanup. */
   release(original: OfficeInvocation): void {
     const id = original.actor.invocationId;

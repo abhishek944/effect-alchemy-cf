@@ -49,6 +49,10 @@
   flex: 1;
   min-height: 0;
 }
+[data-cx="chat-library-item"] {
+  position: relative;
+  min-width: 0;
+}
 [data-cx="chat-library-card"] {
   display: block;
   color: var(--cx-text);
@@ -79,6 +83,7 @@
 [data-cx="chat-library-card"] strong {
   display: block;
   margin-top: 7px;
+  padding-right: 36px;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -87,16 +92,29 @@
 }
 [data-cx="chat-library-card"] small {
   display: block;
+  padding-right: 36px;
   color: var(--cx-muted);
   font-size: 10px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 [data-cx="chat-library-download-label"] {
-  display: block;
-  font-size: 11px;
-  text-decoration: underline;
-  margin-top: 5px;
+  position: absolute;
+  right: 0;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  text-decoration: none;
+}
+[data-cx="chat-library-download-label"]:hover {
+  background: var(--cx-hover);
+}
+[data-cx="chat-library-download-label"] svg {
+  width: 16px;
+  height: 16px;
 }
 [data-cx="chat-library-state"] {
   display: flex;

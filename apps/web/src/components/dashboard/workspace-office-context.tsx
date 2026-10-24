@@ -11,15 +11,9 @@ import type { OfficeSendTarget } from "@starter/office-contract";
 import type { OfficeRuntime, NativeUser } from "@starter/office-react";
 import { createOfficeRuntime } from "@/lib/office-runtime";
 import { useUnsavedGuard } from "./use-unsaved-guard";
+import { useOfficeBarriers, type OfficePanelGuard } from "./workspace-office-barriers";
 import type { DashboardUser } from "./model";
 
-export type OfficePanelGuard = {
-  readonly chatId: string;
-  readonly owner: object;
-  readonly readOnly?: boolean;
-  readonly prepareToLeave: () => Promise<void>;
-  readonly prepareSend: () => Promise<OfficeSendTarget | null>;
-};
 type WorkspaceOffice = {
   runtime: Promise<OfficeRuntime>;
   user: NativeUser;
@@ -30,9 +24,11 @@ type WorkspaceOffice = {
   activate: (id: string | null) => void;
   visibility: (visible: boolean) => void;
   register: (id: string, guard: OfficePanelGuard) => () => void;
+  publishPending: (id: string, owner: object, pending: boolean) => void;
   transition: (action: () => void) => Promise<boolean>;
+  leave: (id: string) => Promise<boolean>;
   beginCommand: () => (() => void) | null;
-  prepareSend: (chatId: string) => Promise<OfficeSendTarget | null>;
+  prepareSend: (chatId: string, explicitReferences: boolean) => Promise<OfficeSendTarget | null>;
 };
 const Context = createContext<WorkspaceOffice | null>(null);
 
@@ -58,13 +54,20 @@ export function WorkspaceOfficeProvider({
   const working = useRef(false);
   const navigating = useRef(false);
   const [count, setCount] = useState(0);
+  const pendingPanels = useRef(new Map<string, object>());
+  const [pendingCount, setPendingCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, report] = useState("");
   const {
     pending: navigation,
     discard,
     keepEditing,
-  } = useUnsavedGuard(active && (count > 0 || busy), root, active);
+  } = useUnsavedGuard(
+    active && (count > 0 || busy),
+    root,
+    active,
+    active && (pendingCount > 0 || busy),
+  );
   const setRoot = useCallback((element: HTMLElement | null) => {
     root.current = element;
   }, []);
@@ -76,6 +79,14 @@ export function WorkspaceOfficeProvider({
       panels.current.delete(id);
       setCount([...panels.current.values()].filter((panel) => !panel.readOnly).length);
     };
+  }, []);
+  /** Publishers own pending cleanup: replacing a guard must never erase real unsaved work. */
+  const publishPending = useCallback((id: string, owner: object, pending: boolean) => {
+    const current = pendingPanels.current;
+    if (pending) current.set(id, owner);
+    else if (current.get(id) === owner) current.delete(id);
+    else return; // A newer publisher owns this id; a stale cleanup must not clear it.
+    setPendingCount(current.size);
   }, []);
   const activate = useCallback((id: string | null) => {
     selected.current = id;
@@ -92,58 +103,16 @@ export function WorkspaceOfficeProvider({
       setBusy(false);
     };
   }, []);
-  const transition = useCallback(
-    async (action: () => void): Promise<boolean> => {
-      const release = beginCommand();
-      if (release === null) {
-        report("Finishing an Office save. Keep the editor open and try again.");
-        return false;
-      }
-      report("");
-      try {
-        const results = await Promise.allSettled(
-          [...panels.current.values()].map((panel) =>
-            Promise.resolve().then(() => panel.prepareToLeave()),
-          ),
-        );
-        if (results.some((result) => result.status === "rejected"))
-          throw new Error("Office saves are unconfirmed.");
-        action();
-        return true;
-      } catch {
-        report(
-          "Office input or saves are unconfirmed. The editor stays open; finish composition or retry saving.",
-        );
-        return false;
-      } finally {
-        release();
-      }
-    },
-    [beginCommand],
-  );
   const visibility = useCallback((showing: boolean) => {
     visible.current = showing;
   }, []);
-  const prepareSend = useCallback(
-    async (chatId: string): Promise<OfficeSendTarget | null> => {
-      const id = visible.current ? selected.current : null;
-      if (id === null) return null;
-      const panel = panels.current.get(id);
-      if (panel === undefined || panel.chatId !== chatId)
-        throw new Error("Office selection is not ready.");
-      const release = beginCommand();
-      if (release === null) throw new Error("Finish the Office save before sending.");
-      try {
-        const target = await panel.prepareSend();
-        if (panels.current.get(id)?.owner !== panel.owner || selected.current !== id)
-          throw new Error("Office selection changed before Send.");
-        return target;
-      } finally {
-        release();
-      }
-    },
-    [beginCommand],
-  );
+  const { transition, leave, prepareSend } = useOfficeBarriers({
+    beginCommand,
+    report,
+    panels,
+    selected,
+    visible,
+  });
   useEffect(() => {
     if (navigation === null || navigating.current) return;
     navigating.current = true;
@@ -167,9 +136,11 @@ export function WorkspaceOfficeProvider({
         notice,
         report,
         register,
+        publishPending,
         activate,
         visibility,
         transition,
+        leave,
         beginCommand,
         prepareSend,
       }}

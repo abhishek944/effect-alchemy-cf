@@ -1,11 +1,13 @@
 import { Schema } from "effect";
 import {
   Count,
+  DraftTarget,
   ArtifactRef,
   Digest,
   Id,
   OFFICE_LIMITS,
   OfficeCommand,
+  officeImportOptions,
   OfficeSendTarget,
   decodeWireSync,
 } from "@starter/office-contract";
@@ -38,7 +40,14 @@ export const OfficeStageReceipt = Schema.Struct({
 export type OfficeStageReceipt = typeof OfficeStageReceipt.Type;
 export const OfficeStageReceipts = Schema.Array(OfficeStageReceipt).check(Schema.isMaxLength(32));
 const Lease = Schema.Struct({ id: Id, notAfter: Count });
-const Intent = Schema.Struct({ operationId: Id, digest: Digest, command: Schema.Unknown });
+const Intent = Schema.Struct({
+  operationId: Id,
+  digest: Digest,
+  command: Schema.Unknown,
+  attachmentId: Schema.optionalKey(Id),
+  step: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{0,63}$/))),
+  basis: Schema.optionalKey(DraftTarget),
+});
 const Reply = Schema.Struct({
   lease: Lease,
   stagedArtifacts: OfficeStageReceipts,
@@ -112,7 +121,8 @@ export function officeTaskSourceFile(proof: OfficeTaskProof) {
   const file = proof.association.originals.find((item) => item.fileId === receipt.fileRef);
   const upload = receipt.artifact;
   if (
-    file?.kind !== "office" ||
+    !file ||
+    !officeImportOptions(file.mediaType, file.name) ||
     upload.kind !== "upload" ||
     upload.digest !== file.digest ||
     upload.bytes !== file.byteSize ||

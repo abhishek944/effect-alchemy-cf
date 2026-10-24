@@ -1,45 +1,57 @@
-import type { Schema } from "effect";
-import {
-  Approve,
-  CreateDocument,
-  CreateDraft,
-  DraftTransition,
-  EditorAction,
-  Execute,
-  ExportRequest,
-  Id,
-  ImportInto,
-  InspectRequest,
-  Merge,
-  RenderRequest,
-  Target,
-  decodeWireSync,
-} from "@starter/office-contract";
+import { Schema } from "effect";
+import { Id, OfficeGroup, decodeWireSync } from "@starter/office-contract";
 import type { HostOffice } from "@starter/office-server/native-remote";
 
-/** Public GET commands: the private input is built from the real path/query contract. */
 export type OfficeRead = { readonly key: keyof typeof HostOffice; readonly input: unknown };
-/** Public POST command plus the real payload schema; null payload means path-params only. */
 export type OfficeWrite = {
   readonly key: keyof typeof HostOffice;
   readonly payload: Schema.ConstraintDecoder<unknown> | null;
   readonly input: (payload: unknown) => unknown;
 };
+const endpoints = OfficeGroup.endpoints;
 const id = "([A-Za-z0-9_-]{16,96})";
-const pattern = (path: string) => new RegExp(`^${path}$`);
+const pattern = (path: string) => new RegExp(`^${path.replace(/:[A-Za-z]+/g, id)}$`);
 const P = {
-  documents: "/api/office/documents",
-  drafts: "/api/office/drafts",
-  document: pattern(`/api/office/documents/${id}`),
-  draft: pattern(`/api/office/drafts/${id}`),
-  review: pattern(`/api/office/reviews/${id}`),
-  receipt: pattern(`/api/office/operations/${id}`),
-  cancel: pattern(`/api/office/operations/${id}/cancel`),
-  events: pattern(`/api/office/documents/${id}/events`),
-  upload: pattern(`/api/office/uploads/${id}`),
-  artifact: pattern(`/api/office/artifacts/${id}`),
-  bytes: pattern(`/api/office/artifacts/${id}/bytes`),
+  documents: endpoints.list.path,
+  drafts: endpoints.drafts.path,
+  document: pattern(endpoints.document.path),
+  draft: pattern(endpoints.draft.path),
+  review: pattern(endpoints.review.path),
+  receipt: pattern(endpoints.receipt.path),
+  cancel: pattern(endpoints.cancel.path),
+  events: pattern(endpoints.events.path),
+  upload: pattern(endpoints.upload.path),
+  artifact: pattern(endpoints.artifact.path),
+  bytes: pattern(endpoints.download.path),
 };
+// Finite private command selection; public paths and payload validation belong to OfficeGroup.
+const writes = [
+  endpoints.create,
+  endpoints.createDraft,
+  endpoints.open,
+  endpoints.editor,
+  endpoints.execute,
+  endpoints.inspect,
+  endpoints.render,
+  endpoints.export,
+  endpoints.ready,
+  endpoints.approve,
+  endpoints.merge,
+  endpoints.reopen,
+  endpoints.discard,
+  endpoints.importInto,
+].map((endpoint) => {
+  const json = endpoint.payload.get("application/json");
+  if (json === undefined) throw new Error("Office command requires a JSON payload contract");
+  return {
+    key: endpoint.identifier,
+    path: endpoint.path,
+    method: endpoint.method,
+    // The body has already been parsed as JSON. Validate the contract's domain value strictly.
+    payload: Schema.Union(json.schemas.map((schema) => Schema.toType(schema))),
+    input: (payload: unknown) => payload,
+  };
+});
 const cursor = (query: URLSearchParams): string | null => query.get("cursor");
 const single = (query: URLSearchParams, name: string): string | null => {
   const all = query.getAll(name);
@@ -54,7 +66,7 @@ const capture = (match: RegExpExecArray | null): string | null => {
   }
 };
 
-/** `after` is the actual supported events pagination; a supplied cursor cannot be carried. */
+/** Events use `after`; never silently ignore an unsupported cursor. */
 export const officeUnsupportedCursor = (
   method: string,
   pathname: string,
@@ -64,7 +76,7 @@ export const officeUploadPath = (pathname: string) => capture(P.upload.exec(path
 export const officeArtifactPath = (pathname: string) => capture(P.artifact.exec(pathname));
 export const officeBytesPath = (pathname: string) => capture(P.bytes.exec(pathname));
 
-/** Register-free pure match for an authenticated public read. */
+/** Translate public path/query names into the finite private command's input. */
 export function officeRead(
   method: string,
   pathname: string,
@@ -90,42 +102,11 @@ export function officeRead(
   return null;
 }
 
-/** Register-free pure match for an authenticated public command payload. */
 export function officeWrite(method: string, pathname: string): OfficeWrite | null {
-  if (method !== "POST") return null;
-  switch (pathname) {
-    case "/api/office/documents":
-      return { key: "create", payload: CreateDocument, input: (payload) => payload };
-    case "/api/office/drafts":
-      return { key: "createDraft", payload: CreateDraft, input: (payload) => payload };
-    case "/api/office/views":
-      return { key: "open", payload: Target, input: (payload) => payload };
-    case "/api/office/editors":
-      return { key: "editor", payload: EditorAction, input: (payload) => payload };
-    case "/api/office/execute":
-      return { key: "execute", payload: Execute, input: (payload) => payload };
-    case "/api/office/inspect":
-      return { key: "inspect", payload: InspectRequest, input: (payload) => payload };
-    case "/api/office/render":
-      return { key: "render", payload: RenderRequest, input: (payload) => payload };
-    case "/api/office/export":
-      return { key: "export", payload: ExportRequest, input: (payload) => payload };
-    case "/api/office/ready":
-      return { key: "ready", payload: DraftTransition, input: (payload) => payload };
-    case "/api/office/approve":
-      return { key: "approve", payload: Approve, input: (payload) => payload };
-    case "/api/office/merge":
-      return { key: "merge", payload: Merge, input: (payload) => payload };
-    case "/api/office/reopen":
-      return { key: "reopen", payload: DraftTransition, input: (payload) => payload };
-    case "/api/office/discard":
-      return { key: "discard", payload: DraftTransition, input: (payload) => payload };
-    case "/api/office/import-into":
-      return { key: "importInto", payload: ImportInto, input: (payload) => payload };
-  }
-  const cancel = capture(P.cancel.exec(pathname));
-  if (cancel !== null) {
-    return { key: "cancel", payload: null, input: () => ({ operationId: cancel }) };
-  }
-  return null;
+  const route = writes.find((endpoint) => endpoint.method === method && endpoint.path === pathname);
+  if (route !== undefined) return route;
+  const cancel = method === endpoints.cancel.method ? capture(P.cancel.exec(pathname)) : null;
+  return cancel === null
+    ? null
+    : { key: "cancel", payload: null, input: () => ({ operationId: cancel }) };
 }

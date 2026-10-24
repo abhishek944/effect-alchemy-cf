@@ -1,6 +1,6 @@
 import type { Editor, EditorAction } from "@starter/office-contract";
 import type { OwnerScope } from "@starter/office-server/ports";
-import type { MetadataStore, Statement } from "../store.ts";
+import type { MetadataStore } from "../store.ts";
 import { conflict, sqlNow } from "../store.ts";
 import { clock, leaseRow, observed } from "./leases.ts";
 import { readView } from "./views.ts";
@@ -27,8 +27,7 @@ export async function closeEditor(
   }
   if (old.state === "drained" || old.state === "revoked") throw conflict("NOT_EDITABLE");
   let sql = "1";
-  const values: (string | number | null)[] = [],
-    statements: Statement[] = [];
+  const values: (string | number | null)[] = [];
   let confirmed: number | null = null;
   const editor: Editor = {
     ...old,
@@ -43,7 +42,7 @@ export async function closeEditor(
       scope = db.native(owner, view.view.documentId, view.target.unitId);
     const nativeFloor = view.source.kind === "artifact" ? "1" : "?>=?";
     sql = `(${fence.sql}) AND (${nativeFloor}) AND EXISTS(SELECT 1 FROM ${view.target.scope.kind === "main" ? "office_native_units" : "office_native_drafts"}
-      WHERE scope=? AND head=?${view.target.scope.kind === "draft" ? " AND worktree=(SELECT worktree FROM office_meta_drafts WHERE owner=? AND id=?)" : ""})
+      WHERE scope=? AND head>=?${view.target.scope.kind === "draft" ? " AND worktree=(SELECT worktree FROM office_meta_drafts WHERE owner=? AND id=?)" : ""})
       AND EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND id=? AND expires>${sqlNow})`;
     values.push(
       ...fence.values,
@@ -55,27 +54,11 @@ export async function closeEditor(
       old.id,
     );
     confirmed = action.confirmedRevision;
-  } else {
-    statements.push([
-      "UPDATE office_meta_editor_epochs SET epoch=? WHERE owner=? AND document=? AND branch=?",
-      [editor.epoch, key, old.view.documentId, previous.row.branch],
-    ]);
   }
   await db.write(
-    `(${sql}) AND EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND id=? AND record=? AND epoch=?)
-    AND EXISTS(SELECT 1 FROM office_meta_editor_epochs WHERE owner=? AND document=? AND branch=? AND epoch=?)`,
-    [
-      ...values,
-      key,
-      old.id,
-      previous.row.record,
-      expected,
-      key,
-      old.view.documentId,
-      previous.row.branch,
-      expected,
-    ],
-    [...statements, leaseUpdate(db, key, editor, confirmed), leaseEvent(db, owner, previous.view)],
+    `(${sql}) AND EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND id=? AND record=? AND epoch=?)`,
+    [...values, key, old.id, previous.row.record, expected],
+    [leaseUpdate(db, key, editor, confirmed), leaseEvent(db, owner, previous.view)],
     "STALE_BASIS",
   );
   return editor;

@@ -3,7 +3,7 @@ import type { SavedFile } from "@/lib/chat-library-types";
 import { Icon } from "./icon";
 import Tooltip from "./tooltip";
 
-const DownloadIcon = () => (
+export const DownloadIcon = () => (
   <svg
     data-cx="icon"
     aria-hidden="true"
@@ -38,8 +38,8 @@ export function ChatLibraryResultActions({
 }) {
   return (
     <div data-cx="chat-library-result-actions" aria-label={`Actions for ${file.name}`}>
-      {file.kind === "image" && (
-        <Tooltip label="Open image">
+      {
+        <Tooltip label="Open in panel">
           <button
             type="button"
             aria-label={`Open ${file.name}`}
@@ -48,15 +48,15 @@ export function ChatLibraryResultActions({
             <Icon name="maximize" />
           </button>
         </Tooltip>
-      )}
-      <Tooltip label={file.kind === "image" ? "Prepare edit" : "Add to draft"}>
+      }
+      <Tooltip label="Add reference">
         <button
           type="button"
           disabled={archived || !readable}
-          aria-label={`${file.kind === "image" ? "Prepare edit of" : "Add to draft"} ${file.name}`}
+          aria-label={`Add reference: ${file.name}`}
           onClick={() => actions.onPrepareReference(file)}
         >
-          <Icon name="square-pen" />
+          <span aria-hidden="true">@</span>
         </button>
       </Tooltip>
       {file.sources.map((id, index) => (

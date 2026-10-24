@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect, Redacted } from "effect";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import * as HttpClient from "effect/http/HttpClient";
@@ -39,17 +40,19 @@ export const postJson = (
       HttpClientRequest.bearerToken(token),
       HttpClientRequest.setHeaders(headers),
       HttpClientRequest.bodyJson(body),
-      Effect.mapError(() => failure(provider, "InvalidInput")),
+      Effect.mapError((cause) => withCause(failure(provider, "InvalidInput"), cause)),
     );
     const response = yield* HttpClient.withScope(client)
       .execute(request)
-      .pipe(Effect.mapError(() => failure(provider, "Transport")));
+      .pipe(Effect.mapError((cause) => withCause(failure(provider, "Transport"), cause)));
     const delay = retryAfter(response.headers["retry-after"]);
     if (response.status < 200 || response.status >= 300) {
       return yield* Effect.fail(failure(provider, "Http", response.status, delay));
     }
     const json = yield* response.json.pipe(
-      Effect.mapError(() => failure(provider, "InvalidResponse", response.status, delay)),
+      Effect.mapError((cause) =>
+        withCause(failure(provider, "InvalidResponse", response.status, delay), cause),
+      ),
     );
     return { body: json, status: response.status, retryAfterSeconds: delay };
   }).pipe(

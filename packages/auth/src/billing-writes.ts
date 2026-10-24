@@ -4,7 +4,7 @@ import { fencedBillingBatch, type BillingLease } from "./billing-lease.ts";
 import { billingQuery, DB_NOW } from "./billing-store.ts";
 
 export const reserveCustomer = (lease: BillingLease, id: string, userId: string) =>
-  fencedBillingBatch(lease, (db, fence) => [
+  fencedBillingBatch(lease, "customer-reserve-write", (db, fence) => [
     db
       .prepare(
         `INSERT INTO billing_customer (id, scope, userId, providerKey, customerId, createdAt)
@@ -14,7 +14,7 @@ export const reserveCustomer = (lease: BillingLease, id: string, userId: string)
   ]);
 
 export const saveCustomer = (lease: BillingLease, id: string, customerId: string) =>
-  fencedBillingBatch(lease, (db, fence) => [
+  fencedBillingBatch(lease, "customer-save-write", (db, fence) => [
     db
       .prepare(
         `UPDATE billing_customer SET customerId=?, providerKey=? WHERE id=? AND scope=? AND ${fence.sql}`,
@@ -23,7 +23,7 @@ export const saveCustomer = (lease: BillingLease, id: string, customerId: string
   ]);
 
 export const reserveCheckout = (lease: BillingLease, row: CheckoutRow) =>
-  fencedBillingBatch(lease, (db, fence) => [
+  fencedBillingBatch(lease, "checkout-reserve-write", (db, fence) => [
     db
       .prepare(
         `INSERT INTO billing_checkout (id, userId, requestId, scope, slug, kind, productId,
@@ -61,7 +61,7 @@ export const completeCheckout = (
   sessionId: string,
   url: string,
 ) =>
-  fencedBillingBatch(lease, (db, fence) => [
+  fencedBillingBatch(lease, "checkout-complete-write", (db, fence) => [
     db
       .prepare(
         `UPDATE billing_checkout SET state='ready', customerId=?, sessionId=?, sessionKey=?, url=?
@@ -71,7 +71,7 @@ export const completeCheckout = (
   ]);
 
 export const claimEvent = (lease: BillingLease, key: string) =>
-  fencedBillingBatch(lease, (db, fence) => [
+  fencedBillingBatch(lease, "event-claim-write", (db, fence) => [
     db
       .prepare(
         `UPDATE billing_event SET state='processing', leaseToken=?, attempts=attempts+1,
@@ -81,14 +81,16 @@ export const claimEvent = (lease: BillingLease, key: string) =>
   ]);
 
 export const failEvent = (key: string, token: string, kind: BillingError["kind"]) =>
-  billingQuery((db) =>
-    db
-      .prepare(
-        `UPDATE billing_event SET state='failed', error=?, updatedAt=${DB_NOW}
+  billingQuery(
+    (db) =>
+      db
+        .prepare(
+          `UPDATE billing_event SET state='failed', error=?, updatedAt=${DB_NOW}
      WHERE id=? AND leaseToken=? AND state!='completed'`,
-      )
-      .bind(kind, key, token)
-      .run(),
+        )
+        .bind(kind, key, token)
+        .run(),
+    "event-fail-write",
   );
 
 export const saveResources = (
@@ -99,6 +101,7 @@ export const saveResources = (
 ) =>
   fencedBillingBatch(
     lease,
+    "resource-save-write",
     (db, fence) => [
       ...rows.map((row) =>
         db

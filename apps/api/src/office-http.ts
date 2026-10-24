@@ -1,17 +1,16 @@
 import { RuntimeContext } from "alchemy";
 import { WorkerEnvironment } from "alchemy/Cloudflare";
-import { Effect, Layer, Schema } from "effect";
-import * as HttpApi from "effect/http-api/HttpApi";
-import type * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
-import type * as HttpApiGroup from "effect/http-api/HttpApiGroup";
+import { Cause, Effect, Layer, Schema } from "effect";
 import * as HttpRouter from "effect/http/HttpRouter";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
-import { OfficeApi, OfficeForbidden, safeFailure } from "@starter/office-contract";
+import { OfficeForbidden, safeFailure } from "@starter/office-contract";
 import { OfficeAuthentication } from "./office-authentication.ts";
 import type { OfficeDispatch } from "./office-http-call.ts";
 import { dispatchOffice } from "./office-http-dispatch.ts";
 import { officeFailure } from "./office-http-model.ts";
+import { Unauthorized } from "./model.ts";
+import { reportOfficeHttpFailure } from "./office-http-failure.ts";
 
 /** Public Office surface. Native SDK paths (`/universer-api/...`) stay actual, never rewritten. */
 export const isOfficePath = (pathname: string): boolean =>
@@ -20,22 +19,7 @@ export const isOfficePath = (pathname: string): boolean =>
   pathname.startsWith("/universer-api/");
 const gone = () => officeFailure(safeFailure("UNAVAILABLE"));
 
-/** Real contract metadata (Top schemas) for the middleware call; never a fabricated endpoint. */
-const Contract = (() => {
-  let group: HttpApiGroup.Top | null = null;
-  let endpoint: HttpApiEndpoint.Top | null = null;
-  HttpApi.reflect(OfficeApi, {
-    onGroup: ({ group: actual }) => {
-      group ??= actual;
-    },
-    onEndpoint: ({ endpoint: actual }) => {
-      endpoint ??= actual;
-    },
-  });
-  if (group === null || endpoint === null) throw new Error("Office contract has no endpoint");
-  return { group, endpoint };
-})();
-type Authenticate = Effect.Success<typeof OfficeAuthentication>;
+type Authenticate = Effect.Success<typeof OfficeAuthentication>["authenticate"];
 
 /** Real OfficeAuthentication before any owner namespace selection; never input Actor JSON. */
 const officeRoute = (dispatch: OfficeDispatch) => (authenticate: Authenticate) =>
@@ -49,15 +33,22 @@ const officeRoute = (dispatch: OfficeDispatch) => (authenticate: Authenticate) =
       Effect.provideService(RuntimeContext, runtime),
       Effect.provideService(WorkerEnvironment, environment),
     );
-    return yield* authenticate(run, Contract).pipe(
-      Effect.catchTag("Unauthorized", () =>
-        Effect.succeed(HttpServerResponse.empty({ status: 401 })),
-      ),
-      Effect.catchTag("AuthenticationUnavailable", () => Effect.succeed(gone())),
-      Effect.catch((error) =>
-        Effect.succeed(Schema.is(OfficeForbidden)(error) ? officeFailure(error) : gone()),
-      ),
-      Effect.catchDefect(() => Effect.succeed(gone())),
+    return yield* authenticate(run).pipe(
+      Effect.catchCause((cause) => {
+        if (Cause.hasInterruptsOnly(cause))
+          return Effect.failCause(
+            Cause.fromReasons<never>(cause.reasons.filter(Cause.isInterruptReason)),
+          );
+        const reason = cause.reasons[0];
+        const error =
+          cause.reasons.length === 1 && reason !== undefined && Cause.isFailReason(reason)
+            ? reason.error
+            : undefined;
+        if (error instanceof Unauthorized)
+          return Effect.succeed(HttpServerResponse.empty({ status: 401 }));
+        const response = Schema.is(OfficeForbidden)(error) ? officeFailure(error) : gone();
+        return reportOfficeHttpFailure(cause, "route").pipe(Effect.as(response));
+      }),
     );
   });
 
@@ -70,7 +61,7 @@ export const makeOfficeHttp = (dispatch: OfficeDispatch) =>
   HttpRouter.toHttpEffect(
     HttpRouter.use((router) =>
       Effect.gen(function* () {
-        const authenticate = yield* OfficeAuthentication;
+        const { authenticate } = yield* OfficeAuthentication;
         const handler = officeRoute(dispatch)(authenticate);
         yield* router.add("*", "/api/office/*", handler);
         yield* router.add("*", "/universer-api/*", handler);

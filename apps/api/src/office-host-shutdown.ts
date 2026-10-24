@@ -1,3 +1,4 @@
+import { reportFailure, withCause, withDiagnostic } from "@starter/diagnostics";
 import { officeDenied } from "./office-private-authority.ts";
 import { closeOfficeHostEntry } from "./office-host-entry.ts";
 import { closeOfficeHostChannel } from "./office-host-channel.ts";
@@ -81,10 +82,28 @@ export async function closeOfficeHost(
     root.bootIO.drain(),
     active?.placements.retire(),
   ]);
-  if (
-    [...kernel, ...gracefulJoined, ...channels, ...frames, ...providers, ...stopped].some(
-      (result) => result.status === "rejected",
-    )
-  )
-    throw officeDenied();
+  const stages = {
+    kernel,
+    graceful: gracefulJoined,
+    channels,
+    frames,
+    providers,
+    "placement-stop": stopped.slice(0, 1),
+    "boot-io": stopped.slice(1, 2),
+    "placement-retire": stopped.slice(2, 3),
+  };
+  for (const [stage, results] of Object.entries(stages)) {
+    for (const result of results) {
+      if (result.status !== "rejected") continue;
+      const error = withCause(withDiagnostic(officeDenied(), `host-close-${stage}`), result.reason);
+      reportFailure(error, {
+        component: "office.host",
+        operation: "shutdown",
+        phase: stage,
+        stage: root.owner.stage,
+        bootId: active?.nodeId,
+      });
+      throw error;
+    }
+  }
 }

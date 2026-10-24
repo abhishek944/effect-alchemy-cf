@@ -1,6 +1,4 @@
 import type { ChatSqlStorage } from "./chat-ledger.ts";
-const WINDOW_MS = 60_000;
-const WINDOW_LIMIT = 10;
 const RESERVATION_MS = 5 * 60_000;
 const RESERVATION_LIMIT = 6;
 export type AdmissionDecision = {
@@ -31,17 +29,12 @@ export class ChatAdmission {
       operation_id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL, reserved_at INTEGER NOT NULL
     )`);
   }
+  /** One stated paid-use policy: at most six retained reservations in the last five minutes. */
   private charge(now: number): boolean {
     this.db.exec(`DELETE FROM reservations WHERE at < ?`, now - RESERVATION_MS);
-    const leased = this.db.exec<{ n: number }>(`SELECT COUNT(*) AS n FROM reservations`).one().n;
-    if (leased >= RESERVATION_LIMIT) return false;
     return (
-      this.db
-        .exec<{ n: number }>(
-          `SELECT COUNT(*) AS n FROM reservations WHERE at >= ?`,
-          now - WINDOW_MS,
-        )
-        .one().n < WINDOW_LIMIT
+      this.db.exec<{ n: number }>(`SELECT COUNT(*) AS n FROM reservations`).one().n <
+      RESERVATION_LIMIT
     );
   }
   admit(

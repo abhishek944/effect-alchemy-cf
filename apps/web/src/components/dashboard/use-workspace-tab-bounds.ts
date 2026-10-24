@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 
 type Bounds = { left: number; width: number };
 /** Match the real resizable pane, retaining navigation and existing pane controls. */
@@ -7,7 +7,8 @@ export function useWorkspaceTabBounds(
   right: RefObject<HTMLElement | null>,
 ) {
   const [bounds, setBounds] = useState<Bounds | null>(null);
-  useLayoutEffect(() => {
+  // The right pane is a later sibling: wait until all layout refs have attached.
+  useEffect(() => {
     const pane = right.current;
     const toolbar = anchor.current?.closest<HTMLElement>('[data-cx="toolbar"]');
     if (!pane || !toolbar) return undefined;

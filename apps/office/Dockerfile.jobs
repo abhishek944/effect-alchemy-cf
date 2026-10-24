@@ -44,4 +44,6 @@ ENTRYPOINT ["node", "/opt/office/dependencies/packages/office-server/worker.mjs"
 
 FROM runtime AS application
 EXPOSE 8080
-ENTRYPOINT ["node", "/opt/office/dependencies/packages/office-server/native-bootstrap.mjs"]
+# Local workerd supplies role commands as Cmd; never prepend the host to job commands.
+ENTRYPOINT []
+CMD ["node", "/opt/office/dependencies/packages/office-server/native-bootstrap.mjs"]

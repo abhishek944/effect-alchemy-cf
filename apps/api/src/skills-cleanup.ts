@@ -10,6 +10,7 @@
  * versions and their objects are never selected, so pinned originals survive.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure } from "@starter/diagnostics";
 import { retireSkillObject } from "./skills-objects.ts";
 import { skillVersionRow, type SkillStorage, type SkillVersionRow } from "./skills-rows.ts";
 
@@ -75,7 +76,15 @@ export const cleanupSkillVersions = async (input: CleanupInput): Promise<void> =
     if (claimed === null) continue;
     try {
       await retireSkillObject(input.bucket, input.scope, claimed.version);
-    } catch {
+    } catch (cause) {
+      reportFailure(cause, {
+        component: "skills",
+        operation: "cleanup.retire",
+        phase: "object",
+        reason: "skills_retire_failed",
+        operationId: claimed.uploadId,
+        event: "application.cleanup",
+      });
       continue;
     }
     input.storage.transactionSync(() => {

@@ -110,7 +110,7 @@ Deployment provider credentials remain in Alchemy profiles.
 
 Before live use:
 
-1. Stop the old local dev server before rebuilding its frontend assets.
+1. Stop the local Worker before `pnpm build`; frontend HMR needs no rebuild.
 2. Run `pnpm lint` and `pnpm build`.
 3. Review `pnpm plan:dev`. Obtain deployment approval before `pnpm deploy:dev`.
 4. Configure enabled vendors' default BYOK aliases securely in Cloudflare and
@@ -118,7 +118,8 @@ Before live use:
    purchase credits or call models.
 5. Set nonsecret `CHAT_GATEWAY_ID` and exact JSON `CHAT_MODEL_ALLOWLIST` in
    `packages/config/.env.dev`; see the linked setup guides for private files and
-   optional development OpenRouter voice key. Start `pnpm dev` with the dev profile.
+   optional development OpenRouter voice key. Start `pnpm dev` (Worker) and
+   `pnpm dev:web` (Vite UI at localhost:5173) with the dev profile.
 6. Sign in and send a short message only when you intend to incur model usage.
 
 Local Worker, auth and durable chat storage remain local. **Inference is always

@@ -1,7 +1,17 @@
 import type * as cf from "@cloudflare/workers-types";
 import * as Cloudflare from "alchemy/Cloudflare";
+import { withCause } from "@starter/diagnostics";
 import { Context, Effect, Layer, Schema } from "effect";
 import { ChatUnavailable } from "./chat-model.ts";
+import { chatObservationHeaders, CHAT_OBSERVATION_REQUEST } from "./chat-observation.ts";
+
+/** Drop caller-supplied observation headers; only generated annotations may set them. */
+const callerHeaders = (headers: Record<string, string> | undefined): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(headers ?? {}).filter(
+      ([name]) => name.toLowerCase() !== CHAT_OBSERVATION_REQUEST,
+    ),
+  );
 
 export type ChatCatalogStub = cf.DurableObjectStub;
 export type ChatConversationStub = cf.DurableObjectStub;
@@ -103,27 +113,39 @@ export const doCall = (
   headers?: Record<string, string>,
   signal?: AbortSignal,
 ): Effect.Effect<DoCall, ChatUnavailable> =>
-  Effect.tryPromise({
-    try: async () => {
-      signal?.throwIfAborted();
-      const transportSignal =
-        signal === undefined ? undefined : Schema.decodeUnknownSync(WorkerSignal)(signal);
-      const response = await stub.fetch(`https://chat.internal${path}`, {
-        ...(transportSignal === undefined ? {} : { signal: transportSignal }),
-        method,
-        headers: { "content-type": "application/json", ...headers },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      });
-      const text = await response.text();
-      let parsed: unknown = null;
-      try {
-        parsed = text.length > 0 ? JSON.parse(text) : null;
-      } catch {
-        parsed = null;
-      }
-      return { status: response.status, body: parsed };
-    },
-    catch: () => new ChatUnavailable(),
+  Effect.gen(function* () {
+    const observation = yield* chatObservationHeaders;
+    return yield* Effect.tryPromise({
+      try: async () => {
+        signal?.throwIfAborted();
+        const transportSignal =
+          signal === undefined ? undefined : Schema.decodeUnknownSync(WorkerSignal)(signal);
+        const response = await stub.fetch(`https://chat.internal${path}`, {
+          ...(transportSignal === undefined ? {} : { signal: transportSignal }),
+          method,
+          // Observation-only correlation; caller headers can never override it.
+          headers: {
+            "content-type": "application/json",
+            ...callerHeaders(headers),
+            ...observation,
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+        const text = await response.text();
+        let parsed: unknown = null;
+        if (text.length > 0) {
+          try {
+            parsed = JSON.parse(text);
+          } catch (error) {
+            // A malformed successful private reply is a failure, never absence.
+            // Non-2xx bodies stay optional and authoritative status still wins.
+            if (response.ok) throw error;
+          }
+        }
+        return { status: response.status, body: parsed };
+      },
+      catch: (error) => withCause(new ChatUnavailable(), error),
+    });
   });
 
 /** Raw fetch for the streaming route, kept as a Response. */
@@ -132,14 +154,17 @@ export const doStream = (
   path: string,
   headers: Record<string, string>,
 ): Effect.Effect<Response, ChatUnavailable> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response: unknown = await stub.fetch(`https://chat.internal${path}`, {
-        method: "GET",
-        headers: { accept: "text/event-stream", ...headers },
-      });
-      if (!(response instanceof Response)) throw new Error("Chat object returned a non-Response");
-      return response;
-    },
-    catch: () => new ChatUnavailable(),
+  Effect.gen(function* () {
+    const observation = yield* chatObservationHeaders;
+    return yield* Effect.tryPromise({
+      try: async () => {
+        const response: unknown = await stub.fetch(`https://chat.internal${path}`, {
+          method: "GET",
+          headers: { accept: "text/event-stream", ...callerHeaders(headers), ...observation },
+        });
+        if (!(response instanceof Response)) throw new Error("Chat object returned a non-Response");
+        return response;
+      },
+      catch: (error) => withCause(new ChatUnavailable(), error),
+    });
   });

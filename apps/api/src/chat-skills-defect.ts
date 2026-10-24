@@ -14,6 +14,7 @@ import {
   type TaskId,
 } from "@earendil-works/pi-durable";
 import { PI_BACKGROUND } from "./chat-runtime.ts";
+import { reportSkillRecovery } from "./chat-skills-errors.ts";
 import type { ChatSkillsStore } from "./chat-skills-store.ts";
 
 export const failSkillAttempt = async (
@@ -34,16 +35,24 @@ export const failSkillAttempt = async (
     // The affected operation is the attempt's own native request, never the
     // mutable live tail.
     affected = row?.operationId ?? attemptId;
-  } catch {
+  } catch (error) {
     // Keep the attempt id as the best available exact key.
+    reportSkillRecovery(error, "defect.read", "skills_defect_read_failed", attemptId);
   }
   try {
     input.latch(affected, message);
     input.store.incomplete(attemptId, message);
     if (permanent === true) input.store.setRecoverability(attemptId, false, message);
     input.notify();
-  } catch {
+  } catch (error) {
     // A persistence failure must still attempt the exact abort below.
+    reportSkillRecovery(
+      error,
+      "defect.persist",
+      "skills_defect_persist_failed",
+      affected,
+      currentTaskId,
+    );
   }
   try {
     const pi = await input.harness();
@@ -59,17 +68,39 @@ export const failSkillAttempt = async (
     if (record?.requestId !== affected) return;
     try {
       await pi.abortTask(run.taskId, PI_BACKGROUND);
-    } catch {
+    } catch (error) {
       // An unproven cancellation is reported by the gate staying closed.
+      reportSkillRecovery(
+        error,
+        "defect.abort",
+        "skills_defect_abort_failed",
+        affected,
+        run.taskId,
+      );
     }
     for (const slot of native?.tools ?? []) {
       if (slot.status === "done" || slot.taskId === undefined) continue;
       if (currentTaskId !== undefined && slot.taskId === currentTaskId) continue;
       try {
         await pi.abortTask(slot.taskId, PI_BACKGROUND);
-      } catch {
+      } catch (error) {
         // Keep aborting the remaining tool phases; the latch stays closed.
+        reportSkillRecovery(
+          error,
+          "defect.abort",
+          "skills_defect_abort_failed",
+          affected,
+          slot.taskId,
+        );
       }
     }
-  } catch {}
+  } catch (error) {
+    reportSkillRecovery(
+      error,
+      "defect.abort",
+      "skills_defect_abort_failed",
+      affected,
+      currentTaskId,
+    );
+  }
 };

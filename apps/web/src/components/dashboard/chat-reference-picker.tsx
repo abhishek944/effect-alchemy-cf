@@ -113,7 +113,7 @@ export function ChatReferencePickerPopup({
         </div>
       )}
       <footer>
-        <span>↑↓ choose · Enter add to draft · Esc close</span>
+        <span>↑↓ choose · Enter add reference · Esc close</span>
         {(picker.hasPrevious || picker.hasNext) && (
           <span data-cx="chat-reference-page-actions">
             <button

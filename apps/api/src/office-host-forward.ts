@@ -1,5 +1,6 @@
 import { officePrivateStream } from "./office-private-stream.ts";
 import { Schema } from "effect";
+import { reportFailure } from "@starter/diagnostics";
 import { decodeWireSync } from "@starter/office-contract";
 import { HostOffice, hostEnvelope } from "@starter/office-server/native-remote";
 import { readOfficePrivateJson } from "./office-private-json.ts";
@@ -21,6 +22,16 @@ export async function forwardOfficeHost(
   protocol: boolean,
   callId: string | null = null,
 ) {
+  const escalate = (reason: string) => (cause: unknown) => {
+    if (!root.closing)
+      reportFailure(cause, {
+        component: "office.host",
+        operation: "cleanup-escalation",
+        reason,
+        eventId: entry.frame.id,
+      });
+    return root.close();
+  };
   const abort = () => entry.frame.revoke();
   incoming.signal.addEventListener("abort", abort, { once: true });
   if (incoming.signal.aborted) abort();
@@ -80,7 +91,7 @@ export async function forwardOfficeHost(
       // Transfer the GENUINE native101 socket. No fetch-to-JSON or invented socket/SDK bridge.
       root.state.waitUntil(
         closeOfficeHostEntry(root, entry)
-          .catch(() => root.close())
+          .catch(escalate("upgrade-entry-close"))
           .catch(() => undefined),
       );
       return response;
@@ -115,7 +126,16 @@ export async function forwardOfficeHost(
     root.state.waitUntil(
       resource
         .drain()
-        .catch(() => root.close())
+        .catch(async (cause) => {
+          reportFailure(cause, {
+            component: "office.host",
+            operation: "forward-body",
+            eventId: entry.frame.id,
+          });
+          // A failed response is not a failed host. Escalate only if its owner cannot close.
+          await finish();
+        })
+        .catch(escalate("forward-entry-close"))
         .catch(() => undefined),
     );
     return output;
@@ -124,7 +144,7 @@ export async function forwardOfficeHost(
     incoming.signal.removeEventListener("abort", abort);
     root.state.waitUntil(
       closeOfficeHostEntry(root, entry)
-        .catch(() => root.close())
+        .catch(escalate("failed-forward-entry-close"))
         .catch(() => undefined),
     );
     throw error;

@@ -26,7 +26,14 @@ Roles are `user` (default) and `admin`. Signup and profile updates cannot set ro
 Every admin API request loads the current session and role from D1; role removal
 therefore takes effect on the next request, even with an existing cookie.
 Role updates and lookup require a same-origin request. Admin APIs return 401 for
-no session and 403 for a non-admin role or invalid mutation origin.
+no session and 403 for a non-admin role or invalid mutation origin. A failed
+session or role read is a reported 503 `AuthenticationUnavailable`, never a
+denial: the final auth handler keeps the original failure in memory and returns
+only the safe status. Better Auth answers its own API errors with responses before
+Effect sees them, so its supported `onAPIError` hook reports unexpected internal
+or unhandled failures with fixed labels and replaces them with a fixed safe 500;
+expected login, validation and session outcomes remain ordinary 4xx responses.
+That hook has no request ID.
 An operator cannot remove their own admin role; another admin can remove it.
 Existing normal application sessions are valid for `/admin` only with an admin role.
 Admin signout also signs out the main application on this browser.

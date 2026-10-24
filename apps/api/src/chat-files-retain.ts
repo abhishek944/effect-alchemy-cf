@@ -8,6 +8,7 @@
  * by the catalog. Staging bytes are removed only after the commit succeeded.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure } from "@starter/diagnostics";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
 import {
@@ -50,6 +51,15 @@ export const retainChatFiles = async (input: {
   await deleteStoredObjects(
     input.bucket,
     input.fileIds.map((fileId) => stagingObjectKey(input.scope, input.chatId, fileId)),
-  ).catch(() => undefined);
+  ).catch((error) =>
+    reportFailure(error, {
+      component: "chat-files",
+      operation: "retain.staging-delete",
+      chatId: input.chatId,
+      operationId: input.operationId,
+      reason: "chat_files_staging_delete_failed",
+      event: "application.cleanup",
+    }),
+  );
   return filesOk(committed.value.files);
 };

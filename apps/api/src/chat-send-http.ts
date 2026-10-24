@@ -1,6 +1,8 @@
+import { withDiagnostic } from "@starter/diagnostics";
 import { Config, type Context, Effect, Schema } from "effect";
 import { type ChatNamespaces, doCall } from "./chat-bindings.ts";
 import { OperationReceipt } from "./chat-contract.ts";
+import { ignoreReport, privateUnavailable } from "./chat-diagnostics.ts";
 import { requireOwnedChat } from "./chat-http-read.ts";
 import {
   AcceptedResponse,
@@ -73,7 +75,9 @@ export const sendChat = (
           },
           { "x-chat-owner": user.id },
         );
-      }).pipe(Effect.ignore);
+      }).pipe(
+        ignoreReport({ component: "chat", operation: "send.title-claim", reason: "title-claim" }),
+      );
     const nativeReceipt = () =>
       doCall(
         ns.conversation(user.id, chat.id),
@@ -85,7 +89,7 @@ export const sendChat = (
         Effect.flatMap((call) =>
           call.status === 200
             ? decodeOrFail(OperationReceipt, call.body)
-            : Effect.fail(new ChatUnavailable()),
+            : Effect.fail(privateUnavailable("receipt", call.status)),
         ),
       );
     // Native exact input evidence precedes quota. No answer/result entry is read.
@@ -103,7 +107,7 @@ export const sendChat = (
         Effect.flatMap((call) =>
           call.status === 200
             ? decodeOrFail(AdmitDecision, call.body)
-            : Effect.fail(new ChatUnavailable()),
+            : Effect.fail(privateUnavailable("admit", call.status)),
         ),
       );
     if (!nativeAccepted) {
@@ -144,7 +148,7 @@ export const sendChat = (
       yield* doCall(ns.catalog(user.id), "POST", "/release", {
         operationId: payload.operationId,
         attemptId: decision.attemptId,
-      }).pipe(Effect.ignore);
+      }).pipe(ignoreReport({ component: "chat", operation: "send.release", reason: "release" }));
       if (call.status === 400) {
         const failure = decodeOption(
           Schema.Struct({ message: Schema.String.check(Schema.isMaxLength(500)) }),
@@ -177,15 +181,19 @@ export const sendChat = (
         new SubmissionFailed({ message: failure?.message ?? SUBMISSION_FAILED }),
       );
     }
-    if (call.status !== 200) return yield* Effect.fail(new ChatUnavailable());
-    const accepted = yield* decodeOrFail(AcceptedResponse, call.body);
+    if (call.status !== 200) return yield* Effect.fail(privateUnavailable("send", call.status));
+    const accepted = yield* decodeOrFail(AcceptedResponse, call.body).pipe(
+      Effect.mapError((error) => withDiagnostic(error, "send-decode")),
+    );
     if (!accepted.accepted) return yield* Effect.fail(new ChatUnavailable());
     yield* claimTitle();
     // A lost finalize is repairable from exact native acceptance on the next retry.
     yield* doCall(ns.catalog(user.id), "POST", "/finalize", {
       operationId: payload.operationId,
       now: Date.now(),
-    }).pipe(Effect.ignore);
-    yield* doCall(ns.catalog(user.id), "POST", "/touch", { id: chat.id }).pipe(Effect.ignore);
+    }).pipe(ignoreReport({ component: "chat", operation: "send.finalize", reason: "finalize" }));
+    yield* doCall(ns.catalog(user.id), "POST", "/touch", { id: chat.id }).pipe(
+      ignoreReport({ component: "chat", operation: "send.touch", reason: "touch" }),
+    );
     return { accepted: true as const };
   });

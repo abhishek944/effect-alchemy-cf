@@ -14,7 +14,8 @@ export function createSessions(
   return {
     putView: (input) =>
       storeEffect(async () => {
-        const plan = await prepareView(db, input);
+        // A live View's opening revision is a floor, not a lock on the current native head.
+        const plan = await prepareView(db, input, false);
         await db.write(plan.fence.sql, plan.fence.values, plan.statements, "AUTHORITY_LOST");
         return plan.record;
       }),

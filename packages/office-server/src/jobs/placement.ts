@@ -1,3 +1,6 @@
+import { jobDiagnostics } from "@starter/office-contract";
+import { reportFailure } from "@starter/diagnostics";
+import { decodeJobRequest } from "./transport.ts";
 import {
   createDockerExecutor,
   type DockerExecutorConfig,
@@ -34,7 +37,23 @@ export async function createLocalJobPlacement(config: DockerExecutorConfig): Pro
   }
   return {
     imageDigest: config.imageId,
-    run: (input, signal) => executor.run(input, signal),
+    run: async (input, signal) => {
+      const { job } = decodeJobRequest(input);
+      const result = await executor.run(input, signal);
+      const binding = { operationId: job.binding.operationId, taskId: job.binding.jobId };
+      const relay = jobDiagnostics(undefined, binding);
+      const records = relay.write(result.stderr);
+      const { discarded } = relay.finish();
+      for (const record of records) console.error(JSON.stringify(record));
+      if (discarded)
+        reportFailure(undefined, {
+          component: "office.job-supervisor",
+          operation: "stderr",
+          reason: "unstructured-diagnostic",
+          ...binding,
+        });
+      return result;
+    },
     close: () => executor.close(),
   };
 }

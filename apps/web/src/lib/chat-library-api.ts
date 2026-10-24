@@ -1,4 +1,5 @@
-import { request, unexpectedResponse, ChatApiError, errorMessage } from "./chat-api";
+import { requestDecoded, ChatApiError, errorMessage } from "./chat-api";
+import { readResponseRequestId } from "./browser-diagnostics";
 import { chatAttachmentUrl } from "./chat-capability-api";
 import { isUuid } from "./chat-validate-base";
 import {
@@ -28,15 +29,15 @@ export async function listSavedFiles(
   signal?: AbortSignal,
 ): Promise<SavedLibraryPage> {
   const params = librarySearchParams(query);
-  const page = parseSavedLibraryPage(
-    await request(`${filesPath(chatId)}?${params}`, {
-      signal: readSignal(signal),
-      cache: "no-store",
-    }),
+  return requestDecoded(
+    `${filesPath(chatId)}?${params}`,
+    "chat.saved-files",
+    (body) => {
+      const page = parseSavedLibraryPage(body);
+      return page && page.chatId === chatId && page.nextCursor !== query.cursor ? page : null;
+    },
+    { signal: readSignal(signal), cache: "no-store" },
   );
-  if (!page || page.chatId !== chatId || page.nextCursor === query.cursor)
-    throw unexpectedResponse();
-  return page;
 }
 
 export async function getSavedFile(
@@ -44,11 +45,15 @@ export async function getSavedFile(
   fileId: string,
   signal?: AbortSignal,
 ): Promise<SavedFile> {
-  const file = parseSavedFile(
-    await request(filesPath(chatId, fileId), { signal: readSignal(signal), cache: "no-store" }),
+  return requestDecoded(
+    filesPath(chatId, fileId),
+    "chat.saved-file",
+    (body) => {
+      const file = parseSavedFile(body);
+      return file && file.chatId === chatId && file.id === fileId ? file : null;
+    },
+    { signal: readSignal(signal), cache: "no-store" },
   );
-  if (!file || file.chatId !== chatId || file.id !== fileId) throw unexpectedResponse();
-  return file;
 }
 
 /** Private same-origin original; no descriptor-controlled/public URLs are accepted. */
@@ -59,18 +64,29 @@ export function savedOriginalUrl(file: Pick<SavedFile, "chatId" | "id">): string
 
 /** A bounded original GET, not a metadata-only claim that missing bytes recovered. */
 export async function readSavedOriginal(file: SavedFile, signal?: AbortSignal): Promise<void> {
+  const active = readSignal(signal);
   const response = await fetch(savedOriginalUrl(file), {
     credentials: "same-origin",
     cache: "no-store",
     redirect: "error",
-    signal: readSignal(signal),
+    signal: active,
   });
-  if (!response.ok || !response.body) throw new Error("The saved original could not be read.");
+  const requestId = readResponseRequestId(response);
+  const failure = (message: string) =>
+    new ChatApiError(
+      response.ok ? 502 : response.status,
+      message,
+      null,
+      requestId,
+      "chat.saved-original",
+      response.status,
+    );
+  if (!response.ok || !response.body) throw failure("The saved original could not be read.");
   const type = response.headers.get("content-type")?.split(";")[0]?.trim();
   const expected = file.kind === "text" ? "text/plain" : file.mediaType;
   if (type !== expected) {
-    await response.body.cancel();
-    throw new Error("The saved original has an unexpected format.");
+    await response.body.cancel().catch(() => undefined);
+    throw failure("The saved original has an unexpected format.");
   }
   const reader = response.body.getReader();
   let bytes = 0;
@@ -79,9 +95,17 @@ export async function readSavedOriginal(file: SavedFile, signal?: AbortSignal): 
       const chunk = await reader.read();
       if (chunk.done) break;
       bytes += chunk.value.byteLength;
-      if (bytes > file.byteSize) throw new Error("The saved original has unexpected content.");
+      if (bytes > file.byteSize) throw failure("The saved original has unexpected content.");
     }
-    if (bytes !== file.byteSize) throw new Error("The saved original was incomplete.");
+    if (bytes !== file.byteSize) throw failure("The saved original was incomplete.");
+  } catch (cause) {
+    if (
+      cause instanceof ChatApiError ||
+      active.aborted ||
+      (cause instanceof Error && /^(AbortError|TimeoutError)$/.test(cause.name))
+    )
+      throw cause;
+    throw Object.assign(failure("The saved original could not be read."), { cause });
   } finally {
     await reader.cancel().catch(() => undefined);
     reader.releaseLock();
@@ -92,6 +116,6 @@ export function libraryReadMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === "TimeoutError")
     return "Reading the saved file timed out. Your draft and saved files are unchanged.";
   if (error instanceof ChatApiError && error.status === 404)
-    return "The saved file or list could not be found. Your draft is unchanged.";
+    return `The saved file or list could not be found. Your draft is unchanged. ${error.message}`;
   return errorMessage(error);
 }

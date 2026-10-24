@@ -2,6 +2,7 @@ import { ConversationBusy } from "@earendil-works/pi-durable";
 import { ROOT_SESSION, type PiSubmitOptions } from "agents/harness/pi";
 import { resolveChatSelectionValue } from "./chat-capability-policy.ts";
 import { digestText, json } from "./chat-internal.ts";
+import { reportSendFailure } from "./chat-observation.ts";
 import { SkillRuntimeError } from "./chat-skills-errors.ts";
 import { noAdmissionBody } from "./chat-skills-no-admission.ts";
 import {
@@ -12,7 +13,13 @@ import {
 } from "./chat-model.ts";
 import { PI_BACKGROUND } from "./chat-runtime.ts";
 import { sendIdentity } from "./chat-send-identity.ts";
-import type { ChatSendScope, ChatSubmissionOptions as Options } from "./chat-submission-types.ts";
+import { releaseUnsubmittedSend } from "./chat-submission-release.ts";
+import type {
+  ChatSendScope,
+  ChatSubmissionOptions as Options,
+  SendProgress,
+  SendObservation,
+} from "./chat-submission-types.ts";
 export type { PreparedChatSend, ChatSendScope, ChatSkillsPort } from "./chat-submission-types.ts";
 
 /** A concurrent Send is rejected, never saved as future work. */
@@ -22,19 +29,35 @@ export class ChatSubmission {
     this.options = options;
   }
 
-  async send(input: typeof SendMessage.Type, scope: ChatSendScope): Promise<Response> {
+  async send(
+    input: typeof SendMessage.Type,
+    scope: ChatSendScope,
+    request: SendObservation,
+  ): Promise<Response> {
     if (!this.options.fence.tryEnter()) return json({ message: "Chat is busy" }, 409);
+    const progress: SendProgress = { phase: "identity", outcome: "not-submitted" };
     try {
-      return await this.submit(input, scope);
+      return await this.submit(input, scope, progress, request);
     } catch (error) {
       if (error instanceof ChatInvalid) return json({ message: error.message }, 400);
+      reportSendFailure(
+        error,
+        { ...request, operationId: input.operationId, chatId: scope.chat.id },
+        progress,
+        this.options.runtime.diagnostic,
+      );
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     } finally {
       this.options.fence.leave();
     }
   }
 
-  private async submit(input: typeof SendMessage.Type, scope: ChatSendScope): Promise<Response> {
+  private async submit(
+    input: typeof SendMessage.Type,
+    scope: ChatSendScope,
+    progress: SendProgress,
+    request: SendObservation,
+  ): Promise<Response> {
     const { harness, runtime, ledger, records, policy } = this.options;
     const hash = await digestText(sendIdentity(input));
     const known = records.identity(input.operationId);
@@ -42,8 +65,11 @@ export class ChatSubmission {
       return json({ message: "Operation identity does not match this message." }, 400);
     const native = await runtime.inputRecord(input.operationId);
     if (native !== undefined) {
+      progress.outcome = "confirmed";
+      progress.phase = "accepted-repair";
       if ("entry" in native) ledger.recordEntry(input.operationId, native.entry, Date.now());
       if (known === null) return json({ message: "Operation identity is unavailable." }, 400);
+      progress.phase = "retention-repair";
       await this.options.retain(input, scope);
       ledger.accepted(input.operationId, Date.now());
       return json({ accepted: true, duplicate: true });
@@ -64,13 +90,16 @@ export class ChatSubmission {
     const session = harness.session(ROOT_SESSION);
     if (await session.busy()) return json({ message: "Chat is busy" }, 409);
     const conversation = await runtime.conversation();
+    progress.phase = "prepare";
     const prepared = await this.options.prepare(input, scope, resolved.model);
     if (await session.busy()) {
+      progress.phase = "release";
       await this.options.release(input, scope);
       return json({ message: "Chat is busy" }, 409);
     }
     // The verified library candidate is durable before native admission; a lost
     // finalize stays repairable and a definite busy rejection releases it.
+    progress.phase = "skills-prepare";
     try {
       await this.options.skills.prepareNew({
         ownerId: scope.ownerId,
@@ -78,8 +107,15 @@ export class ChatSubmission {
         content: prepared.content,
       });
     } catch (error) {
-      await this.options.release(input, scope);
-      if (error instanceof SkillRuntimeError)
+      await releaseUnsubmittedSend(this.options, input, scope, error);
+      if (error instanceof SkillRuntimeError) {
+        if (error.code !== "invalid")
+          reportSendFailure(
+            error,
+            { ...request, operationId: input.operationId, chatId: scope.chat.id },
+            progress,
+            runtime.diagnostic,
+          );
         return json(
           {
             message: error.message,
@@ -87,8 +123,10 @@ export class ChatSubmission {
           },
           error.code === "invalid" ? 400 : 503,
         );
+      }
       throw error;
     }
+    progress.phase = "bind";
     if (
       !records.bind(
         input.operationId,
@@ -104,9 +142,11 @@ export class ChatSubmission {
       )
     ) {
       this.options.skills.release(input.operationId);
+      progress.phase = "release";
       await this.options.release(input, scope);
       return json({ message: "Operation identity does not match this message." }, 400);
     }
+    progress.phase = "configure";
     try {
       await conversation.configure(
         {
@@ -117,16 +157,19 @@ export class ChatSubmission {
       );
     } catch (error) {
       // No native submission was attempted, so releasing staged bindings is safe.
-      this.options.skills.release(input.operationId);
-      await this.options.release(input, scope);
+      await releaseUnsubmittedSend(this.options, input, scope, error, true);
       throw error;
     }
+    progress.phase = "native-submit";
+    progress.outcome = "unknown";
     ledger.tentative(input.operationId, Date.now());
     // Native runtime supports reject although the host's PiSubmitOptions omits it.
     const options: PiSubmitOptions = { operationId: input.operationId };
     Object.assign(options, { whenBusy: "reject" });
     try {
       const receipt = await session.submit(prepared.content, options);
+      progress.phase = "retain";
+      progress.outcome = "confirmed";
       ledger.accepted(input.operationId, Date.now());
       const accepted = await runtime.inputRecord(input.operationId);
       if (accepted !== undefined) {
@@ -139,11 +182,18 @@ export class ChatSubmission {
     } catch (error) {
       if (error instanceof ConversationBusy) {
         // Native admission refused before writing; release only this candidate.
-        this.options.skills.release(input.operationId);
-        await this.options.release(input, scope);
+        progress.phase = "native-submit";
+        progress.outcome = "not-submitted";
+        await releaseUnsubmittedSend(this.options, input, scope, error, true);
         return json({ message: "Chat is busy" }, 409);
       }
       // Uncertain admission: the candidate and bytes stay for reconciliation.
+      reportSendFailure(
+        error,
+        { ...request, operationId: input.operationId, chatId: scope.chat.id },
+        progress,
+        this.options.runtime.diagnostic,
+      );
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     }
   }

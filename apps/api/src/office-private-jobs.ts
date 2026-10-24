@@ -1,15 +1,15 @@
 import type * as cf from "@cloudflare/workers-types";
-import { decodeWireSync } from "@starter/office-contract";
-import { NativeJobExit } from "../../office/src/native-private-wire.ts";
+import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { officeLifecycle } from "./office-lifecycle.ts";
+import { officeJobResponseError, officeReadJobExit } from "./office-job-response.ts";
 import { officeJobRequest } from "./office-job-request.ts";
 import { officeNativeSignal } from "./office-platform.ts";
 import { officePrivateStream } from "./office-private-stream.ts";
-import { readOfficePrivateJson } from "./office-private-json.ts";
 import type { OfficeJobClaims } from "./office-job-claims.ts";
 import type { OfficeJobExit } from "./office-job-process.ts";
 import type { OfficeNamespace } from "./office-private-bindings.ts";
 import { officeDenied, type OfficePrivateRequest } from "./office-private-authority.ts";
-
 /** Real raw same-script fresh instance, selected by original CAS ACK, no retry/adoption/Node host exec. */
 export function officePrivateJobs(
   namespace: OfficeNamespace,
@@ -20,8 +20,20 @@ export function officePrivateJobs(
   const stop = new AbortController();
   const signal = AbortSignal.any([request.signal, stop.signal]);
   let stub: cf.DurableObjectStub | undefined;
-  let dispatched = false,
-    failed = false;
+  let dispatched = false;
+  let failed: { cause: unknown } | undefined;
+  let association:
+    | { operationId: string; jobId: string; taskId: string; deadlineAt: number }
+    | undefined;
+  const { event, step, context } = officeLifecycle(() => ({
+    component: "office.private-jobs",
+    operation: "dispatch",
+    ...association,
+  }));
+  const upstream = (status: number) => {
+    event("upstream-response", { status, outcome: "unknown" });
+    return officeJobResponseError(status);
+  };
   let starting: Promise<cf.Response> | undefined;
   let preparing: Promise<Awaited<ReturnType<typeof officeJobRequest>>> | undefined;
   let input: Awaited<ReturnType<typeof officeJobRequest>> | undefined;
@@ -38,29 +50,17 @@ export function officePrivateJobs(
     const actual = stub;
     if (actual === undefined || !dispatched) return Promise.reject(officeDenied());
     const result = Promise.resolve().then(async () => {
-      // Already-owned cleanup observation; it issues NO authority and cannot timeout-as-quiescence.
-      const response = await actual.fetch("http://office-job.internal/status", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cancel }),
-        redirect: "manual",
-      });
-      const payload = await readOfficePrivateJson(
-        response.body,
-        new AbortController().signal,
-        null,
-        16 * 1024,
+      const exit = await step(cancel ? "cancel-status" : "exit-status", () =>
+        officeReadJobExit(actual, cancel, event),
       );
-      if (response.status !== 200) throw officeDenied();
-      const exit = decodeWireSync(NativeJobExit)(payload);
       claims.confirmCleanup(exit); // Actual known private box result, NOT a Node/model claim.
       observed = exit;
       return exit;
     });
     if (cancel) cancellation = result;
     else observation = result;
-    void result.catch(() => {
-      failed = true;
+    void result.catch((cause: unknown) => {
+      failed ??= { cause };
     });
     return result;
   };
@@ -78,8 +78,19 @@ export function officePrivateJobs(
         responseClosing,
       ]);
       const body = await Promise.allSettled([output?.close()]);
-      if (failed || [...joined, ...body].some((item) => item.status === "rejected"))
-        throw officeDenied();
+      const failures = [...joined, ...body]
+        .filter((item) => item.status === "rejected")
+        .map((item): unknown => item.reason);
+      if (failed !== undefined) failures.unshift(failed.cause);
+      if (failures.length)
+        throw withCause(
+          withDiagnostic(
+            new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")),
+            "private-job-cleanup",
+          ),
+          new AggregateError(failures, "Private job cleanup failed"),
+        );
+      event("cleanup", { outcome: "confirmed" });
       return undefined;
     });
     return closing;
@@ -92,9 +103,20 @@ export function officePrivateJobs(
       await request.live();
       if (closing !== undefined) throw officeDenied();
       const claim = claims.take();
-      if (claim.dispatch === null || claim.dispatch.workerId !== nodeId) throw officeDenied();
+      if (claim.dispatch === null || claim.dispatch.workerId !== nodeId)
+        throw withDiagnostic(officeDenied(), "job-dispatch-association");
+      association = {
+        operationId: claim.job.binding.operationId,
+        jobId: claim.job.binding.jobId,
+        taskId: claim.job.binding.jobId,
+        deadlineAt: claim.dispatch.deadlineAt,
+      };
+      event("claim-taken", { outcome: "confirmed" });
+      const deadline = claim.dispatch.deadlineAt;
       try {
-        preparing = officeJobRequest(body, claim, signal, claim.dispatch.deadlineAt, revoke);
+        preparing = step("input-prepare", () =>
+          officeJobRequest(body, claim, signal, deadline, revoke),
+        );
         input = await preparing;
         await request.live();
         if (closing !== undefined) throw officeDenied();
@@ -109,16 +131,20 @@ export function officePrivateJobs(
           ]),
         );
         dispatched = true;
-        starting = stub.fetch("http://office-job.internal/run", {
-          method: "POST",
-          headers: { "content-type": "application/octet-stream" },
-          body: input.body,
-          // Native Web-IDL signal: the Worker compilation and Node-only infra IDL differ; not auth.
-          signal: officeNativeSignal(signal),
-          redirect: "manual",
-        });
-        void starting.catch(() => {
-          if (closing === undefined) failed = true;
+        const actual = stub,
+          inputBody = input.body;
+        starting = step("job-dispatch", () =>
+          actual.fetch("http://office-job.internal/run", {
+            method: "POST",
+            headers: { "content-type": "application/octet-stream" },
+            body: inputBody,
+            // Native Web-IDL signal: the Worker compilation and Node-only infra IDL differ; not auth.
+            signal: officeNativeSignal(signal),
+            redirect: "manual",
+          }),
+        );
+        void starting.catch((cause: unknown) => {
+          if (closing === undefined) failed ??= { cause };
         });
         const response = await starting;
         if (
@@ -126,10 +152,16 @@ export function officePrivateJobs(
           response.body === null ||
           response.headers.get("content-type") !== "application/octet-stream"
         ) {
+          const cause = upstream(response.status);
           responseClosing = response.body?.cancel();
-          await responseClosing;
-          throw officeDenied();
+          try {
+            await responseClosing;
+          } catch (cleanup) {
+            throw withCause(cause, cleanup);
+          }
+          throw cause;
         }
+        event("output", { reason: "entered" });
         output = officePrivateStream(
           response.body,
           32 * 1024 * 1024,
@@ -137,13 +169,24 @@ export function officePrivateJobs(
           claim.dispatch.deadlineAt,
           async () => {
             await status(false);
+            event("output-finish", { reason: "status-confirmed", outcome: "confirmed" });
           },
           revoke,
+          { ...context(), operation: "output", outcome: "unknown" },
         );
         return output.body;
       } catch (error) {
-        if (!signal.aborted || error !== signal.reason) failed = true;
-        await close();
+        if (!signal.aborted || error !== signal.reason) failed ??= { cause: error };
+        try {
+          await close();
+        } catch (cleanup) {
+          throw withCause(
+            error instanceof OfficeForbidden
+              ? officeDenied()
+              : new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")),
+            new AggregateError([error, cleanup], "Private job failed"),
+          );
+        }
         throw error;
       }
     },

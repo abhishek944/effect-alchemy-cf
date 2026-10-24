@@ -87,8 +87,10 @@ membership over adding the broader `chat:write.public` scope.
 ## Failure, timeout, and retry policy
 
 `IntegrationError` contains only `provider`, `kind`, nullable `status`, nullable
-`code`, and nullable `retryAfterSeconds`. It never embeds raw errors, request or
-response objects, recipient addresses, message bodies, headers, or credentials.
+`code`, and nullable `retryAfterSeconds`. Adapters may keep the original failure
+as a non-enumerable in-memory `cause`, but nothing serializes or returns it: no
+raw errors, request/response objects, recipient addresses, bodies, headers or
+credentials leave the server. Callers own final safe reporting.
 
 | Kind                   | Meaning and caller action                                               |
 | ---------------------- | ----------------------------------------------------------------------- |

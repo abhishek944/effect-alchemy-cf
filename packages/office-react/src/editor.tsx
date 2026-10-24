@@ -79,6 +79,7 @@ function NativeFrame(props: OfficeNativeEditorProps) {
         hold: () => handle().hold(),
         flush: () => handle().flush(),
         prepareToLeave: () => handle().prepareToLeave(),
+        stopInput: () => handle().stopInput(),
         resume: () => handle().resume(),
       };
     },

@@ -75,7 +75,6 @@ export function frozenSQL(db: MetadataStore, review: FrozenReview): PredicateSQL
         : "EXISTS(SELECT 1 FROM office_native_units WHERE scope=? AND head=? AND lifecycle='active')"
     }
     AND ?>${sqlNow}
-    AND NOT EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND document=? AND state IN ('active','draining','unclean'))
     AND NOT EXISTS(SELECT 1 FROM office_meta_writes WHERE owner=? AND document=? AND phase IN ('staged','dispatching','unknown'))`;
   return {
     sql,
@@ -94,8 +93,6 @@ export function frozenSQL(db: MetadataStore, review: FrozenReview): PredicateSQL
       scope,
       ...(review.mainRevision === null ? [] : [review.mainRevision]),
       review.expiresAt,
-      owner,
-      review.documentId,
       owner,
       review.documentId,
     ],

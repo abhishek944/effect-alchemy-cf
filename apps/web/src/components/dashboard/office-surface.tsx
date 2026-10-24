@@ -1,6 +1,11 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Draft } from "@starter/office-contract";
-import { OfficeDraftControls, OfficeNativeEditor, OfficeReview } from "@starter/office-react";
+import {
+  OfficeDraftControls,
+  OfficeNativeEditor,
+  OfficeReview,
+  type FrameStatus,
+} from "@starter/office-react";
 import { useDashboardTheme } from "./theme";
 import { useWorkspaceOffice } from "./workspace-office-context";
 import { useOfficeSurface } from "./use-office-surface";
@@ -27,6 +32,7 @@ export function OfficeSurface({
     busy,
     receipt,
     reviewId,
+    holdAndDrain,
     save,
     resume,
     onOperation,
@@ -36,32 +42,25 @@ export function OfficeSurface({
     onBusy,
   } = useOfficeSurface(chatId, id, selection);
   const office = useWorkspaceOffice();
+  const { publishPending } = office;
   const { theme: hostTheme } = useDashboardTheme();
   const theme = hostTheme === "light" || hostTheme === "paper" ? "light" : "dark";
   const [draft, setDraft] = useState<Draft | null>(null);
   const [connected, setConnected] = useState<string | null>(null);
-  const [ready, setReady] = useState<string | null>(null);
-  const pause = useEffectEvent(() => {
-    void save();
-  });
-  const channelId = opened?.channel.channelId;
-  const expiresAt = opened?.channel.expiresAt;
-  const editorState = opened?.editor?.state;
-  const viewId = opened?.view.id;
+  const [status, setStatus] = useState<FrameStatus>("loading");
+  const [publisher] = useState(() => ({}));
+  // Native "held" is only the SDK ACK; a confirmed save also needs the server drain.
+  const confirmed =
+    status === "saved" ||
+    status === "read-only" ||
+    (status === "held" && opened?.editor?.state === "drained");
+  const editable = reviewId === null && opened !== null && opened.editor !== null;
+  // Unresolved save/drain/lease failures stay pending until a successful retry clears them.
+  const pending = busy || pendingControl !== null || error !== "" || (editable && !confirmed);
   useEffect(() => {
-    if (
-      channelId === undefined ||
-      expiresAt === undefined ||
-      editorState !== "active" ||
-      ready !== viewId
-    )
-      return undefined;
-    const remaining = expiresAt - Date.now();
-    const reserve = Math.min(45_000, Math.max(0, remaining / 2));
-    // Only a genuinely initialized exact View consumes this original-deadline pause.
-    const timer = setTimeout(pause, Math.max(0, remaining - reserve));
-    return () => clearTimeout(timer);
-  }, [channelId, expiresAt, editorState, ready, viewId]);
+    publishPending(id, publisher, pending);
+    return () => publishPending(id, publisher, false);
+  }, [publishPending, id, publisher, pending]);
   useEffect(() => {
     const active = new AbortController();
     if (runtime !== null && selection.target.scope.kind === "draft") {
@@ -152,12 +151,10 @@ export function OfficeSurface({
             channelId={opened.channel.channelId}
             frameUrl="/office/frame.html"
             operation={receipt}
-            onStatus={(status) => {
-              if (status === "saved" || status === "held" || status === "read-only") {
+            onStatus={(next) => {
+              setStatus(next);
+              if (next === "saved" || next === "held" || next === "read-only")
                 setConnected(opened.view.id);
-                setReady(opened.view.id);
-              } else if (status === "loading" || status === "error" || status === "offline")
-                setReady(null);
             }}
           />
           {runtime !== null &&
@@ -170,7 +167,7 @@ export function OfficeSurface({
                 run={runtime.run}
                 draft={draft}
                 editor={opened.editor}
-                native={handle}
+                holdAndDrain={holdAndDrain}
                 onOperation={(operationId) => onOperation(operationId, "ready")}
                 onReceipt={onReceipt}
                 onBusy={onBusy}

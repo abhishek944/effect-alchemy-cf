@@ -1,61 +1,58 @@
-import { OfficeCommand, decodeWireSync } from "@starter/office-contract";
+import { Schema } from "effect";
+import { Digest, decodeWireSync } from "@starter/office-contract";
 import {
-  OfficeToolRequest,
-  type OfficeIntentCommand,
+  OfficePanelRequest,
+  UniverCliRequest,
+  OFFICE_TOOL_NAME,
+  OFFICE_PANEL_TOOL_NAME,
   type OfficeToolIntent,
 } from "@starter/office-pi";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
-import { sameImageRequestValue } from "./chat-image-request-values.ts";
 
-async function digest(bytes: Uint8Array): Promise<string> {
-  const hash = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
+const StepMemo = Schema.Struct({ requestDigest: Digest, intentDigest: Digest });
+async function digest(value: unknown) {
+  const hash = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify(value)),
+  );
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Match actual Pi bindIntent normalization AND its task/conversation/call-bound memo digest. */
+/** The trusted CLI program derives private steps; model args never supply task/native claims. */
 export async function officeIntentMatches(
   raw: unknown,
   intent: OfficeToolIntent,
   api: Pick<ToolExecutionApi, "taskId" | "conversationId" | "callId">,
+  toolName: string,
+  memo: unknown,
 ): Promise<boolean> {
-  const command = decodeWireSync(OfficeToolRequest)(raw).request;
-  const bound =
-    "input" in command && "operationId" in command.input
-      ? decodeWireSync(OfficeCommand)({
-          ...command,
-          input: { ...command.input, operationId: intent.operationId },
-        })
-      : command;
-  let description: OfficeIntentCommand;
-  if (bound.command === "stage-code") {
-    const bytes = new TextEncoder().encode(bound.input.source);
-    description = {
-      command: "stage-code",
-      input: {
-        operationId: bound.input.operationId,
-        bytes: bytes.byteLength,
-        digest: await digest(bytes),
-      },
-    };
-  } else description = bound;
-  if (!sameImageRequestValue(description, intent.command)) return false;
+  if (!intent.step || !intent.attachmentId) return false;
+  const request =
+    toolName === OFFICE_PANEL_TOOL_NAME
+      ? decodeWireSync(OfficePanelRequest)(raw)
+      : toolName === OFFICE_TOOL_NAME
+        ? decodeWireSync(UniverCliRequest)(raw)
+        : null;
+  if (request === null || request.attachmentId !== intent.attachmentId) return false;
+  const saved = decodeWireSync(StepMemo)(memo);
+  if (saved.requestDigest !== (await digest(request)) || saved.intentDigest !== intent.digest)
+    return false;
+  const command = intent.command;
   const unbound =
-    "input" in description && "operationId" in description.input
-      ? {
-          ...description,
-          input: { ...description.input, operationId: "office_intent_placeholder" },
-        }
-      : description;
-  const expected = await digest(
-    new TextEncoder().encode(
-      JSON.stringify([
-        "office.intent.v1",
-        String(api.taskId),
-        String(api.conversationId),
-        api.callId,
-        unbound,
-      ]),
-    ),
+    "input" in command && "operationId" in command.input
+      ? { ...command, input: { ...command.input, operationId: "office_intent_placeholder" } }
+      : command;
+  return (
+    intent.digest ===
+    (await digest([
+      "office.intent.v1",
+      String(api.taskId),
+      String(api.conversationId),
+      api.callId,
+      unbound,
+      intent.attachmentId,
+      intent.step,
+      intent.basis ?? null,
+    ]))
   );
-  return expected === intent.digest;
 }

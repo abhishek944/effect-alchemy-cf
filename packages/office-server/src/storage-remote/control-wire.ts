@@ -37,15 +37,6 @@ export const HostTurn = Object.freeze({
     }),
     HostTurnGrant,
   ),
-  renew: hostMethod(
-    "turn.renew",
-    Schema.Struct({
-      turnId: HostId,
-      expectedVersion: HostEpoch,
-      until: HostEpoch,
-    }),
-    HostTurnGrant,
-  ),
   release: hostMethod(
     "turn.release",
     Schema.Struct({

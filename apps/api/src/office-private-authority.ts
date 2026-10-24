@@ -1,11 +1,13 @@
 import { Effect } from "effect";
 import type { NativePrivateFile } from "../../office/src/native-private-wire.ts";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import type { ActorVerification, NativeTarget, OfficeMetadata } from "@starter/office-server/ports";
+import type { OfficeMetadata } from "@starter/office-server/ports";
 import type { HostOfficeRequest } from "@starter/office-server/native-remote";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { OfficePlacement } from "./office-host-placements.ts";
 import type { OfficeMetadataCall } from "./office-metadata-dispatch.ts";
+import { officeHumanAuthority } from "./office-private-human.ts";
+import { officeDenied, officeSame } from "./office-private-values.ts";
+export { officeDenied, officeSame, officeSameView } from "./office-private-values.ts";
 import { officeTaskVerifier } from "./office-task-file-actor.ts";
 
 export type OfficePrivateIO = {
@@ -27,7 +29,7 @@ export type OfficePrivateRequest = {
   /** Actual original process proof is checked before this object is selected. */
   readonly live: () => Promise<void>;
 };
-export const officeDenied = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
+export { officeCaught } from "./office-failure.ts";
 /** Actual Worker ref request/captured original association for the SDK's generic adapter context.
  * This is correlation only: native access is enforced by the separately acquired provider fence. */
 export const officeNativeContext = (original: OfficePrivateRequest, request: object) => ({
@@ -35,85 +37,10 @@ export const officeNativeContext = (original: OfficePrivateRequest, request: obj
   customData: { office: original },
   request,
 });
-const record = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-/** Finite DTO equality only, never original caller proof. */
-export function officeSame(left: unknown, right: unknown): boolean {
-  if (Object.is(left, right)) return true;
-  if (Array.isArray(left) && Array.isArray(right))
-    return (
-      left.length === right.length &&
-      left.every((value: unknown, index) => officeSame(value, right[index]))
-    );
-  if (!record(left) || !record(right)) return false;
-  const keys = Object.keys(left);
-  return (
-    keys.length === Object.keys(right).length &&
-    keys.every((key) => Object.hasOwn(right, key) && officeSame(left[key], right[key]))
-  );
-}
-
 /** Real original private record + fresh session liveness; claims data alone never reaches this function. */
 export function officePrivateAuthority(metadata: OfficeMetadata, request: OfficePrivateRequest) {
   const actor = request.original.actor;
-  const live = Effect.tryPromise({ try: request.live, catch: officeDenied });
-  function target(input: NativeTarget) {
-    return Effect.gen(function* () {
-      if (!officeSame(input.owner, actor.owner)) return yield* Effect.fail(officeDenied());
-      const document = yield* metadata.document(actor.owner, input.documentId);
-      if (document === null || document.unitId !== input.unitId)
-        return yield* Effect.fail(officeDenied());
-      if (input.scope.kind === "draft") {
-        const draft = yield* metadata.draft(actor.owner, input.scope.draftId);
-        if (
-          draft === null ||
-          draft.documentId !== input.documentId ||
-          draft.generation !== input.scope.generation
-        )
-          return yield* Effect.fail(officeDenied());
-      }
-      return undefined;
-    });
-  }
-  const verify = (input: ActorVerification) =>
-    Effect.gen(function* () {
-      yield* live;
-      const claims = input.claims;
-      if (
-        claims.capability !== "human" ||
-        claims.principalId !== actor.principalId ||
-        (input.phase !== "recovery-observe" && claims.sessionEpoch !== actor.sessionEpoch) ||
-        !officeSame(claims.owner, actor.owner)
-      )
-        return yield* Effect.fail(officeDenied());
-      if (input.phase === "request") {
-        if (!officeSame(claims, actor)) return yield* Effect.fail(officeDenied());
-        if (input.target !== null) yield* target(input.target);
-      } else {
-        if (
-          input.phase !== "recovery-observe" &&
-          (claims.expiresAt <= Date.now() ||
-            request.command === null ||
-            !("operationId" in request.command.input) ||
-            request.command.input.operationId !== input.operationId ||
-            ["office.receipt", "office.cancel"].includes(request.command.method))
-        )
-          return yield* Effect.fail(officeDenied());
-        const operation = yield* metadata.operation(actor.owner, input.operationId);
-        if (
-          operation === null ||
-          !officeSame(operation.actor, claims) ||
-          operation.intentDigest !== input.intentDigest ||
-          operation.unitId !== input.target.unitId ||
-          operation.documentId !== input.target.documentId
-        )
-          return yield* Effect.fail(officeDenied());
-        // Observation preserves old control identity, without granting old-generation content reads.
-        if (input.phase !== "recovery-observe") yield* target(input.target);
-      }
-      yield* live;
-      return undefined;
-    });
+  const { verify, target, live } = officeHumanAuthority(metadata, request);
   const authorize = (call: OfficeMetadataCall) =>
     Effect.gen(function* () {
       yield* live;

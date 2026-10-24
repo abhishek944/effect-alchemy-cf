@@ -1,3 +1,4 @@
+import { reportFailure, withCause } from "@starter/diagnostics";
 import {
   ArtifactRef,
   OfficeInvalid,
@@ -80,9 +81,15 @@ export async function putBytes(
         )
         .bind(key, scope.owner, input.id)
         .run()
-        .catch(() => undefined);
+        .catch((markFailure: unknown) => {
+          reportFailure(markFailure, {
+            component: "office.bytes",
+            operation: "mark-unknown",
+            event: "application.failure",
+          });
+        });
       if (cause instanceof OfficeInvalid) throw cause;
-      throw unknownOutcome();
+      throw withCause(unknownOutcome(), cause);
     }
     await db.complete(scope.owner, input.id, key, actual.digest, actual.bytes, actual.etag);
     if (input.expectedDigest !== null && actual.digest !== input.expectedDigest) throw invalid();
@@ -96,6 +103,13 @@ export async function putBytes(
     });
     return await db.publish(scope.owner, input, key, ref, scope.prefix);
   } finally {
-    if (!input.body.locked) await input.body.cancel().catch(() => undefined);
+    if (!input.body.locked)
+      await input.body.cancel().catch((cause: unknown) => {
+        reportFailure(cause, {
+          component: "office.bytes",
+          operation: "cancel-input",
+          event: "application.cleanup",
+        });
+      });
   }
 }

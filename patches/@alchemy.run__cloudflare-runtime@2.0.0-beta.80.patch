@@ -1,0 +1,197 @@
+diff --git a/dist/core/node/Docker.mjs b/dist/core/node/Docker.mjs
+index 0a1055d9afbb5fb5ba62be470390010b78d3ffbf..8943574d938b07346cd8baed03a7623a022e069c 100644
+--- a/dist/core/node/Docker.mjs
++++ b/dist/core/node/Docker.mjs
+@@ -13,6 +13,8 @@ import * as ChildProcess from "effect/process/ChildProcess";
+ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
+ import * as NodeHttp from "node:http";
+ import * as NodeStream from "node:stream";
++import * as Scope from "effect/Scope";
++import { acquireDockerProxy } from "./DockerExecUpgrade.mjs";
+ //#region src/core/Docker.ts
+ var Docker = class extends Context.Service()("cloudflare-runtime/Docker") {};
+ const DEFAULT_DOCKER_HOST = process.platform === "win32" ? "//./pipe/docker_engine" : "unix:///var/run/docker.sock";
+@@ -92,6 +94,7 @@ const mergeContainerCreateEnv = (originalEnv, imageEnv) => {
+ 	});
+ };
+ const DockerLive = Layer.effect(Docker, Effect.gen(function* () {
++	const ownerScope = yield* Effect.scope;
+ 	const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+ 	const fs = yield* FileSystem.FileSystem;
+ 	const path = yield* Path.Path;
+@@ -273,9 +276,10 @@ const DockerLive = Layer.effect(Docker, Effect.gen(function* () {
+ 		};
+ 	}).filter((container) => container.image === ancestor)));
+ 	const docker = yield* Effect.zipWith(DockerHost.pipe(Effect.catchTag("ConfigError", getSocketPathFromContext), Effect.orElseSucceed(() => DEFAULT_DOCKER_HOST), Effect.flatMap((socketPath) => {
+-		const server = makeDockerProxyServer(socketPath);
+-		server.listen(0);
+-		return getAddress(server);
++		return Effect.acquireRelease(Effect.tryPromise({
++			try: () => acquireDockerProxy(makeDockerProxyServer(socketPath), socketPath),
++			catch: (cause) => new SystemError({ subtag: "DockerProxyListenFailed", message: "Docker proxy listen failed.", cause })
++		}), ({ close }) => Effect.promise(close)).pipe(Scope.provide(ownerScope), Effect.flatMap(({ server }) => getAddress(server)));
+ 	})), inspect(containerEgressInterceptorImage, "{{.Id}}").pipe(Effect.orElseSucceed(() => void 0), Effect.flatMap((imageId) => imageId?.trim() ? Effect.void : pull({ imageUri: containerEgressInterceptorImage }))), (socketPath) => ({ localDocker: {
+ 		socketPath,
+ 		containerEgressInterceptorImage
+diff --git a/dist/core/node/DockerExecUpgrade.d.mts b/dist/core/node/DockerExecUpgrade.d.mts
+new file mode 100644
+index 0000000000000000000000000000000000000000..653ac2590980c80a63a282a7a064e30017e9b191
+--- /dev/null
++++ b/dist/core/node/DockerExecUpgrade.d.mts
+@@ -0,0 +1,5 @@
++import type { Server } from "node:http";
++export declare function acquireDockerProxy(
++  server: Server,
++  socketPath: string,
++): Promise<{ server: Server; close: () => Promise<void> }>;
+diff --git a/dist/core/node/DockerExecUpgrade.mjs b/dist/core/node/DockerExecUpgrade.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..33fb42df47fa68cb2bc91d2a1b20fa932308b5f7
+--- /dev/null
++++ b/dist/core/node/DockerExecUpgrade.mjs
+@@ -0,0 +1,95 @@
++import { Socket } from "node:net";
++/** @param {import("node:http").Server} server @param {string} socketPath */
++function installDockerExecUpgrade(server, socketPath) {
++  /** @type {Set<import("node:stream").Duplex>} */
++  const sockets = new Set();
++  /** @type {Set<Promise<void>>} */
++  const joins = new Set();
++  let accepting = true;
++  /** @param {import("node:stream").Duplex} socket */
++  const own = (socket) => {
++    sockets.add(socket);
++    /** @type {Promise<void>} */
++    const joined = new Promise((resolve) => {
++      socket.once("close", () => {
++        sockets.delete(socket);
++        joins.delete(joined);
++        resolve(undefined);
++      });
++    });
++    joins.add(joined);
++  };
++  /** @param {import("node:http").IncomingMessage} req @param {import("node:stream").Duplex} incoming @param {Buffer} head */
++  const upgrade = (req, incoming, head) => {
++    if (
++      !accepting ||
++      req.method !== "POST" ||
++      !/^\/(?:v[\d.]+\/)?exec\/[^/?]+\/start(?:\?.*)?$/.test(req.url ?? "")
++    ) {
++      incoming.destroy();
++      return;
++    }
++    incoming.pause();
++    incoming.allowHalfOpen = true;
++    own(incoming);
++    const upstream = new Socket({ allowHalfOpen: true });
++    own(upstream);
++    const abort = () => {
++      incoming.destroy();
++      upstream.destroy();
++    };
++    for (const socket of [incoming, upstream]) {
++      socket.on("error", abort);
++      socket.once("close", () => {
++        // A clean close must not truncate bytes queued on the other socket.
++        if (!socket.readableEnded || !socket.writableFinished) abort();
++      });
++    }
++    upstream.pipe(incoming);
++    upstream.once("connect", () => {
++      const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
++      for (let i = 0; i < req.rawHeaders.length; i += 2) {
++        lines.push(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}`);
++      }
++      upstream.write(`${lines.join("\r\n")}\r\n\r\n`, "latin1");
++      if (head.length) upstream.write(head);
++      const relay = () => incoming.pipe(upstream);
++      if (upstream.writableNeedDrain) upstream.once("drain", relay);
++      else relay();
++    });
++    try {
++      upstream.connect({ path: socketPath.replace(/^unix:/, "") });
++    } catch {
++      abort();
++    }
++  };
++  server.on("upgrade", upgrade);
++  return async () => {
++    accepting = false;
++    // Keep the rejecting listener until server.close stops new connections.
++    const pending = [...joins];
++    for (const socket of sockets) socket.destroy();
++    await Promise.all(pending);
++  };
++}
++/** @param {import("node:http").Server} server @param {string} socketPath */
++export async function acquireDockerProxy(server, socketPath) {
++  const stop = installDockerExecUpgrade(server, socketPath);
++  const close = async () => {
++    await stop();
++    await new Promise((resolve) => server.close(() => resolve(undefined)));
++  };
++  try {
++    await new Promise((resolve, reject) => {
++      server.once("error", reject);
++      server.listen(0, () => {
++        server.removeListener("error", reject);
++        resolve(undefined);
++      });
++    });
++    return { server, close };
++  } catch (error) {
++    await close();
++    throw error;
++  }
++}
+diff --git a/src/core/Docker.ts b/src/core/Docker.ts
+index 1d42bc36816f0c9bb1ee24b0f363e0c453f19bdb..1a9bf7a315696f46982043fc2931a93d3b4c8e57 100644
+--- a/src/core/Docker.ts
++++ b/src/core/Docker.ts
+@@ -5,7 +5,8 @@ import * as Fiber from "effect/Fiber";
+ import * as FileSystem from "effect/FileSystem";
+ import * as Layer from "effect/Layer";
+ import * as Path from "effect/Path";
+-import type * as Scope from "effect/Scope";
++import * as Scope from "effect/Scope";
++import { acquireDockerProxy } from "../../dist/core/node/DockerExecUpgrade.mjs";
+ import * as Stream from "effect/Stream";
+ import * as ChildProcess from "effect/process/ChildProcess";
+ import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
+@@ -192,6 +193,7 @@ export const mergeContainerCreateEnv = (
+ export const DockerLive = Layer.effect(
+   Docker,
+   Effect.gen(function* () {
++    const ownerScope = yield* Effect.scope;
+     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+     const fs = yield* FileSystem.FileSystem;
+     const path = yield* Path.Path;
+@@ -485,11 +487,22 @@ export const DockerLive = Layer.effect(
+       DockerHost.pipe(
+         Effect.catchTag("ConfigError", getSocketPathFromContext),
+         Effect.orElseSucceed(() => DEFAULT_DOCKER_HOST),
+-        Effect.flatMap((socketPath) => {
+-          const server = makeDockerProxyServer(socketPath);
+-          server.listen(0);
+-          return getAddress(server);
+-        }),
++        Effect.flatMap((socketPath) =>
++          Effect.acquireRelease(
++            Effect.tryPromise({
++              try: () => acquireDockerProxy(makeDockerProxyServer(socketPath), socketPath),
++              catch: (cause) => new SystemError({
++                subtag: "DockerProxyListenFailed",
++                message: "Docker proxy listen failed.",
++                cause,
++              }),
++            }),
++            ({ close }) => Effect.promise(close),
++          ).pipe(
++            Scope.provide(ownerScope),
++            Effect.flatMap(({ server }) => getAddress(server)),
++          ),
++        ),
+       ),
+       // Skip the eager pull when the interceptor image is already present
+       // locally. `CONTAINER_EGRESS_INTERCEPTOR_IMAGE` can point at a

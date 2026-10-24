@@ -1,24 +1,24 @@
-import { officeImageReference } from "./office-image.ts";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { officeLifecycle, officeObserve as observe } from "./office-lifecycle.ts";
+import { officeNativeMonitor } from "./office-platform.ts";
 import type * as cf from "@cloudflare/workers-types";
 import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { officePrivateStream } from "./office-private-stream.ts";
-import { officeJobStreams } from "./office-job-streams.ts";
-import { officeTerminateJob } from "./office-job-termination.ts";
-export type OfficeJobExit = {
-  readonly status: "exited" | "cancelled" | "timed-out" | "output-limit";
-  readonly exitCode: number | null;
-  readonly cleanup: "confirmed";
-};
-const unavailable = () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
-const observe = <A>(actual: Promise<A>): Promise<A> => {
-  void actual.catch(() => undefined);
-  return actual;
-};
+import type { officePrivateStream } from "./office-private-stream.ts";
+import {
+  officeJobExecution,
+  officeJobStartOptions,
+  officeExecuteJob,
+  officeJobContainer,
+  officeInspectJob,
+} from "./office-job-execution.ts";
+import { officeTerminateJob, officeFinishJob } from "./office-job-termination.ts";
+import type { NativeJobExit } from "../../office/src/native-private-wire.ts";
+export type OfficeJobExit = typeof NativeJobExit.Type;
+const unavailable = (cause?: unknown) =>
+  withCause(new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")), cause);
 /** One fresh private job instance, only AFTER the first original D1 claim ACK. */
 export function officeJobProcess(state: cf.DurableObjectState, imageRef: string, stage: string) {
-  const configured = state.container;
-  if (configured === undefined || !officeImageReference(imageRef, stage)) throw unavailable();
-  const native = configured;
+  const native = officeJobContainer(state, imageRef, stage);
   const boot = crypto.randomUUID(),
     stop = new AbortController();
   let used = false,
@@ -26,12 +26,29 @@ export function officeJobProcess(state: cf.DurableObjectState, imageRef: string,
     timedOut = false,
     cancelled = false,
     completed = false;
-  let terminal: OfficeJobExit | undefined;
+  let binding: { operationId: string; taskId: string } | undefined;
+  let deadlineAt: number | undefined;
+  const context = () => ({
+    component: "office.job-process",
+    operation: "run",
+    stage,
+    service: "office",
+    release: imageRef.slice(-64),
+    bootId: boot,
+    ...binding,
+    jobId: binding?.taskId,
+    deadlineAt,
+  });
+  let primary: unknown, terminal: OfficeJobExit | undefined;
+  const lifecycle = officeLifecycle(context, (cause) => {
+    primary ??= cause;
+  });
+  const { event, step } = lifecycle;
   let starting: Promise<void> | undefined;
   let executing: Promise<cf.ExecProcess> | undefined;
   let terminating: Promise<void> | undefined;
   let closing: Promise<void> | undefined;
-  let monitor: Promise<boolean> | undefined;
+  let monitor: ReturnType<typeof officeNativeMonitor> | undefined;
   let input: Promise<void> | undefined, errors: Promise<void> | undefined;
   let output: ReturnType<typeof officePrivateStream> | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -45,7 +62,6 @@ export function officeJobProcess(state: cf.DurableObjectState, imageRef: string,
   function terminate(): Promise<void> {
     if (terminating !== undefined) return terminating;
     terminating = Promise.resolve().then(async () => {
-      // Normal EOF keeps the output signal live until the real outgoing close join below.
       if (!completed || cancelled || timedOut) stop.abort();
       clearTimeout(timer);
       originalSignal?.removeEventListener("abort", abort);
@@ -54,18 +70,25 @@ export function officeJobProcess(state: cf.DurableObjectState, imageRef: string,
         if (starting === undefined) return undefined;
         throw unavailable();
       }
-      const exitCode = await officeTerminateJob(native, imageRef, boot, {
-        executing,
-        input,
-        errors,
-        monitor,
-        output,
-      });
+      const exitCode = await step("cleanup", () =>
+        officeTerminateJob(native, imageRef, boot, {
+          executing,
+          input,
+          errors,
+          monitor,
+          output,
+        }),
+      );
       terminal = {
         status: timedOut ? "timed-out" : cancelled || !completed ? "cancelled" : "exited",
         exitCode,
         cleanup: "confirmed",
       };
+      event("exit", {
+        outcome: "confirmed",
+        reason: terminal.status,
+        exitCode: exitCode ?? undefined,
+      });
       return undefined;
     });
     return terminating;
@@ -74,10 +97,14 @@ export function officeJobProcess(state: cf.DurableObjectState, imageRef: string,
     if (closing !== undefined) return closing;
     if (!completed) cancelled = true;
     closing = Promise.resolve().then(async () => {
-      const physical = await Promise.allSettled([terminate()]);
-      const stream = await Promise.allSettled([output?.close(cancelled || timedOut || !completed)]);
-      stop.abort(); // Only after the real output-close/EOF join above.
-      if ([...physical, ...stream].some((item) => item.status === "rejected")) throw unavailable();
+      await officeFinishJob(
+        terminate(),
+        output,
+        cancelled || timedOut || !completed,
+        stop,
+        () => primary,
+        context(),
+      );
       return undefined;
     });
     void closing.then(
@@ -90,97 +117,73 @@ export function officeJobProcess(state: cf.DurableObjectState, imageRef: string,
     void close().catch(() => undefined);
   };
   const abort = () => {
+    event("cancel", { reason: "original-request-aborted", outcome: "unknown" });
     cancelled = true;
     revoke();
   };
-  async function run(body: ReadableStream<unknown>, signal: AbortSignal, notAfter: number) {
-    if (
-      used ||
-      closing !== undefined ||
-      signal.aborted ||
-      !Number.isSafeInteger(notAfter) ||
-      notAfter <= Date.now()
-    )
-      throw unavailable();
+  async function run(
+    body: ReadableStream<unknown>,
+    signal: AbortSignal,
+    notAfter: number,
+    association: { operationId: string; taskId: string },
+  ) {
+    if (used || closing !== undefined || signal.aborted)
+      throw withDiagnostic(unavailable(), "job-not-live");
+    if (!Number.isSafeInteger(notAfter) || notAfter <= Date.now())
+      throw withDiagnostic(unavailable(), "job-deadline-expired");
     used = true;
+    binding = association;
     const deadline = Math.min(notAfter, Date.now() + 120_000);
+    deadlineAt = deadline;
     originalSignal = signal;
     signal.addEventListener("abort", abort, { once: true });
     timer = setTimeout(
       () => {
         timedOut = true;
+        primary ??= withDiagnostic(unavailable(), "job-deadline-expired");
+        event("deadline", { reason: "job-deadline-expired", outcome: "unknown" });
         revoke();
       },
       Math.max(0, deadline - Date.now()),
     );
     starting = observe(
-      Promise.resolve().then(() =>
+      step("container-start", () =>
         state.blockConcurrencyWhile(async () => {
-          if (native.running) throw unavailable();
+          if (native.running) throw withDiagnostic(unavailable(), "container-already-running");
           owned = true;
-          native.start({
-            enableInternet: false,
-            entrypoint: [
-              "node",
-              "/opt/office/dependencies/packages/office-server/native-job-anchor.mjs",
-            ],
-            env: {
-              HOME: "/task",
-              TMPDIR: "/tmp",
-              PATH: "/usr/local/bin:/usr/bin:/bin",
-              OFFICE_JOB_DEADLINE: String(deadline),
-            },
-            labels: { "office-job": boot },
-            instance: { vcpu: 1, memoryMib: 3072, diskMb: 2048 },
-          });
-          monitor = native.monitor().then(
-            () => true,
-            () => false,
-          );
+          native.start(officeJobStartOptions(boot, deadline, stage, imageRef));
+          const actual = officeNativeMonitor(native);
+          monitor = { ...actual, wait: observe(step("container-monitor", () => actual.wait)) };
         }),
       ),
     );
     try {
       await starting;
-      const inspected = await native.inspect();
-      if (
-        stop.signal.aborted ||
-        inspected?.image !== imageRef ||
-        inspected.labels["office-job"] !== boot
-      )
-        throw unavailable();
-      // Destroy owns termination; never attach an abort signal that can kill exec AFTER confirmed exit.
+      await officeInspectJob(native, imageRef, boot, stop.signal, lifecycle);
       executing = observe(
-        native.exec(["node", "/opt/office/dependencies/packages/office-server/worker.mjs"], {
-          cwd: "/task",
-          env: {},
-          stdin: "pipe",
-          stdout: "pipe",
-          stderr: "pipe",
-        }),
+        step("worker-exec", () => officeExecuteJob(native, stop.signal, stage, imageRef)),
       );
       const process = await executing;
       if (stop.signal.aborted) throw unavailable();
-      const io = officeJobStreams(process, body, stop.signal, deadline, revoke);
-      input = observe(io.input);
-      errors = observe(io.errors);
-      output = officePrivateStream(
-        io.stdout,
-        32 * 1024 * 1024,
+      const io = officeJobExecution(
+        process,
+        body,
         stop.signal,
         deadline,
-        async () => {
-          await process.exitCode;
-          await Promise.all([input, errors]); // Natural stdin/stderr drain BEFORE stream revocation.
-          completed = true;
-          await terminate(); // Source-only join: MUST NOT await this output's own finish promise.
-          revoke(); // Publish the separate complete body/finish join without self-await.
-        },
         revoke,
+        binding,
+        lifecycle,
+        async () => {
+          completed = true;
+          await terminate(); // Never await this output's own finish promise.
+          revoke();
+        },
       );
+      ({ input, errors, output } = io);
       return output;
     } catch (error) {
-      await close();
+      primary ??= error;
+      await close(); // Final close report already retains the first execution cause.
       throw error;
     }
   }

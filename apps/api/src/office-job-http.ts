@@ -1,4 +1,5 @@
 import { Effect, Schema, Stream } from "effect";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import {
   OfficeForbidden,
@@ -10,7 +11,11 @@ import { readOfficePrivateJson } from "./office-private-json.ts";
 import type { OfficeJobRole } from "./office-job-object.ts";
 
 const denied = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
-const unavailable = () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
+const unavailable = (cause: unknown) =>
+  withCause(
+    withDiagnostic(new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")), "job-http-output"),
+    cause,
+  );
 const endpoint = "http://office-job.internal";
 const Status = Schema.Struct({ cancel: Schema.Boolean });
 
@@ -42,7 +47,7 @@ export const officeJobHttp = (role: OfficeJobRole, request: Request) =>
         Effect.promise(() => body.cancel().catch(() => undefined)),
       );
       return HttpServerResponse.stream(
-        Stream.fromReadableStream({ evaluate: () => output, onError: () => unavailable() }),
+        Stream.fromReadableStream({ evaluate: () => output, onError: unavailable }),
         {
           contentType: "application/octet-stream",
           headers: { "cache-control": "private, no-store" },
@@ -53,11 +58,11 @@ export const officeJobHttp = (role: OfficeJobRole, request: Request) =>
     const payload = yield* Effect.tryPromise({
       try: () =>
         readOfficePrivateJson(request.body, request.signal, Date.now() + 10_000, 16 * 1024),
-      catch: () => denied(),
+      catch: (cause) => withCause(withDiagnostic(denied(), "job-status-body"), cause),
     });
     const input = yield* Effect.try({
       try: () => decodeWireSync(Status)(payload),
-      catch: () => denied(),
+      catch: (cause) => withCause(withDiagnostic(denied(), "job-status-schema"), cause),
     });
     const exit = yield* role.jobStatus(input.cancel);
     return HttpServerResponse.uint8Array(new TextEncoder().encode(JSON.stringify(exit)), {

@@ -6,11 +6,22 @@
   top: 5px;
   left: var(--cx-tabs-left, 0px);
   width: var(--cx-tabs-width, 0px);
+  container-type: inline-size;
   height: 36px;
   display: flex;
   align-items: center;
   gap: 4px;
   min-width: 0;
+  padding-left: 16px;
+}
+[data-dashboard] [data-cx="workspace-preview-tabs"]::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  width: 1px;
+  height: 20px;
+  background: var(--cx-line);
 }
 [data-dashboard] [data-cx="workspace-preview-tabs"][hidden] {
   display: none;
@@ -20,7 +31,7 @@
   align-items: center;
   gap: 5px;
   min-width: 0;
-  max-width: calc(100% - 34px);
+  max-width: calc(100% - 38px);
   height: 36px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -33,13 +44,17 @@
   height: 34px;
   min-width: 116px;
   max-width: 150px;
+  border: 1px solid var(--cx-line);
   border-radius: 10px;
   background: transparent;
 }
 [data-dashboard] [data-cx="workspace-tab-shell"][data-active="true"] {
-  min-width: 190px;
-  max-width: 190px;
+  min-width: min(var(--cx-active-tab-width, 190px), calc(100cqw - 38px));
+  max-width: min(var(--cx-active-tab-width, 190px), calc(100cqw - 38px));
   background: var(--cx-canvas);
+}
+[data-dashboard] [data-cx="workspace-tab-shell"][data-kind="image"] {
+  --cx-active-tab-width: 160px;
 }
 [data-dashboard] [data-cx="workspace-tab-shell"][data-kind="image"][data-active="false"] {
   min-width: 44px;
@@ -80,9 +95,7 @@
 }
 [data-dashboard]
   [data-kind="image"][data-active="false"]
-  > [role="tab"]
-  > [data-cx="workspace-tab-label"],
-[data-dashboard] [data-kind="image"][data-active="false"] > [data-cx="workspace-tab-close"] {
+  :is([data-cx="workspace-tab-label"], [data-cx="workspace-tab-close"]) {
   display: none;
 }
 [data-dashboard] :is([data-cx="workspace-tab-close"], [data-cx="workspace-tab-add"]) {
@@ -101,8 +114,10 @@
   margin-right: 3px;
 }
 [data-dashboard] [data-cx="workspace-tab-add"] {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--cx-line);
+  border-radius: 10px;
 }
 [data-dashboard] [data-cx="workspace-tab-add"] svg {
   width: 17px;
@@ -174,8 +189,8 @@
     max-width: 125px;
   }
   [data-dashboard] [data-cx="workspace-tab-shell"][data-active="true"] {
-    min-width: 120px;
-    max-width: 135px;
+    min-width: min(120px, calc(100cqw - 38px));
+    max-width: min(135px, calc(100cqw - 38px));
   }
   [data-dashboard] [data-cx="workspace-tab-shell"][data-kind="image"][data-active="false"] {
     min-width: 34px;

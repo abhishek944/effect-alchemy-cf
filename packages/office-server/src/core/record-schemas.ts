@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import {
   Approve,
   ArtifactRef,
@@ -19,7 +19,7 @@ import {
   Revision,
   RenderRequest,
 } from "@starter/office-contract";
-import { OriginalActorClaims, OwnerClaims } from "../ports/index.ts";
+import { MergeWitness, OriginalActorClaims, OwnerClaims } from "../ports/index.ts";
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const StoredDocument = Schema.Struct({
   owner: OwnerClaims,
@@ -84,6 +84,8 @@ export const StoredOperation = Schema.Struct({
     code: Schema.NullOr(StoredArtifact),
     proposal: Schema.NullOr(StoredArtifact),
   }),
+  // Records persisted before the witness moved into the operation decode as "no witness yet".
+  merge: Schema.NullOr(MergeWitness).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
   jobId: Schema.NullOr(Id),
   policyVersion: NativeId,
   createdAt: Count,

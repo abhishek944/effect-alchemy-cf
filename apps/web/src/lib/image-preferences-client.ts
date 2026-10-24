@@ -1,4 +1,4 @@
-import { ChatApiError, request } from "@/lib/chat-api";
+import { ChatApiError, requestJson, type JsonResponse } from "@/lib/chat-api";
 import { isRecord, isSafeIndex } from "@/lib/chat-validate-base";
 import {
   IMAGE_MODEL_OPTIONS,
@@ -39,38 +39,45 @@ export function parseImagePreferencesView(input: unknown): ImagePreferencesView 
   };
 }
 
-const unexpected = () =>
+const unexpected = (response: JsonResponse, operation: string) =>
   new ChatApiError(
     502,
     "The server returned unreadable image preferences. No defaults were assumed.",
+    null,
+    response.requestId,
+    operation,
+    response.status,
   );
 
-async function readResponse(init: RequestInit): Promise<ImagePreferencesView> {
-  let body: unknown;
-  try {
-    body = await request(IMAGE_PREFERENCES_PATH, { ...init, cache: "no-store" });
-  } catch (error) {
-    if (error instanceof SyntaxError) throw unexpected();
-    throw error;
-  }
-  const view = parseImagePreferencesView(body);
-  if (view === null) throw unexpected();
-  return view;
+async function readResponse(
+  init: RequestInit,
+  operation: string,
+): Promise<{ view: ImagePreferencesView; response: JsonResponse }> {
+  const response = await requestJson(IMAGE_PREFERENCES_PATH, operation, {
+    ...init,
+    cache: "no-store",
+  });
+  const view = parseImagePreferencesView(response.body);
+  if (view === null) throw unexpected(response, operation);
+  return { view, response };
 }
 
 export const fetchImagePreferences = (signal?: AbortSignal): Promise<ImagePreferencesView> =>
-  readResponse({ signal: signal ?? null });
+  readResponse({ signal: signal ?? null }, "images.preferences").then(({ view }) => view);
 
 export async function saveImagePreferences(
   input: ImagePreferencesWrite,
   signal?: AbortSignal,
 ): Promise<ImagePreferencesView> {
-  const view = await readResponse({
-    method: "PATCH",
-    headers: { accept: "application/json", "content-type": "application/json" },
-    body: JSON.stringify(input),
-    signal: signal ?? null,
-  });
+  const { view, response } = await readResponse(
+    {
+      method: "PATCH",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify(input),
+      signal: signal ?? null,
+    },
+    "images.preferences-write",
+  );
   const saved = view.preferences;
   if (
     view.source !== "explicit" ||
@@ -79,6 +86,6 @@ export async function saveImagePreferences(
     saved.size !== input.size ||
     saved.quality !== input.quality
   )
-    throw unexpected();
+    throw unexpected(response, "images.preferences-write");
   return view;
 }

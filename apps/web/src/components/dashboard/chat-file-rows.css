@@ -1,18 +1,6 @@
 [data-dashboard] [data-cx="composer-files"] {
   margin: 0 0 10px;
 }
-[data-dashboard] [data-cx="files-head"] {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 6px 6px;
-  color: var(--cx-muted);
-  font-size: 11px;
-}
-[data-dashboard] [data-cx="files-local"] {
-  color: var(--cx-muted);
-}
 [data-dashboard] [data-cx="file-list"] {
   display: flex;
   flex-direction: column;
@@ -28,29 +16,17 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px;
-  border: 1px solid var(--cx-hover);
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--cx-resizer) 65%, var(--cx-composer));
   border-radius: 12px;
   background: var(--cx-card);
 }
-[data-dashboard] [data-cx="file-preview-button"] {
+[data-dashboard] [data-cx="file-static-icon"] {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   flex-shrink: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 10px;
-  background: var(--cx-selected);
-  overflow: hidden;
-}
-[data-dashboard] [data-cx="file-thumb"] {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-[data-dashboard] [data-cx="file-kind"] {
   color: var(--cx-muted);
 }
 [data-dashboard] [data-cx="file-body"] {
@@ -67,20 +43,14 @@
   font-size: 12px;
 }
 [data-dashboard] [data-cx="file-meta"],
-[data-dashboard] [data-cx="file-excerpt"] {
+[data-dashboard] [data-cx="file-error"] {
   color: var(--cx-muted);
   font-size: 11px;
   line-height: 1.4;
 }
-[data-dashboard] [data-cx="file-excerpt"] {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-[data-dashboard] [data-cx="file-row"][data-state="failed"] [data-cx="file-meta"],
-[data-dashboard] [data-cx="file-row"][data-state="unsupported"] [data-cx="file-meta"] {
+[data-dashboard] [data-cx="file-error"] {
   color: var(--cx-negative);
+  overflow-wrap: anywhere;
 }
 [data-dashboard] [data-cx="file-actions"] {
   display: flex;
@@ -96,6 +66,10 @@
   background: transparent;
   color: var(--cx-muted);
   font-size: 11px;
+}
+[data-dashboard] [data-cx="file-row"] [data-cx="file-action"] {
+  min-height: 32px;
+  color: var(--cx-text);
 }
 [data-dashboard] [data-cx="file-action"]:hover {
   background: var(--cx-hover);

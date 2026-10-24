@@ -10,7 +10,9 @@ export type IntegrationErrorKind =
   | "InvalidResponse"
   | "Rejected";
 
-/** Safe metadata only: never retain raw causes, bodies, headers or recipient data. */
+/** Safe metadata only: callers see these fields, never raw causes, bodies, headers or recipients.
+ * Adapters may attach the original failure as a non-enumerable in-memory cause; nothing
+ * serializes or returns it. */
 export class IntegrationError extends Data.TaggedError("IntegrationError")<{
   readonly provider: IntegrationProvider;
   readonly kind: IntegrationErrorKind;

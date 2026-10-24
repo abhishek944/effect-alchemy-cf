@@ -1,4 +1,5 @@
 import type { BillingView, CheckoutRedirect } from "@/lib/billing-types";
+import { readResponseRequestId, serverReference, withReference } from "@/lib/browser-diagnostics";
 import {
   httpsUrl,
   parseBillingView,
@@ -21,11 +22,19 @@ const STATUS_MESSAGES: Record<number, string> = {
 
 export class BillingApiError extends Error {
   readonly status: number;
+  readonly requestId: string | null;
 
-  constructor(status: number, message: string) {
-    super(message);
+  constructor(
+    status: number,
+    message: string,
+    requestId: string | null = null,
+    operation = "billing.request",
+    responseStatus = status,
+  ) {
+    super(withReference(message, serverReference(operation, responseStatus, requestId)));
     this.name = "BillingApiError";
     this.status = status;
+    this.requestId = requestId;
   }
 }
 
@@ -43,7 +52,11 @@ function statusMessage(status: number): string {
   return STATUS_MESSAGES[status] ?? `Billing request failed (${status}).`;
 }
 
-async function request(path: string, init?: RequestInit): Promise<unknown> {
+async function request(
+  path: string,
+  operation: string,
+  init?: RequestInit,
+): Promise<{ body: unknown; requestId: string | null; status: number }> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -52,18 +65,25 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
       headers: { accept: "application/json" },
       ...init,
     });
-  } catch {
-    throw new BillingApiError(0, NETWORK);
+  } catch (cause) {
+    if (init?.signal?.aborted) throw cause;
+    throw new BillingApiError(0, NETWORK, null, operation);
   }
+  const requestId = readResponseRequestId(response);
   if (!response.ok) {
-    throw new BillingApiError(response.status, statusMessage(response.status));
+    throw new BillingApiError(
+      response.status,
+      statusMessage(response.status),
+      requestId,
+      operation,
+    );
   }
-  if (response.status === 204) return null;
+  if (response.status === 204) return { body: null, requestId, status: response.status };
   try {
-    const body: unknown = await response.json();
-    return body;
-  } catch {
-    throw new BillingApiError(502, UNEXPECTED);
+    return { body: await response.json(), requestId, status: response.status };
+  } catch (cause) {
+    if (init?.signal?.aborted) throw cause;
+    throw new BillingApiError(502, UNEXPECTED, requestId, operation, response.status);
   }
 }
 
@@ -79,26 +99,41 @@ export function newBillingRequestId(): string {
 }
 
 export async function fetchBilling(signal?: AbortSignal): Promise<BillingView> {
-  const view = parseBillingView(await request("/api/billing", signal ? { signal } : undefined));
-  if (!view) throw new BillingApiError(502, UNEXPECTED);
+  const { body, requestId, status } = await request(
+    "/api/billing",
+    "billing.view",
+    signal ? { signal } : undefined,
+  );
+  const view = parseBillingView(body);
+  if (!view) throw new BillingApiError(502, UNEXPECTED, requestId, "billing.view", status);
   return view;
 }
 
 export async function startCheckout(slug: string, requestId: string): Promise<CheckoutRedirect> {
-  const checkout = parseCheckout(await request("/api/billing/checkout", post({ slug, requestId })));
-  if (!checkout) throw new BillingApiError(502, UNEXPECTED);
+  const seen = await request(
+    "/api/billing/checkout",
+    "billing.checkout",
+    post({ slug, requestId }),
+  );
+  const checkout = parseCheckout(seen.body);
+  if (!checkout)
+    throw new BillingApiError(502, UNEXPECTED, seen.requestId, "billing.checkout", seen.status);
   return checkout;
 }
 
 export async function openPortal(scope: string): Promise<string> {
-  const portal = parsePortal(await request("/api/billing/portal", post({ scope })));
-  if (!portal) throw new BillingApiError(502, UNEXPECTED);
+  const seen = await request("/api/billing/portal", "billing.portal", post({ scope }));
+  const portal = parsePortal(seen.body);
+  if (!portal)
+    throw new BillingApiError(502, UNEXPECTED, seen.requestId, "billing.portal", seen.status);
   return portal.url;
 }
 
 export async function refreshResource(key: string): Promise<void> {
-  const ok = parseRefresh(await request("/api/billing/refresh", post({ key })));
-  if (!ok) throw new BillingApiError(502, UNEXPECTED);
+  const seen = await request("/api/billing/refresh", "billing.refresh", post({ key }));
+  const ok = parseRefresh(seen.body);
+  if (!ok)
+    throw new BillingApiError(502, UNEXPECTED, seen.requestId, "billing.refresh", seen.status);
 }
 
 /** Redirects only to an absolute HTTPS URL; anything else becomes a safe error. */

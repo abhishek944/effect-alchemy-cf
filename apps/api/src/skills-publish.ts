@@ -1,16 +1,10 @@
 /**
- * Atomic publication of one reserved skill upload.
- *
- * Publication is fenced across every await: the manifest snapshot is rebuilt
- * after the digest and R2 verification, and committed only when the head, the
- * same-name file and the reservation are unchanged. A changed head is retried
- * with a fresh snapshot; a genuinely changed same-name file is reported as a
- * conflict. Concurrent delivery of the same upload returns the already
- * published receipt instead of a spurious failure, and a claimed/expired
- * reservation is refused. No metadata is promoted before the stored bytes
- * match their declared size and digest.
+ * Fenced publication of one reserved upload after complete size/digest verification.
+ * Rebuild snapshots after awaits; commit only if head, name and reservation match.
+ * Concurrent delivery returns the original receipt; claimed/expired input is refused.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure } from "@starter/diagnostics";
 import { skillFilenameKey, skillManifestDigest } from "./skills-manifest.ts";
 import {
   MAX_SKILLS,
@@ -52,6 +46,22 @@ export const publishSkill = async (
   input: PublishSkillInput,
 ): Promise<SkillsResult<SkillUploadReceipt>> => {
   const { storage, scope, uploadId, bucket } = input;
+  const recovered = (cause: unknown) =>
+    reportFailure(cause, {
+      component: "skills",
+      operation: "publish.reconcile",
+      operationId: uploadId,
+      event: "application.recovery",
+    });
+  const afterFailure = (cause: unknown) => {
+    try {
+      return skillUploadRow(storage, uploadId);
+    } catch (secondary) {
+      throw new AggregateError([cause], "Skill publication reconciliation failed", {
+        cause: secondary,
+      });
+    }
+  };
   const upload = skillUploadRow(storage, uploadId);
   if (upload === null)
     return skillsFail(
@@ -86,19 +96,25 @@ export const publishSkill = async (
   };
   try {
     await readSkillBytes(bucket, scope, ref);
-  } catch {
+  } catch (cause) {
     // The read can fail after another delivery of this exact version already
     // published it. Reconcile the authoritative row before reporting
     // uncertainty; never re-publish and never return another version's receipt.
-    const reconciled = skillUploadRow(storage, uploadId);
+    const reconciled = afterFailure(cause);
     if (reconciled !== null && reconciled.version === upload.version) {
       if (reconciled.state === "published") {
         const receipt = receiptOf(reconciled);
-        if (receipt !== null) return skillsOk(receipt);
+        if (receipt !== null) {
+          recovered(cause);
+          return skillsOk(receipt);
+        }
       }
-      if (reconciled.state === "expired") return expired();
+      if (reconciled.state === "expired") {
+        recovered(cause);
+        return expired();
+      }
     }
-    return unavailable("The saved skill bytes could not be verified. Retry the upload.");
+    throw cause;
   }
   /** Returns the settled outcome for a concurrent publisher, or null to proceed. */
   const settled = (row: SkillUploadRow): SkillsResult<SkillUploadReceipt> | null => {
@@ -151,14 +167,20 @@ export const publishSkill = async (
         manifest,
         now: input.now,
       });
-    } catch {
-      const after = skillUploadRow(storage, uploadId);
+    } catch (cause) {
+      const after = afterFailure(cause);
       if (after !== null && after.version === upload.version && after.state === "published") {
         const receipt = receiptOf(after);
-        if (receipt !== null) return skillsOk(receipt);
+        if (receipt !== null) {
+          recovered(cause);
+          return skillsOk(receipt);
+        }
       }
-      if (after !== null && after.state === "expired") return expired();
-      return unavailable("The skill could not be published. Retry the upload.");
+      if (after !== null && after.state === "expired") {
+        recovered(cause);
+        return expired();
+      }
+      throw cause;
     }
     const receipt = receiptOf(skillUploadRow(storage, uploadId) ?? upload);
     return receipt === null

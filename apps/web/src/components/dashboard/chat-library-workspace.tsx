@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
 import { ChatLibraryPanel } from "./chat-library-panel";
 import { ChatLibraryPreview } from "./chat-library-preview";
@@ -10,6 +11,7 @@ import { WorkspaceToolsLauncher, workspacePanelId, workspaceTabId } from "./work
 import "./chat-library-workspace.css";
 import { OfficeFiles } from "./office-files";
 import { OfficeSurface } from "./office-surface";
+import { OfficeOriginal } from "./office-original";
 import { useWorkspaceOffice } from "./workspace-office-context";
 
 type ViewProps = { chatId: string | null; active: boolean; archived: boolean };
@@ -17,22 +19,20 @@ type ViewProps = { chatId: string | null; active: boolean; archived: boolean };
 function FilesView({ chatId, active, archived, title }: ViewProps & { title: string }) {
   const { snapshot } = useChatStore();
   const running = snapshot?.chat.id === chatId && snapshot.isRunning;
-  const library = useChatLibrary(chatId, { active, refreshKey: running ? "running" : "settled" });
+  const [refresh, setRefresh] = useState(0);
+  const refreshKey = `${running ? "running" : "settled"}:${refresh}`;
+  const library = useChatLibrary(chatId, { active, refreshKey });
   const read = useChatLibraryOpen({ active });
-  if (!chatId)
-    return (
-      <output data-cx="chat-library-workspace-empty">
-        Select a chat to browse its saved files.
-      </output>
-    );
+  if (!chatId) return null;
   return (
     <>
-      <OfficeFiles active={active} refreshKey={running ? "running" : "settled"} />
+      <OfficeFiles active={active} refreshKey={refreshKey} />
       <ChatLibraryPanel
         library={library}
         chatTitle={title}
         archived={archived}
         active={active}
+        onRefresh={() => setRefresh((value) => value + 1)}
         onOpenImage={(id) => void read.open(id)}
       />
       <ChatLibraryOpenStatus read={read} />
@@ -46,7 +46,7 @@ function ImageView({
   archived,
   tab,
 }: ViewProps & {
-  tab: Extract<WorkspacePreviewTab, { kind: "image" }>;
+  tab: Extract<WorkspacePreviewTab, { kind: "image" | "text" }>;
 }) {
   const metadata = useChatLibraryFile(chatId, tab.file.id, active);
   const read = useChatLibraryOpen({ active });
@@ -113,6 +113,8 @@ export function ChatLibraryWorkspace({ active }: { active: boolean }) {
           >
             {tab.kind === "office" && chatId !== null ? (
               <OfficeSurface chatId={chatId} id={tab.id} selection={tab.selection} />
+            ) : tab.kind === "office-file" && chatId !== null ? (
+              <OfficeOriginal file={tab.file} id={tab.id} archived={chat?.archived ?? false} />
             ) : tab.kind === "files" ? (
               <FilesView
                 chatId={chatId}
@@ -120,7 +122,7 @@ export function ChatLibraryWorkspace({ active }: { active: boolean }) {
                 archived={chat?.archived ?? false}
                 title={chat?.title ?? "This chat"}
               />
-            ) : tab.kind === "image" ? (
+            ) : tab.kind === "image" || tab.kind === "text" ? (
               <ImageView
                 chatId={chatId}
                 active={visible}

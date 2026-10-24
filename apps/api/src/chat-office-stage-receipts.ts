@@ -1,11 +1,11 @@
 import { Schema } from "effect";
 import { defineDocFamily, GenerationTask, LiveDoc, ToolTask } from "@earendil-works/pi-durable";
-import { Count, Digest, decodeWireSync } from "@starter/office-contract";
+import { Count, Digest, decodeWireSync, officeImportOptions } from "@starter/office-contract";
 import type { ArtifactRef } from "@starter/office-contract";
 import type { OfficeResolution } from "@starter/office-pi";
 import type { OfficeTaskAssociation } from "./chat-office-task-association.ts";
 import { OfficeStageReceipt, OfficeStageReceipts } from "./office-task-proof.ts";
-import { freezeImageRequestValue, sameImageRequestValue } from "./chat-image-request-values.ts";
+import { freezeAcceptedInputValue, sameAcceptedInputValue } from "./chat-accepted-input-values.ts";
 import { officeDenied } from "./office-private-authority.ts";
 
 const Name = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
@@ -62,8 +62,8 @@ export async function readOfficeStageReceipts(
   );
   if (stored === undefined) return Object.freeze([]);
   const ledger = decodeWireSync(Ledger)(stored);
-  if (!sameImageRequestValue(ledger.binding, bindingOf(association))) throw officeDenied();
-  return freezeImageRequestValue(ledger.receipts, true);
+  if (!sameAcceptedInputValue(ledger.binding, bindingOf(association))) throw officeDenied();
+  return freezeAcceptedInputValue(ledger.receipts, true);
 }
 
 /** Caller owns the actual verified provider ACK, exact lease object and fresh native association. */
@@ -97,7 +97,8 @@ export async function recordOfficeStageReceipt(
   } else if (command.command === "stage-file") {
     const file = association.originals.find((item) => item.fileId === command.input.fileRef);
     if (
-      file?.kind !== "office" ||
+      !file ||
+      !officeImportOptions(file.mediaType, file.name) ||
       value.kind !== "upload" ||
       value.digest !== file.digest ||
       value.bytes !== file.byteSize ||
@@ -137,10 +138,14 @@ export async function recordOfficeStageReceipt(
       expected,
     );
     const checked = decodeWireSync(Ledger)(ledger);
-    if (!sameImageRequestValue(checked.binding, expected)) throw officeDenied();
+    if (!sameAcceptedInputValue(checked.binding, expected)) throw officeDenied();
     const old = checked.receipts.find((item) => item.artifact.id === value.id);
     if (old !== undefined) {
-      if (!sameImageRequestValue(old, artifact)) throw officeDenied();
+      if (
+        !sameAcceptedInputValue(old.artifact, artifact.artifact) ||
+        old.fileRef !== artifact.fileRef
+      )
+        throw officeDenied();
       return;
     }
     if (checked.receipts.length >= 32) throw officeDenied();

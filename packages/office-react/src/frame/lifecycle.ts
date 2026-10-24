@@ -9,6 +9,39 @@ import type { FrameInit, FrameStatus } from "./messages.ts";
 import type { NativeApplication } from "./native.ts";
 import { finishNativeInput } from "./editing.ts";
 
+export type NativePhase = "input" | "flush";
+const NATIVE_REASONS = [
+  "disposed",
+  "composing",
+  "unacknowledged",
+  "revision-unavailable",
+  "native",
+];
+/** Tag a lifecycle failure with a fixed phase/reason; the cause chain stays in memory. */
+export function nativeFailure(
+  phase: NativePhase,
+  reason: string,
+  message: string,
+  cause?: unknown,
+) {
+  return Object.assign(new Error(message, cause === undefined ? undefined : { cause }), {
+    phase,
+    reason,
+  });
+}
+/** Read back a failure tagged by this module; foreign errors stay unclassified. */
+export function readNativeReason(error: unknown): { phase: NativePhase; reason: string } | null {
+  if (typeof error !== "object" || error === null) return null;
+  const { phase, reason } = error as { phase?: unknown; reason?: unknown };
+  if (
+    (phase === "input" || phase === "flush") &&
+    typeof reason === "string" &&
+    (NATIVE_REASONS as readonly string[]).includes(reason)
+  )
+    return { phase, reason };
+  return null;
+}
+
 export function nativeLifecycle(
   native: NativeApplication,
   input: FrameInit,
@@ -84,18 +117,23 @@ export function nativeLifecycle(
     );
   });
   const flush = async () => {
-    if (disposed) throw new Error("Office editor disposed.");
+    if (disposed) throw nativeFailure("flush", "disposed", "Office editor disposed.");
     if (collaboration === null) return view.revision;
-    await collaboration.flush(unitId, { timeout: 30_000 });
+    try {
+      await collaboration.flush(unitId, { timeout: 30_000 });
+    } catch (cause) {
+      throw nativeFailure("flush", "native", "Native saves remain unconfirmed.", cause);
+    }
     if (disposed || collaboration.getCollaborationStatus(unitId) !== CollaborationStatus.SYNCED)
-      throw new Error("Office saves are not acknowledged.");
+      throw nativeFailure("flush", "unacknowledged", "Office saves are not acknowledged.");
     const confirmed = revision();
     if (!Number.isSafeInteger(confirmed) || confirmed < 1)
-      throw new Error("Office revision unavailable.");
+      throw nativeFailure("flush", "revision-unavailable", "Office revision unavailable.");
     return confirmed;
   };
   const perform = async () => {
-    if (composing) throw new Error("Finish composing text before leaving.");
+    if (composing)
+      throw nativeFailure("input", "composing", "Finish composing text before leaving.");
     inputHeld = true;
     native.activity.unseal();
     emit("holding");
@@ -110,11 +148,12 @@ export function nativeLifecycle(
     } catch (error) {
       if (native.activity.idle()) native.activity.seal(false);
       emit("error");
-      throw error;
+      if (readNativeReason(error) !== null) throw error;
+      throw nativeFailure("input", "native", "Native input could not be finished.", error);
     }
   };
   const hold = async () => {
-    if (disposed) throw new Error("Office editor disposed.");
+    if (disposed) throw nativeFailure("input", "disposed", "Office editor disposed.");
     if (readOnly) return flush();
     if (pending !== null) return pending;
     pending = perform();

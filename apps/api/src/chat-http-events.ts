@@ -1,9 +1,11 @@
 import { Auth } from "@starter/auth";
+import { reportFailureEffect, withDiagnostic } from "@starter/diagnostics";
 import { RuntimeContext } from "alchemy";
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall, doStream } from "./chat-bindings.ts";
+import { privateUnavailable } from "./chat-diagnostics.ts";
 import { chatHeader, decodeOrFail, fail } from "./chat-internal.ts";
 import { Chat, ChatUnavailable } from "./chat-model.ts";
 
@@ -21,8 +23,17 @@ export const handleChatEvents = Effect.gen(function* () {
   if (session === null) return fail(401, "Unauthorized");
   if (id === undefined) return fail(404, "Not found");
   const lookup = yield* doCall(ns.catalog(session.user.id), "GET", `/get?id=${id}`);
-  if (lookup.status !== 200) return fail(lookup.status === 404 ? 404 : 503, "Not found");
-  const chat = yield* decodeOrFail(Chat, lookup.body);
+  if (lookup.status === 404) return fail(404, "Not found");
+  if (lookup.status !== 200)
+    return yield* reportFailureEffect(privateUnavailable("lookup", lookup.status), {
+      component: "chat",
+      operation: "events.lookup",
+      reason: "lookup",
+      status: lookup.status,
+    }).pipe(Effect.as(fail(503, "Not found")));
+  const chat = yield* decodeOrFail(Chat, lookup.body).pipe(
+    Effect.mapError((error) => withDiagnostic(error, "lookup-decode")),
+  );
   return yield* doStream(
     ns.conversation(session.user.id, chat.id),
     "/events",
@@ -30,6 +41,11 @@ export const handleChatEvents = Effect.gen(function* () {
   ).pipe(Effect.map((response) => HttpServerResponse.fromWeb(response)));
 }).pipe(
   Effect.provide(RuntimeContext.phantom),
+  Effect.tapCause((cause) =>
+    Cause.hasInterruptsOnly(cause)
+      ? Effect.void
+      : reportFailureEffect(cause, { component: "chat", operation: "events" }),
+  ),
   Effect.catchDefect(() => Effect.succeed(fail(503, "Chat unavailable"))),
   Effect.catch(() => Effect.succeed(fail(503, "Chat unavailable"))),
 );

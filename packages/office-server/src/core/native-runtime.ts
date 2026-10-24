@@ -19,8 +19,14 @@ export class OfficeNativeRuntime {
     this.deps = deps;
   }
   private async dispose(slot: Slot): Promise<void> {
-    await slot.drafts.dispose();
-    await slot.core.dispose();
+    const settled = await Promise.allSettled([
+      Promise.resolve().then(() => slot.drafts.dispose()),
+      Promise.resolve().then(() => slot.core.dispose()),
+    ]);
+    const errors = settled
+      .filter((result) => result.status === "rejected")
+      .map((result): unknown => result.reason);
+    if (errors.length) throw new AggregateError(errors, "Native services disposal failed");
   }
   private async slot(target: NativeTarget, epoch: string, now: number): Promise<Slot> {
     if (this.closed) throw officeFailure("UNAVAILABLE");
@@ -143,7 +149,11 @@ export class OfficeNativeRuntime {
     this.closed = true;
     const slots = [...this.slots.values()];
     this.slots.clear();
-    for (const slot of slots) await this.dispose(slot);
+    const settled = await Promise.allSettled(slots.map((slot) => this.dispose(slot)));
+    const errors = settled
+      .filter((result) => result.status === "rejected")
+      .map((result): unknown => result.reason);
+    if (errors.length) throw new AggregateError(errors, "Native runtime disposal failed");
   }
 }
 export const makeNativeRuntime = Effect.fn("Office.makeNativeRuntime")(function* (

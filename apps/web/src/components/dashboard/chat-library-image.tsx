@@ -4,16 +4,19 @@ import type { SavedFile } from "@/lib/chat-library-types";
 import type { PreviewFile, PreviewLease } from "./chat-file-preview-types";
 import { usePinnedImage, type PinnedImageState } from "./chat-pinned-image";
 import { usePreviewReservation } from "./use-preview-reservation";
+import { AttachmentFallback } from "./attachment-fallback";
 
 export type LibraryImageState = PinnedImageState | "withheld";
 
 function Pinned({
   file,
   lease,
+  thumbnail,
   onState,
 }: {
   file: PreviewFile;
   lease: PreviewLease;
+  thumbnail: boolean;
   onState?: ((state: LibraryImageState) => void) | undefined;
 }) {
   const { imgRef, state } = usePinnedImage(file.url, lease);
@@ -23,7 +26,13 @@ function Pinned({
       <img ref={imgRef} alt={file.name} data-state={state} />
       {state !== "ready" && (
         <output data-cx="chat-library-image-status">
-          {state === "loading" ? "Loading image…" : "Image unavailable"}
+          {thumbnail ? (
+            <AttachmentFallback />
+          ) : state === "loading" ? (
+            "Loading image…"
+          ) : (
+            "Image unavailable"
+          )}
         </output>
       )}
     </>
@@ -87,10 +96,10 @@ function ImageAttempt({ file, thumbnail = false, active = true, onState }: ChatL
   return (
     <span ref={container} data-cx="chat-library-image" data-thumbnail={thumbnail}>
       {active && visible && reservation.lease && reservation.allowed && preview.url ? (
-        <Pinned file={preview} lease={reservation.lease} onState={onState} />
+        <Pinned file={preview} lease={reservation.lease} thumbnail={thumbnail} onState={onState} />
       ) : (
         <span data-cx="chat-library-image-status" title={reservation.withheldReason ?? undefined}>
-          {thumbnail ? "Image" : (reservation.withheldReason ?? "Loading image…")}
+          {thumbnail ? <AttachmentFallback /> : (reservation.withheldReason ?? "Loading image…")}
         </span>
       )}
     </span>

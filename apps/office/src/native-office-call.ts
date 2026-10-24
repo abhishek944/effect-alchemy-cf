@@ -1,4 +1,5 @@
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
+import { reportFailure } from "@starter/diagnostics";
 import {
   OfficeForbidden,
   decodeWireSync,
@@ -10,19 +11,45 @@ import type { Actor, OfficeService } from "@starter/office-server/ports";
 import type { OfficeRemoteMethod } from "./native-channel.ts";
 import { officeChannelError } from "./native-channel-errors.ts";
 
-function answer<Q, A>(definition: OfficeRemoteMethod<Q, A>, task: Effect.Effect<A, OfficeError>) {
-  return Effect.match(task, {
-    onSuccess: (value): unknown =>
-      decodeWireSync(definition.response)({ method: definition.method, value }),
-    onFailure: (error): unknown =>
-      decodeWireSync(definition.response)({
-        method: definition.method,
-        error: safeFailure(officeChannelError(error).code, error.operationId),
+function answerCall<Q, A>(
+  definition: OfficeRemoteMethod<Q, A>,
+  task: Effect.Effect<A, OfficeError>,
+  callId?: string,
+): Effect.Effect<unknown, OfficeError> {
+  return Effect.gen(function* () {
+    const exit = yield* Effect.exit(task);
+    if (Exit.isSuccess(exit))
+      return decodeWireSync(definition.response)({ method: definition.method, value: exit.value });
+    const reason = exit.cause.reasons[0];
+    // Mixed causes/defects belong to the HTTP failure owner, never a single typed facade.
+    if (exit.cause.reasons.length !== 1 || reason === undefined || !Cause.isFailReason(reason))
+      return yield* Effect.failCause(exit.cause);
+    const error = reason.error;
+    yield* Effect.sync(() =>
+      reportFailure(exit.cause, {
+        component: "office.node",
+        operation: "control-call",
+        callId,
+        operationId: error.operationId ?? undefined,
       }),
+    );
+    return decodeWireSync(definition.response)({
+      method: definition.method,
+      error: safeFailure(officeChannelError(error).code, error.operationId),
+    });
   });
 }
 /** Explicit application methods, NOT property/method RPC; actor is NEVER decoded from the message. */
-export function invokeOfficeCall(service: OfficeService, actor: Actor, call: HostOfficeRequest) {
+export function invokeOfficeCall(
+  service: OfficeService,
+  actor: Actor,
+  call: HostOfficeRequest,
+  callId?: string,
+) {
+  const answer = <Q, A>(
+    definition: OfficeRemoteMethod<Q, A>,
+    task: Effect.Effect<A, OfficeError>,
+  ) => answerCall(definition, task, callId);
   const forbidden = Effect.fail(new OfficeForbidden(safeFailure("FORBIDDEN")));
   switch (call.method) {
     case "office.list":

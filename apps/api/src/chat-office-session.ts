@@ -1,3 +1,5 @@
+import { withCause } from "@starter/diagnostics";
+import { AuthenticationUnavailable } from "./model.ts";
 import { Auth } from "@starter/auth";
 import { OfficeSessionEpochs, resolveOfficeSession } from "@starter/auth/office-session";
 import type { OfficeSessionBinding } from "@starter/auth/office-session";
@@ -43,8 +45,8 @@ export const makeChatOfficeSessionCapture = Effect.gen(function* () {
               expiresAt: original.expiresAt,
             }),
       ),
-      Effect.catch(() => Effect.succeed(null)),
-      Effect.catchDefect(() => Effect.succeed(null)),
+      Effect.catchTag("OfficeSessionDenied", () => Effect.succeed(null)),
+      Effect.mapError((cause) => withCause(new AuthenticationUnavailable(), cause)),
     );
 });
 

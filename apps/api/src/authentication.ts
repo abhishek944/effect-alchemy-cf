@@ -2,6 +2,7 @@ import { Auth } from "@starter/auth";
 import { RuntimeContext } from "alchemy";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
+import { authUnavailableEffect } from "./auth-failure.ts";
 import { AuthenticationUnavailable, CurrentUser, Unauthorized } from "./model.ts";
 
 export class Authentication extends HttpApiMiddleware.Service<
@@ -17,8 +18,8 @@ export class Authentication extends HttpApiMiddleware.Service<
       return (httpEffect) =>
         Effect.gen(function* () {
           const session = yield* auth.getSession().pipe(
-            Effect.mapError(() => new AuthenticationUnavailable()),
-            Effect.catchDefect(() => Effect.fail(new AuthenticationUnavailable())),
+            Effect.catch((cause) => authUnavailableEffect("auth.session", cause)),
+            Effect.catchDefect((defect) => authUnavailableEffect("auth.session", defect)),
           );
           if (session === null) return yield* Effect.fail(new Unauthorized());
           return yield* Effect.provideService(httpEffect, CurrentUser, {

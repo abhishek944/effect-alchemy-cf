@@ -22,6 +22,7 @@ export async function officeHostRuntime(
   namespace: OfficeNamespace,
   resources: Pick<OfficeProviderOptions, "database" | "bucket">,
   imageRef: string,
+  retireIdle: boolean,
 ): Promise<OfficeHostRuntime> {
   const scope = await Effect.runPromise(Scope.make());
   const policy = officeHostPolicy(imageRef, owner.stage);
@@ -82,7 +83,7 @@ export async function officeHostRuntime(
           owner,
           process,
           self,
-          policy.limits.cacheTtlSeconds,
+          retireIdle ? policy.limits.cacheTtlSeconds : null,
           stop,
         );
         actual.signal.addEventListener("abort", stop, { once: true });

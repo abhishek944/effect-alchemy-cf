@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { reportFailure } from "@starter/diagnostics";
 import { OfficeErrors, decodeWireSync, safeFailure } from "@starter/office-contract";
 import { hostEnvelope } from "@starter/office-server/native-remote";
 import {
@@ -35,6 +36,13 @@ export async function officePrivateControl(
   try {
     payload = await backend.call(envelope.payload, cleanup);
   } catch (error) {
+    reportFailure(error, {
+      component: "office.worker",
+      operation: "private-control",
+      phase: frame.request.command?.method ?? envelope.payload.method,
+      callId: envelope.callId,
+      eventId: frame.original.actor.invocationId,
+    });
     const failure = Schema.is(Errors)(error)
       ? safeFailure(error.code, error.operationId)
       : safeFailure("OUTCOME_UNKNOWN");

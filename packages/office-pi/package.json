@@ -13,7 +13,9 @@
   "dependencies": {
     "@earendil-works/pi-ai": "1.1.0",
     "@earendil-works/pi-durable": "1.1.0",
+    "@starter/diagnostics": "workspace:*",
     "@starter/office-contract": "workspace:*",
+    "commander": "14.0.2",
     "effect": "4.0.1"
   },
   "devDependencies": {

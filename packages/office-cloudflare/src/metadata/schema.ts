@@ -3,10 +3,10 @@ import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
 import { sessionSchemaStatements } from "./sessions/schemas.ts";
 import { jobSchemaStatements } from "./jobs/schemas.ts";
 
-export const metadataSchemaVersion = 1;
+export const metadataSchemaVersion = 2;
 export const metadataSchemaStatements = [
   `CREATE TABLE IF NOT EXISTS office_meta_schema (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL)`,
-  `INSERT OR IGNORE INTO office_meta_schema VALUES(1,1)`,
+  `INSERT OR IGNORE INTO office_meta_schema VALUES(1,2)`,
   `CREATE TABLE IF NOT EXISTS office_meta_guard (token TEXT PRIMARY KEY,
     ok INTEGER NOT NULL CONSTRAINT office_metadata_guard CHECK(ok=1))`,
   `CREATE TABLE IF NOT EXISTS office_meta_documents (owner TEXT NOT NULL,id TEXT NOT NULL,unit TEXT NOT NULL,
@@ -22,10 +22,7 @@ export const metadataSchemaStatements = [
   `CREATE TABLE IF NOT EXISTS office_meta_editors (owner TEXT NOT NULL,id TEXT NOT NULL,document TEXT NOT NULL,
     branch TEXT NOT NULL,epoch INTEGER NOT NULL,state TEXT NOT NULL,expires INTEGER NOT NULL,record TEXT NOT NULL,
     PRIMARY KEY(owner,id))`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS office_meta_editor_writer ON office_meta_editors(owner,document,branch)
-    WHERE state IN ('active','draining','unclean')`,
-  `CREATE TABLE IF NOT EXISTS office_meta_editor_epochs (owner TEXT NOT NULL,document TEXT NOT NULL,
-    branch TEXT NOT NULL,epoch INTEGER NOT NULL,PRIMARY KEY(owner,document,branch))`,
+  `CREATE INDEX IF NOT EXISTS office_meta_editor_sessions ON office_meta_editors(owner,document,branch)`,
   `CREATE TABLE IF NOT EXISTS office_meta_reviews (owner TEXT NOT NULL,id TEXT NOT NULL,document TEXT NOT NULL,
     fingerprint TEXT NOT NULL,expires INTEGER NOT NULL,record TEXT NOT NULL,PRIMARY KEY(owner,id))`,
   `CREATE TABLE IF NOT EXISTS office_meta_approvals (owner TEXT NOT NULL,id TEXT NOT NULL,review TEXT NOT NULL,
@@ -55,15 +52,23 @@ export async function initializeOfficeMetadataSchema(database: D1Database): Prom
   const exists = await session
     .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='office_meta_schema'")
     .first();
-  if (exists) await verify(database);
-  await database.batch(metadataSchemaStatements.map((sql) => database.prepare(sql)));
+  if (exists) await verify(database, true);
+  // Version 1's unique branch writer index is policy, not content. Retire it without deleting sessions.
+  // Stop the old application before upgrading; mixed v1/v2 writer policies are unsupported.
+  await database.batch(
+    [
+      ...metadataSchemaStatements,
+      "DROP INDEX IF EXISTS office_meta_editor_writer",
+      "UPDATE office_meta_schema SET version=2 WHERE id=1 AND version=1",
+    ].map((sql) => database.prepare(sql)),
+  );
   await verify(database);
 }
-async function verify(database: D1Database): Promise<void> {
+async function verify(database: D1Database, upgrading = false): Promise<void> {
   const row = await database
     .withSession("first-primary")
     .prepare("SELECT version FROM office_meta_schema WHERE id=1")
     .first<{ version: number }>();
-  if (row?.version !== metadataSchemaVersion)
+  if (row?.version !== metadataSchemaVersion && !(upgrading && row?.version === 1))
     throw new OfficeUnavailable(safeFailure("UNAVAILABLE"));
 }

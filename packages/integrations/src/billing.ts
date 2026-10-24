@@ -1,3 +1,4 @@
+import { withDiagnostic } from "@starter/diagnostics";
 import { Schema, type Effect, type Redacted } from "effect";
 
 export const BillingProviderId = Schema.Literals(["dodo", "polar"]);
@@ -53,6 +54,26 @@ export class BillingError extends Schema.TaggedError<BillingError>()("BillingErr
   ]),
 }) {}
 export const billingError = (kind: BillingError["kind"]) => new BillingError({ kind });
+
+/**
+ * Fixed diagnostic attribution only: the reason is a non-enumerable app-owned label and the
+ * provider is a finite allowlisted value, so neither reaches callers, schemas or responses.
+ */
+export const billingFailure = (
+  kind: BillingError["kind"],
+  reason: string,
+  provider?: ProviderId,
+): BillingError => {
+  const error = withDiagnostic(billingError(kind), reason);
+  if (provider !== undefined) {
+    Object.defineProperty(error, "provider", {
+      value: provider,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  return error;
+};
 
 export interface ProviderOptions {
   readonly apiKey: Redacted.Redacted;

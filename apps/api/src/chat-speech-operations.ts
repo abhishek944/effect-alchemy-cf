@@ -8,6 +8,7 @@
  * from a failed attempt, and TTS characters are an honest estimate.
  */
 import { speechSynthesisWithinLimit } from "./chat-speech-schema.ts";
+import { reportFailure } from "@starter/diagnostics";
 import { fingerprintSpeech } from "./chat-speech-fingerprint.ts";
 import {
   SpeechTransportError,
@@ -69,14 +70,23 @@ export const transcribeSpeechOperation = async (
   };
   const pending = await persistAttempt(services, base, "audio_seconds");
   if (pending !== null) {
-    await settleSpeechOperation(services, admission.claimId, "failed");
+    await settleSpeechOperation(services, admission.claimId, "failed", input.operationId);
     return pending;
   }
   let result: TranscriptionResult;
   try {
     result = await transcribeAudio(prepared.runtime, { model, audio: input.audio }, request.signal);
   } catch (error) {
-    await settleSpeechOperation(services, admission.claimId, "failed");
+    reportFailure(error, {
+      component: "chat-speech",
+      operation: "transcribe",
+      operationId: input.operationId,
+      event:
+        error instanceof SpeechTransportError && error.code === "cancelled"
+          ? "application.cancelled"
+          : "application.failure",
+    });
+    await settleSpeechOperation(services, admission.claimId, "failed", input.operationId);
     const reported = error instanceof SpeechTransportError ? error.reported : null;
     await recordSpeechUsage(services, base, {
       unit: reported?.unit ?? "audio_seconds",
@@ -87,13 +97,18 @@ export const transcribeSpeechOperation = async (
     return speechTransportFailure(error);
   }
   const reported = result.reported;
-  await recordSpeechUsage(services, base, {
-    unit: reported?.unit ?? "audio_seconds",
-    failed: false,
-    reported: reported?.quantity ?? null,
-    estimated: reported === null ? input.measuredDurationMs / 1000 : null,
-  });
-  await settleSpeechOperation(services, admission.claimId, "completed");
+  await recordSpeechUsage(
+    services,
+    base,
+    {
+      unit: reported?.unit ?? "audio_seconds",
+      failed: false,
+      reported: reported?.quantity ?? null,
+      estimated: reported === null ? input.measuredDurationMs / 1000 : null,
+    },
+    "WARN",
+  );
+  await settleSpeechOperation(services, admission.claimId, "completed", input.operationId);
   return speechJson({ text: result.text });
 };
 
@@ -137,7 +152,7 @@ export const speakSpeechOperation = async (
   };
   const pending = await persistAttempt(services, base, "characters");
   if (pending !== null) {
-    await settleSpeechOperation(services, admission.claimId, "failed");
+    await settleSpeechOperation(services, admission.claimId, "failed", input.operationId);
     return pending;
   }
   let result: Awaited<ReturnType<typeof synthesizeSpeech>>;
@@ -148,16 +163,25 @@ export const speakSpeechOperation = async (
       request.signal,
     );
   } catch (error) {
-    await settleSpeechOperation(services, admission.claimId, "failed");
+    reportFailure(error, {
+      component: "chat-speech",
+      operation: "speak",
+      operationId: input.operationId,
+      event:
+        error instanceof SpeechTransportError && error.code === "cancelled"
+          ? "application.cancelled"
+          : "application.failure",
+    });
+    await settleSpeechOperation(services, admission.claimId, "failed", input.operationId);
     return speechTransportFailure(error);
   }
-  await recordSpeechUsage(services, base, {
-    unit: "characters",
-    failed: false,
-    reported: null,
-    estimated: input.text.length,
-  });
-  await settleSpeechOperation(services, admission.claimId, "completed");
+  await recordSpeechUsage(
+    services,
+    base,
+    { unit: "characters", failed: false, reported: null, estimated: input.text.length },
+    "WARN",
+  );
+  await settleSpeechOperation(services, admission.claimId, "completed", input.operationId);
   return new Response(result.audio, {
     status: 200,
     headers: {

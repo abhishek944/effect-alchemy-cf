@@ -15,7 +15,7 @@ export async function joinChannel(
   const until = db.decode(Channel.fields.until, db.encode(Channel.fields.until, inputUntil));
   const basis = await channelBasis(db, c, viewId),
     previous = await channelRow(db, c);
-  if (until > c.notAfter || until > basis.view.view.expiresAt) throw forbidden();
+  if (until > c.notAfter) throw forbidden();
   const value: typeof Channel.Type = {
     id: c.channelId,
     viewId,
@@ -33,20 +33,10 @@ export async function joinChannel(
     serviceEpoch: basis.view.serviceEpoch,
   };
   const record = db.encode(Channel, value);
-  const live = `${basis.sql} AND ?>${sqlNow} AND EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND id=? AND expires>=?)
-    AND EXISTS(SELECT 1 FROM office_coord_documents d JOIN office_coord_placements p ON p.id=d.placement_id
-      WHERE d.owner=? AND d.document=? AND d.placement_until>=? AND p.deadline>=?)`;
-  const values = [
-    ...basis.values,
-    until,
-    basis.key.owner,
-    c.editorId,
-    until,
-    basis.key.owner,
-    c.document.documentId,
-    until,
-    until,
-  ];
+  // Membership is session identity, not a write lease. The current basis and every actual
+  // write still require live editor/View/placement leases and the final atomic native fence.
+  const live = `${basis.sql} AND ?>${sqlNow}`;
+  const values = [...basis.values, until];
   if (previous) {
     if (
       canonical(previous.value) !== canonical(value) ||

@@ -9,6 +9,7 @@ import {
   resourceById,
   type ResourceRow,
 } from "@starter/auth/billing-data";
+import { withCause } from "@starter/diagnostics";
 import {
   billingError,
   ProviderResource,
@@ -22,7 +23,7 @@ import { BillingRuntime } from "./billing-config.ts";
 export const readSnapshot = (row: ResourceRow) =>
   Effect.try({
     try: () => decodeSnapshot(row),
-    catch: () => billingError("Storage"),
+    catch: (cause) => withCause(billingError("Storage"), cause),
   });
 
 export const billingAccess = (snapshot: Snapshot, syncedAt: number, now = Date.now() / 1000) => {
@@ -50,7 +51,7 @@ export const prepareBillingRows = (scope: string, input: readonly Resource[]) =>
     const runtime = yield* BillingRuntime;
     const resources = yield* Schema.decodeUnknownEffect(
       Schema.Array(ProviderResource).check(Schema.isMaxLength(10)),
-    )(input).pipe(Effect.mapError(() => billingError("Provider")));
+    )(input).pipe(Effect.mapError((cause) => withCause(billingError("Provider"), cause)));
     if (resources.length === 0) return yield* Effect.fail(billingError("Provider"));
     const rows: ResourceRow[] = [];
     for (const resource of resources) {
@@ -133,7 +134,7 @@ export const prepareBillingRows = (scope: string, input: readonly Resource[]) =>
       const snapshot = yield* Schema.decodeUnknownEffect(StoredResource)({
         resource,
         entitlements,
-      }).pipe(Effect.mapError(() => billingError("Provider")));
+      }).pipe(Effect.mapError((cause) => withCause(billingError("Provider"), cause)));
       rows.push({
         id: yield* billingKey(scope, resource.kind, resource.id),
         scope,

@@ -12,6 +12,12 @@ import type {
   ImageRequestBridge,
   ImageRequestTicket,
 } from "./chat-image-request-types.ts";
+import {
+  imageDiagnosticFailed,
+  imageDiagnosticRefused,
+  type ImageDiagnosticCorrelation,
+  type ImageDiagnosticPhase,
+} from "./chat-image-diagnostics.ts";
 import { requireImageAccess } from "./chat-image-request-accepted.ts";
 import { mapImageInputOccurrences } from "./chat-image-request-occurrences.ts";
 import { readImageRequestState } from "./chat-image-request-state.ts";
@@ -63,6 +69,8 @@ export const createImageRequestBridge = (access: ImageRequestAccess): ImageReque
     hooks: [
       hook(GenerationTask, {
         async beforeRequest(request, api, context) {
+          let phase: ImageDiagnosticPhase = "state";
+          let correlation: ImageDiagnosticCorrelation | undefined;
           try {
             const state = await readImageRequestState(
               access,
@@ -70,21 +78,27 @@ export const createImageRequestBridge = (access: ImageRequestAccess): ImageReque
               api.conversationId,
               context,
             );
+            correlation = state;
+            phase = "context";
             const conversation = await access
               .rawHarness()
               .conversation(api.conversationId, context);
             if (conversation === undefined) return imageProofFailure();
             const view = await conversation.context(context, { at: state.cutoff });
+            phase = "view_comparison";
             if (!sameImageRequestValue(request.messages, view.messages)) imageProofFailure();
+            phase = "input_mapping";
             const proof = await proveView(state, view, context);
             // Spread arrays preserve these unique wrappers in native generation.js.
             const messages = request.messages.map((message) => ({ ...message }));
             freezeImageRequestValue(messages);
             const ticket: ImageRequestTicket = { messages, proof };
             for (const message of messages) tickets.set(message, ticket);
+            phase = "state";
             requireImageAccess(access, context);
             return { messages };
-          } catch {
+          } catch (error) {
+            imageDiagnosticFailed("hook", phase, error, correlation);
             return imageProofFailure();
           }
         },
@@ -116,23 +130,42 @@ export const createImageRequestBridge = (access: ImageRequestAccess): ImageReque
     proof: GenerationRequestTicketProof,
     context: ImageNativeContext,
   ): Promise<boolean> => {
+    let phase: ImageDiagnosticPhase = "proof_take";
     const messages = taken.get(proof);
-    if (messages === undefined) return false;
+    if (messages === undefined) {
+      imageDiagnosticRefused("verify", phase, proof);
+      return false;
+    }
     taken.delete(proof);
     try {
+      phase = "state";
       const state = await readImageRequestState(
         access,
         proof.taskId,
         proof.conversationId,
         context,
       );
+      phase = "context";
       const conversation = await access.rawHarness().conversation(proof.conversationId, context);
-      if (conversation === undefined) return false;
+      if (conversation === undefined) {
+        imageDiagnosticRefused("verify", phase, proof);
+        return false;
+      }
       const view = await conversation.context(context, { at: state.cutoff });
-      if (!sameImageRequestValue(messages, view.messages)) return false;
+      phase = "view_comparison";
+      if (!sameImageRequestValue(messages, view.messages)) {
+        imageDiagnosticRefused("verify", phase, proof);
+        return false;
+      }
+      phase = "input_mapping";
       const current = await proveView(state, view, context);
-      if (!sameImageRequestValue(proof, current)) return false;
+      phase = "view_comparison";
+      if (!sameImageRequestValue(proof, current)) {
+        imageDiagnosticRefused("verify", phase, proof);
+        return false;
+      }
       // Context reads/hash awaits must not turn a concurrent Stop into permission.
+      phase = "state";
       const final = await readImageRequestState(
         access,
         proof.taskId,
@@ -140,8 +173,11 @@ export const createImageRequestBridge = (access: ImageRequestAccess): ImageReque
         context,
       );
       requireImageAccess(access, context);
-      return sameImageRequestValue(state, final);
-    } catch {
+      const settled = sameImageRequestValue(state, final);
+      if (!settled) imageDiagnosticRefused("verify", phase, proof);
+      return settled;
+    } catch (error) {
+      imageDiagnosticFailed("verify", phase, error, proof);
       return false;
     }
   };

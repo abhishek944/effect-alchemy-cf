@@ -9,6 +9,7 @@ import type { ResolveOfficeIngress } from "./native-handler-types.ts";
 import type { OfficeRequestContext } from "./native-request-context.ts";
 
 export type NativeOfficeHostOptions = NativeApplicationOptions & {
+  readonly maxProtocols: number;
   /** SAME actual context used by metadata/control/authority/T49 native+bytes dispatchers. */
   readonly context: OfficeRequestContext;
   readonly resolve: ResolveOfficeIngress;
@@ -29,7 +30,6 @@ export const makeNativeOfficeHost = Effect.fn("Office.nativeHost")(function* (
   const application = yield* makeNativeApplication({
     dependencies,
     owner,
-    maxProtocols,
     bindAuthority(input) {
       const actual = bindAuthority(input);
       return {

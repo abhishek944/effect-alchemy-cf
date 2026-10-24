@@ -1,4 +1,5 @@
 /** Operation-scoped recovery: shared admission, native submit and DTO. */
+import { reportFailure } from "@starter/diagnostics";
 import { ConversationBusy, type UserInput } from "@earendil-works/pi-durable";
 import { ROOT_SESSION, type PiHarness, type PiSubmitOptions } from "agents/harness/pi";
 import type { ChatAdmissionFence } from "./chat-admission-fence.ts";
@@ -24,7 +25,13 @@ import { acceptedRecoveryImageInput } from "./chat-skills-recovery-image-native.
 import type { SkillRecoveryImageInput } from "./chat-skills-recovery-image-input.ts";
 import type { SkillReadiness } from "./chat-skills-readiness.ts";
 export type { SkillRecoveryImageInput } from "./chat-skills-recovery-image-input.ts";
-
+const report = (
+  error: unknown,
+  operation: string,
+  operationId: string,
+  event: "application.cleanup" | "application.failure" | "application.recovery",
+): void =>
+  reportFailure(error, { component: "chat-skills-recovery", operation, operationId, event });
 export type ChatSkillsRecoveryDeps = {
   readonly harness: PiHarness;
   readonly runtime: ChatRuntime;
@@ -50,7 +57,7 @@ export type ChatSkillsRecoveryDeps = {
     readonly identity: string;
     readonly leaseId: string;
     readonly now: number;
-  }) => Promise<{ readonly admitted: boolean; readonly reason: string } | null>;
+  }) => Promise<{ readonly admitted: boolean; readonly reason: string }>;
   readonly releaseAdmission: (
     operationId: string,
     leaseId: string,
@@ -87,27 +94,16 @@ export class ChatSkillsRecovery implements RecoveryRunner {
 
   async busy(): Promise<Response | null> {
     await this.deps.runtime.pi();
-    if (await this.deps.harness.session(ROOT_SESSION).busy())
-      return json({ message: "Chat is busy" }, 409);
-    return null;
+    const busy = await this.deps.harness.session(ROOT_SESSION).busy();
+    return busy ? json({ message: "Chat is busy" }, 409) : null;
   }
-
-  enter(): boolean {
-    return this.deps.fence.tryEnter();
-  }
-
-  leave(): void {
-    this.deps.fence.leave();
-  }
+  enter = (): boolean => this.deps.fence.tryEnter();
+  leave = (): void => this.deps.fence.leave();
 
   accepted(operationId: string, logicalOperationId: string, duplicate: boolean): Response {
     return json({ accepted: true, duplicate, operationId, logicalOperationId });
   }
-
-  readiness(): Promise<SkillReadiness> {
-    return this.deps.readiness();
-  }
-
+  readiness = (): Promise<SkillReadiness> => this.deps.readiness();
   private async releaseAdmission(
     operationId: string,
     leaseId: string,
@@ -115,7 +111,9 @@ export class ChatSkillsRecovery implements RecoveryRunner {
   ): Promise<void> {
     try {
       await this.deps.releaseAdmission(operationId, leaseId, ownerId);
-    } catch {}
+    } catch (error) {
+      report(error, "lease-release", operationId, "application.cleanup");
+    }
   }
 
   async submit(input: RecoverySubmission): Promise<Response> {
@@ -123,16 +121,20 @@ export class ChatSkillsRecovery implements RecoveryRunner {
     if (fenced !== null) return fenced;
     const { runtime, ledger } = this.deps;
     const leaseId = crypto.randomUUID();
-    const decision = await this.deps.admit({
-      ownerId: input.ownerId,
-      chatId: input.chatId,
-      operationId: input.operationId,
-      identity: input.identity,
-      leaseId,
-      now: Date.now(),
-    });
-    if (decision === null) {
+    let decision: { readonly admitted: boolean; readonly reason: string };
+    try {
+      decision = await this.deps.admit({
+        ownerId: input.ownerId,
+        chatId: input.chatId,
+        operationId: input.operationId,
+        identity: input.identity,
+        leaseId,
+        now: Date.now(),
+      });
+    } catch (error) {
+      // Admission is uncertain: release only local skills, never the catalog lease.
       this.deps.skills.release(input.operationId);
+      report(error, "admission", input.operationId, "application.failure");
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     }
     if (!decision.admitted) {
@@ -183,6 +185,7 @@ export class ChatSkillsRecovery implements RecoveryRunner {
         await this.releaseAdmission(input.operationId, leaseId, input.ownerId);
         return json({ message: "Chat is busy" }, 409);
       }
+      report(error, "native-submit", input.operationId, "application.failure");
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     }
   }

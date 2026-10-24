@@ -25,7 +25,6 @@ export function nativePresets(container: HTMLElement, kind: Kind, remote: boolea
         ribbonType: "classic",
         formulaBar: true,
         footer: { sheetBar: true, statisticBar: true, menus: true, zoomSlider: true },
-        disableAutoFocus: true,
       }),
     ];
   const core = UniverDocsCorePreset({
@@ -35,7 +34,6 @@ export function nativePresets(container: HTMLElement, kind: Kind, remote: boolea
     ribbonType: "classic",
     footer: true,
     toc: true,
-    disableAutoFocus: true,
   });
   if (kind === "doc")
     return [

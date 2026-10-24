@@ -23,7 +23,7 @@ import {
 } from "@/lib/chat-capability-preference-validate";
 import { parseChatUsage } from "@/lib/chat-capability-usage-validate";
 import { parseChatFileDescriptor } from "@/lib/chat-capability-file-validate";
-import { ChatApiError, errorMessage, request, unexpectedResponse } from "@/lib/chat-api";
+import { ChatApiError, errorMessage, requestJson, requestDecoded } from "@/lib/chat-api";
 
 export type CapabilityLoadState = "idle" | "loading" | "ready" | "error";
 
@@ -31,9 +31,10 @@ export type CapabilityLoadState = "idle" | "loading" | "ready" | "error";
 export function capabilityMessage(error: unknown, action: string): string {
   if (error instanceof ChatApiError) {
     if (error.status === 404)
-      return `${action} is not available on this server. Ask the operator to enable it.`;
-    if (error.status === 401) return "You are signed out. Sign in again to continue.";
-    if (error.status === 403) return `${action} was blocked for this account.`;
+      return `${action} is not available on this server. Ask the operator to enable it. ${error.message}`;
+    if (error.status === 401)
+      return `You are signed out. Sign in again to continue. ${error.message}`;
+    if (error.status === 403) return `${action} was blocked for this account. ${error.message}`;
   }
   return `${action} failed. ${errorMessage(error)}`;
 }
@@ -42,23 +43,28 @@ const chatPath = (chatId: string, suffix: string): string =>
   `/api/chats/${encodeURIComponent(chatId)}/${suffix}`;
 
 export async function getChatCatalog(signal?: AbortSignal): Promise<ChatCatalog> {
-  const catalog = parseChatCatalog(
-    await request("/api/chat/capabilities", signal ? { signal } : undefined),
+  return requestDecoded(
+    "/api/chat/capabilities",
+    "chat.capabilities",
+    parseChatCatalog,
+    signal ? { signal } : undefined,
   );
-  if (!catalog) throw unexpectedResponse();
-  return catalog;
 }
 
 export async function getAccountChatPreferences(): Promise<AccountChatPreferencesView> {
-  const view = parseAccountChatPreferencesView(await request("/api/chat/preferences"));
-  if (!view) throw unexpectedResponse();
-  return view;
+  return requestDecoded(
+    "/api/chat/preferences",
+    "chat.account-preferences",
+    parseAccountChatPreferencesView,
+  );
 }
 
 export async function getChatPreferences(chatId: string): Promise<ChatPreferencesView> {
-  const view = parseChatPreferencesView(await request(chatPath(chatId, "preferences")));
-  if (!view) throw unexpectedResponse();
-  return view;
+  return requestDecoded(
+    chatPath(chatId, "preferences"),
+    "chat.preferences",
+    parseChatPreferencesView,
+  );
 }
 
 /**
@@ -71,21 +77,20 @@ export async function writeChatPreferences(
   selection: ChatSelection,
 ): Promise<ChatPreferencesWriteResult> {
   const body = JSON.stringify({ chatId, expectedRevision, selection });
-  const result = parseChatPreferencesWriteResult(
-    await request(chatPath(chatId, "preferences"), {
+  return requestDecoded(
+    chatPath(chatId, "preferences"),
+    "chat.preferences-write",
+    parseChatPreferencesWriteResult,
+    {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body,
-    }),
+    },
   );
-  if (!result) throw unexpectedResponse();
-  return result;
 }
 
 export async function getChatUsage(chatId: string): Promise<ChatUsage> {
-  const usage = parseChatUsage(await request(chatPath(chatId, "usage")));
-  if (!usage) throw unexpectedResponse();
-  return usage;
+  return requestDecoded(chatPath(chatId, "usage"), "chat.usage", parseChatUsage);
 }
 
 /**
@@ -100,18 +105,19 @@ export async function uploadChatFile(
   name: string,
   mediaType: string,
 ): Promise<ChatFileDescriptor> {
-  const descriptor = parseChatFileDescriptor(
-    await request(chatPath(chatId, `attachments/${encodeURIComponent(attachmentId)}`), {
+  return requestDecoded(
+    chatPath(chatId, `attachments/${encodeURIComponent(attachmentId)}`),
+    "chat.attachment-upload",
+    parseChatFileDescriptor,
+    {
       method: "POST",
       headers: {
         "content-type": mediaType,
         "x-file-name": encodeURIComponent(name),
       },
       body: file,
-    }),
+    },
   );
-  if (!descriptor) throw unexpectedResponse();
-  return descriptor;
 }
 
 export function chatAttachmentUrl(chatId: string, attachmentId: string): string {
@@ -119,7 +125,9 @@ export function chatAttachmentUrl(chatId: string, attachmentId: string): string 
 }
 
 export async function deleteChatAttachment(chatId: string, attachmentId: string): Promise<void> {
-  await request(chatPath(chatId, `attachments/${encodeURIComponent(attachmentId)}`), {
-    method: "DELETE",
-  });
+  await requestJson(
+    chatPath(chatId, `attachments/${encodeURIComponent(attachmentId)}`),
+    "chat.attachment-delete",
+    { method: "DELETE" },
+  );
 }

@@ -1,7 +1,8 @@
 import { type Context, Effect, type Schema } from "effect";
 import { type ChatNamespaces, doCall } from "./chat-bindings.ts";
+import { ignoreReport, privateUnavailable } from "./chat-diagnostics.ts";
 import { chatHeader, decodeOrFail } from "./chat-internal.ts";
-import { Chat, ChatInvalid, ChatNotFound, ChatUnavailable, RefreshRequired } from "./chat-model.ts";
+import { Chat, ChatInvalid, ChatNotFound, RefreshRequired } from "./chat-model.ts";
 import { CurrentUser } from "./model.ts";
 import { OperationReceipt } from "./chat-contract.ts";
 
@@ -13,7 +14,8 @@ export const requireOwnedChat = (
   Effect.gen(function* () {
     const lookup = yield* doCall(ns.catalog(owner), "GET", `/get?id=${encodeURIComponent(id)}`);
     if (lookup.status === 404) return yield* Effect.fail(new ChatNotFound());
-    if (lookup.status !== 200) return yield* Effect.fail(new ChatUnavailable());
+    if (lookup.status !== 200)
+      return yield* Effect.fail(privateUnavailable("lookup", lookup.status));
     return yield* decodeOrFail(Chat, lookup.body);
   });
 
@@ -41,14 +43,16 @@ export const chatRead = <S extends Schema.Constraint>(
     if (call.status === 404) return yield* Effect.fail(new ChatNotFound());
     if (call.status === 409)
       return yield* Effect.fail(new RefreshRequired({ message: "Refresh required." }));
-    if (call.status !== 200) return yield* Effect.fail(new ChatUnavailable());
+    if (call.status !== 200) return yield* Effect.fail(privateUnavailable("read", call.status));
     if (path === "/receipt") {
       const receipt = yield* decodeOrFail(OperationReceipt, call.body);
       if (receipt.accepted)
         yield* doCall(ns.catalog(user.id), "POST", "/finalize", {
           operationId: receipt.operationId,
           now: Date.now(),
-        }).pipe(Effect.ignore);
+        }).pipe(
+          ignoreReport({ component: "chat", operation: "read.finalize", reason: "finalize" }),
+        );
     }
     return yield* decodeOrFail(schema, call.body);
   });

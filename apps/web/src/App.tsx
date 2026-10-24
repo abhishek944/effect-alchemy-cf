@@ -6,11 +6,24 @@ import { usePathname } from "@/lib/router";
 
 export default function App() {
   const pathname = usePathname();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
 
   if (isAdminRoute) return <AdminPortal />;
   if (session) return <Workspace user={session.user} pathname={pathname} />;
+  if (isPending) {
+    return (
+      <main className="grid min-h-svh place-items-center bg-[#181818] text-[#a3a3a3]">
+        <output className="flex items-center gap-3 text-sm" aria-live="polite">
+          <span
+            className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+            aria-hidden="true"
+          />
+          Checking your session…
+        </output>
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-svh bg-background text-foreground">

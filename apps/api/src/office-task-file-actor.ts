@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import type { OfficeMetadata, VerifyActor } from "@starter/office-server/ports";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
-import { officeDenied, officeSame } from "./office-private-authority.ts";
+import { officeCaught, officeDenied, officeSame } from "./office-private-authority.ts";
 import { officeTaskActorPolicy } from "./office-task-actor-policy.ts";
 import { assertOfficeTaskUpload } from "./office-task-command.ts";
 
@@ -16,7 +16,7 @@ export function officeTaskVerifier(
   if (request.file === null) return officeTaskActorPolicy(metadata, request, original);
   return (input) =>
     Effect.gen(function* () {
-      yield* Effect.tryPromise({ try: request.live, catch: officeDenied });
+      yield* Effect.tryPromise({ try: request.live, catch: officeCaught });
       const file = request.file;
       if (
         request.original !== original ||
@@ -31,9 +31,9 @@ export function officeTaskVerifier(
         return yield* Effect.fail(officeDenied());
       yield* Effect.try({
         try: () => assertOfficeTaskUpload(original.task.proof, file.input),
-        catch: officeDenied,
+        catch: officeCaught,
       });
-      yield* Effect.tryPromise({ try: request.live, catch: officeDenied });
+      yield* Effect.tryPromise({ try: request.live, catch: officeCaught });
       return undefined;
     });
 }

@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { officeDenied, type OfficePrivateIO } from "./office-private-authority.ts";
 
 /** Actual promises/readers/bodies, not map-emptiness or cancellation acknowledgements as a seal. */
@@ -8,11 +9,16 @@ export function officeHostFrameIO() {
   let revoked = false,
     stopped = false,
     failed = false;
+  let failureCause: unknown;
+  const fail = (cause: unknown) => {
+    if (!failed) failureCause = cause;
+    failed = true;
+  };
   const observe = (actual: Promise<unknown>, physical: boolean) => {
     const joined = actual.then(
       () => undefined,
-      () => {
-        if (physical) failed = true;
+      (cause) => {
+        if (physical) fail(cause);
         return undefined;
       },
     );
@@ -33,8 +39,8 @@ export function officeHostFrameIO() {
           resources.delete(resource);
           return undefined;
         },
-        () => {
-          failed = true;
+        (cause) => {
+          fail(cause);
           resources.delete(resource);
           return undefined;
         },
@@ -58,7 +64,7 @@ export function officeHostFrameIO() {
     async drain(): Promise<void> {
       // Every entry observes the actual foreign promise before it can run. Late cleanup is retained.
       while (pending.size > 0) await Promise.all(pending);
-      if (failed) throw officeDenied();
+      if (failed) throw withCause(officeDenied(), failureCause);
     },
     get failed() {
       return failed;

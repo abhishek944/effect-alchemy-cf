@@ -1,7 +1,7 @@
 import type { Api, Context, Model } from "@earendil-works/pi-ai";
 import { effectiveGenerationOutputTokens } from "./chat-generation-output-budget.ts";
 
-/** Text/guidance ceiling; image transport bytes belong to the shared memory lease. */
+/** Text/guidance request ceiling; direct image payloads are excluded. */
 export const MAX_FINAL_REQUEST_BYTES = 1_572_864;
 export const requestBudgetBytes = (model: Model<Api>): number => {
   const output = effectiveGenerationOutputTokens(model.contextWindow, model.maxTokens);

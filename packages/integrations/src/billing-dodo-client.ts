@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect, Redacted } from "effect";
 import {
   APIConnectionError,
@@ -10,7 +11,7 @@ import {
   RateLimitError,
   UnprocessableEntityError,
 } from "dodopayments";
-import { billingError, type BillingError, type ProviderOptions } from "./billing.ts";
+import { billingFailure, type BillingError, type ProviderOptions } from "./billing.ts";
 
 /**
  * One bounded attempt: SDK retries are off, its one-minute default is lowered to
@@ -27,38 +28,65 @@ export const printable = (value: Redacted.Redacted): string | null => {
 };
 
 /** Definite 4xx rejections are never retried; transport, abort and 5xx stay ambiguous. */
-const sdkError = (error: unknown, safety: Safety): BillingError => {
-  if (error instanceof NotFoundError) return billingError("NotFound");
-  if (error instanceof ConflictError) return billingError("Conflict");
-  if (error instanceof RateLimitError) return billingError("Busy");
+const classified = (error: unknown, safety: Safety): BillingError => {
+  if (error instanceof NotFoundError)
+    return billingFailure("NotFound", "provider-not-found", "dodo");
+  if (error instanceof ConflictError)
+    return billingFailure("Conflict", "provider-conflict", "dodo");
+  if (error instanceof RateLimitError) return billingFailure("Busy", "provider-rate-limit", "dodo");
   if (error instanceof BadRequestError || error instanceof UnprocessableEntityError) {
-    return billingError("InvalidInput");
+    return billingFailure("InvalidInput", "provider-rejected-input", "dodo");
   }
   if (error instanceof APIConnectionError || error instanceof APIUserAbortError) {
-    return billingError(safety === "ambiguous" ? "UnknownOutcome" : "Provider");
+    return billingFailure(
+      safety === "ambiguous" ? "UnknownOutcome" : "Provider",
+      "provider-transport",
+      "dodo",
+    );
   }
   if (error instanceof APIError && error.status !== undefined && error.status < 500) {
-    return billingError("Provider");
+    return billingFailure("Provider", "provider-http-rejected", "dodo");
   }
-  return billingError(safety === "ambiguous" ? "UnknownOutcome" : "Provider");
+  return billingFailure(
+    safety === "ambiguous" ? "UnknownOutcome" : "Provider",
+    "provider-unexpected",
+    "dodo",
+  );
 };
 
+/** The existing kind stays public; the SDK failure is retained in server memory only. */
+const sdkError = (error: unknown, safety: Safety): BillingError =>
+  withCause(classified(error, safety), error);
+
 /** `unwrap` verifies with standardwebhooks and then casts; parse and HMAC failures reject. */
-export const webhookError = (error: unknown): BillingError => {
-  if (error instanceof SyntaxError) return billingError("Signature");
+const classifiedWebhook = (error: unknown): BillingError => {
+  if (error instanceof SyntaxError)
+    return billingFailure("Signature", "webhook-parse-failed", "dodo");
   if (error instanceof Error && error.name === "WebhookVerificationError") {
-    return billingError("Signature");
+    return billingFailure("Signature", "webhook-signature-invalid", "dodo");
   }
-  return billingError("Provider");
+  return billingFailure("Provider", "webhook-verification-unexpected", "dodo");
 };
+
+export const webhookError = (error: unknown): BillingError =>
+  withCause(classifiedWebhook(error), error);
 
 const call = <A>(run: (signal: AbortSignal) => Promise<A>, safety: Safety) =>
   Effect.tryPromise({ try: run, catch: (error) => sdkError(error, safety) }).pipe(
-    Effect.timeoutOrElse({
-      duration: DEADLINE,
-      orElse: () =>
-        Effect.fail(billingError(safety === "ambiguous" ? "UnknownOutcome" : "Provider")),
-    }),
+    Effect.timeout(DEADLINE),
+    // One bounded attempt: keep the deadline origin and name the provider stage.
+    Effect.catchTag("TimeoutError", (timeout) =>
+      Effect.fail(
+        withCause(
+          billingFailure(
+            safety === "ambiguous" ? "UnknownOutcome" : "Provider",
+            "provider-deadline",
+            "dodo",
+          ),
+          timeout,
+        ),
+      ),
+    ),
   );
 
 export interface DodoSdk {
@@ -72,7 +100,8 @@ export const makeDodoSdk = (options: ProviderOptions): DodoSdk => {
   const client = Effect.suspend(() => {
     if (cached !== null) return Effect.succeed(cached);
     const apiKey = printable(options.apiKey);
-    if (apiKey === null) return Effect.fail(billingError("Configuration"));
+    if (apiKey === null)
+      return Effect.fail(billingFailure("Configuration", "provider-credentials", "dodo"));
     try {
       cached = new DodoPayments({
         bearerToken: apiKey,
@@ -83,8 +112,10 @@ export const makeDodoSdk = (options: ProviderOptions): DodoSdk => {
         timeout: REQUEST_TIMEOUT_MS,
       });
       return Effect.succeed(cached);
-    } catch {
-      return Effect.fail(billingError("Configuration"));
+    } catch (cause) {
+      return Effect.fail(
+        withCause(billingFailure("Configuration", "provider-client-init", "dodo"), cause),
+      );
     }
   });
 

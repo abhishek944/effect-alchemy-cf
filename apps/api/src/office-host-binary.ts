@@ -1,3 +1,4 @@
+import { reportFailure, withCause } from "@starter/diagnostics";
 import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
 import { officePrivateBinary } from "./office-private-binary.ts";
 import type { OfficePrivateIO } from "./office-private-authority.ts";
@@ -39,13 +40,33 @@ export async function officeHostBinary(
         const results = await Promise.allSettled(
           [...resources].map((resource) => resource.drain()),
         );
-        if (results.some((result) => result.status === "rejected"))
-          throw new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+        const rejected = results.filter((result) => result.status === "rejected");
+        if (rejected.length)
+          throw withCause(
+            new OfficeUnavailable(safeFailure("UNAVAILABLE")),
+            new AggregateError(
+              rejected.map((result): unknown => result.reason),
+              "Binary resource drain failed",
+            ),
+          );
         return undefined;
       })
       .finally(() => {
         root.binaryActive--;
       });
-    root.state.waitUntil(release.catch(() => root.close()).catch(() => undefined));
+    root.state.waitUntil(
+      release
+        .catch((cause) => {
+          if (!root.closing)
+            reportFailure(cause, {
+              component: "office.host",
+              operation: "cleanup-escalation",
+              reason: "binary-resource-drain",
+              eventId: entry.frame.id,
+            });
+          return root.close();
+        })
+        .catch(() => undefined),
+    );
   }
 }

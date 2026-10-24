@@ -7,6 +7,7 @@ import { officeTaskTargetReads } from "./office-task-target-reads.ts";
 import { Effect } from "effect";
 import { readOfficeTaskReview, type OfficeTaskReview } from "./office-task-review.ts";
 import { readOfficeTaskDiscovery, type OfficeTaskDiscovery } from "./office-task-descriptor.ts";
+import type { OfficeTaskAttachment } from "./office-task-attachment.ts";
 
 export type OfficeTaskTarget = {
   readonly target: DraftTarget | null;
@@ -14,6 +15,7 @@ export type OfficeTaskTarget = {
   readonly readView: ViewRecord | null;
   readonly review?: OfficeTaskReview;
   readonly discovery?: OfficeTaskDiscovery;
+  readonly attachment?: OfficeTaskAttachment | null;
 };
 const empty: OfficeTaskTarget = Object.freeze({ target: null, fork: null, readView: null });
 
@@ -22,11 +24,13 @@ export async function resolveOfficeTaskTarget(
   metadata: OfficeMetadata,
   proof: OfficeTaskProof,
   operations: readonly OperationRecord[],
+  attachment: OfficeTaskAttachment | null = null,
 ): Promise<OfficeTaskTarget> {
   const { session, target: captured, intent } = proof.association;
   const owner = { stage: session.stage, ownerId: session.ownerId };
   const run = Effect.runPromise;
   const targets = [...confirmedOfficeTaskTargets(proof, operations)];
+  if (attachment?.target) targets.push(attachment.target);
   const command = intent.command;
   const { view, draft } = officeTaskTargetReads(metadata, owner, operations);
   let original: Promise<ViewRecord> | undefined;

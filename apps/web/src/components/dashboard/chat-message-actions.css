@@ -76,22 +76,6 @@
 [data-dashboard] [data-cx="chat-message"] [data-cx="chat-reply-actions"] {
   gap: 4px;
 }
-[data-dashboard] [data-cx="date-divider"] {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 736px;
-  margin: 8px auto 20px;
-  color: var(--cx-muted);
-  font-size: 11px;
-}
-[data-dashboard] [data-cx="date-divider"] hr {
-  flex: 1;
-  height: 1px;
-  margin: 0;
-  border: 0;
-  background: var(--cx-line);
-}
 [data-dashboard] [data-cx="sent-files"] {
   display: flex;
   flex-direction: column;

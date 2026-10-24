@@ -32,7 +32,7 @@ export function officeHostPlacements(
   owner: OwnerScope,
   process: OfficeHostProcess,
   self: cf.Fetcher,
-  idleSeconds: number,
+  idleSeconds: number | null,
   onStop: () => void,
 ) {
   const acquisitions = new Map<string, Promise<Lease>>();
@@ -65,7 +65,7 @@ export function officeHostPlacements(
     if (closed || failed) return;
     lease.timer = setTimeout(
       () => {
-        if (Date.now() - lastUsed >= idleSeconds * 1000) {
+        if (idleSeconds !== null && Date.now() - lastUsed >= idleSeconds * 1000) {
           onStop();
           return;
         }

@@ -1,12 +1,11 @@
 import type * as cf from "@cloudflare/workers-types";
 import { Option, Schema } from "effect";
 import { FileDescriptor } from "./chat-attachment-schema.ts";
-import { validateFileBytes } from "./chat-files-media.ts";
+import { inspectFileBytes } from "./chat-files-media.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";
 import { checkImageIOSignal, ImageIOError } from "./chat-image-io-error.ts";
 import { disposeImageStream, readImageStream } from "./chat-image-io-stream.ts";
-import { runImageIO } from "./chat-image-io.ts";
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
+import { runImageIO, type ImageIOTracker } from "./chat-image-io.ts";
 
 /**
  * Trusted SERVER result after the owner catalog proved accepted asset identity.
@@ -17,7 +16,6 @@ export type AcceptedOriginalMetadata = {
   readonly state: "accepted";
   readonly ownerScope: string;
   readonly file: FileDescriptor;
-  readonly digest: string;
 };
 
 export type AcceptedOriginalRead = {
@@ -26,7 +24,7 @@ export type AcceptedOriginalRead = {
   readonly ownerScope: string;
   readonly chatId: string;
   readonly metadata: AcceptedOriginalMetadata;
-  readonly lease: ImageMemoryLease;
+  readonly track?: ImageIOTracker;
   readonly signal?: AbortSignal;
 };
 
@@ -47,16 +45,14 @@ const integrity = (): never => {
 export const readAcceptedOriginal = async (
   input: AcceptedOriginalRead,
 ): Promise<LoadedAcceptedOriginal> => {
-  const { metadata, bucket, signal, lease } = input;
+  const { metadata, bucket, signal } = input;
   checkImageIOSignal(signal);
   const file = Option.getOrNull(Schema.decodeUnknownOption(FileDescriptor)({ ...metadata.file }));
-  const digest = metadata.digest;
   const scope = input.ownerScope;
   if (
     metadata.state !== "accepted" ||
     metadata.ownerScope !== scope ||
     !/^[A-Za-z0-9_-]{1,256}$/.test(scope) ||
-    !/^[a-f0-9]{64}$/.test(digest) ||
     file === null ||
     file.chatId !== input.chatId ||
     file.state !== "ready" ||
@@ -64,12 +60,11 @@ export const readAcceptedOriginal = async (
   )
     throw new ImageIOError("invalid_metadata", "Accepted original metadata is unavailable.");
   const key = retainedObjectKey(scope, file.chatId, file.id);
-  lease.claim("original", file.byteSize);
   return runImageIO({
-    lease,
+    ...(input.track === undefined ? {} : { track: input.track }),
     signal,
     async run() {
-      // R2 get has no AbortSignal. Its full late read/disposal remains lease-tracked.
+      // R2 get has no AbortSignal; late reads still finish their signal/disposal path.
       const object = await bucket.get(key);
       if (object === null)
         throw new ImageIOError("original_unavailable", "The saved original is unavailable.");
@@ -79,25 +74,28 @@ export const readAcceptedOriginal = async (
         checkImageIOSignal(signal);
         const declared = object.httpMetadata?.contentType?.split(";")[0]?.trim().toLowerCase();
         const custom = object.customMetadata;
+        const range = object.range;
         if (
           object.key !== key ||
           object.size !== file.byteSize ||
-          object.range !== undefined ||
+          (range !== undefined &&
+            (!("offset" in range) ||
+              range.offset !== 0 ||
+              !("length" in range) ||
+              range.length !== file.byteSize)) ||
           (declared !== undefined && declared !== file.mediaType) ||
           (object.httpMetadata?.contentEncoding !== undefined &&
             object.httpMetadata.contentEncoding !== "identity") ||
-          (custom?.digest !== undefined && custom.digest !== digest) ||
           (custom?.fileId !== undefined && custom.fileId !== file.id) ||
           (custom?.chatId !== undefined && custom.chatId !== file.chatId)
         )
           integrity();
         reading = true;
         const bytes = await readImageStream(body, file.byteSize, signal);
-        const validated = await validateFileBytes(file.name, bytes);
+        const validated = inspectFileBytes(file.name, bytes);
         checkImageIOSignal(signal);
         if (!validated.ok || validated.value.kind === "office") return integrity();
         if (
-          validated.value.digest !== digest ||
           validated.value.kind !== file.kind ||
           validated.value.mediaType !== file.mediaType ||
           validated.value.width !== file.width ||

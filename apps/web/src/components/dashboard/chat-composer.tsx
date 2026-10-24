@@ -94,7 +94,6 @@ export default function ChatComposer({ chatId, running, stopping, ...actions }: 
             }
             notice={stagedFiles.notice}
             onRemove={stagedFiles.remove}
-            onRetry={stagedFiles.retry}
             onClearNotice={stagedFiles.clearNotice}
           />
           {voice && <VoiceRecorder bundle={voice.bundle} />}

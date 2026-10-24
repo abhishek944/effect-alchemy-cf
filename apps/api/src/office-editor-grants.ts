@@ -7,6 +7,7 @@ import type {
 import type { HostEditor } from "@starter/office-server/native-remote";
 import type { OfficeEditorChannel } from "./office-editor-channel.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
+import { officeDeniedReason } from "./office-private-values.ts";
 
 type NativeAdmission = NonNullable<NativeStorageHooks["admission"]>;
 type Original = Awaited<ReturnType<OfficeEditorChannel["require"]>>;
@@ -22,6 +23,7 @@ export function officeEditorGrants(channel: OfficeEditorChannel) {
   const subjects = new Map<
     string,
     {
+      readonly memberId: string;
       readonly submissionId: string;
       readonly turnId: string;
       readonly sid: string;
@@ -37,13 +39,10 @@ export function officeEditorGrants(channel: OfficeEditorChannel) {
   async function require(permit: NativeEditorPermit) {
     await channel.require(permit.memberId);
     const actual = grants.get(permit.submissionId);
-    if (
-      actual === undefined ||
-      actual.releasing !== undefined ||
-      !officeSame(actual.permit, permit) ||
-      actual.admission.notAfter <= Date.now()
-    )
-      throw officeDenied();
+    if (actual === undefined) throw officeDeniedReason("editor-grant-missing");
+    if (actual.releasing !== undefined) throw officeDeniedReason("editor-grant-releasing");
+    if (!officeSame(actual.permit, permit)) throw officeDeniedReason("editor-grant-permit");
+    if (actual.admission.notAfter <= Date.now()) throw officeDeniedReason("editor-grant-expired");
     return actual;
   }
   return {
@@ -52,16 +51,18 @@ export function officeEditorGrants(channel: OfficeEditorChannel) {
       await channel.require(memberId);
       const key = JSON.stringify([memberId, sid, reqId]);
       const known = subjects.get(key);
-      if (known !== undefined) return known;
+      if (known !== undefined)
+        return { submissionId: known.submissionId, turnId: known.turnId, sid, reqId };
       if (subjects.size >= 1024) throw officeDenied();
       const original = {
+        memberId,
         submissionId: crypto.randomUUID(),
         turnId: crypto.randomUUID(),
         sid,
         reqId,
       };
       subjects.set(key, original);
-      return original;
+      return { submissionId: original.submissionId, turnId: original.turnId, sid, reqId };
     },
     async call(call: EditorCall): Promise<unknown> {
       switch (call.method) {
@@ -77,7 +78,6 @@ export function officeEditorGrants(channel: OfficeEditorChannel) {
         case "editor.revoke":
           return channel.revoke();
         case "editor.admit": {
-          const original = await channel.require();
           const subject = [...subjects.values()].find(
             (item) => item.submissionId === call.input.submissionId,
           );
@@ -91,6 +91,7 @@ export function officeEditorGrants(channel: OfficeEditorChannel) {
             throw officeDenied();
           // Never manufacture/reissue a stored permit on a repeated/lost-ACK request.
           attempted.add(subject.submissionId);
+          const original = await channel.require(subject.memberId);
           const result = await Effect.runPromise(
             original.provider.admit(call.input.submissionId, call.input.turnId, {
               sid: call.input.sid,

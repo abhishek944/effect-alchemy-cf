@@ -52,7 +52,8 @@ export const makeOfficeEditors = (deps: OfficeDependencies) => ({
         scope: record.target.scope,
       });
       if (
-        input.confirmedRevision !== current.state.revision ||
+        input.confirmedRevision < record.view.revision ||
+        input.confirmedRevision > current.state.revision ||
         record.authorityEpoch !== current.authorityEpoch ||
         record.serviceEpoch !== current.serviceEpoch
       )

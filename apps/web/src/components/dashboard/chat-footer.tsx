@@ -13,6 +13,7 @@ type Props = {
   chatId: string;
   running: boolean;
   status: string;
+  reconnecting: boolean;
   announcement: string;
   announce: boolean;
   stopLabel: string;
@@ -32,6 +33,7 @@ export default function ChatFooter({
   chatId,
   running,
   status,
+  reconnecting,
   announcement,
   announce,
   stopLabel,
@@ -99,14 +101,16 @@ export default function ChatFooter({
         </section>
       )}
       <ChatUsageTray chatId={chatId} />
-      <output
-        id="chat-connection"
-        data-cx="chat-connection"
-        aria-live={announce ? "polite" : "off"}
-        data-announcement-only={!status || undefined}
-      >
-        {status || announcement}
-      </output>
+      {!reconnecting && (
+        <output
+          id="chat-connection"
+          data-cx="chat-connection"
+          aria-live={announce ? "polite" : "off"}
+          data-announcement-only={!status || undefined}
+        >
+          {status || announcement}
+        </output>
+      )}
       {onRetry && (
         <button type="button" data-cx="chat-retry-action" onClick={onRetry}>
           Try again

@@ -11,6 +11,8 @@ import { isOfficeContainer, officeMediaType } from "./chat-office-media.ts";
 import { readImageInfo } from "./chat-files-image.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
 import { decodeTextFile } from "./chat-files-text.ts";
+import { sha256Hex } from "./chat-files-digest.ts";
+export { sha256Hex } from "./chat-files-digest.ts";
 
 type Media = { readonly kind: FileKind; readonly mediaType: string };
 const TEXT_TYPES: Readonly<Record<string, string>> = {
@@ -111,7 +113,6 @@ const formatOf = (mediaType: string): string | null =>
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 const RIFF = [0x52, 0x49, 0x46, 0x46] as const;
 const WEBP = [0x57, 0x45, 0x42, 0x50] as const;
-
 const hasBytes = (bytes: Uint8Array, offset: number, expected: readonly number[]): boolean => {
   if (offset + expected.length > bytes.byteLength) return false;
   for (let index = 0; index < expected.length; index += 1) {
@@ -136,22 +137,14 @@ export type ValidatedFile = {
   readonly digest: string;
 };
 
-export const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  const hash = await crypto.subtle.digest("SHA-256", copy.buffer);
-  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-};
-
-/** Validates actual bytes against the resolved filename type and returns safe metadata. */
-export const validateFileBytes = async (
+/** Inspect actual content without hashing an already-owned original. */
+export const inspectFileBytes = (
   name: string,
   bytes: Uint8Array,
-): Promise<ChatFilesResult<ValidatedFile>> => {
+): ChatFilesResult<Omit<ValidatedFile, "digest">> => {
   if (bytes.byteLength === 0) return filesFail("invalid_content");
   const media = resolveMedia(name);
   if (media === null) return filesFail("unsupported_type");
-  const digest = await sha256Hex(bytes);
   if (media.kind === "image") {
     if (bytes.byteLength > MAX_IMAGE_BYTES) return filesFail("file_too_large");
     const info = readImageInfo(bytes);
@@ -167,7 +160,6 @@ export const validateFileBytes = async (
       height: info.height,
       excerpt: null,
       chars: 0,
-      digest,
     });
   }
   if (media.kind === "office") {
@@ -181,7 +173,6 @@ export const validateFileBytes = async (
       height: null,
       excerpt: null,
       chars: 0,
-      digest,
     });
   }
   if (bytes.byteLength > MAX_TEXT_FILE_BYTES) return filesFail("file_too_large");
@@ -195,6 +186,15 @@ export const validateFileBytes = async (
     height: null,
     excerpt: decoded.excerpt,
     chars: decoded.chars,
-    digest,
   });
+};
+
+/** New uploads retain their existing content-identity contract. */
+export const validateFileBytes = async (
+  name: string,
+  bytes: Uint8Array,
+): Promise<ChatFilesResult<ValidatedFile>> => {
+  const result = inspectFileBytes(name, bytes);
+  if (!result.ok) return result;
+  return filesOk({ ...result.value, digest: await sha256Hex(bytes) });
 };

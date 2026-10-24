@@ -1,3 +1,4 @@
+import { reportFailure, type FailureContext } from "@starter/diagnostics";
 import type { ChatSnapshot } from "./chat-model.ts";
 import { RefreshFence } from "./chat-contract.ts";
 
@@ -22,7 +23,16 @@ export type SnapshotSource = {
  * one pending encoded frame, and closes slow or oversized streams so the
  * browser reconnects and rebuilds from an authoritative bounded snapshot.
  */
-export const streamChat = (source: SnapshotSource, signal: AbortSignal): Response => {
+/**
+ * `context` carries optional caller-known chat/metadata association for
+ * abnormal-close reports; the relay always owns component/operation/reason.
+ * The T13-owned caller wires it; chat-source itself is not modified here.
+ */
+export const streamChat = (
+  source: SnapshotSource,
+  signal: AbortSignal,
+  context?: FailureContext,
+): Response => {
   const encoder = new TextEncoder();
   let closed = false;
   let unsubscribe: (() => void) | null = null;
@@ -34,6 +44,27 @@ export const streamChat = (source: SnapshotSource, signal: AbortSignal): Respons
   let scheduled = false;
   let dirty = true;
   let previous = "";
+  let reported = false;
+
+  /** Report one abnormal close, then close; rotation/cancel/abort stay silent. */
+  const failClosed = (
+    error: unknown,
+    reason: string,
+    bytes?: number,
+    event?: "application.recovery",
+  ): void => {
+    if (reported) return;
+    reported = true;
+    reportFailure(error, {
+      ...context,
+      component: "chat-sse",
+      operation: "stream",
+      reason,
+      ...(event === undefined ? {} : { event }),
+      ...(bytes === undefined ? {} : { bytes }),
+    });
+    void close();
+  };
 
   const close = async () => {
     if (closed) return;
@@ -70,7 +101,7 @@ export const streamChat = (source: SnapshotSource, signal: AbortSignal): Respons
     queuedBytes = 0;
     const frame = pending;
     pending = null;
-    if (frame !== null && !enqueue(frame)) void close();
+    if (frame !== null && !enqueue(frame)) failClosed(undefined, "oversize", frame.byteLength);
   };
 
   const drain = async () => {
@@ -81,7 +112,7 @@ export const streamChat = (source: SnapshotSource, signal: AbortSignal): Respons
       while (dirty) {
         if (closed) return;
         if (retries++ >= 4) {
-          await close();
+          failClosed(undefined, "retry-limit");
           return;
         }
         dirty = false;
@@ -96,13 +127,16 @@ export const streamChat = (source: SnapshotSource, signal: AbortSignal): Respons
         const data = JSON.stringify(snapshot);
         if (data === previous) continue;
         previous = data;
-        if (!enqueue(encoder.encode(`event: snapshot\ndata: ${data}\n\n`))) {
-          await close();
+        const frame = encoder.encode(`event: snapshot\ndata: ${data}\n\n`);
+        if (!enqueue(frame)) {
+          failClosed(undefined, "oversize", frame.byteLength);
           return;
         }
       }
-    } catch {
-      await close();
+    } catch (error) {
+      if (error instanceof RefreshFence)
+        failClosed(error, "refresh-fence", undefined, "application.recovery");
+      else failClosed(error, "snapshot");
     } finally {
       draining = false;
     }

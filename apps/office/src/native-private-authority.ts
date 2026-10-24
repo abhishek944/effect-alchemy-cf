@@ -103,6 +103,7 @@ export function nativePrivateAuthority(
               new AbortController().signal,
               actual.value.cleanupDeadline,
             ),
+            "sdk-closed-report",
           );
         },
       },

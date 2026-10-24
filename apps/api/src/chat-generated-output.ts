@@ -14,6 +14,16 @@ import {
 import type { SavedFile } from "./chat-library-schema.ts";
 import type { GeneratedReceipt } from "./chat-generated-storage.ts";
 
+export const generatedDeclaredBytes = (request: Request): number => {
+  const raw = request.headers.get("x-image-byte-size") ?? request.headers.get("content-length");
+  if (raw === null || !/^[1-9][0-9]{0,7}$/.test(raw)) throw new ImageStorageError("invalid_input");
+  const bytes = Number(raw);
+  const contentLength = request.headers.get("content-length");
+  if (bytes > MAX_IMAGE_BYTES || (contentLength !== null && Number(contentLength) !== bytes))
+    throw new ImageStorageError("invalid_output");
+  return bytes;
+};
+
 type Dependencies = {
   readonly ledger: ChatImageStorageLedger;
   readonly bucket: cf.R2Bucket;
@@ -24,7 +34,7 @@ type Dependencies = {
   ) => Promise<GeneratedReceipt>;
 };
 
-/** Runs only inside the owner's tracked byte lease; byte validation and F1 identity are unchanged. */
+/** Validate and persist output under the owner's durable storage intent. */
 export const persistGeneratedOutput = async (
   deps: Dependencies,
   key: ImageCallKey,

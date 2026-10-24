@@ -8,46 +8,21 @@ import type {
   OperationIntent,
   OperationRecord,
 } from "../ports/index.ts";
-import { Intent, StoredOperation } from "./record-schemas.ts";
-import { actorIdentity, intentIdentity } from "./control-identity.ts";
+import { StoredOperation } from "./record-schemas.ts";
 import { boundedMetadataDigest } from "./control-identity.ts";
 import { officeFailure } from "./failure.ts";
+import { prepareOperation, type PreparedOperation } from "./operation-prepare.ts";
 
-/** Construction only: merge uses this inside atomic approval consumption/barrier reservation, not a prior insert. */
-export const initialOperation = Effect.fn("Office.initialOperation")(function* (
+/** Requested record from an already prepared identity; no duplicated intent/digest work. */
+export const createOperationRecord = Effect.fn("Office.createOperationRecord")(function* (
   deps: OfficeDependencies,
   actor: ActorClaims,
-  value: OperationIntent,
+  prepared: PreparedOperation,
   document: DocumentRecord,
   draft: DraftRecord | null,
 ) {
-  const intent = yield* decodeWire(Intent)(value).pipe(
-    Effect.mapError(() => officeFailure("INVALID_INPUT")),
-  );
-  if (
-    actor.capability === "draft-task" &&
-    (intent.kind === "approve" ||
-      intent.kind === "merge" ||
-      (intent.kind === "create" && intent.input.destination !== "new-draft"))
-  )
-    return yield* Effect.fail(officeFailure("FORBIDDEN", intent.input.operationId));
   const now = yield* Clock.currentTimeMillis;
-  const lineageDigest = yield* boundedMetadataDigest(
-    actorIdentity(actor),
-    deps.policy.limits.metadataBytes,
-  );
-  const intentDigest = yield* boundedMetadataDigest(
-    [
-      "office-operation",
-      1,
-      intentIdentity(intent),
-      document.document.id,
-      document.unitId,
-      draft?.worktreeId ?? null,
-      deps.policy.version,
-    ],
-    deps.policy.limits.metadataBytes,
-  );
+  const { intent, intentDigest, lineageDigest } = prepared;
   const receipt = yield* decodeWire(Receipt)({
     operationId: intent.input.operationId,
     kind: intent.kind,
@@ -72,6 +47,7 @@ export const initialOperation = Effect.fn("Office.initialOperation")(function* (
     lineageDigest,
     receipt,
     artifacts: { source: null, input: null, code: null, proposal: null },
+    merge: null,
     jobId: null,
     policyVersion: deps.policy.version,
     createdAt: now,
@@ -82,4 +58,16 @@ export const initialOperation = Effect.fn("Office.initialOperation")(function* (
   );
   yield* boundedMetadataDigest(normalized, deps.policy.limits.metadataBytes);
   return normalized;
+});
+
+/** Construction only: merge uses this inside atomic approval consumption/barrier reservation, not a prior insert. */
+export const initialOperation = Effect.fn("Office.initialOperation")(function* (
+  deps: OfficeDependencies,
+  actor: ActorClaims,
+  value: OperationIntent,
+  document: DocumentRecord,
+  draft: DraftRecord | null,
+) {
+  const prepared = yield* prepareOperation(deps, actor, value, document, draft);
+  return yield* createOperationRecord(deps, actor, prepared, document, draft);
 });

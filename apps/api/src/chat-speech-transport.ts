@@ -4,6 +4,7 @@
  * synthesis, no retry, no redirects.
  */
 import { Option, Schema } from "effect";
+import { withCause } from "@starter/diagnostics";
 import { beginSpeechAttempt, drainResponse, readBoundedBytes } from "./chat-speech-io.ts";
 import type { SpeechModel, SpeechVoice, TranscriptionModel } from "./chat-speech-schema.ts";
 import {
@@ -18,6 +19,7 @@ export const SPEECH_AUDIO_LIMIT = 8 * 1024 * 1024;
 export type SpeechTransportFailure =
   | "timeout"
   | "network"
+  | "cancelled"
   | "upstream_rejected"
   | "invalid_response";
 
@@ -49,11 +51,23 @@ const attempt = async <T>(
     return await run(owned.signal);
   } catch (error) {
     if (error instanceof SpeechTransportError) throw error;
-    if (owned.timedOut()) throw new SpeechTransportError("timeout", null);
-    throw new SpeechTransportError("network", null);
+    if (owned.timedOut()) throw withCause(new SpeechTransportError("timeout", null), error);
+    if (owned.cancelled()) throw withCause(new SpeechTransportError("cancelled", null), error);
+    throw withCause(new SpeechTransportError("network", null), error);
   } finally {
     owned.clear();
   }
+};
+
+/** Preserve the intended upstream rejection even when draining its body fails. */
+const rejectUpstream = async (response: Response): Promise<never> => {
+  const failure = new SpeechTransportError("upstream_rejected", response.status);
+  try {
+    await drainResponse(response);
+  } catch (error) {
+    withCause(failure, error);
+  }
+  throw failure;
 };
 
 const decodeOption = <S extends Schema.ConstraintDecoder<unknown>>(
@@ -113,10 +127,7 @@ export const transcribeAudio = (
       cache: "no-store",
       signal: owned,
     });
-    if (!response.ok) {
-      await drainResponse(response);
-      throw new SpeechTransportError("upstream_rejected", response.status);
-    }
+    if (!response.ok) return rejectUpstream(response);
     const contentType = (response.headers.get("content-type") ?? "")
       .toLowerCase()
       .split(";")[0]
@@ -128,13 +139,12 @@ export const transcribeAudio = (
     const raw = await readBoundedBytes(response, TRANSCRIPTION_RESPONSE_LIMIT);
     if (raw === null) throw new SpeechTransportError("invalid_response", null);
     const rawText = new TextDecoder().decode(raw);
-    const parsed: unknown = ((): unknown => {
-      try {
-        return JSON.parse(rawText);
-      } catch {
-        return null;
-      }
-    })();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (error) {
+      throw withCause(new SpeechTransportError("invalid_response", null), error);
+    }
     const reported = usageOf(parsed);
     const decoded = decodeOption(Schema.Struct({ text: Schema.String }), parsed);
     if (decoded === null) throw new SpeechTransportError("invalid_response", null, reported);
@@ -175,10 +185,7 @@ export const synthesizeSpeech = (
       cache: "no-store",
       signal: owned,
     });
-    if (!response.ok) {
-      await drainResponse(response);
-      throw new SpeechTransportError("upstream_rejected", response.status);
-    }
+    if (!response.ok) return rejectUpstream(response);
     const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
     if (contentType.split(";")[0]?.trim() !== "audio/mpeg") {
       await drainResponse(response);

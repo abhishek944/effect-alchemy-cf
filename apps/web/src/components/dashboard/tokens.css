@@ -101,8 +101,8 @@
   flex-shrink: 0;
 }
 [data-dashboard] ::selection {
-  background: var(--cx-selected);
-  color: var(--cx-text);
+  background: var(--cx-primary);
+  color: var(--cx-primary-text);
 }
 
 [data-dashboard][data-theme="midnight-black"] {

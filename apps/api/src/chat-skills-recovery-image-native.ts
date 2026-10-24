@@ -1,5 +1,6 @@
 import type { UserInput } from "@earendil-works/pi-durable";
 import { UserEntry } from "@earendil-works/pi-durable";
+import { reportFailure } from "@starter/diagnostics";
 import type { RecoveryRunner } from "./chat-skills-recovery.ts";
 import { PI_BACKGROUND } from "./chat-runtime.ts";
 import { json } from "./chat-internal.ts";
@@ -62,8 +63,14 @@ export async function acceptedRecoveryImageInput(
   deps.ledger.recordEntry(operationId, native.entry, Date.now());
   try {
     await deps.finalize(operationId, scope.chatId, scope.ownerId);
-  } catch {
-    /* Exact native proof remains available for lost catalog-finalize repair. */
+  } catch (error) {
+    // Exact native proof remains available for lost catalog-finalize repair.
+    reportFailure(error, {
+      component: "chat-skills-recovery",
+      operation: "image-finalize",
+      operationId,
+      event: "application.recovery",
+    });
   }
   return runner.accepted(operationId, logicalOperationId, true);
 }

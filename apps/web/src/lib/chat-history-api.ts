@@ -1,4 +1,4 @@
-import { request, unexpectedResponse } from "@/lib/chat-api";
+import { requestDecoded } from "@/lib/chat-api";
 import {
   parseHistoryPage,
   parseOperationReceipt,
@@ -16,11 +16,12 @@ export async function getHistory(
   signal: AbortSignal,
 ): Promise<HistoryPage> {
   const query = new URLSearchParams({ cursor, limit: String(limit) });
-  const page = parseHistoryPage(
-    await request(`${path(id, "/history")}?${query.toString()}`, { signal }),
+  return requestDecoded(
+    `${path(id, "/history")}?${query.toString()}`,
+    "chat.history",
+    parseHistoryPage,
+    { signal },
   );
-  if (!page) throw unexpectedResponse();
-  return page;
 }
 
 /** Exact next text slice for one message/revision, resuming from `cursor`. */
@@ -31,14 +32,12 @@ export async function getMessageText(
   signal: AbortSignal,
 ): Promise<TextPage> {
   const query = new URLSearchParams({ cursor });
-  const page = parseTextPage(
-    await request(
-      `${path(id, `/messages/${encodeURIComponent(messageId)}/text`)}?${query.toString()}`,
-      { signal },
-    ),
+  return requestDecoded(
+    `${path(id, `/messages/${encodeURIComponent(messageId)}/text`)}?${query.toString()}`,
+    "chat.message-text",
+    parseTextPage,
+    { signal },
   );
-  if (!page) throw unexpectedResponse();
-  return page;
 }
 
 /** Exact native receipt for one operation UUID, without another submission. */
@@ -47,9 +46,10 @@ export async function getOperationReceipt(
   operationId: string,
   signal: AbortSignal,
 ): Promise<OperationReceipt> {
-  const receipt = parseOperationReceipt(
-    await request(path(id, `/operations/${encodeURIComponent(operationId)}`), { signal }),
+  return requestDecoded(
+    path(id, `/operations/${encodeURIComponent(operationId)}`),
+    "chat.operation-receipt",
+    parseOperationReceipt,
+    { signal },
   );
-  if (!receipt) throw unexpectedResponse();
-  return receipt;
 }

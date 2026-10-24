@@ -63,12 +63,14 @@ function UploadedFile({ file, active }: { file: ChatFileDescriptor; active: bool
 export function SentSavedFiles() {
   const messageId = useAuiState((state) => state.message.id);
   const { attachmentsFor, active } = useHistoryText();
+  const files = attachmentsFor(messageId);
+  if (!files.length) return null;
   return (
-    <>
-      {attachmentsFor(messageId).map((file) => (
+    <div data-cx="chat-message-sent-files">
+      {files.map((file) => (
         <UploadedFile key={file.id} file={file} active={active} />
       ))}
-    </>
+    </div>
   );
 }
 

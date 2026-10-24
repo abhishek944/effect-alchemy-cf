@@ -9,12 +9,16 @@ export default function SearchField({
   value,
   onChange,
   status,
+  placeholder = "Search",
+  maxLength,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   status?: string;
+  placeholder?: string;
+  maxLength?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,7 +33,8 @@ export default function SearchField({
         id={id}
         data-cx="search-field-input"
         type="search"
-        placeholder="Search"
+        placeholder={placeholder}
+        maxLength={maxLength}
         autoComplete="off"
         value={value}
         onChange={(event) => onChange(event.target.value)}

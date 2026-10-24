@@ -1,4 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { officeLifecycle } from "./office-lifecycle.ts";
 import { Effect, Exit, Schema, Scope } from "effect";
 import { OfficeUnavailable, decodeWireSync, safeFailure } from "@starter/office-contract";
 import type { OwnerScope } from "@starter/office-server/ports";
@@ -6,7 +8,8 @@ import type { HostPolicy } from "@starter/office-server/native-remote";
 import { makeOfficeContainerLifetime } from "./office-container-lifetime.ts";
 import { officeNativeRequest } from "./office-platform.ts";
 
-const unknown = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+const unknown = (cause?: unknown) =>
+  withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE")), cause);
 const Ready = Schema.Struct({
   bootId: Schema.String,
   processId: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
@@ -24,6 +27,15 @@ export function officeHostProcess(
   policy: typeof HostPolicy.Type,
   storage: cf.Fetcher,
 ) {
+  let bootId: string | undefined;
+  const { event, step } = officeLifecycle(() => ({
+    component: "office.host-process",
+    operation: "bootstrap",
+    stage: owner.stage,
+    service: "office-host",
+    release: imageRef.slice(-64),
+    bootId,
+  }));
   let acquisition: Promise<Lifetime> | undefined;
   let starting: Promise<Lifetime> | undefined;
   let closing: Promise<void> | undefined;
@@ -53,23 +65,27 @@ export function officeHostProcess(
       ),
     );
     void acquisition.catch(() => undefined);
-    timer = setTimeout(() => rejectReady?.(unknown()), 30_000);
+    timer = setTimeout(() => {
+      event("bootstrap-ready", { reason: "bootstrap-deadline-expired", outcome: "unknown" });
+      rejectReady?.(withDiagnostic(unknown(), "bootstrap-deadline-expired"));
+    }, 30_000);
     starting = Promise.resolve().then(async () => {
       const resource = await acquisition;
       if (resource === undefined) throw unknown();
-      await ready;
+      bootId = resource.bootId;
+      await step("bootstrap-ready", () => ready);
       if (closing !== undefined) throw unknown();
-      await resource.activate(); // Actual inspect.image + original boot checked again by frozen lifetime.
+      await step("host-activate", () => resource.activate()); // Actual inspect.image + original boot checked again by frozen lifetime.
       return resource;
     });
     return starting;
   };
   return {
     start,
-    async peer(bootId: string | null, cleanup: boolean) {
+    async peer(peerBootId: string | null, cleanup: boolean) {
       if (acquisition === undefined || (!cleanup && closing !== undefined)) throw unknown();
       const resource = await acquisition;
-      if (bootId !== resource.bootId) throw unknown(); // Correlation, NOT the peer proof.
+      if (peerBootId !== resource.bootId) throw unknown(); // Correlation, NOT the peer proof.
       const native = state.container;
       if (native === undefined || (!cleanup && !native.running)) throw unknown();
       const current = await native.inspect();
@@ -79,8 +95,8 @@ export function officeHostProcess(
         throw unknown();
       return resource;
     },
-    async ready(bootId: string | null, payload: unknown) {
-      const resource = await this.peer(bootId, false);
+    async ready(readyBootId: string | null, payload: unknown) {
+      const resource = await this.peer(readyBootId, false);
       const actual = decodeWireSync(Ready)(payload);
       if (
         acceptedReady ||
@@ -102,10 +118,12 @@ export function officeHostProcess(
       if (closing !== undefined) return closing;
       closing = Promise.resolve().then(async () => {
         clearTimeout(timer);
-        rejectReady?.(unknown());
+        rejectReady?.(withDiagnostic(unknown(), "bootstrap-closed"));
         await acquisition?.catch(() => undefined);
         // Caller gracefully stops/joins actual Node handlers and Worker callbacks FIRST.
-        await Effect.runPromise(Scope.close(scope, Exit.succeed(undefined)));
+        await step("host-close", () =>
+          Effect.runPromise(Scope.close(scope, Exit.succeed(undefined))),
+        );
         resolveGone?.(); // Actual owned destroy/monitor/start/task Scope joined; NEVER just stop.signal.
         return undefined;
       });

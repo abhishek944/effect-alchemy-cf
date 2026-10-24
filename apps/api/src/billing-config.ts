@@ -1,10 +1,11 @@
 import {
   BillingProducts,
-  billingError,
+  billingFailure,
   type BillingAdapter,
   type BillingProducts as Products,
   type ProviderId,
 } from "@starter/integrations/billing";
+import { withCause } from "@starter/diagnostics";
 import { makeDodoBilling } from "@starter/integrations/billing-dodo";
 import { makePolarBilling } from "@starter/integrations/billing-polar";
 import { Config, Context, Effect, Layer, Option, Redacted, Schema } from "effect";
@@ -42,13 +43,17 @@ export class BillingRuntime extends Context.Service<
             onSome: (value) => (value.stage === "prod" ? "live" : "test"),
           });
       if (!["", "dodo", "polar"].includes(selected) || !["test", "live"].includes(mode)) {
-        return yield* Effect.fail(billingError("Configuration"));
+        return yield* Effect.fail(billingFailure("Configuration", "config-provider-mode"));
       }
       const products = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(BillingProducts))(
         raw,
-      ).pipe(Effect.mapError(() => billingError("Configuration")));
+      ).pipe(
+        Effect.mapError((cause) =>
+          withCause(billingFailure("Configuration", "config-products"), cause),
+        ),
+      );
       if (Object.keys(products).length > 20)
-        return yield* Effect.fail(billingError("Configuration"));
+        return yield* Effect.fail(billingFailure("Configuration", "config-products-limit"));
       const scopes: BillingScope[] = [];
       for (const provider of ["dodo", "polar"] as const) {
         const prefix = provider.toUpperCase();
@@ -65,13 +70,13 @@ export class BillingRuntime extends Context.Service<
           !Redacted.value(apiKey) ||
           !Redacted.value(webhookSecret)
         ) {
-          return yield* Effect.fail(billingError("Configuration"));
+          return yield* Effect.fail(billingFailure("Configuration", "config-credentials"));
         }
         const ids = Object.values(products).flatMap((product) =>
           product[provider] ? [product[provider]] : [],
         );
         if (new Set(ids).size !== ids.length)
-          return yield* Effect.fail(billingError("Configuration"));
+          return yield* Effect.fail(billingFailure("Configuration", "config-product-ids"));
         const options = { accountId, apiKey, webhookSecret, live: mode === "live" };
         scopes.push({
           scope: `${namespace}/${provider}/${mode}/${accountId}`,
@@ -82,7 +87,7 @@ export class BillingRuntime extends Context.Service<
       const defaultProvider: ProviderId | null =
         selected === "dodo" || selected === "polar" ? selected : null;
       if (defaultProvider !== null && !scopes.some((scope) => scope.provider === defaultProvider)) {
-        return yield* Effect.fail(billingError("Configuration"));
+        return yield* Effect.fail(billingFailure("Configuration", "config-default-provider"));
       }
       return { defaultProvider, products, scopes, namespace };
     }).pipe(Effect.orDie),
@@ -93,5 +98,5 @@ export const scopeById = (scope: string) =>
   Effect.gen(function* () {
     const runtime = yield* BillingRuntime;
     const found = runtime.scopes.find((entry) => entry.scope === scope);
-    return found ? found : yield* Effect.fail(billingError("NotFound"));
+    return found ? found : yield* Effect.fail(billingFailure("NotFound", "scope-not-configured"));
   });

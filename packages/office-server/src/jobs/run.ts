@@ -1,4 +1,5 @@
 import { Clock, Effect } from "effect";
+import { withCause, reportFailureEffect } from "@starter/diagnostics";
 import {
   OfficeInvalid,
   OfficeUnavailable,
@@ -39,17 +40,24 @@ export const computeJobState = Effect.fn("Office.jobs.compute")(function* (
       output,
     })),
     Effect.catch((error) =>
-      Effect.succeed(
-        error.code === "OUTCOME_UNKNOWN"
-          ? unknownJobState(job)
-          : {
-              state: "failed" as const,
-              jobId: job.binding.jobId,
-              error: {
-                ...safeFailure(error.code, job.binding.operationId),
-                retry: "never" as const,
+      reportFailureEffect(error, {
+        component: "office.job-supervisor",
+        operation: "compute",
+        operationId: job.binding.operationId,
+        taskId: job.binding.jobId,
+      }).pipe(
+        Effect.as(
+          error.code === "OUTCOME_UNKNOWN"
+            ? unknownJobState(job)
+            : {
+                state: "failed" as const,
+                jobId: job.binding.jobId,
+                error: {
+                  ...safeFailure(error.code, job.binding.operationId),
+                  retry: "never" as const,
+                },
               },
-            },
+        ),
       ),
     ),
   );
@@ -76,7 +84,8 @@ export const runIsolatedJob = Effect.fn("Office.jobs.run")(function* (
       : new Uint8Array();
   const wire = yield* Effect.try({
     try: () => encodeJobRequest({ job, input, code }),
-    catch: () => new OfficeInvalid(safeFailure("INVALID_INPUT", job.binding.operationId)),
+    catch: (cause) =>
+      withCause(new OfficeInvalid(safeFailure("INVALID_INPUT", job.binding.operationId)), cause),
   });
   let pending: Promise<unknown> | null = null;
   const result = yield* Effect.tryPromise({
@@ -87,10 +96,15 @@ export const runIsolatedJob = Effect.fn("Office.jobs.run")(function* (
         throw new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN", job.binding.operationId));
       }
       const running = placement.run(wire, AbortSignal.any([signal, controller.signal]));
-      pending = running.catch(() => undefined);
+      pending = running;
+      void running.catch(() => undefined); // Observer only; interruption still joins the original.
       return running;
     },
-    catch: () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN", job.binding.operationId)),
+    catch: (cause) =>
+      withCause(
+        new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN", job.binding.operationId)),
+        cause,
+      ),
   }).pipe(
     Effect.onInterrupt(() =>
       Effect.promise(async () => {
@@ -103,19 +117,31 @@ export const runIsolatedJob = Effect.fn("Office.jobs.run")(function* (
     return yield* Effect.fail(
       new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN", job.binding.operationId)),
     );
-  if (result.status !== "exited" || result.exitCode !== 0)
+  if (result.status !== "exited" || result.exitCode !== 0) {
+    const failureCode =
+      result.status === "output-limit"
+        ? "LIMIT_EXCEEDED"
+        : result.status !== "exited"
+          ? "OUTCOME_UNKNOWN"
+          : result.exitCode === 2
+            ? "INVALID_INPUT"
+            : "UNAVAILABLE";
     return yield* Effect.fail(
-      new OfficeInvalid({
-        ...safeFailure(
-          result.status === "output-limit" ? "LIMIT_EXCEEDED" : "INVALID_INPUT",
-          job.binding.operationId,
-        ),
-        retry: "never",
-      }),
+      failureCode === "INVALID_INPUT" || failureCode === "LIMIT_EXCEEDED"
+        ? new OfficeInvalid({
+            ...safeFailure(failureCode, job.binding.operationId),
+            retry: "never",
+          })
+        : new OfficeUnavailable({
+            ...safeFailure(failureCode, job.binding.operationId),
+            retry: "never",
+          }),
     );
+  }
   const output = yield* Effect.try({
     try: () => validateJobOutput(job, result.stdout),
-    catch: () => new OfficeInvalid(safeFailure("INVALID_INPUT", job.binding.operationId)),
+    catch: (cause) =>
+      withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE", job.binding.operationId)), cause),
   });
   const id = digestBytes(
     new TextEncoder().encode(

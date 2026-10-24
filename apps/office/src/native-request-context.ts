@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Effect } from "effect";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@starter/office-contract";
 import type { OfficeControlChannel, OfficeControlSession } from "./native-channel.ts";
 import type { OfficeBinaryChannel, OfficeBinarySession } from "./native-transfer-types.ts";
@@ -19,7 +20,7 @@ const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
 /** Request-local resource association ONLY. T47 must authenticate before transferring channels here. */
 export class OfficeRequestContext {
   private readonly local = new AsyncLocalStorage<Lease>();
-  private failedCleanup = false;
+  private cleanupFailure: OfficeUnavailable | undefined;
   readonly publication = new OfficeEditorPublication();
   readonly work = this.dispatcher("work");
   readonly manifest = this.dispatcher("manifest");
@@ -38,7 +39,7 @@ export class OfficeRequestContext {
   private lease(work: boolean): Lease {
     const lease = this.local.getStore();
     if (lease === undefined || (work && !lease.active)) throw forbidden();
-    if (work && this.failedCleanup) throw new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+    if (work) this.assertClean();
     return lease;
   }
   private channel(role: JsonRole, work: boolean): OfficeControlChannel {
@@ -107,18 +108,28 @@ export class OfficeRequestContext {
     const cleanup = await Promise.allSettled([
       Promise.resolve().then(() => channels.cleanup.close()),
     ]);
-    if ([...closed, ...cleanup].some((value) => value.status === "rejected"))
-      this.failedCleanup = true;
+    const reasons = [
+      "request-work-close",
+      "request-manifest-close",
+      "request-binary-close",
+      "request-cleanup-close",
+    ];
+    [...closed, ...cleanup].forEach((result, index) => {
+      if (result.status === "rejected") this.failCleanup(result.reason, reasons[index]);
+    });
     if (!outcome.ok) throw outcome.error; // Preserve the original denial, even if cleanup also failed.
     this.assertClean();
     return outcome.value;
   }
   /** Real local SDK/serializer disposal failure poisons later work and remains visible at shutdown. */
-  failCleanup(): void {
-    this.failedCleanup = true;
+  failCleanup(cause?: unknown, reason = "request-cleanup"): void {
+    this.cleanupFailure ??= withCause(
+      withDiagnostic(new OfficeUnavailable(safeFailure("UNAVAILABLE")), reason),
+      cause,
+    );
   }
   /** Server shutdown must check this after joining all actual request tasks. */
   assertClean(): void {
-    if (this.failedCleanup) throw new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+    if (this.cleanupFailure !== undefined) throw this.cleanupFailure;
   }
 }

@@ -5,44 +5,59 @@
   flex-shrink: 0;
 }
 [data-cx="chat-library-search"] {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 9px;
-  border: 1px solid var(--cx-line);
-  border-radius: 8px;
-  background: var(--cx-sidebar);
   flex: 1;
   min-width: 0;
 }
-[data-cx="chat-library-search"] svg {
-  width: 16px;
-  height: 16px;
-  color: var(--cx-muted);
-}
-[data-cx="chat-library-search"] input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: var(--cx-text);
-  font-size: 12px;
-}
-[data-cx="chat-library-search"]:focus-within {
-  outline: 2px solid var(--cx-focus);
-  outline-offset: -2px;
+[data-dashboard] [data-cx="chat-library-search"] > [data-cx="search-field"] {
+  margin: 0;
 }
 [data-cx="chat-library-filters"] {
   display: flex;
   gap: 6px;
   min-width: 0;
 }
+[data-cx="chat-library-filters"] [data-cx="select-wrap"] {
+  min-width: 0;
+}
+[data-cx="chat-library-sort"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+[data-cx="chat-library-sort"] > [data-cx="select-wrap"] {
+  flex: 1;
+}
+[data-dashboard] [data-cx="chat-library-refresh"] {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--cx-muted);
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="chat-library-refresh"]:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="chat-library-refresh"]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+[data-cx="chat-library-refresh"] svg {
+  width: 16px;
+  height: 16px;
+}
 [data-cx="chat-library-filters"] select {
   border: 1px solid var(--cx-line);
   border-radius: 7px;
   background: var(--cx-sidebar);
   color: var(--cx-text);
-  padding: 6px;
+  padding-block: 6px;
   min-width: 0;
   font-size: 11px;
 }
@@ -57,8 +72,15 @@
   }
   [data-cx="chat-library-filters"] {
     width: 100%;
+    flex-wrap: wrap;
+  }
+  [data-cx="chat-library-filters"] > [data-cx="select-wrap"] {
+    flex: 1 0 min(128px, 100%);
+  }
+  [data-cx="chat-library-sort"] {
+    flex: 1 0 min(168px, 100%);
   }
   [data-cx="chat-library-filters"] select {
-    flex: 1;
+    width: 100%;
   }
 }

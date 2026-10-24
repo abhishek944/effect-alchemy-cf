@@ -5,14 +5,15 @@ import { HostUnitRecord } from "@starter/office-server/native-remote";
 import { officeNativeContext, officeDenied } from "./office-private-authority.ts";
 import type { OfficeHostActive, OfficeHostEntry } from "./office-host-state.ts";
 
-/** Actual admitted readonly SDK adapter metadata, not a fabricated Unit from title/type/constructor. */
+/** Artifact serialization needs persisted source metadata; live drafts use their native Worktree adapter. */
 export async function officeHostUnit(
   active: OfficeHostActive,
   entry: OfficeHostEntry,
   incoming: Request,
 ) {
   const view = entry.resolution.view;
-  if (view === null) return null;
+  // A worktree-only imported Unit has no trunk record. Requiring one here prevents even live loading.
+  if (view === null || view.source.kind !== "artifact") return null;
   await entry.frame.request.live();
   const target = view.target;
   const draft =

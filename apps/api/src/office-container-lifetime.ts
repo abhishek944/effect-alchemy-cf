@@ -1,4 +1,9 @@
 import { officeImageReference } from "./office-image.ts";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { officeLifecycle } from "./office-lifecycle.ts";
+import { officeContainerCleanup } from "./office-container-cleanup.ts";
+import { stopPreexistingOfficeContainer } from "./office-container-preexisting.ts";
+import { officeNativeMonitor } from "./office-platform.ts";
 import type * as cf from "@cloudflare/workers-types";
 import {
   OfficeForbidden,
@@ -10,7 +15,8 @@ import { HostPolicy } from "@starter/office-server/native-remote";
 import { OwnerClaims, type OwnerScope } from "@starter/office-server/ports";
 import { Effect, Exit } from "effect";
 
-const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+const unavailable = (cause?: unknown) =>
+  withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE")), cause);
 const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
 const storageHost = "office-storage.internal";
 const credentials = [
@@ -30,7 +36,6 @@ type Options = {
   /** Real private Worker binding. Its handler authenticates original process/context on EACH call. */
   readonly storage: cf.Fetcher;
 };
-
 function lifetime(options: Options) {
   const state = options.state;
   const storage = options.storage;
@@ -46,13 +51,22 @@ function lifetime(options: Options) {
   )
     throw forbidden();
   const bootId = crypto.randomUUID();
+  const { event, step } = officeLifecycle(() => ({
+    component: "office.container",
+    operation: "lifetime",
+    bootId,
+    stage: owner.stage,
+    service: "office-host",
+    release: imageRef.slice(-64),
+  }));
   const stop = new AbortController();
   let closed = false,
     active = false,
     owned = false;
   let starting: Promise<void> | undefined;
   let stopping: Promise<void> | undefined;
-  let monitor: Promise<boolean> | undefined;
+  let monitor: ReturnType<typeof officeNativeMonitor> | undefined;
+  let monitorCause: unknown;
   let port: cf.Fetcher | undefined;
   const pending = new Set<Promise<void>>();
   function own<A>(body: () => Promise<A>): Promise<A> {
@@ -68,25 +82,22 @@ function lifetime(options: Options) {
   const check = () => {
     if (closed || stop.signal.aborted) throw unavailable();
   };
-  const watch = () =>
-    Promise.resolve()
-      .then(() => native.monitor())
-      .then(
-        () => true,
-        () => false,
-      )
-      .then((clean) => {
-        closed = true;
-        active = false;
-        stop.abort();
-        return clean;
-      });
+  const watch = () => {
+    const watched = officeNativeMonitor(native);
+    const actual = step("container-monitor", () => watched.wait).finally(() => {
+      closed = true;
+      active = false;
+      stop.abort();
+    });
+    void actual.catch((cause: unknown) => (monitorCause = cause));
+    return { ...watched, wait: actual };
+  };
   function start(): Promise<void> {
     if (starting !== undefined) return starting;
-    starting = Promise.resolve().then(() =>
-      state.blockConcurrencyWhile(async () => {
+    starting = state.blockConcurrencyWhile(() =>
+      step("container-start", async () => {
         check();
-        if (native.running) throw unavailable(); // Never adopt another or revoked host.
+        if (native.running) await stopPreexistingOfficeContainer(native, imageRef, event);
         await native.interceptOutboundHttp(storageHost, storage);
         check();
         if (native.running) throw unavailable();
@@ -98,6 +109,9 @@ function lifetime(options: Options) {
           ],
           labels: { "office-boot": bootId },
           env: {
+            OBS_SERVICE: "office-host",
+            OBS_STAGE: owner.stage,
+            OBS_RELEASE: imageRef.slice(-64), // Validated immutable image digest, label-safe hex.
             OFFICE_BOOT_ID: bootId,
             OFFICE_STAGE: owner.stage,
             OFFICE_OWNER_ID: owner.ownerId,
@@ -120,25 +134,10 @@ function lifetime(options: Options) {
     stopping = Promise.resolve().then(async () => {
       await starting?.catch(() => undefined);
       if (!owned) return undefined;
-      let failed = false,
-        foreign = false;
-      try {
-        const current = await native.inspect();
-        foreign = current !== null && current.labels["office-boot"] !== bootId;
-        if (foreign) failed = true;
-      } catch {
-        failed = true;
-      }
-      if (!foreign) {
-        try {
-          await native.destroy();
-        } catch {
-          failed = true;
-        }
-      }
-      if (monitor === undefined || !(await monitor)) failed = true;
-      while (pending.size > 0) await Promise.all(pending);
-      if (failed) throw unavailable();
+      await step("container-cleanup", () =>
+        officeContainerCleanup(native, bootId, monitor, pending, () => monitorCause),
+      );
+      event("closed", { event: "application.complete", outcome: "confirmed" });
       return undefined;
     });
     void stopping.catch(() => undefined);
@@ -155,7 +154,7 @@ function lifetime(options: Options) {
       check();
       return own(async () => {
         check();
-        const current = await native.inspect();
+        const current = await step("container-activate-inspect", () => native.inspect());
         check();
         if (
           !owned ||
@@ -163,8 +162,9 @@ function lifetime(options: Options) {
           current.image !== imageRef ||
           current.labels["office-boot"] !== bootId
         )
-          throw forbidden();
+          throw withDiagnostic(forbidden(), "container-provenance-mismatch");
         active = true;
+        event("activated", { outcome: "confirmed" });
       });
     },
     request(request: cf.Request): Promise<cf.Response> {

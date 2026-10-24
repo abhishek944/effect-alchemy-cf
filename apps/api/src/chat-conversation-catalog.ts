@@ -1,6 +1,9 @@
 import type * as cf from "@cloudflare/workers-types";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";
 
+const catalogFailure = (message: string, status?: number): Error =>
+  Object.assign(new Error(message), status === undefined ? {} : { status });
+
 export const conversationCatalogStub = (
   env: ConversationFileEnv,
   ownerId: string,
@@ -16,17 +19,15 @@ export const conversationCatalogPost = async (
   path: string,
   body: unknown,
 ): Promise<unknown> => {
-  try {
-    const response = await conversationCatalogStub(env, ownerId).fetch(
-      `https://chat.internal${path}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    );
-    return response.status === 200 ? await response.json() : null;
-  } catch {
-    return null;
-  }
+  const response = await conversationCatalogStub(env, ownerId).fetch(
+    `https://chat.internal${path}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  if (response.status !== 200)
+    throw catalogFailure("Private chat catalog request failed", response.status);
+  return await response.json();
 };

@@ -15,6 +15,7 @@ export type SpeechAttemptFailure = "timeout" | "network";
 export type SpeechAttempt = {
   readonly signal: AbortSignal;
   readonly timedOut: () => boolean;
+  readonly cancelled: () => boolean;
   readonly clear: () => void;
 };
 
@@ -25,10 +26,16 @@ export const beginSpeechAttempt = (
 ): SpeechAttempt => {
   const controller = new AbortController();
   let timedOut = false;
-  const forward = () => controller.abort();
+  let cancelled = false;
+  const forward = () => {
+    cancelled = true;
+    controller.abort();
+  };
   if (signal !== undefined) {
-    if (signal.aborted) controller.abort();
-    else signal.addEventListener("abort", forward, { once: true });
+    if (signal.aborted) {
+      cancelled = true;
+      controller.abort();
+    } else signal.addEventListener("abort", forward, { once: true });
   }
   const timer = setTimeout(() => {
     timedOut = true;
@@ -37,6 +44,7 @@ export const beginSpeechAttempt = (
   return {
     signal: controller.signal,
     timedOut: () => timedOut,
+    cancelled: () => cancelled,
     clear: () => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", forward);

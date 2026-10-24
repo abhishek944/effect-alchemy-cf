@@ -52,6 +52,8 @@ export const speechTransportFailure = (error: unknown): Response => {
         "provider_invalid",
         "The speech provider returned an unexpected response.",
       );
+    if (error.code === "cancelled")
+      return speechResponse(499, "provider_cancelled", "The speech request was cancelled.");
   }
   return speechResponse(
     503,

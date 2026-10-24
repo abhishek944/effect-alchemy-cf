@@ -17,6 +17,12 @@ body,
 body {
   overscroll-behavior: none;
 }
+/* Univer 1.0.3's empty hidden input can collapse to 0×0 in this frame, leaving
+   Chromium focused without a caret. Keep a layout box inside its clipped host. */
+#office-native [data-u-comp="editor"][contenteditable="true"] {
+  min-width: 1px;
+  min-height: 1px;
+}
 body :is(button, a, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid Highlight;
   outline-offset: 2px;

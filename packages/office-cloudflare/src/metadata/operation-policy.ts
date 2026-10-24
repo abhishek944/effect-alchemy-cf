@@ -54,7 +54,9 @@ export function validateOperation(record: OperationRecord): void {
     record.intent.kind !== record.receipt.kind ||
     record.intent.input.operationId !== record.receipt.operationId ||
     record.updatedAt < record.createdAt ||
-    (record.receipt.documentId !== null && record.receipt.documentId !== record.documentId)
+    (record.receipt.documentId !== null && record.receipt.documentId !== record.documentId) ||
+    (record.merge !== null &&
+      (record.intent.kind !== "merge" || record.merge.operationId !== record.receipt.operationId))
   )
     throw invalid();
   if (record.intent.kind === "create-draft" && record.intent.input.documentId !== record.documentId)
@@ -145,6 +147,9 @@ export function validateAdvance(
     )
       throw conflict();
   }
+  // The merge witness is set at most once; a later advance may carry it but never rewrite it.
+  if (previous.merge !== null && canonical(previous.merge) !== canonical(next.merge))
+    throw conflict();
   if (previous.receipt.reviewId !== null && next.receipt.reviewId !== previous.receipt.reviewId)
     throw conflict();
   if (previous.jobId !== null && previous.jobId !== next.jobId) throw conflict();

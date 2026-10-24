@@ -1,8 +1,9 @@
 import type { DurableImageHost } from "@abhishek944/pi-image-gen/durable";
+import { reportFailure } from "@starter/diagnostics";
 import { createChatGeneratedClient } from "./chat-generated-client.ts";
 import { prepareImageHostPlan, recheckImageHostPlan } from "./chat-image-host-proof.ts";
 import { imageHostRefusal } from "./chat-image-host-sources.ts";
-import { reserveImageHostLifetime } from "./chat-image-host-lifetime.ts";
+import { createImageHostLifetime } from "./chat-image-host-lifetime.ts";
 import { assertImageHostLogical, imageHostIO } from "./chat-image-host-io.ts";
 import { nativeImageLimits } from "./chat-image-policy.ts";
 import {
@@ -51,7 +52,7 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
         const known = deps.calls.read(plan.key);
         if (known === null) return imageHostRefusal();
         if (known.started || known.status !== "prepared") return recoverImageHostPlan(deps, plan);
-        lifetime = reserveImageHostLifetime(plan);
+        lifetime = createImageHostLifetime();
         execution = {
           deps,
           plan,
@@ -63,7 +64,6 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
           blockPaid: () => {
             paidBlocked = true;
           },
-          retainedOutputBackingBytes: 0,
           dispatched: false,
           storing: false,
         };
@@ -87,7 +87,7 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
         const size = plan.proof.args.size ?? image.preferences.size;
         const quality = plan.proof.args.quality ?? image.preferences.quality;
         ownerReservationAttempted = true;
-        await lifetime.lease.track(() =>
+        await lifetime.track(() =>
           client.reserve({
             ...key,
             operationId: snapshot.operationId,
@@ -101,13 +101,13 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
         );
         await recheckImageHostPlan(deps, plan, api, context);
         assertImageHostLogical(execution);
-        const permission = await lifetime.lease.track(() => client.consume(key));
+        const permission = await lifetime.track(() => client.consume(key));
         if (!permission.dispatch) return recoverImageHostPlan(deps, plan);
         await recheckImageHostPlan(deps, plan, api, context);
         assertImageHostLogical(execution);
         const host = imageHostIO(execution, context);
         const request = plan.request;
-        const result = await lifetime.lease.track(() => run(host, request));
+        const result = await lifetime.track(() => run(host, request));
         rememberImageHostMetadata(execution, result.metadata);
         if (!execution.dispatched || result.images.length !== execution.files.size)
           return imageHostRefusal();
@@ -121,6 +121,14 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
           false,
         );
       } catch (error) {
+        reportFailure(error, {
+          component: "chat-image-host",
+          operation: "run-admitted-call",
+          event: "application.failure",
+          ...(plan === undefined
+            ? {}
+            : { operationId: plan.proof.snapshot.operationId, callId: plan.key }),
+        });
         if (execution !== undefined) {
           const failure = safeImageCoreError(error, execution);
           outcome = failure.outcome;
@@ -147,13 +155,12 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
           outcome,
           outcome.dispatched
             ? "Image work did not finish cleanly. Saved results are retained. Do not repeat generation without a new explicit request."
-            : "This invocation did not contact the image provider. Image settings, references, admission or byte capacity could not be verified.",
+            : "This invocation did not contact the image provider. Image settings, references, admission or storage quota could not be verified.",
         );
       } finally {
         if (execution !== undefined && ownsStart)
           closeImageHost(execution, outcome, ownerReservationAttempted);
         else {
-          lifetime?.lease.releaseWhenSettled();
           if (plan !== undefined)
             detachImageHost(
               deps,

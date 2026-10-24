@@ -13,6 +13,7 @@
  * Private `/files/*` envelopes stay internal to the catalog client.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure, type FailureContext } from "@starter/diagnostics";
 import { decodeOption, json } from "./chat-internal.ts";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
@@ -42,6 +43,7 @@ export const matchChatFilesRoute = (pathname: string): ChatFilesRouteMatch | nul
 
 export type ChatFilesRequestInput = {
   readonly request: Request;
+  readonly diagnostic: Omit<FailureContext, "component" | "operation">;
   readonly route: ChatFilesRouteMatch;
   readonly ownerId: string;
   readonly bucket: cf.R2Bucket | undefined;
@@ -65,10 +67,16 @@ const readOriginal = async (
   if (found.value.state !== "ready") return fail("attachment_not_ready", 410);
   if (found.value.chatId !== input.route.chatId || found.value.id !== input.fileId)
     return fail("unavailable", 503);
-  return serveFileOriginal(input.request, found.value, input.bucket, [
-    stagingObjectKey(input.catalog.scope, input.route.chatId, input.fileId),
-    retainedObjectKey(input.catalog.scope, input.route.chatId, input.fileId),
-  ]);
+  return serveFileOriginal(
+    input.request,
+    found.value,
+    input.bucket,
+    [
+      stagingObjectKey(input.catalog.scope, input.route.chatId, input.fileId),
+      retainedObjectKey(input.catalog.scope, input.route.chatId, input.fileId),
+    ],
+    input.diagnostic,
+  );
 };
 
 const remove = async (
@@ -89,7 +97,17 @@ const remove = async (
   await deleteStoredObjects(input.bucket, [
     stagingObjectKey(input.catalog.scope, input.route.chatId, input.fileId),
     retainedObjectKey(input.catalog.scope, input.route.chatId, input.fileId),
-  ]).catch(() => undefined);
+  ]).catch((cause) => {
+    // Removal already succeeded; report the orphaned-byte disposition once.
+    reportFailure(cause, {
+      ...input.diagnostic,
+      chatId: input.route.chatId,
+      component: "chat-files",
+      operation: "attachments.remove",
+      event: "application.cleanup",
+      reason: "cleanup",
+    });
+  });
   return json({ ok: true });
 };
 /** Handles one matched attachment request; returns a response for every method. */

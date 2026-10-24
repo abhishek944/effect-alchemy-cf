@@ -1,7 +1,8 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect } from "effect";
 import { webhooks } from "@polar-sh/sdk/2026-10";
 import {
-  billingError,
+  billingFailure,
   type BillingAdapter,
   type BillingError,
   type ProviderOptions,
@@ -11,11 +12,17 @@ import { polarAccountId, polarEventKind, polarResourceId } from "./billing-polar
 import { makePolarRetrieve } from "./billing-polar-retrieve.ts";
 
 /** `validateEvent` verifies the HMAC before parsing and reports unknown signed types. */
-const verificationError = (error: unknown): BillingError => {
-  if (error instanceof webhooks.PolarWebhookVerificationError) return billingError("Signature");
-  if (error instanceof webhooks.PolarWebhookError) return billingError("Signature");
-  return billingError("Provider");
+const verificationKind = (error: unknown): BillingError => {
+  if (error instanceof webhooks.PolarWebhookVerificationError)
+    return billingFailure("Signature", "webhook-signature-invalid", "polar");
+  if (error instanceof webhooks.PolarWebhookError)
+    return billingFailure("Signature", "webhook-payload-invalid", "polar");
+  return billingFailure("Provider", "webhook-verification-unexpected", "polar");
 };
+
+/** The kind stays public; the verification failure is retained in server memory only. */
+const verificationError = (error: unknown): BillingError =>
+  withCause(verificationKind(error), error);
 
 /**
  * Polar adapter. Customers use the parent-scoped external key, which is unique
@@ -94,9 +101,12 @@ export const makePolarBilling = (options: ProviderOptions): BillingAdapter => {
       Effect.gen(function* () {
         const eventId = headers.get("webhook-id");
         if (eventId === null || eventId === "")
-          return yield* Effect.fail(billingError("Signature"));
+          return yield* Effect.fail(billingFailure("Signature", "webhook-id-missing", "polar"));
         const secret = printable(options.webhookSecret);
-        if (secret === null) return yield* Effect.fail(billingError("Configuration"));
+        if (secret === null)
+          return yield* Effect.fail(
+            billingFailure("Configuration", "webhook-secret-invalid", "polar"),
+          );
         const outcome = yield* Effect.tryPromise({
           try: async () => {
             try {
@@ -118,12 +128,17 @@ export const makePolarBilling = (options: ProviderOptions): BillingAdapter => {
         }
         const account = polarAccountId(outcome.event.data);
         if (account !== null && account !== options.accountId) {
-          return yield* Effect.fail(billingError("Signature"));
+          return yield* Effect.fail(
+            billingFailure("Signature", "webhook-account-mismatch", "polar"),
+          );
         }
         const kind = polarEventKind(outcome.event.type);
         if (kind === null) return { id: eventId, type: outcome.event.type, resource: null };
         const id = polarResourceId(outcome.event.data);
-        if (id === null) return yield* Effect.fail(billingError("Provider"));
+        if (id === null)
+          return yield* Effect.fail(
+            billingFailure("Provider", "webhook-resource-unmapped", "polar"),
+          );
         return { id: eventId, type: outcome.event.type, resource: { kind, id } };
       }),
 

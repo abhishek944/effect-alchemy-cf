@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
 import {
   MAX_ACTIVE_TEXT_BYTES,
@@ -31,11 +32,7 @@ export class ChatSkillsStore {
   constructor(db: ChatSqlStorage) {
     this.db = db;
     db.exec(`CREATE TABLE IF NOT EXISTS skill_attempts (
-      attempt_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL,
-      logical_operation_id TEXT NOT NULL, retry_of TEXT, retry_key TEXT, pin TEXT,
-      status TEXT NOT NULL, failure TEXT, catalog TEXT, catalog_digest TEXT, active TEXT,
-      content TEXT, classification TEXT, recoverable INTEGER, recovery_reason TEXT,
-      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
+      attempt_id TEXT PRIMARY KEY, operation_id TEXT NOT NULL, logical_operation_id TEXT NOT NULL, retry_of TEXT, retry_key TEXT, pin TEXT, status TEXT NOT NULL, failure TEXT, catalog TEXT, catalog_digest TEXT, active TEXT, content TEXT, classification TEXT, recoverable INTEGER, recovery_reason TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`);
     const columns = db
       .exec<{ name: string }>(`SELECT name FROM pragma_table_info('skill_attempts')`)
       .toArray()
@@ -49,9 +46,9 @@ export class ChatSkillsStore {
       if (!columns.includes(column))
         db.exec(`ALTER TABLE skill_attempts ADD COLUMN ${column} ${type}`);
     }
-    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS skill_attempt_operation ON skill_attempts(operation_id);
-      CREATE UNIQUE INDEX IF NOT EXISTS skill_attempt_retry
-      ON skill_attempts(logical_operation_id, retry_key) WHERE retry_key IS NOT NULL`);
+    db.exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS skill_attempt_operation ON skill_attempts(operation_id); CREATE UNIQUE INDEX IF NOT EXISTS skill_attempt_retry ON skill_attempts(logical_operation_id, retry_key) WHERE retry_key IS NOT NULL`,
+    );
   }
   private one(sql: string, ...params: (string | number)[]): SkillAttemptRow | null {
     const row = this.db.exec<SkillAttemptDbRow>(sql, ...params).toArray()[0];
@@ -83,19 +80,15 @@ export class ChatSkillsStore {
     return this.one(
       `SELECT * FROM skill_attempts a
        WHERE a.status IN ('incomplete','unavailable')
-         AND a.rowid = (SELECT b.rowid FROM skill_attempts b
-                        WHERE b.logical_operation_id = a.logical_operation_id
-                          AND b.status IN ('accepted','incomplete','unavailable')
-                        ORDER BY b.created_at DESC, b.rowid DESC LIMIT 1)
+         AND a.rowid = (SELECT b.rowid FROM skill_attempts b WHERE b.logical_operation_id = a.logical_operation_id
+                        AND b.status IN ('accepted','incomplete','unavailable') ORDER BY b.created_at DESC, b.rowid DESC LIMIT 1)
        ORDER BY a.created_at DESC, a.rowid DESC LIMIT 1`,
     );
   }
   insert(input: SkillInsertInput): SkillInsertOutcome {
     try {
       this.db.exec(
-        `INSERT INTO skill_attempts (attempt_id, operation_id, logical_operation_id, retry_of,
-         retry_key, pin, status, failure, catalog, catalog_digest, active, content,
-         classification, recoverable, recovery_reason, created_at, updated_at)
+        `INSERT INTO skill_attempts (attempt_id, operation_id, logical_operation_id, retry_of, retry_key, pin, status, failure, catalog, catalog_digest, active, content, classification, recoverable, recovery_reason, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, 'prepared', NULL, ?, ?, ?, ?, 'library', NULL, NULL, ?, ?)`,
         input.attemptId,
         input.operationId,
@@ -111,12 +104,19 @@ export class ChatSkillsStore {
         input.now,
       );
       return "inserted";
-    } catch {
-      const existing =
-        input.retryKey === null
-          ? this.byOperation(input.operationId)
-          : this.byRetry(input.logicalOperationId, input.retryKey);
-      if (existing === null) return "conflict";
+    } catch (error) {
+      const failure =
+        error instanceof Error ? error : withCause(new Error("Skill attempt insert failed"), error);
+      let existing: SkillAttemptRow | null;
+      try {
+        existing =
+          input.retryKey === null
+            ? this.byOperation(input.operationId)
+            : this.byRetry(input.logicalOperationId, input.retryKey);
+      } catch (readback) {
+        throw withCause(failure, readback);
+      }
+      if (existing === null) throw failure;
       const same =
         existing.operationId === input.operationId &&
         existing.logicalOperationId === input.logicalOperationId &&

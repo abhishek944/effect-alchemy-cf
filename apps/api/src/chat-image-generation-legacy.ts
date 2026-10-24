@@ -10,8 +10,6 @@ import {
   assertHydrationTextBudget,
   assertHydrationTokenBudget,
 } from "./chat-image-hydration-budget.ts";
-import type { HydratedImageRequest } from "./chat-image-hydration-types.ts";
-import { tryReserveImageMemory } from "./chat-image-memory.ts";
 
 const LEGACY_WORKFLOW =
   "This proven pre-image-era continuation grants no image authority. Continue ordinary conversation " +
@@ -27,7 +25,7 @@ export const prepareLegacyTextGeneration = (input: {
   readonly compact: Context;
   readonly model: ChatCatalogModel;
   readonly signal: AbortSignal;
-}): HydratedImageRequest => {
+}): Context => {
   input.signal.throwIfAborted();
   if (
     input.proof.current.operationId !== input.proof.operationId ||
@@ -54,20 +52,7 @@ export const prepareLegacyTextGeneration = (input: {
   assertLegacyTextMessages(context.messages);
   const size = measureHydrationContext(context);
   assertHydrationTextBudget(size, input.model);
-  const lease = tryReserveImageMemory({
-    purpose: "hydration",
-    originals: [],
-    // Include JSON structure/numeric metadata as a conservative text-serialization bound.
-    textCharacters: Math.max(size.textCharacters, size.transportBytes),
-  });
-  if (lease === null) return imageProofFailure();
-  try {
-    if (size.transportBytes > lease.bytes) imageProofFailure();
-    assertHydrationTokenBudget(context, input.model);
-    input.signal.throwIfAborted();
-    return { context, lease };
-  } catch (error) {
-    lease.releaseWhenSettled();
-    throw error;
-  }
+  assertHydrationTokenBudget(context, input.model);
+  input.signal.throwIfAborted();
+  return context;
 };

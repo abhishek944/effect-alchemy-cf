@@ -23,6 +23,8 @@ export type NavigationGuardPorts = {
   /** Latest intent retained while a restoration is outstanding. */
   readonly queued: MutableRefObject<DeferredLeave | null>;
   readonly dirty: () => boolean;
+  /** Synchronous unload warning; route barriers deliberately use `dirty` instead. */
+  readonly warn: () => boolean;
   readonly defer: (intent: LeaveIntent, action: () => void) => void;
   readonly setDecision: (next: DeferredLeave | null) => void;
 };
@@ -110,7 +112,7 @@ export const observeNavigation = (ports: NavigationGuardPorts): (() => void) => 
   };
 
   const onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!ports.dirty()) return;
+    if (!ports.warn()) return;
     event.preventDefault();
     event.returnValue = "";
   };

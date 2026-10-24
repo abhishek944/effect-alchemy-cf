@@ -8,6 +8,7 @@
  * unreachable catalog produces an honest `unavailable` intent instead of a guess.
  */
 import type { Storage } from "@earendil-works/pi-durable";
+import { reportFailure } from "@starter/diagnostics";
 import { Effect } from "effect";
 import { doCall, type ChatCatalogStub, type DoCall } from "./chat-bindings.ts";
 import { conversationOwner, type ChatOwnerBinding } from "./chat-tool-authorization.ts";
@@ -56,11 +57,22 @@ const catalogGet = async (
   deps: AccountPreparationDeps,
   ownerId: string,
   path: string,
+  operationId: string,
+  chatId: string,
   headers?: Record<string, string>,
 ): Promise<DoCall | null> => {
   try {
     return await Effect.runPromise(doCall(deps.catalog(ownerId), "GET", path, undefined, headers));
-  } catch {
+  } catch (error) {
+    reportFailure(error, {
+      component: "chat-account",
+      operation: "theme.prepare",
+      phase: "read",
+      reason: "theme_read_failed",
+      operationId,
+      chatId,
+      event: "application.recovery",
+    });
     return null;
   }
 };
@@ -92,7 +104,13 @@ export const prepareAccountOperation = async (
   const origin = `${base.chatScope}:${base.conversationId}`;
   const actionId = `acct:${(await digestText(`v1|${origin}|${input.operationId}|${parsed.kind}`)).slice(0, 40)}`;
   if (parsed.kind === "apply") {
-    const response = await catalogGet(deps, scope.ownerId, "/theme");
+    const response = await catalogGet(
+      deps,
+      scope.ownerId,
+      "/theme",
+      input.operationId,
+      scope.chat.id,
+    );
     const view =
       response === null ? null : (decodeOption(ThemeResponse, response.body)?.theme ?? null);
     if (view === null)
@@ -110,9 +128,14 @@ export const prepareAccountOperation = async (
       },
     };
   }
-  const response = await catalogGet(deps, scope.ownerId, "/theme/undo-target", {
-    "x-theme-origin": encodeURIComponent(origin),
-  });
+  const response = await catalogGet(
+    deps,
+    scope.ownerId,
+    "/theme/undo-target",
+    input.operationId,
+    scope.chat.id,
+    { "x-theme-origin": encodeURIComponent(origin) },
+  );
   const target =
     response === null ? null : (decodeOption(UndoTargetResponse, response.body)?.target ?? null);
   if (target === null) return failure("There is no theme change from this chat left to undo.");

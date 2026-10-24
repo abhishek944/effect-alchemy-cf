@@ -55,65 +55,81 @@ export type EventRow = {
 export const decodeSnapshot = (row: ResourceRow) =>
   Schema.decodeUnknownSync(StoredResource)(JSON.parse(row.data));
 export const customerForUser = (scope: string, userId: string) =>
-  billingQuery((db) =>
-    db
-      .prepare("SELECT * FROM billing_customer WHERE scope=? AND userId=?")
-      .bind(scope, userId)
-      .first<CustomerRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare("SELECT * FROM billing_customer WHERE scope=? AND userId=?")
+        .bind(scope, userId)
+        .first<CustomerRow>(),
+    "customer-read",
   );
 export const customerOwner = (scope: string, customerId: string) =>
-  billingQuery((db) =>
-    db
-      .prepare("SELECT * FROM billing_customer WHERE scope=? AND customerId=?")
-      .bind(scope, customerId)
-      .first<CustomerRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare("SELECT * FROM billing_customer WHERE scope=? AND customerId=?")
+        .bind(scope, customerId)
+        .first<CustomerRow>(),
+    "customer-owner-read",
   );
 export const checkoutForRequest = (userId: string, requestId: string) =>
-  billingQuery((db) =>
-    db
-      .prepare("SELECT * FROM billing_checkout WHERE userId=? AND requestId=?")
-      .bind(userId, requestId)
-      .first<CheckoutRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare("SELECT * FROM billing_checkout WHERE userId=? AND requestId=?")
+        .bind(userId, requestId)
+        .first<CheckoutRow>(),
+    "checkout-request-read",
   );
 export const checkoutByKey = (key: string) =>
-  billingQuery((db) =>
-    db.prepare("SELECT * FROM billing_checkout WHERE id=?").bind(key).first<CheckoutRow>(),
+  billingQuery(
+    (db) => db.prepare("SELECT * FROM billing_checkout WHERE id=?").bind(key).first<CheckoutRow>(),
+    "checkout-key-read",
   );
 export const pendingSubscriptionCheckout = (scope: string, userId: string, productId: string) =>
-  billingQuery((db) =>
-    db
-      .prepare(
-        "SELECT * FROM billing_checkout WHERE scope=? AND userId=? AND productId=? AND kind='subscription' AND resolution='pending'",
-      )
-      .bind(scope, userId, productId)
-      .first<CheckoutRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare(
+          "SELECT * FROM billing_checkout WHERE scope=? AND userId=? AND productId=? AND kind='subscription' AND resolution='pending'",
+        )
+        .bind(scope, userId, productId)
+        .first<CheckoutRow>(),
+    "checkout-pending-read",
   );
 export const checkoutForSession = (scope: string, sessionId: string) =>
-  billingQuery((db) =>
-    db
-      .prepare("SELECT * FROM billing_checkout WHERE scope=? AND sessionId=?")
-      .bind(scope, sessionId)
-      .first<CheckoutRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare("SELECT * FROM billing_checkout WHERE scope=? AND sessionId=?")
+        .bind(scope, sessionId)
+        .first<CheckoutRow>(),
+    "checkout-session-read",
   );
 export const resourceByKey = (id: string) =>
-  billingQuery((db) =>
-    db.prepare("SELECT * FROM billing_resource WHERE id=?").bind(id).first<ResourceRow>(),
+  billingQuery(
+    (db) => db.prepare("SELECT * FROM billing_resource WHERE id=?").bind(id).first<ResourceRow>(),
+    "resource-key-read",
   );
 export const resourceById = (scope: string, kind: ResourceKind, id: string) =>
-  billingQuery((db) =>
-    db
-      .prepare("SELECT * FROM billing_resource WHERE scope=? AND kind=? AND providerId=?")
-      .bind(scope, kind, id)
-      .first<ResourceRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare("SELECT * FROM billing_resource WHERE scope=? AND kind=? AND providerId=?")
+        .bind(scope, kind, id)
+        .first<ResourceRow>(),
+    "resource-provider-read",
   );
 export const purchaseForSubscription = (scope: string, subscriptionId: string) =>
-  billingQuery((db) =>
-    db
-      .prepare(
-        "SELECT * FROM billing_resource WHERE scope=? AND kind='purchase' AND json_extract(data, '$.resource.subscriptionId')=? ORDER BY syncedAt, id LIMIT 1",
-      )
-      .bind(scope, subscriptionId)
-      .first<ResourceRow>(),
+  billingQuery(
+    (db) =>
+      db
+        .prepare(
+          "SELECT * FROM billing_resource WHERE scope=? AND kind='purchase' AND json_extract(data, '$.resource.subscriptionId')=? ORDER BY syncedAt, id LIMIT 1",
+        )
+        .bind(scope, subscriptionId)
+        .first<ResourceRow>(),
+    "resource-purchase-read",
   );
 export const resourcesForUser = (userId: string) =>
   billingQuery(async (db) => {
@@ -122,7 +138,7 @@ export const resourcesForUser = (userId: string) =>
       .bind(userId)
       .all<ResourceRow>();
     return rows.results;
-  });
+  }, "resource-list-read");
 export const customersForUser = (userId: string) =>
   billingQuery(async (db) => {
     const rows = await db
@@ -132,10 +148,11 @@ export const customersForUser = (userId: string) =>
       .bind(userId)
       .all<CustomerRow>();
     return rows.results;
-  });
+  }, "customer-list-read");
 export const eventByKey = (id: string) =>
-  billingQuery((db) =>
-    db.prepare("SELECT * FROM billing_event WHERE id=?").bind(id).first<EventRow>(),
+  billingQuery(
+    (db) => db.prepare("SELECT * FROM billing_event WHERE id=?").bind(id).first<EventRow>(),
+    "event-read",
   );
 export const pendingEvents = () =>
   billingQuery(async (db) => {
@@ -147,7 +164,7 @@ export const pendingEvents = () =>
         Pick<EventRow, "id" | "scope" | "type" | "state" | "attempts" | "error" | "updatedAt">
       >();
     return rows.results;
-  });
+  }, "event-list-read");
 export const recordEvent = (key: string, scope: string, event: EventReference) =>
   billingQuery(async (db) => {
     await db
@@ -164,4 +181,4 @@ export const recordEvent = (key: string, scope: string, event: EventReference) =
         Date.now() / 1000,
       )
       .run();
-  });
+  }, "event-record-write");

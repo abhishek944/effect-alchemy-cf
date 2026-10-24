@@ -13,7 +13,6 @@ import {
 } from "./chat-attachment-schema.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import type { ChatFilesPrepareResult } from "./chat-files-ops.ts";
-import { sha256Hex } from "./chat-files-media.ts";
 import {
   filesFail,
   filesOk,
@@ -27,6 +26,7 @@ import {
   officeAttachmentBlock,
   quotedAttachmentBlock,
 } from "./chat-files-text.ts";
+import { csvReferenceBlock, isCsvOriginal } from "./chat-image-hydration-csv.ts";
 import {
   chatFilesImageCompatibility,
   imageBase64Bytes as base64Bytes,
@@ -40,11 +40,7 @@ export type NativeContent = {
 
 export type NativeAttachment = {
   readonly file: FileDescriptor;
-  /** Server-side digest for integrity verification; never public. */
-  readonly digest: string;
 };
-
-const DIGEST = /^[0-9a-f]{64}$/;
 
 const base64Of = (bytes: Uint8Array): string => {
   let binary = "";
@@ -55,7 +51,7 @@ const base64Of = (bytes: Uint8Array): string => {
   return btoa(binary);
 };
 
-/** Exact native input: image/text bytes verify digests; Office contributes compact refs only. */
+/** Owned original bytes become native input; Office contributes compact refs only. */
 export const buildNativeInput = async (input: {
   readonly text: string;
   readonly attachments: readonly NativeAttachment[];
@@ -75,10 +71,12 @@ export const buildNativeInput = async (input: {
   const blocks: (TextContent | ImageContent)[] = [];
   if (input.text.length > 0) blocks.push({ type: "text", text: input.text });
   const boundary = attachmentBoundary();
-  const textTotal = files.filter((file) => file.kind === "text").length;
+  const textTotal = files.filter((file) => file.kind === "text" && !isCsvOriginal(file)).length;
+  const csvTotal = files.filter(isCsvOriginal).length;
   const officeTotal = files.filter((file) => file.kind === "office").length;
   let quotedChars = 0;
   let textIndex = 0;
+  let csvIndex = 0;
   let officeIndex = 0;
   for (const attachment of input.attachments) {
     if (attachment.file.kind === "office") {
@@ -97,10 +95,16 @@ export const buildNativeInput = async (input: {
       officeIndex += 1;
       continue;
     }
+    if (isCsvOriginal(attachment.file)) {
+      blocks.push({
+        type: "text",
+        text: csvReferenceBlock(attachment.file, boundary, csvIndex, csvTotal),
+      });
+      csvIndex += 1;
+      continue;
+    }
     const bytes = await input.read(attachment.file.id);
     if (bytes === null || bytes.byteLength !== attachment.file.byteSize)
-      return filesFail("unavailable");
-    if (!DIGEST.test(attachment.digest) || (await sha256Hex(bytes)) !== attachment.digest)
       return filesFail("unavailable");
     if (attachment.file.kind === "image") {
       blocks.push({
@@ -170,10 +174,7 @@ export const prepareChatFiles = async (input: {
     now: input.now,
   });
   if (!prepared.ok) return prepared;
-  const attachments: NativeAttachment[] = prepared.value.files.map((file, index) => ({
-    file,
-    digest: prepared.value.digests[index] ?? "",
-  }));
+  const attachments: NativeAttachment[] = prepared.value.files.map((file) => ({ file }));
   const built = await buildNativeInput({
     text: input.text,
     attachments,

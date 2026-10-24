@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { reportFailure } from "@starter/diagnostics";
 import { Id, decodeWireSync } from "@starter/office-contract";
 import type { ChatOfficeTaskBroker } from "./chat-office-task-broker.ts";
 import { readOfficePrivateJson } from "./office-private-json.ts";
@@ -45,7 +46,12 @@ export async function chatOfficeTaskEndpoint(
     return new Response(body, {
       headers: { "content-type": "application/json", "cache-control": "private, no-store" },
     });
-  } catch {
+  } catch (cause) {
+    reportFailure(cause, {
+      component: "office.admission",
+      operation: "resolve-callback",
+      reason: "callback-failed",
+    });
     return json({ message: "Office task is unavailable" }, 503);
   } finally {
     clearTimeout(timer);

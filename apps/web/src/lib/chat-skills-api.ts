@@ -1,5 +1,5 @@
 import type { ChatSelection } from "@/lib/chat-capability-types";
-import { request, unexpectedResponse } from "@/lib/chat-api";
+import { requestDecoded } from "@/lib/chat-api";
 import { isRecord, isUuid } from "@/lib/chat-validate-base";
 
 /** Operation-scoped recovery state; never a version fallback. */
@@ -49,12 +49,16 @@ export async function retrySkillOperation(
   id: string,
   input: { logicalOperationId: string; failedAttemptId: string; retryKey: string },
 ): Promise<SkillAttemptAccepted> {
-  const accepted = parseAttemptAccepted(
-    await request(`/api/chats/${encodeURIComponent(id)}/skills/retry`, json(input)),
-    { operationId: null, logicalOperationId: input.logicalOperationId },
+  return requestDecoded(
+    `/api/chats/${encodeURIComponent(id)}/skills/retry`,
+    "chat.skill-retry",
+    (body) =>
+      parseAttemptAccepted(body, {
+        operationId: null,
+        logicalOperationId: input.logicalOperationId,
+      }),
+    json(input),
   );
-  if (accepted === null) throw unexpectedResponse();
-  return accepted;
 }
 
 /** Distinct new operation: current skills, explicit current selection. */
@@ -67,10 +71,14 @@ export async function newSkillSend(
     selection: ChatSelection;
   },
 ): Promise<SkillAttemptAccepted> {
-  const accepted = parseAttemptAccepted(
-    await request(`/api/chats/${encodeURIComponent(id)}/skills/new-send`, json(input)),
-    { operationId: input.operationId, logicalOperationId: input.operationId },
+  return requestDecoded(
+    `/api/chats/${encodeURIComponent(id)}/skills/new-send`,
+    "chat.skill-new-send",
+    (body) =>
+      parseAttemptAccepted(body, {
+        operationId: input.operationId,
+        logicalOperationId: input.operationId,
+      }),
+    json(input),
   );
-  if (accepted === null) throw unexpectedResponse();
-  return accepted;
 }

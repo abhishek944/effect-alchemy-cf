@@ -1,4 +1,4 @@
-import { request, unexpectedResponse } from "./chat-api";
+import { requestDecoded } from "./chat-api";
 import { isRecord, isUuid } from "./chat-validate-base";
 import { parseSavedFile } from "./chat-library-validate";
 import type { SavedFile } from "./chat-library-types";
@@ -58,14 +58,13 @@ export async function getAssistantSavedFiles(
     throw new Error("Invalid saved-file page.");
   const params = cursor === null ? "" : `?${new URLSearchParams({ cursor })}`;
   const timeout = AbortSignal.timeout(15_000);
-  const page = parseAssistantSavedFilesPage(
-    await request(
-      `/api/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/files${params}`,
-      { signal: signal ? AbortSignal.any([signal, timeout]) : timeout, cache: "no-store" },
-    ),
-    chatId,
-    messageId,
+  return requestDecoded(
+    `/api/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/files${params}`,
+    "chat.assistant-files",
+    (body) => {
+      const page = parseAssistantSavedFilesPage(body, chatId, messageId);
+      return page && (page.nextCursor === null || page.nextCursor !== cursor) ? page : null;
+    },
+    { signal: signal ? AbortSignal.any([signal, timeout]) : timeout, cache: "no-store" },
   );
-  if (!page || (page.nextCursor !== null && page.nextCursor === cursor)) throw unexpectedResponse();
-  return page;
 }

@@ -26,11 +26,10 @@ export async function channelBasis(db: MetadataStore, c: EditorContext, viewId: 
     view,
     sql: `(${native.sql}) AND ?>${sqlNow}
     AND EXISTS(SELECT 1 FROM office_meta_editors e
-      JOIN office_meta_editor_epochs x ON x.owner=e.owner AND x.document=e.document AND x.branch=e.branch
       JOIN office_meta_views v ON v.owner=e.owner AND v.id=?
       JOIN office_coord_documents d ON d.owner=e.owner AND d.document=e.document
       JOIN office_coord_placements p ON p.id=d.placement_id
-      WHERE e.owner=? AND e.id=? AND e.document=? AND e.epoch=? AND x.epoch=e.epoch
+      WHERE e.owner=? AND e.id=? AND e.document=? AND e.epoch=?
       AND e.state='active' AND e.expires>${sqlNow} AND v.expires>${sqlNow} AND v.record=?
       AND json_extract(e.record,'$.editor.view')=json_extract(v.record,'$.view')
       AND d.scope=? AND d.unit=? AND d.placement_id=? AND d.state='live'

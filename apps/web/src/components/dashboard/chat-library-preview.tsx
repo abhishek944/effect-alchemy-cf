@@ -6,6 +6,7 @@ import { savedMeta, savedOrigin, savedTime } from "./chat-library-format";
 import { useChatLibraryOriginal } from "./use-chat-library-original";
 import { useChatLibrarySources } from "./use-chat-library-sources";
 import { Icon } from "./icon";
+import { AttachmentContent } from "./attachment-content";
 import "./chat-library-preview.css";
 import "./chat-library-image.css";
 
@@ -17,7 +18,7 @@ export type ChatLibraryPreviewProps = {
   sourceNames?: Readonly<Record<string, string>>;
 };
 
-/** No dialog/header/text inspector: original image first, every detail below. */
+/** Saved original first, with private read-only text content or image viewing. */
 export function ChatLibraryPreview({
   file,
   active,
@@ -89,10 +90,7 @@ export function ChatLibraryPreview({
             )}
           </>
         ) : (
-          <div data-cx="chat-library-preview-status">
-            <strong>Download to view this file</strong>
-            <p>Text, code and Office files open externally. Nothing uploaded is executed here.</p>
-          </div>
+          <AttachmentContent source={saved} active={active} />
         )}
       </div>
       <div data-cx="chat-library-provenance">

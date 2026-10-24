@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
 import {
   OfficeForbidden,
   OfficeUnavailable,
@@ -19,20 +19,16 @@ import { createNativeDraftAdapter } from "./native-draft-adapter.ts";
 import { NativeValues } from "./native-values.ts";
 import { createNativeBytesClient } from "./native-bytes-client.ts";
 import { adapterFailure } from "./native-stream-io.ts";
-
 export function runNative<A>(
   effect: Effect.Effect<A, OfficeError>,
   signal?: AbortSignal,
 ): Promise<A> {
-  return Effect.runPromise(
-    Effect.match(effect, {
-      onSuccess: (value): { value: A } => ({ value }),
-      onFailure: (error): { error: OfficeError } => ({ error }),
-    }),
-    { signal },
-  ).then((result) => {
-    if ("error" in result) throw result.error;
-    return result.value;
+  return Effect.runPromiseExit(effect, { signal }).then((exit) => {
+    if (Exit.isSuccess(exit)) return exit.value;
+    const reason = exit.cause.reasons[0];
+    if (exit.cause.reasons.length === 1 && reason !== undefined && Cause.isFailReason(reason))
+      throw reason.error;
+    throw exit.cause;
   });
 }
 export type NativeSession = {
@@ -137,8 +133,11 @@ export function createNativeClient(options: {
             Promise.resolve().then(() => binary.drain()),
             Promise.resolve().then(() => cleanup.drain()),
           ]);
-          if ([...closed, ...drained].some((result) => result.status === "rejected"))
-            throw new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+          const failures = [...closed, ...drained]
+            .filter((result) => result.status === "rejected")
+            .map((result): unknown => result.reason);
+          if (failures.length)
+            throw adapterFailure(new AggregateError(failures, "Native client cleanup failed"));
         })();
         return closePromise;
       }

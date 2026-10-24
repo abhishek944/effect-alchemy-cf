@@ -65,11 +65,6 @@ export const assertReviewCurrent = Effect.fn("Office.assertReviewCurrent")(funct
     }),
   );
   const barrier = yield* deps.metadata.publicationBarrier(review.owner, review.documentId);
-  const editors = yield* deps.metadata.editors(review.owner, review.documentId);
-  if (
-    barrier !== null ||
-    editors.some((editor) => ["active", "draining", "unclean"].includes(editor.state))
-  )
-    return yield* Effect.fail(officeFailure("BUSY"));
+  if (barrier !== null) return yield* Effect.fail(officeFailure("BUSY"));
   return { bundle, draft, document, target };
 });

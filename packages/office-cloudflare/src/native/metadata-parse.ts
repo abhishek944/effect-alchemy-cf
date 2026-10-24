@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Array as Arr, Predicate, Schema } from "effect";
 import { NativeStorageError } from "./types.ts";
 
@@ -53,7 +54,7 @@ export function parseMetadata<S extends Schema.ConstraintDecoder<unknown>>(
 ): S["Type"] {
   try {
     return Schema.decodeUnknownSync(schema, { onExcessProperty: "error" })(input);
-  } catch {
-    throw new NativeStorageError("CONTENT", "Invalid bounded native metadata");
+  } catch (cause) {
+    throw withCause(new NativeStorageError("CONTENT", "Invalid bounded native metadata"), cause);
   }
 }

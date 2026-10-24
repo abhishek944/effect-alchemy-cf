@@ -20,8 +20,10 @@ const declarations = [
   "package.json",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
+  "patches/@alchemy.run__cloudflare-runtime@2.0.0-beta.80.patch",
   "packages/office-server/package.json",
   "packages/office-contract/package.json",
+  "packages/diagnostics/package.json",
 ];
 
 /** Explicit local preparation only. No install, daemon action, environment file or host checkout COPY. */

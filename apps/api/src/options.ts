@@ -16,6 +16,9 @@ export const workerOptions = Effect.gen(function* () {
   const modelAllowlist = yield* Config.String("CHAT_MODEL_ALLOWLIST").pipe(Config.withDefault(""));
   const { dev: local } = yield* AlchemyContext;
   const production = stack.stage === "prod";
+  const localIdle = local
+    ? yield* Config.Boolean("OFFICE_LOCAL_IDLE").pipe(Config.withDefault(false))
+    : false;
   const allowProduction = yield* Config.Boolean("ALLOW_PRODUCTION").pipe(Config.withDefault(false));
   if (local && !stack.stage.startsWith("dev_") && !stack.stage.startsWith("dev-")) {
     throw new Error(
@@ -42,7 +45,9 @@ export const workerOptions = Effect.gen(function* () {
         ]
       : undefined;
   const revision = yield* Config.String("GITHUB_SHA").pipe(Config.withDefault("unversioned"));
-  const release = /^[a-f0-9]{40}$/.test(revision) ? revision : "unversioned";
+  const release = /^[a-f0-9]{40}$/.test(revision)
+    ? revision
+    : `${local ? "local" : "manual"}-${Date.now().toString(36)}`;
   // Stage isolation: local may only use the managed dev gateway when it is
   // explicitly configured, cloud dev derives that id, prod needs its own id.
   const expectedDevGateway = `${serviceName.toLowerCase()}-dev-chat`;
@@ -104,6 +109,7 @@ export const workerOptions = Effect.gen(function* () {
       OFFICE_R2: office.bucket,
       // Operator-supplied immutable application image (host + fixed job entries).
       OFFICE_IMAGE_REF: Config.String("OFFICE_IMAGE_REF"),
+      OFFICE_LOCAL_IDLE: localIdle ? "yes" : "no",
       // Speech is nonproduction-only; production binds no audio credential.
       ...(!production
         ? {

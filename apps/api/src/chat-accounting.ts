@@ -10,6 +10,7 @@
  * pretending success.
  */
 import type { Models } from "@earendil-works/pi-ai/models";
+import { reportFailure } from "@starter/diagnostics";
 import {
   defineExtension,
   GenerationTask,
@@ -31,6 +32,7 @@ import { aggregateChatUsage } from "./chat-accounting-aggregate.ts";
 import { installCompactionObserver } from "./chat-accounting-compaction-observer.ts";
 import { ChatAccountingStore } from "./chat-accounting-store.ts";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
+import type { ChatObjectMetadata } from "./chat-observation.ts";
 import type { ChatUsage, ContextUsage, SpeechUsage } from "./chat-usage-schema.ts";
 
 /** Everything `usage()` needs from the native conversation, already read by the parent. */
@@ -45,28 +47,37 @@ const observedModels = new WeakSet<object>();
 export class ChatAccounting {
   private readonly store: ChatAccountingStore;
   private readonly onRecorded: () => void;
+  private readonly metadata: ChatObjectMetadata;
 
-  constructor(db: ChatSqlStorage, onRecorded: () => void) {
+  constructor(db: ChatSqlStorage, onRecorded: () => void, metadata: ChatObjectMetadata = {}) {
     this.store = new ChatAccountingStore(db);
     this.onRecorded = onRecorded;
+    this.metadata = metadata;
   }
 
   /**
    * Notifies the host after a persisted write so live viewers can refresh.
    * Notification failure is observer-only: the stored row already counts.
    */
-  private notify(): void {
+  private notify(taskId?: string): void {
     try {
       this.onRecorded();
-    } catch {
-      // Notification must never mask or undo a persisted write.
+    } catch (error) {
+      reportFailure(error, {
+        ...this.metadata,
+        component: "chat-accounting",
+        operation: "notify",
+        reason: "accounting_notify_failed",
+        ...(taskId === undefined ? {} : { taskId }),
+        event: "application.recovery",
+      });
     }
   }
 
   observeCompactions(models: Models): void {
     if (observedModels.has(models)) return;
     observedModels.add(models);
-    installCompactionObserver(this.store, () => this.notify(), models);
+    installCompactionObserver(this.store, () => this.notify(), models, this.metadata);
   }
 
   extension(currentSelection: () => Promise<ChatSelection | null>): Extension {
@@ -76,24 +87,49 @@ export class ChatAccounting {
       hooks: [
         hook(GenerationTask, {
           afterResponse: async (message, api) => {
+            const taskId = String(api.taskId);
+            let selection: ChatSelection | null;
             try {
-              const selection = await currentSelection();
+              selection = await currentSelection();
+            } catch (error) {
+              reportFailure(error, {
+                ...this.metadata,
+                component: "chat-accounting",
+                operation: "generation.observe",
+                phase: "selection",
+                reason: "accounting_selection_failed",
+                taskId,
+                event: "application.recovery",
+              });
+              return;
+            }
+            try {
               const actual = messageModelId(message);
               const model = actual ?? selection?.model ?? null;
               store.record({
-                attemptKey: `generation:${String(api.taskId)}:${message.responseId ?? message.timestamp}`,
+                attemptKey: `generation:${taskId}:${message.responseId ?? message.timestamp}`,
                 kind: "generation",
-                taskId: String(api.taskId),
+                taskId,
                 stopReason: message.stopReason,
                 model,
                 effort: messageEffort(message) ?? selection?.effort ?? null,
                 amount: amountOfUsage(message.usage, model, selection?.model ?? null),
                 recordedAt: Date.now(),
               });
-              this.notify();
-            } catch {
-              // Accounting observes; it never breaks accepted native output.
+            } catch (error) {
+              reportFailure(error, {
+                ...this.metadata,
+                component: "chat-accounting",
+                operation: "generation.observe",
+                phase: "record",
+                reason: "accounting_record_failed",
+                taskId,
+                event: "application.recovery",
+              });
+              return;
             }
+            // Accounting observes; it never breaks accepted native output.
+            this.notify(taskId);
           },
         }),
       ],

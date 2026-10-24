@@ -1,11 +1,15 @@
 import type * as cf from "@cloudflare/workers-types";
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
+import type { Context } from "@earendil-works/pi-ai";
 import type {
   ImageGenerationTransport,
   ImageGenerationTransportScope,
 } from "./chat-image-binding.ts";
+import {
+  imageDiagnosticFailed,
+  imageDiagnosticRefused,
+  type ImageDiagnosticPhase,
+} from "./chat-image-diagnostics.ts";
 import { hydrateImageRequest } from "./chat-image-hydration.ts";
-import type { HydratedImageRequest } from "./chat-image-hydration-types.ts";
 import { prepareLegacyTextGeneration } from "./chat-image-generation-legacy.ts";
 import { remapImageGenerationProof } from "./chat-image-generation-remap.ts";
 import { canonicalImageGenerationContext } from "./chat-image-generation-policy.ts";
@@ -16,6 +20,7 @@ import {
 } from "./chat-image-generation-state.ts";
 import type {
   GenerationRequestProof,
+  GenerationRequestTicketProof,
   ImageNativeContext,
   ImageRequestAccess,
   ImageRequestBridge,
@@ -42,30 +47,45 @@ export type ImageGenerationDependencies = {
 export const createImageGenerationGuard =
   (deps: ImageGenerationDependencies): SkillRequestGuard["prepare"] =>
   async (model, context, signal) => {
-    let lease: ImageMemoryLease | undefined;
     let transport: ImageGenerationTransportScope | undefined;
+    let phase: ImageDiagnosticPhase = "proof_take";
+    let proof: GenerationRequestTicketProof | null = null;
     try {
-      const proof = deps.bridge.take(context.messages); // MUST precede any normalization.
-      if (proof === null) return { ok: false, message: IMAGE_GENERATION_INCOMPLETE };
-      const nativeContext = imageGenerationContext(deps.context, signal);
-      if (!(await deps.bridge.verify(proof, nativeContext)))
+      proof = deps.bridge.take(context.messages); // MUST precede any normalization.
+      if (proof === null) {
+        imageDiagnosticRefused("prepare", phase);
         return { ok: false, message: IMAGE_GENERATION_INCOMPLETE };
+      }
+      phase = "context";
+      const nativeContext = imageGenerationContext(deps.context, signal);
+      phase = "bridge_verify";
+      if (!(await deps.bridge.verify(proof, nativeContext))) {
+        imageDiagnosticRefused("prepare", phase, proof);
+        return { ok: false, message: IMAGE_GENERATION_INCOMPLETE };
+      }
+      phase = "state";
       await verifyImageGenerationState(deps.request, proof, model, nativeContext);
+      phase = "skill_preparation";
       const compact = await deps.skills.prepareRequestFor(
         proof.operationId,
         model,
         context,
         nativeContext.abortSignal,
       );
-      if (!compact.ok) return { ok: false, message: IMAGE_GENERATION_INCOMPLETE };
-      let hydrated: HydratedImageRequest;
+      if (!compact.ok) {
+        imageDiagnosticRefused("prepare", phase, proof);
+        return { ok: false, message: IMAGE_GENERATION_INCOMPLETE };
+      }
+      let hydrated: Context;
       if (proof.legacy === true) {
+        phase = "state";
         const catalogModel = await verifyImageGenerationState(
           deps.request,
           proof,
           model,
           nativeContext,
         );
+        phase = "legacy_preparation";
         hydrated = prepareLegacyTextGeneration({
           proof,
           original: context,
@@ -74,16 +94,22 @@ export const createImageGenerationGuard =
           signal: nativeContext.abortSignal,
         });
       } else {
+        phase = "canonicalization";
         const canonical = canonicalImageGenerationContext(compact.context);
+        phase = "remap";
         const projectedProof = remapImageGenerationProof(proof, context, canonical);
-        if (proof.inputs.some((input) => input.originals.length > 0))
+        if (proof.inputs.some((input) => input.originals.length > 0)) {
+          phase = "acceptance_repair";
           await deps.repairAccepted(proof, nativeContext);
+        }
+        phase = "state";
         const catalogModel = await verifyImageGenerationState(
           deps.request,
           proof,
           model,
           nativeContext,
         );
+        phase = "original_hydration";
         hydrated = await hydrateImageRequest({
           proof: projectedProof,
           context: canonical,
@@ -93,20 +119,21 @@ export const createImageGenerationGuard =
           signal: nativeContext.abortSignal,
         });
       }
-      lease = hydrated.lease;
+      phase = "final_verification";
       await verifyImageGenerationState(deps.request, proof, model, nativeContext);
-      const admitted = deps.transport.open(lease, nativeContext.abortSignal);
+      phase = "transport_admission";
+      const admitted = deps.transport.open(nativeContext.abortSignal);
       transport = admitted;
       if (admitted.signal.aborted) throw new Error(IMAGE_GENERATION_INCOMPLETE);
       return {
         ok: true,
-        context: hydrated.context,
+        context: hydrated,
         transportSignal: admitted.signal,
         cleanup: () => admitted.close(),
       };
-    } catch {
+    } catch (error) {
+      imageDiagnosticFailed("prepare", phase, error, proof ?? undefined);
       transport?.close();
-      lease?.releaseWhenSettled();
       return { ok: false, message: IMAGE_GENERATION_INCOMPLETE };
     }
   };

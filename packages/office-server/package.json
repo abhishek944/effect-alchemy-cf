@@ -12,7 +12,6 @@
     "./native-protocol": "./src/protocol/index.ts",
     "./native-remote": "./src/storage-remote/index.ts",
     "./native-codec": "./src/storage-remote/node-codec.ts",
-    "./native-doc-read": "./src/storage-remote/doc-read.ts",
     "./render-page": "./src/render-page/index.ts"
   },
   "scripts": {
@@ -21,6 +20,7 @@
   },
   "dependencies": {
     "@effect/platform-node": "4.0.1",
+    "@starter/diagnostics": "workspace:*",
     "@starter/office-contract": "workspace:*",
     "@univer-cli/content-execution": "1.0.3",
     "@univer-cli/content-inspection": "1.0.3",

@@ -1,5 +1,4 @@
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
-import { tryReserveImageMemory } from "./chat-image-memory.ts";
+import type { Context } from "@earendil-works/pi-ai";
 import { checkLegacyHydrationImage } from "./chat-image-hydration-codec.ts";
 import {
   assertHydrationTextBudget,
@@ -13,9 +12,7 @@ import {
 } from "./chat-image-hydration-originals.ts";
 import {
   hydrationError,
-  hydrationFailure,
   hydrationSignal,
-  type HydratedImageRequest,
   type ImageHydrationInput,
 } from "./chat-image-hydration-types.ts";
 
@@ -23,35 +20,17 @@ export {
   ImageHydrationError,
   type ImageHydrationCode,
   type ImageHydrationInput,
-  type HydratedImageRequest,
 } from "./chat-image-hydration-types.ts";
 
-/**
- * Transient hydration ONLY after parent's bridge.verify and exact acceptance repair.
- * Success transfers lease ownership; release only after REAL provider work settles.
- * No bytes enter native storage, tool results, memos, compaction or checkpoints here.
- */
-export const hydrateImageRequest = async (
-  input: ImageHydrationInput,
-): Promise<HydratedImageRequest> => {
-  let lease: ImageMemoryLease | null = null;
+/** Request-only bytes never enter native history, checkpoints or compaction. */
+export const hydrateImageRequest = async (input: ImageHydrationInput): Promise<Context> => {
   try {
     const plan = planImageHydration(input);
-    lease = tryReserveImageMemory({
-      purpose: "hydration",
-      originals: plan.originals,
-      textCharacters: plan.reservationCharacters,
-    });
-    if (lease === null) return hydrationFailure("memory_unavailable");
     hydrationSignal(input.signal);
-    const authorized = await authorizeHydrationOriginals(input, plan, lease);
+    const authorized = await authorizeHydrationOriginals(input, plan);
     for (const legacy of plan.legacy) {
       hydrationSignal(input.signal);
-      lease.claim("original", legacy.byteSize);
-      // Decoder scratch remains covered alongside the unmodified inline message data.
-      await lease.track(async () =>
-        checkLegacyHydrationImage(legacy.block, legacy.byteSize, input.model),
-      );
+      checkLegacyHydrationImage(legacy.block, legacy.byteSize, input.model);
     }
     const messages = [...input.context.messages];
     for (const occurrence of authorized) {
@@ -59,19 +38,14 @@ export const hydrateImageRequest = async (
       messages[occurrence.occurrence.requestIndex] = await loadHydrationOccurrence(
         input,
         occurrence,
-        lease,
       );
     }
     const context = { ...input.context, messages };
-    const size = measureHydrationContext(context);
-    assertHydrationTextBudget(size, input.model);
-    if (size.transportBytes > lease.bytes) hydrationFailure("memory_unavailable");
-    // Only after reservation and bounded text checks: SDK may stringify tool metadata.
+    assertHydrationTextBudget(measureHydrationContext(context), input.model);
     assertHydrationTokenBudget(context, input.model);
     hydrationSignal(input.signal);
-    return { context, lease };
+    return context;
   } catch (error) {
-    lease?.releaseWhenSettled();
     throw hydrationError(error, input.signal);
   }
 };

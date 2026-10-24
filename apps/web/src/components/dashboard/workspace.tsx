@@ -13,6 +13,7 @@ import DashboardShell from "./shell";
 import { DashboardThemeProvider } from "./theme";
 import { WorkspacePreviewProvider } from "./workspace-preview-context";
 import { WorkspaceOfficeProvider } from "./workspace-office-context";
+import { OfficePanelRequests } from "./use-office-panel-request";
 
 export default function Workspace({ user, pathname }: { user: DashboardUser; pathname: string }) {
   const section = settingsSectionFromPath(pathname);
@@ -23,6 +24,7 @@ export default function Workspace({ user, pathname }: { user: DashboardUser; pat
         <WorkspaceOfficeProvider key={user.id} user={user} active={dashboard}>
           <ChatStoreProvider key={user.id} pathname={pathname}>
             <WorkspacePreviewProvider active={dashboard}>
+              <OfficePanelRequests active={dashboard} />
               <DashboardShell
                 section={section}
                 homeHref={chatIdFromPath(pathname) ? pathname : "/dashboard"}

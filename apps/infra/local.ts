@@ -19,7 +19,10 @@ runMain(
       dev: true,
     }).pipe(Effect.mapError((cause) => new Error("Local stack planning failed", { cause })));
     const output = yield* Alchemist.Stack.apply(plan);
-    yield* Effect.log(`Local service: ${output.url} (no watching; restart to rebuild)`);
+    yield* Effect.log(
+      `Local Worker: ${output.url} (API and backend; no watching, restart to rebuild)`,
+    );
+    yield* Effect.log("Frontend: pnpm dev:web (Vite with HMR at http://localhost:5173)");
     // Keep local providers alive until shutdown; their scope owns workerd.
     return yield* Effect.never;
   }).pipe(Effect.provide(Alchemist.layer()), Effect.scoped),

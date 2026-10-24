@@ -1,4 +1,10 @@
 import { Agent, type AgentContext } from "agents";
+import {
+  chatObjectMetadata,
+  reportCatalogSweep,
+  reportObjectFailure,
+  type ChatObjectMetadata,
+} from "./chat-observation.ts";
 import { ChatAdmission } from "./chat-admission.ts";
 import { ChatCatalogData } from "./chat-catalog-data.ts";
 import { catalogAdmissionRequest } from "./chat-catalog-admission-http.ts";
@@ -36,6 +42,7 @@ export class ChatCatalog extends Agent<ChatEnv> {
   private readonly images: ChatCatalogImages;
   private readonly skills: SkillsCatalog;
   private readonly speech: ChatCatalogSpeech;
+  private readonly metadata: ChatObjectMetadata;
 
   constructor(ctx: AgentContext, env: ChatEnv) {
     super(ctx, env);
@@ -71,32 +78,49 @@ export class ChatCatalog extends Agent<ChatEnv> {
           response,
         }),
     });
+    // Safe composition labels only; the scheduler owner reports escaped failures.
+    this.metadata = chatObjectMetadata(env);
   }
 
   /** SDK Scheduler owns its alarm; no competing alarm handler is installed. */
   async expireChatFiles(): Promise<void> {
-    await this.files.cleanup();
+    try {
+      await this.files.cleanup();
+    } catch (error) {
+      reportCatalogSweep(error, "expire-chat-files", this.metadata);
+      throw error;
+    }
   }
 
   /** Abandoned and never-saved avatar objects, retried until deletion succeeds. */
   async expireProfileObjects(): Promise<void> {
-    await sweepProfileObjects(
-      this.objects,
-      this.env.CHAT_FILES,
-      this.ctx.id.toString(),
-      Date.now(),
-    );
-    await reconcileAvatarOrphans({
-      storage: this.ctx.storage,
-      objects: this.objects,
-      profile: this.profile,
-      bucket: this.env.CHAT_FILES,
-      scope: this.ctx.id.toString(),
-    });
+    try {
+      await sweepProfileObjects(
+        this.objects,
+        this.env.CHAT_FILES,
+        this.ctx.id.toString(),
+        Date.now(),
+      );
+      await reconcileAvatarOrphans({
+        storage: this.ctx.storage,
+        objects: this.objects,
+        profile: this.profile,
+        bucket: this.env.CHAT_FILES,
+        scope: this.ctx.id.toString(),
+      });
+    } catch (error) {
+      reportCatalogSweep(error, "expire-profile-objects", this.metadata);
+      throw error;
+    }
   }
   /** Abandoned unpublished skill versions, retired to permanent markers. */
   async expireSkillObjects(): Promise<void> {
-    await this.skills.cleanup(this.env.CHAT_FILES, Date.now());
+    try {
+      await this.skills.cleanup(this.env.CHAT_FILES, Date.now());
+    } catch (error) {
+      reportCatalogSweep(error, "expire-skill-objects", this.metadata);
+      throw error;
+    }
   }
 
   async onRequest(request: Request): Promise<Response> {
@@ -149,7 +173,9 @@ export class ChatCatalog extends Agent<ChatEnv> {
         titles: this.titles,
         policy: this.policy,
       });
-    } catch {
+    } catch (error) {
+      // Native catalog producer boundary: report the original once, never raw request data.
+      reportObjectFailure(error, "catalog", request, undefined, this.metadata);
       return json({ message: "Chat catalog unavailable" }, 503);
     }
   }

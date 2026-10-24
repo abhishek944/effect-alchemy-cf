@@ -152,6 +152,12 @@ const icons = {
       <path d="M12 12v9" />
     </>
   ),
+  "refresh-cw": (
+    <>
+      <path d="M3 12a9 9 0 0 1 15.4-6.4L21 8M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16M8 16H3v5" />
+    </>
+  ),
   check: <path d="M20 6 9 17l-5-5" />,
   mic: (
     <>

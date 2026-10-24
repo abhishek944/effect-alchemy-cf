@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Clock, Effect, Schema } from "effect";
 import { Auth } from "./auth.ts";
 import {
@@ -57,15 +58,15 @@ export const revalidateOfficeSessionBinding = Effect.fn("OfficeSession.revalidat
         });
         return { session, user };
       },
-      catch: () => new OfficeSessionUnavailable(),
+      catch: (cause) => withCause(new OfficeSessionUnavailable(), cause),
     });
     if (value.session === null || value.user === null)
       return yield* Effect.fail(new OfficeSessionDenied());
     const session = yield* Schema.decodeUnknownEffect(StoredSession)(value.session).pipe(
-      Effect.mapError(() => new OfficeSessionUnavailable()),
+      Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)),
     );
     const user = yield* Schema.decodeUnknownEffect(StoredUser)(value.user).pipe(
-      Effect.mapError(() => new OfficeSessionUnavailable()),
+      Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)),
     );
     const now = yield* Clock.currentTimeMillis;
     const expiry = session.expiresAt.getTime();
@@ -81,5 +82,10 @@ export const revalidateOfficeSessionBinding = Effect.fn("OfficeSession.revalidat
     // No cookie/token, new principal, extended deadline or epoch write is returned/performed.
     return undefined;
   },
-  (effect) => effect.pipe(Effect.catchDefect(() => Effect.fail(new OfficeSessionUnavailable()))),
+  (effect) =>
+    effect.pipe(
+      Effect.catchDefect((defect) =>
+        Effect.fail(withCause(new OfficeSessionUnavailable(), defect)),
+      ),
+    ),
 );

@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import {
   ArtifactRef,
   Count,
@@ -19,6 +19,7 @@ import {
   DocumentScope,
 } from "@starter/office-contract";
 import {
+  MergeWitness,
   OriginalActorClaims,
   OwnerClaims,
   NativeReceiptKey,
@@ -68,6 +69,8 @@ export const OperationRow = Schema.Struct({
     code: Schema.NullOr(ArtifactRef),
     proposal: Schema.NullOr(ArtifactRef),
   }),
+  // Rows written before the witness moved into the operation encode without the key.
+  merge: Schema.NullOr(MergeWitness).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
   jobId: Schema.NullOr(Id),
   policyVersion: NativeId,
   createdAt: Count,

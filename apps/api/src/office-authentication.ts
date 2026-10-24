@@ -7,30 +7,34 @@ import {
 import { OfficeForbidden, safeFailure } from "@starter/office-contract";
 import { RuntimeContext } from "alchemy";
 import { Config, Context, Effect, Layer } from "effect";
-import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
-import { AuthenticationUnavailable, Unauthorized } from "./model.ts";
+import { type AuthenticationUnavailable, Unauthorized } from "./model.ts";
+import { authUnavailableEffect } from "./auth-failure.ts";
 
 /** Internal request capability; never serialize it or treat its fields as a native grant. */
 export class CurrentOfficeSession extends Context.Service<CurrentOfficeSession, OfficeSession>()(
   "starter/CurrentOfficeSession",
 ) {}
 
-export class OfficeAuthentication extends HttpApiMiddleware.Service<
+type Authenticate = <E, R>(
+  effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
+) => Effect.Effect<
+  HttpServerResponse.HttpServerResponse,
+  E | Unauthorized | AuthenticationUnavailable | OfficeForbidden,
+  Exclude<R, CurrentOfficeSession> | HttpServerRequest.HttpServerRequest
+>;
+
+export class OfficeAuthentication extends Context.Service<
   OfficeAuthentication,
-  {
-    provides: CurrentOfficeSession;
-  }
->()("starter/OfficeAuthentication", {
-  error: [Unauthorized, AuthenticationUnavailable, OfficeForbidden],
-}) {
+  { readonly authenticate: Authenticate }
+>()("starter/OfficeAuthentication") {
   static readonly layer = Layer.effect(
     OfficeAuthentication,
     Effect.gen(function* () {
       const auth = yield* Auth;
       const epochs = yield* OfficeSessionEpochs;
-      return (httpEffect) =>
+      const authenticate: Authenticate = (httpEffect) =>
         Effect.gen(function* () {
           const stage = yield* Config.String("OBS_STAGE").pipe(Effect.orDie);
           const request = yield* HttpServerRequest.HttpServerRequest;
@@ -44,8 +48,8 @@ export class OfficeAuthentication extends HttpApiMiddleware.Service<
             Effect.provideService(Auth, auth),
             Effect.provideService(OfficeSessionEpochs, epochs),
             Effect.catchTag("OfficeSessionDenied", () => Effect.fail(new Unauthorized())),
-            Effect.catchTag("OfficeSessionUnavailable", () =>
-              Effect.fail(new AuthenticationUnavailable()),
+            Effect.catchTag("OfficeSessionUnavailable", (cause) =>
+              authUnavailableEffect("office.session", cause),
             ),
           );
           return yield* httpEffect.pipe(
@@ -55,6 +59,7 @@ export class OfficeAuthentication extends HttpApiMiddleware.Service<
             ),
           );
         }).pipe(Effect.provide(RuntimeContext.phantom));
+      return { authenticate };
     }),
   ).pipe(Layer.provide(OfficeSessionEpochs.layer));
 }

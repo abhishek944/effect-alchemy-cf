@@ -164,6 +164,8 @@ export default function ChatConversation({
                 chatId,
                 running,
                 status,
+                reconnecting:
+                  Boolean(snapshot) && connection === "reconnecting" && !stoppingHere && !archived,
                 announcement,
                 announce: !runError && pending?.phase !== "failed",
                 stopLabel,

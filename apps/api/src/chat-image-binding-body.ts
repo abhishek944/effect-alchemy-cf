@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { bindingScopeFailure } from "./chat-image-binding-types.ts";
 
 export type ImageBindingBody = {
@@ -5,7 +6,7 @@ export type ImageBindingBody = {
   readonly done: Promise<void>;
 };
 
-/** Called INSIDE the existing tracked raw run; never starts new work on a closing lease. */
+/** Own response-body cancellation for the existing provider transport scope. */
 export const ownImageBindingBody = async (
   response: Response,
   signal: AbortSignal,
@@ -14,14 +15,18 @@ export const ownImageBindingBody = async (
   if (body === null) return { response, done: Promise.resolve() };
   const reader = body.getReader();
   let complete: (() => void) | undefined;
-  const done = new Promise<void>((resolve) => {
+  let failComplete: ((error: unknown) => void) | undefined;
+  const done = new Promise<void>((resolve, reject) => {
     complete = resolve;
+    failComplete = reject;
   });
+  // Late body errors may be observed by the caller; never leave an unhandled rejection.
+  void done.catch(() => undefined);
   let ended = false;
-  let stopping: Promise<void> | undefined;
+  let stopping: Promise<unknown> | undefined;
   let reading: Promise<ReadableStreamReadResult<Uint8Array>> | undefined;
   let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
-  const finish = (): void => {
+  const finish = (failure?: unknown, cleanup?: unknown): void => {
     if (ended) return;
     ended = true;
     signal.removeEventListener("abort", abort);
@@ -30,17 +35,24 @@ export const ownImageBindingBody = async (
     } catch {
       /* Actual read/cancel has already settled. */
     }
-    complete?.();
+    const primary = failure ?? cleanup;
+    const both = failure !== undefined && cleanup !== undefined && cleanup !== failure;
+    if (primary === undefined) complete?.();
+    else if (!both) failComplete?.(primary);
+    else if (primary instanceof Error) failComplete?.(withCause(primary, cleanup));
+    else failComplete?.(new AggregateError([primary, cleanup], "Multiple internal failures"));
   };
-  const stop = (): Promise<void> => {
+  const stop = (failure?: unknown): Promise<unknown> => {
     stopping ??= (async () => {
+      let cleanup: unknown;
       try {
         await reader.cancel();
-      } catch {
-        /* Still join any actual pending read. */
+      } catch (error) {
+        cleanup = error;
       }
       await reading?.catch(() => undefined);
-      finish();
+      finish(failure, cleanup);
+      return cleanup;
     })();
     return stopping;
   };
@@ -79,10 +91,12 @@ export const ownImageBindingBody = async (
             } else next.enqueue(part.value);
           } catch (error) {
             fail(error);
-            await stop();
+            await stop(error);
           }
         },
-        cancel: () => stop(),
+        cancel: async () => {
+          await stop();
+        },
       },
       { highWaterMark: 0 },
     );
@@ -94,19 +108,22 @@ export const ownImageBindingBody = async (
       }),
       done,
     };
-  } catch {
+  } catch (error) {
+    const cleanup = await stop();
+    const primary = error instanceof Error ? error : withCause(bindingScopeFailure(), error);
     // Construction failure stays owned until actual disposal, never a synthetic response.
-    await stop();
-    throw bindingScopeFailure();
+    throw withCause(primary, cleanup);
   }
 };
 
 /** Late unused binding results are disposed within that same outstanding raw run. */
-export const disposeImageBindingResult = async (value: unknown): Promise<void> => {
+export const disposeImageBindingResult = async (value: unknown): Promise<unknown> => {
   try {
     if (value instanceof Response) await value.body?.cancel();
     else if (value instanceof ReadableStream) await value.cancel();
-  } catch {
-    /* Awaited cancellation is finished; never echo a foreign body. */
+    return undefined;
+  } catch (error) {
+    // Preserve the real disposal failure for the owning binding call.
+    return error;
   }
 };

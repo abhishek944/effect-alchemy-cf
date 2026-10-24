@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Clock, Effect, Schema } from "effect";
 export {
   revalidateOfficeSessionBinding,
@@ -36,20 +37,22 @@ export const resolveOfficeSession = Effect.fn("OfficeSession.resolve")(function*
   const read = Effect.gen(function* () {
     const value = yield* auth
       .getSession(originalHeaders)
-      .pipe(Effect.mapError(() => new OfficeSessionUnavailable()));
+      .pipe(Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)));
     if (value === null) return yield* Effect.fail(new OfficeSessionDenied());
     const principal = yield* Schema.decodeUnknownEffect(Principal)({
       ownerId: value.user.id,
       sessionId: value.session.id,
       expiresAt: value.session.expiresAt.getTime(),
-    }).pipe(Effect.mapError(() => new OfficeSessionUnavailable()));
+    }).pipe(Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)));
     if (
       value.session.userId !== principal.ownerId ||
       principal.expiresAt <= (yield* Clock.currentTimeMillis)
     )
       return yield* Effect.fail(new OfficeSessionDenied());
     return principal;
-  }).pipe(Effect.catchDefect(() => Effect.fail(new OfficeSessionUnavailable())));
+  }).pipe(
+    Effect.catchDefect((defect) => Effect.fail(withCause(new OfficeSessionUnavailable(), defect))),
+  );
   const original = yield* read;
   const sessionEpoch = yield* epochs.bind(stage, original.ownerId, original.sessionId);
   const revalidate = Effect.gen(function* () {

@@ -11,7 +11,7 @@ export type ImageByteStream = {
   cancel(): Promise<void>;
 };
 
-/** Await disposal; never detach this promise from the owning memory lease. */
+/** Await disposal so late/cancelled original reads still close their body. */
 export const disposeImageStream = async (stream: ImageByteStream): Promise<void> => {
   try {
     await stream.cancel();

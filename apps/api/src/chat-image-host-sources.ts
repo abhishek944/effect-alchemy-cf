@@ -17,7 +17,6 @@ function matches(binding: ImageOriginalBinding, authority: SavedOriginalMetadata
   const file = authority.file;
   return (
     binding.fileId === file.id &&
-    binding.digest === authority.digest &&
     binding.originOperationId === authority.originOperationId &&
     binding.kind === file.kind &&
     binding.name === file.name &&

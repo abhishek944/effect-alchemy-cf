@@ -1,4 +1,5 @@
 import type { ImageCallUpdate } from "./chat-image-call-schema.ts";
+import { reportFailure } from "@starter/diagnostics";
 import type {
   ChatImageHostDependencies,
   ImageHostExecution,
@@ -8,19 +9,21 @@ import type {
 import { createChatGeneratedClient } from "./chat-generated-client.ts";
 import { imageHostToolResult } from "./chat-image-host-result.ts";
 import { acknowledgeImageHostOwner } from "./chat-image-host-owner-finalization.ts";
-
 import type { SavedFile } from "./chat-library-schema.ts";
-
 type ReceiptRead = Pick<ImageHostExecution, "plan" | "files" | "client">;
-
+const report = (
+  error: unknown,
+  operation: string,
+  event: "application.cleanup" | "application.failure" | "application.recovery",
+  operationId?: string,
+): void => reportFailure(error, { component: "chat-image-host", operation, event, operationId });
 export const imageHostFiles = (execution: Pick<ImageHostExecution, "files">) =>
   [...execution.files].toSorted(([a], [b]) => a - b).map(([index, file]) => ({ index, file }));
-
 export async function notifyImageHost(execution: ImageHostExecution): Promise<void> {
   try {
     await execution.deps.notify();
-  } catch {
-    // Observation never changes paid/storage authority or triggers another attempt.
+  } catch (error) {
+    report(error, "notify", "application.recovery", execution.plan.proof.snapshot.operationId);
   }
 }
 
@@ -101,8 +104,9 @@ export async function recoverImageHostPlan(deps: ChatImageHostDependencies, plan
         files: imageHostFiles(read),
       });
     }
-  } catch {
+  } catch (error) {
     // Missing/lost receipts remain uncertain. Do not consume, finish an active owner, or dispatch.
+    report(error, "receipt-recovery", "application.failure", plan.proof.snapshot.operationId);
   }
   return imageHostToolResult(
     plan,
@@ -123,9 +127,10 @@ export function failClosedImageHost(
       outcome,
       files: [],
     });
-  } catch {
+  } catch (error) {
     // Durable failure could not be established. This host cannot grant further paid work.
     execution.blockPaid();
+    report(error, "fail-closed", "application.failure", execution.plan.proof.snapshot.operationId);
   }
 }
 
@@ -135,11 +140,14 @@ export function closeImageHost(
   outcome: ImageHostOutcome,
   ownerReservationAttempted: boolean,
 ): void {
+  const operationId = execution.plan.proof.snapshot.operationId;
   const work = (async () => {
     try {
       for (const response of execution.responses) {
         if (response.body !== null && !response.body.locked)
-          await response.body.cancel().catch(() => undefined);
+          await response.body.cancel().catch((error) => {
+            report(error, "cancel", "application.cleanup", operationId);
+          });
       }
       await execution.lifetime.drain();
       let unresolved = outcome.storageUncertain;
@@ -147,8 +155,9 @@ export function closeImageHost(
       if (ownerReservationAttempted) {
         try {
           unresolved = await readImageHostReceipts(execution);
-        } catch {
+        } catch (error) {
           // Preserve earlier honest uncertainty and known receipts when bounded repair fails.
+          report(error, "receipt-repair", "application.failure", operationId);
         }
       }
       const current = execution.deps.calls.read(execution.plan.key);
@@ -172,17 +181,16 @@ export function closeImageHost(
         });
       }
       await notifyImageHost(execution);
-    } catch {
+    } catch (error) {
+      report(error, "close", "application.failure", operationId);
       failClosedImageHost(execution, outcome);
-    } finally {
-      execution.lifetime.lease.releaseWhenSettled();
     }
   })();
   detachImageHost(execution.deps, work);
 }
 
 export function detachImageHost(deps: ChatImageHostDependencies, work: Promise<void>): void {
-  const safe = work.catch(() => undefined);
+  const safe = work.catch((error) => report(error, "detached-work", "application.failure"));
   try {
     deps.waitUntil(safe);
   } catch {

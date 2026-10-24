@@ -5,7 +5,7 @@ import { reviewBlocker } from "./review-data.ts";
 import { useReviewEvidence } from "./use-review-evidence.ts";
 import { ReviewTabs, type ReviewTab } from "./review-tabs.tsx";
 import { ReviewContent } from "./review-content.tsx";
-import type { NativeTheme, NativeUser, FrameStatus } from "./frame/messages.ts";
+import type { NativeTheme, NativeUser } from "./frame/messages.ts";
 import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 
 export type OfficeReviewProps = OfficeRuntime &
@@ -21,41 +21,13 @@ export type OfficeReviewProps = OfficeRuntime &
 function ReviewSurface(props: OfficeReviewProps) {
   const { evidence, loading, error, more, refresh } = useReviewEvidence(props, props.reviewId);
   const [tab, setTab] = useState<ReviewTab>("result");
-  const [loadedViews, setLoadedViews] = useState<ReadonlySet<string>>(() => new Set());
   const actions = useReviewActions(props, evidence, props.onOperation, props.onReceipt);
   const page = evidence?.page;
   const blocker =
     evidence === null
       ? "Load complete exact review evidence before approval."
       : reviewBlocker(evidence);
-  const nativeBlocker =
-    page?.draft &&
-    page.result &&
-    loadedViews.has(`result:${page.draft.id}`) &&
-    loadedViews.has(`preview:${page.result.id}`)
-      ? null
-      : "Open the full native result and merge preview before approval.";
-  const blocked = blocker ?? (error || nativeBlocker);
-  const onNativeStatus = (id: string, status: FrameStatus, revision: number) => {
-    const candidate = [page?.main, page?.baseline, page?.draft, page?.result].find(
-      (view) => view?.id === id,
-    );
-    setLoadedViews((current) => {
-      const next = new Set(current);
-      const key = `${tab}:${id}`;
-      if (status === "read-only" && candidate?.revision === revision) next.add(key);
-      else if (status === "loading") next.delete(key);
-      else if (status === "error")
-        for (const loaded of next) {
-          if (loaded.endsWith(`:${id}`)) next.delete(loaded);
-        }
-      return next;
-    });
-  };
-  const refreshReview = () => {
-    setLoadedViews(new Set());
-    refresh();
-  };
+  const blocked = blocker ?? error;
   return (
     <section
       data-office="review"
@@ -75,7 +47,7 @@ function ReviewSurface(props: OfficeReviewProps) {
       {(error || blocked) && (
         <div data-office="notice" role="alert">
           {error || blocked}
-          <button type="button" disabled={loading || actions.pending} onClick={refreshReview}>
+          <button type="button" disabled={loading || actions.pending} onClick={refresh}>
             Refresh review
           </button>
         </div>
@@ -104,7 +76,6 @@ function ReviewSurface(props: OfficeReviewProps) {
           frameUrl={props.frameUrl}
           loading={loading}
           more={more}
-          onStatus={onNativeStatus}
         />
       </div>
       <div data-office="review-actions">

@@ -31,6 +31,15 @@ export function ChatConversationView({
 }) {
   return (
     <ThreadPrimitive.Root data-cx="chat-thread" aria-label="Assistant chat">
+      {footer.reconnecting && (
+        <output
+          id="chat-connection"
+          data-cx="chat-reconnecting"
+          aria-live={footer.announce ? "polite" : "off"}
+        >
+          {footer.status}
+        </output>
+      )}
       <ThreadPrimitive.Viewport data-cx="chat-viewport">
         <HistoryControls
           gap={history.gap}

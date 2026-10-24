@@ -24,13 +24,15 @@ export async function officePrivateBinary(
   metadata: OfficeMetadata,
   limits: OfficeLimits,
 ) {
-  await request.live();
+  // The private route authenticated the peer/frame before handing over this body.
   const input = officeBinaryInput(body, request);
   try {
     const envelope = decodeWireSync(Envelope)(await input.header());
     if (envelope.invocationId !== request.id) throw officeDenied();
     request.receive(envelope.callId);
     const call = envelope.payload;
+    // One admission after the asynchronous header read, shared by all finite handle calls.
+    await request.live();
     const reply = (
       value: () => unknown,
       payload: ReadableStream<Uint8Array> | null,

@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import {
   Count,
   decodeWireSync,
@@ -33,7 +34,9 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
     closed = false,
     failed = false,
     closing: Promise<void> | undefined;
-  const fail = () => {
+  let failureCause: unknown;
+  const fail = (cause: unknown) => {
+    if (!failed) failureCause = cause;
     failed = true;
     closed = true;
     for (const resource of resources) resource.revoke();
@@ -171,7 +174,8 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
   }
   function drain(): Promise<void> {
     return Promise.all([...resources].map((resource) => resource.done)).then(() => {
-      if (failed) throw unavailable();
+      if (failed)
+        throw withCause(withDiagnostic(unavailable(), "binary-channel-drain"), failureCause);
       return undefined;
     });
   }
@@ -180,7 +184,12 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
     closed = true;
     closing = Promise.allSettled([...resources].map((resource) => resource.close())).then(
       (results) => {
-        if (failed || results.some((result) => result.status === "rejected")) throw unavailable();
+        const rejected = results.find((result) => result.status === "rejected");
+        if (failed || rejected !== undefined)
+          throw withCause(
+            withDiagnostic(unavailable(), "binary-channel-close"),
+            failed ? failureCause : rejected?.reason,
+          );
         return undefined;
       },
     );

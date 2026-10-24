@@ -13,6 +13,7 @@ export type ChatLibraryPanelProps = {
   /** Keep mounted/hidden to retain query+scroll; false releases original display leases. */
   active: boolean;
   onOpenImage: (fileId: string) => void;
+  onRefresh: () => void;
 };
 
 export function ChatLibraryPanel({
@@ -21,6 +22,7 @@ export function ChatLibraryPanel({
   archived,
   active,
   onOpenImage,
+  onRefresh,
 }: ChatLibraryPanelProps) {
   const update = (patch: Partial<LibraryFilters>) =>
     library.setFilters({ ...library.filters, ...patch });
@@ -30,17 +32,18 @@ export function ChatLibraryPanel({
     library.filters.origin !== "all";
   return (
     <section data-cx="chat-library-panel" aria-label={`Files in ${chatTitle}`} hidden={!active}>
-      <header data-cx="chat-library-heading">
-        <h2>Files</h2>
-      </header>
       {archived && (
         <p data-cx="chat-library-banner">
           <Icon name="archive" />
           Archived chat · View and download only
         </p>
       )}
-      <p data-cx="chat-library-scope">{chatTitle} · Images open in tabs; other files download</p>
-      <ChatLibraryQuery filters={library.filters} onChange={library.setFilters} />
+      <ChatLibraryQuery
+        filters={library.filters}
+        onChange={library.setFilters}
+        onRefresh={onRefresh}
+        refreshing={library.state === "loading" || !active}
+      />
       <div data-cx="chat-library-grid" aria-busy={library.state === "loading"}>
         {library.state === "loading" && (
           <div data-cx="chat-library-state" aria-live="polite">
@@ -56,22 +59,16 @@ export function ChatLibraryPanel({
             </button>
           </div>
         )}
-        {library.state === "ready" && library.files.length === 0 && (
+        {library.state === "ready" && library.files.length === 0 && filtered && (
           <div data-cx="chat-library-state" aria-live="polite">
-            <strong>{filtered ? "No matching files" : "No saved files yet"}</strong>
-            <p>
-              {filtered
-                ? "Try another name or clear your filters."
-                : "Accepted attachments and completed images will appear here. Unsent files stay in your draft."}
-            </p>
-            {filtered && (
-              <button
-                type="button"
-                onClick={() => update({ search: "", kind: "all", origin: "all" })}
-              >
-                Clear search and filters
-              </button>
-            )}
+            <strong>No matching files</strong>
+            <p>Try another name or clear your filters.</p>
+            <button
+              type="button"
+              onClick={() => update({ search: "", kind: "all", origin: "all" })}
+            >
+              Clear search and filters
+            </button>
           </div>
         )}
         {library.files.map((file) => (

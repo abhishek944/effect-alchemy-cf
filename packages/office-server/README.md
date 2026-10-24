@@ -24,14 +24,6 @@ A host sharing SDK resources with native endpoints may acquire
 `runtime.invoke(...)` scope and actual admitted adapters. Nested Worktree/trunk
 calls reuse that invocation's pair. Never retain a native write permit.
 
-## Readonly main Doc adapter
-
-`./native-doc-read` exports `createReadonlyDocDatabase` and `DocReadOptions` for
-one explicit main Doc scope. It requires actual private fetch/association/access,
-expiry/abort and finite budgets; all writes and Sheet blocks are denied.
-Node loads published native frames through bounded refs/pieces. This is not an
-installed host, authentication provider, writer or Worktree implementation.
-
 ## Native HTTP/WebSocket boundary
 
 `./native-protocol` composes the actual SDK endpoints/transport with finite routes.

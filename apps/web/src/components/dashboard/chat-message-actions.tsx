@@ -65,7 +65,15 @@ function SpeakerButton({ canSpeak }: { canSpeak: boolean }) {
 }
 
 /** Time comes from the raw stored stamp, never the runtime's synthesized createdAt. */
-export function AssistantActions({ optimistic }: { optimistic: boolean }) {
+export function AssistantActions({
+  optimistic,
+  attachmentsOnly = false,
+  toolOnly = false,
+}: {
+  optimistic: boolean;
+  attachmentsOnly?: boolean;
+  toolOnly?: boolean;
+}) {
   const messageId = useAuiState((state) => state.message.id);
   const { factsFor, stampFor } = useHistoryText();
   const copy = useMessageCopy();
@@ -73,11 +81,19 @@ export function AssistantActions({ optimistic }: { optimistic: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const facts = factsFor(messageId);
   if (optimistic) return null;
+  if (attachmentsOnly) {
+    if (copy.text.length === 0) return null;
+    return (
+      <div data-cx="chat-reply-actions">
+        <CopyButton text={copy.text} scope={copy.scope} disabled={!copy.enabled} kind="response" />
+      </div>
+    );
+  }
 
   return (
     <div data-cx="chat-reply-actions">
       <TimeChip stamp={stampFor(messageId)} />
-      <SpeakerButton canSpeak={copy.enabled} />
+      {!toolOnly && <SpeakerButton canSpeak={copy.enabled} />}
       {copy.text.length > 0 && (
         <CopyButton text={copy.text} scope={copy.scope} disabled={!copy.enabled} kind="response" />
       )}

@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Receipt } from "@starter/office-contract";
 import type { OfficeEditorHandle, OfficeSave, OfficeRuntime } from "@starter/office-react";
-import {
-  openOffice,
-  drainOffice,
-  reacquireOffice,
-  officeSendAnchor,
-  type OpenOffice,
-} from "@/lib/office-runtime";
+import { drainOffice, openOffice, type OpenOffice } from "@/lib/office-runtime";
+import { checkpointOfficeSendTarget } from "@/lib/office-anchor";
 import type { OfficeSelection } from "./workspace-preview-model";
 import { useWorkspaceOffice } from "./workspace-office-context";
+import { useOfficeEditorLease } from "./use-office-editor-lease";
 
 type Control = "ready" | "review" | "reopen";
 
@@ -19,7 +15,6 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
   const [captured] = useState(selection);
   const [owner] = useState(() => ({}));
   const [handle, native] = useState<OfficeEditorHandle | null>(null);
-  const saved = useRef<OfficeSave | null>(null);
   const pending = useRef<{ id: string; control: Control } | null>(null);
   const [pendingControl, setPendingControl] = useState<Control | null>(null);
   const command = useRef(false);
@@ -32,6 +27,7 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [reviewId, setReviewId] = useState(captured.reviewId);
   const retired = useRef(captured.reviewId !== null);
+  useOfficeEditorLease(runtime, value, handle, busy, setValue, setError);
   useEffect(() => {
     const active = new AbortController();
     lifetime.current = active;
@@ -54,19 +50,33 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
       active.abort();
     };
   }, [runtimePromise, captured]);
-  const holdAndDrain = useCallback(async () => {
-    await loading.current;
-    if (retired.current) return;
-    const opened = value;
-    if (opened === null || opened.view.mode !== "edit" || opened.editor === null) return;
-    if (opened.editor.state === "drained") return;
-    const acknowledged = saved.current ?? (await handle?.prepareToLeave());
-    if (acknowledged === undefined) throw new Error("Native save acknowledgement is unavailable.");
-    saved.current = acknowledged;
-    const active = lifetime.current;
-    if (active === null) throw new Error("Office scope is unavailable.");
-    const next = await drainOffice(await runtimePromise, opened, acknowledged, active.signal);
-    setValue(next);
+  /** This editor's one save: native finish, ACK identity, server drain. Concurrent callers share it. */
+  const saving = useRef<Promise<OfficeSave | null> | null>(null);
+  const holdAndDrain = useCallback((): Promise<OfficeSave | null> => {
+    if (saving.current !== null) return saving.current;
+    const started = (async (): Promise<OfficeSave | null> => {
+      await loading.current;
+      const opened = value;
+      if (retired.current || opened === null || opened.editor === null) return null;
+      if (opened.view.mode !== "edit") return null;
+      const acknowledged = await handle?.prepareToLeave();
+      if (acknowledged === undefined)
+        throw new Error("Native save acknowledgement is unavailable.");
+      if (acknowledged.viewId !== opened.view.id)
+        throw new Error("The native save acknowledgement belongs to another editor.");
+      if (opened.editor.state === "drained") return acknowledged;
+      const active = lifetime.current;
+      if (active === null) throw new Error("Office scope is unavailable.");
+      const next = await drainOffice(await runtimePromise, opened, acknowledged, active.signal);
+      setValue(next);
+      setError(""); // A confirmed drain clears prior save/drain failure state.
+      return acknowledged;
+    })();
+    const tracked: Promise<OfficeSave | null> = started.finally(() => {
+      if (saving.current === tracked) saving.current = null;
+    });
+    saving.current = tracked;
+    return tracked;
   }, [runtimePromise, handle, value]);
   useLayoutEffect(
     () =>
@@ -86,14 +96,22 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
           if (command.current || pending.current !== null)
             throw new Error("Finish the Office operation before Send.");
           const opened = value;
-          await holdAndDrain();
+          const acknowledged = await holdAndDrain();
           if (command.current || pending.current !== null)
             throw new Error("An Office operation started during Send.");
           if (opened === null) throw new Error("Office is not ready.");
-          return officeSendAnchor(opened, saved.current, captured.target);
+          const active = lifetime.current;
+          if (active === null) throw new Error("Office scope is unavailable.");
+          return checkpointOfficeSendTarget(
+            await runtimePromise,
+            captured.target,
+            opened,
+            acknowledged,
+            active.signal,
+          );
         },
       }),
-    [register, id, chatId, captured, holdAndDrain, owner, busy, value],
+    [register, id, chatId, captured, holdAndDrain, owner, busy, value, runtimePromise],
   );
   const act = async (reacquire: boolean) => {
     if (command.current || pending.current !== null) return;
@@ -101,22 +119,17 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
     setBusy(true);
     setError("");
     try {
-      await holdAndDrain();
+      const saved = await holdAndDrain();
       if (!reacquire) return;
+      if (saved === null) throw new Error("Office is not open for native editing.");
       const active = lifetime.current;
       if (active === null) throw new Error("Office scope is unavailable.");
-      const fresh = await reacquireOffice(
-        await runtimePromise,
-        captured.target,
-        saved.current,
-        active.signal,
-      );
-      saved.current = null;
-      setValue(fresh);
+      // A fresh authorized session for the live head; the server decides grant eligibility.
+      setValue(await openOffice(await runtimePromise, captured.target, active.signal));
     } catch {
       setError(
         reacquire
-          ? "Editor reacquisition is unconfirmed or the head changed. Keep this saved tab open; close and reopen from Files to choose a newer head."
+          ? "Editor reacquisition is unconfirmed. Keep this saved tab open; retry or reopen it from Files."
           : "Native save or server drain is unconfirmed. Keep this editor mounted and retry.",
       );
     } finally {
@@ -174,6 +187,7 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
     reviewId,
     pendingControl,
     admit,
+    holdAndDrain,
     save: () => act(false),
     resume: () => act(true),
     onOperation,

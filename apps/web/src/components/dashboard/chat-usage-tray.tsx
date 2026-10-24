@@ -35,14 +35,13 @@ function ContextFigure() {
 function CostFigure() {
   const { usage } = useChatStore().usage;
   const subtotal = usage ? knownSubtotal(usage) : null;
-  if (!usage || !subtotal) return <span data-cx="usage-figure">Text/voice unknown</span>;
+  if (!usage || !subtotal) return <span data-cx="usage-figure">0$</span>;
   // Whole-chat completeness decides the label: token counters alone can look
   // complete while speech cost is still unknown.
   const partial = usage.completeness !== "complete";
   return (
     <span>
-      {formatCost(subtotal.known)} text/voice
-      {partial ? " partial" : ""}
+      {formatCost(subtotal.known)}
       <span className="sr-only">
         {` estimated text and speech cost, a known ${
           partial ? "subtotal; some categories may be unknown" : "total"
@@ -55,8 +54,8 @@ function CostFigure() {
 /**
  * Shallow numeric tray tucked below the composer. Known values are numbers
  * only; hover/focus identifies each figure with an accessible meaning, and an
- * explicit activation opens the categorized ledger. Unknown or failed loads
- * stay honest instead of showing a fabricated zero.
+ * explicit activation opens the categorized ledger. Missing cost data displays
+ * 0$ here; tooltips and the ledger retain the underlying unknown status.
  */
 export default function ChatUsageTray({ chatId }: { chatId: string }) {
   const { usage, status, error, mismatch, reload, reconcile } = useChatStore().usage;

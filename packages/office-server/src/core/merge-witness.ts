@@ -1,5 +1,5 @@
-import { Effect, Schema } from "effect";
-import { Digest, Id, Revision, decodeWire } from "@starter/office-contract";
+import { Effect } from "effect";
+import { decodeWire } from "@starter/office-contract";
 import { encodeNativeFrame } from "@starter/office-contract/native-wire";
 import type {
   FrozenReview,
@@ -7,49 +7,45 @@ import type {
   OperationRecord,
   WritePermit,
 } from "../ports/index.ts";
+import {
+  MergeWitness as MergeWitnessSchema,
+  type MergeWitness as MergeWitnessType,
+} from "../ports/index.ts";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
 import { verifyOperation } from "./claims.ts";
 import { readReviewBundle } from "./review-bundle.ts";
 import { sameReviewResult } from "./review-comparison.ts";
-import { loadNativeArtifact, stageNativeArtifact } from "./bytes.ts";
+import { loadNativeArtifact } from "./bytes.ts";
 import { operationRecord } from "./operation-read.ts";
 import { advanceOperation, terminalReceipt, sha256 } from "./operations.ts";
 import { operationTarget } from "./operation-caller.ts";
 import { confirmNativeWrites } from "./native-complete.ts";
 import { nativeCall, officeFailure } from "./failure.ts";
 
-const Witness = Schema.Struct({
-  purpose: Schema.Literal("office-merge-verified"),
-  version: Schema.Literal(1),
-  operationId: Id,
-  reviewId: Id,
-  fingerprint: Digest,
-  previewDigest: Digest,
-  outcome: Schema.Literals(["merged", "unchanged"]),
-  acceptedRevision: Schema.NullOr(Revision),
-  native: Schema.Struct({
-    unitID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256)),
-    type: Schema.Literals([1, 2, 3]),
-    rev: Revision,
-  }),
-  nativeDigest: Digest,
-});
-export type MergeWitness = typeof Witness.Type;
+export type { MergeWitness } from "../ports/index.ts";
+
+/**
+ * The operation record owns the witness. An operation staged before that compaction still
+ * carries a ready merge-artifact ref, which is read but never written again.
+ */
 export const readMergeWitness = Effect.fn("Office.readMergeWitness")(function* (
   deps: OfficeDependencies,
   record: OperationRecord,
   review: FrozenReview,
 ) {
-  if (record.artifacts.proposal === null) return null;
-  const raw = yield* loadNativeArtifact(
-    deps,
-    record.owner,
-    record.artifacts.proposal,
-    "merge-artifact",
-  );
-  const witness = yield* decodeWire(Witness)(raw).pipe(
-    Effect.mapError(() => officeFailure("CONTENT_REQUIRED")),
-  );
+  let witness = record.merge;
+  if (witness === null) {
+    if (record.artifacts.proposal === null) return null;
+    const raw = yield* loadNativeArtifact(
+      deps,
+      record.owner,
+      record.artifacts.proposal,
+      "merge-artifact",
+    );
+    witness = yield* decodeWire(MergeWitnessSchema)(raw).pipe(
+      Effect.mapError(() => officeFailure("CONTENT_REQUIRED")),
+    );
+  }
   if (
     witness.operationId !== record.receipt.operationId ||
     witness.reviewId !== review.id ||
@@ -85,7 +81,7 @@ export const stageMergeWitness = Effect.fn("Office.stageMergeWitness")(function*
     try: () => sha256(encodeNativeFrame("merge-artifact", native)),
     catch: () => officeFailure("LIMIT_EXCEEDED", record.receipt.operationId),
   });
-  const value = yield* decodeWire(Witness)({
+  const value = yield* decodeWire(MergeWitnessSchema)({
     purpose: "office-merge-verified",
     version: 1,
     operationId: record.receipt.operationId,
@@ -101,20 +97,12 @@ export const stageMergeWitness = Effect.fn("Office.stageMergeWitness")(function*
     },
     nativeDigest,
   }).pipe(Effect.mapError(() => officeFailure("CONTENT_REQUIRED")));
-  const ref = yield* stageNativeArtifact(
-    deps,
-    record.owner,
-    "native-preview",
-    "merge-artifact",
-    value,
-  );
   const current = yield* operationRecord(deps, record.owner, record.receipt.operationId);
   if (current === null) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
   yield* verifyOperation(deps, current, yield* operationTarget(deps, current), "recovery-observe");
-  if (current.artifacts.proposal !== null) return yield* readMergeWitness(deps, current, review);
-  yield* advanceOperation(deps, current, current.receipt.phase, {
-    artifacts: { ...current.artifacts, proposal: ref },
-  });
+  if (current.merge !== null || current.artifacts.proposal !== null)
+    return yield* readMergeWitness(deps, current, review);
+  yield* advanceOperation(deps, current, current.receipt.phase, { merge: value });
   return value;
 });
 export const finishWitnessedMerge = Effect.fn("Office.finishWitnessedMerge")(function* (
@@ -122,7 +110,7 @@ export const finishWitnessedMerge = Effect.fn("Office.finishWitnessedMerge")(fun
   record: OperationRecord,
   review: FrozenReview,
   permit: WritePermit,
-  witness: MergeWitness,
+  witness: MergeWitnessType,
 ) {
   yield* confirmNativeWrites(deps, record, permit);
   const current = yield* operationRecord(deps, record.owner, permit.operationId);

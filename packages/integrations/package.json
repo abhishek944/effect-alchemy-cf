@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@polar-sh/sdk": "1.0.2",
+    "@starter/diagnostics": "workspace:*",
     "dodopayments": "2.54.2",
     "effect": "4.0.1"
   },

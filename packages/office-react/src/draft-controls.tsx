@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { Draft, Editor, Receipt } from "@starter/office-contract";
-import type { OfficeEditorHandle } from "./connection.ts";
+import type { OfficeSave } from "./connection.ts";
 import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 
 export type OfficeDraftControlsProps = OfficeRuntime &
   OfficeActionAdmission & {
     readonly draft: Draft;
     readonly editor: Editor;
-    readonly native: OfficeEditorHandle;
+    /** The host's one editor-session save: native finish, ACK identity check and server drain. */
+    readonly holdAndDrain: () => Promise<OfficeSave | null>;
     readonly onOperation: (operationId: string) => void;
     readonly onReceipt: (receipt: Receipt) => void;
     readonly onBusy?: (busy: boolean) => void;
   };
-/** Host owns leave guarding and editor reacquisition. This control never installs a router guard. */
+/** Host owns leave guarding, the save barrier and editor reacquisition. This control never drains. */
 function DraftControlSurface(props: OfficeDraftControlsProps) {
   const attempt = useRef<string | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -49,26 +50,9 @@ function DraftControlSurface(props: OfficeDraftControlsProps) {
           { signal: active.signal },
         );
       } else {
-        const saved = await props.native.hold();
+        const saved = await props.holdAndDrain();
         if (active.signal.aborted) return;
-        if (saved.viewId !== props.editor.view.id) throw new Error("Editor epoch changed.");
-        const drained = await props.run(
-          props.client.office.editor({
-            payload: {
-              kind: "drained",
-              editorId: props.editor.id,
-              confirmedRevision: saved.revision,
-            },
-          }),
-          { signal: active.signal },
-        );
-        if (active.signal.aborted) return;
-        if (
-          drained.id !== props.editor.id ||
-          drained.epoch !== props.editor.epoch ||
-          drained.state !== "drained"
-        )
-          throw new Error("Editor save barrier is not acknowledged.");
+        if (saved === null) throw new Error("This editor is not open for native review.");
         const operationId = crypto.randomUUID();
         attempt.current = operationId;
         props.onOperation(operationId);

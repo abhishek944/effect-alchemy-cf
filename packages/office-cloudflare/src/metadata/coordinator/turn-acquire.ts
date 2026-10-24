@@ -139,8 +139,7 @@ export async function acquireCore(
         AND NOT EXISTS(SELECT 1 FROM office_coord_turns t WHERE t.id=d.current_turn AND t.state='held'
           AND t.deadline>${sqlNow} AND t.auth_until>${sqlNow}))
       AND EXISTS(SELECT 1 FROM office_native_authority WHERE scope=? AND epoch=? AND command_id IS ? AND step_id IS ?)
-      AND NOT EXISTS(SELECT 1 FROM office_coord_turns WHERE id=?) AND (${plan.predicate.sql}) AND (${basis.sql})
-      ${request.purpose === "native" ? "AND NOT EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND document=? AND state IN ('active','draining','unclean'))" : ""}`,
+      AND NOT EXISTS(SELECT 1 FROM office_coord_turns WHERE id=?) AND (${plan.predicate.sql}) AND (${basis.sql})`,
     [
       context.notAfter,
       next.deadline,
@@ -161,7 +160,6 @@ export async function acquireCore(
       next.id,
       ...plan.predicate.values,
       ...basis.values,
-      ...(request.purpose === "native" ? [key.owner, target.documentId] : []),
     ],
     statements,
     "BUSY",

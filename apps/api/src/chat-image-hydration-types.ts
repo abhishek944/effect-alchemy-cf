@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
+import { withCause } from "@starter/diagnostics";
 import type { Context } from "@earendil-works/pi-ai";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
 import type { GenerationRequestProof } from "./chat-image-request-types.ts";
 import { ImageIOError } from "./chat-image-io-error.ts";
 
@@ -16,12 +16,6 @@ export type ImageHydrationInput = {
   readonly bucket?: cf.R2Bucket;
   readonly signal?: AbortSignal;
 };
-export type HydratedImageRequest = {
-  readonly context: Context;
-  /** Caller keeps this through actual provider transport/stream/body/serialization settlement. */
-  readonly lease: ImageMemoryLease;
-};
-
 const messages = {
   invalid_context: "Image request positions or compact content could not be verified.",
   metadata_mismatch: "A saved original no longer matches its immutable reference.",
@@ -33,7 +27,6 @@ const messages = {
   quoted_text_too_large: "Quoted files exceed the supported text limit for this message.",
   text_budget: "The request's text and guidance exceed the supported request budget.",
   context_budget: "The estimated image and text context exceeds this model's input budget.",
-  memory_unavailable: "This request cannot fit the available transient image memory.",
   cancelled: "This request was stopped before original reading completed.",
   read_failed: "Private originals could not be read for this request.",
 } as const;
@@ -55,7 +48,7 @@ export const hydrationSignal = (signal?: AbortSignal): void => {
   if (signal?.aborted) hydrationFailure("cancelled");
 };
 export const hydrationError = (error: unknown, signal?: AbortSignal): ImageHydrationError => {
-  if (signal?.aborted) return new ImageHydrationError("cancelled");
+  if (signal?.aborted) return withCause(new ImageHydrationError("cancelled"), error);
   if (error instanceof ImageHydrationError) return error;
   if (error instanceof ImageIOError) {
     if (
@@ -63,10 +56,9 @@ export const hydrationError = (error: unknown, signal?: AbortSignal): ImageHydra
       error.code === "original_integrity" ||
       error.code === "cancelled"
     )
-      return new ImageHydrationError(error.code);
-    if (error.code === "invalid_metadata") return new ImageHydrationError("metadata_mismatch");
-    if (error.code === "invalid_memory_estimate" || error.code === "lease_capacity")
-      return new ImageHydrationError("memory_unavailable");
+      return withCause(new ImageHydrationError(error.code), error);
+    if (error.code === "invalid_metadata")
+      return withCause(new ImageHydrationError("metadata_mismatch"), error);
   }
-  return new ImageHydrationError("read_failed");
+  return withCause(new ImageHydrationError("read_failed"), error);
 };

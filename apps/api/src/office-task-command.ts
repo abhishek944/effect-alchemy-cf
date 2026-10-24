@@ -1,4 +1,4 @@
-import { decodeWireSync } from "@starter/office-contract";
+import { decodeWireSync, officeImportOptions } from "@starter/office-contract";
 import type { OfficeIntentCommand } from "@starter/office-pi";
 import type { OperationRecord } from "@starter/office-server/ports";
 import { HostOfficeRequest } from "@starter/office-server/native-remote";
@@ -103,7 +103,8 @@ export function assertOfficeTaskUpload(
     (file) => file.fileId === command.input.fileRef,
   );
   if (
-    original?.kind !== "office" ||
+    !original ||
+    !officeImportOptions(original.mediaType, original.name) ||
     input.kind !== "upload" ||
     input.operationId !== command.input.operationId ||
     input.filename !== original.name ||

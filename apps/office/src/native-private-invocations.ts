@@ -30,11 +30,11 @@ export class NativePrivateInvocations {
     this.connection = connection;
     this.context = context;
   }
-  own(actual: Promise<unknown>): void {
+  own(actual: Promise<unknown>, reason = "invocation-owned-cleanup"): void {
     const observed = actual.then(
       () => undefined,
-      () => {
-        this.context.failCleanup();
+      (cause) => {
+        this.context.failCleanup(cause, reason);
       },
     );
     this.pending.add(observed);
@@ -49,7 +49,9 @@ export class NativePrivateInvocations {
       channels.cleanup,
     ]);
     const closed = await Promise.allSettled(resources.map((resource) => resource.close()));
-    if (closed.some((result) => result.status === "rejected")) this.context.failCleanup();
+    for (const result of closed)
+      if (result.status === "rejected")
+        this.context.failCleanup(result.reason, "invocation-drain-close");
     this.active.clear();
     this.context.assertClean();
   }
@@ -74,7 +76,9 @@ export class NativePrivateInvocations {
         channels.binary.close(),
         channels.cleanup.close(),
       ]).then((closed) => {
-        if (closed.some((result) => result.status === "rejected")) this.context.failCleanup();
+        for (const result of closed)
+          if (result.status === "rejected")
+            this.context.failCleanup(result.reason, "invocation-discard-close");
         return undefined;
       }),
     );
@@ -130,7 +134,9 @@ export class NativePrivateInvocations {
         channels.binary.close(),
         channels.cleanup.close(),
       ]);
-      if (closed.some((result) => result.status === "rejected")) this.context.failCleanup();
+      for (const result of closed)
+        if (result.status === "rejected")
+          this.context.failCleanup(result.reason, "invocation-capacity-close");
       throw forbidden();
     }
     const actual = Object.freeze({ value, channels, signal });
@@ -156,7 +162,7 @@ export class NativePrivateInvocations {
         current.value.cleanupDeadline,
       );
     } catch (error) {
-      this.context.failCleanup();
+      this.context.failCleanup(error, "invocation-finished-report");
       throw error;
     }
   }

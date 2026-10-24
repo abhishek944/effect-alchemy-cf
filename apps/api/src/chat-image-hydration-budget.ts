@@ -28,9 +28,7 @@ const stringBytes = (value: string): number => {
 };
 
 export type HydrationContextSize = {
-  readonly transportBytes: number;
   readonly textBytes: number;
-  readonly textCharacters: number;
 };
 
 /** Exclude ONLY actual direct image blocks' data from text/guidance budgeting. */
@@ -41,13 +39,11 @@ export const measureHydrationContext = (context: Context): HydrationContextSize 
     if (Array.isArray(message.content))
       for (const block of message.content) if (block.type === "image") images.add(block);
   }
-  let transportBytes = 0;
   let textBytes = 0;
   let textCharacters = 0;
   let nodes = 262_144;
   const ancestors = new WeakSet<object>();
   const add = (bytes: number): void => {
-    transportBytes += bytes;
     textBytes += bytes;
   };
   const string = (value: string): void => {
@@ -91,7 +87,6 @@ export const measureHydrationContext = (context: Context): HydrationContextSize 
         add(1);
         if (images.has(value) && key === "data") {
           if (typeof child !== "string") return hydrationFailure("invalid_context");
-          transportBytes += child.length + 2; // Validated canonical base64 is ASCII, unescaped.
           textBytes += 2;
         } else visit(child, depth + 1);
       }
@@ -99,9 +94,8 @@ export const measureHydrationContext = (context: Context): HydrationContextSize 
     ancestors.delete(value);
   };
   visit(context, 0);
-  if (![transportBytes, textBytes, textCharacters].every(Number.isSafeInteger))
-    hydrationFailure("invalid_context");
-  return { transportBytes, textBytes, textCharacters };
+  if (![textBytes, textCharacters].every(Number.isSafeInteger)) hydrationFailure("invalid_context");
+  return { textBytes };
 };
 
 export const assertHydrationTextBudget = (

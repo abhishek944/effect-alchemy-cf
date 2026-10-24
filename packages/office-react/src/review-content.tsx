@@ -4,7 +4,7 @@ import { ReviewNative } from "./review-native.tsx";
 import type { OfficeRuntime } from "./runtime.ts";
 import { OfficeChanges } from "./changes.tsx";
 import { pinnedReviewView, reviewBlocker, type ReviewEvidence } from "./review-data.ts";
-import type { NativeTheme, NativeUser, FrameStatus } from "./frame/messages.ts";
+import type { NativeTheme, NativeUser } from "./frame/messages.ts";
 import type { ReviewTab } from "./review-tabs.tsx";
 
 export function ReviewContent({
@@ -17,7 +17,6 @@ export function ReviewContent({
   frameUrl,
   loading,
   more,
-  onStatus,
 }: OfficeRuntime & {
   readonly evidence: ReviewEvidence | null;
   readonly tab: ReviewTab;
@@ -26,7 +25,6 @@ export function ReviewContent({
   readonly frameUrl: string;
   readonly loading: boolean;
   readonly more: () => Promise<void>;
-  readonly onStatus: (id: string, status: FrameStatus, revision: number) => void;
 }) {
   const [context, setContext] = useState<View | null>(null);
   if (evidence === null) return <p data-office="notice">Exact review evidence unavailable.</p>;
@@ -46,7 +44,6 @@ export function ReviewContent({
       user={user}
       theme={theme}
       frameUrl={frameUrl}
-      onStatus={onStatus}
     />
   );
   if (tab === "changes" && context === null)

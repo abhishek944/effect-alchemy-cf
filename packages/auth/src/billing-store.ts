@@ -1,4 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import { billingError } from "@starter/integrations/billing";
 import type { RuntimeContext } from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
@@ -20,12 +21,17 @@ export class BillingStore extends Context.Service<
   ).pipe(Layer.provide(Cloudflare.D1.QueryDatabaseBinding));
 }
 
-/** Provider/database failures never retain their raw cause or SQL values. */
-export const billingQuery = <A>(run: (db: D1Database) => Promise<A>) =>
+/** Provider/database failures keep their public kind; the cause stays in server memory.
+ * Callers pass a fixed logical-operation reason so a store failure names what failed; the
+ * generic label remains only where the logical operation is genuinely unknown. */
+export const billingQuery = <A>(run: (db: D1Database) => Promise<A>, reason = "store-query") =>
   Effect.gen(function* () {
     const { raw } = yield* BillingStore;
     const db = yield* raw;
-    return yield* Effect.tryPromise({ try: () => run(db), catch: () => billingError("Storage") });
+    return yield* Effect.tryPromise({
+      try: () => run(db),
+      catch: (cause) => withCause(withDiagnostic(billingError("Storage"), reason), cause),
+    });
   });
 
 export const billingKey = (...parts: string[]) =>

@@ -2,6 +2,7 @@ import type { AppendMessage, ThreadMessageLike } from "@assistant-ui/react";
 import type { ChatMessage } from "@/lib/chat-api";
 import type { PendingSend } from "@/lib/chat-store-context";
 import { storedDate } from "@/lib/chat-time";
+import { toolMessageContent } from "./chat-tool-projection";
 
 export function convertMessage(message: ThreadMessageLike): ThreadMessageLike {
   return message;
@@ -15,7 +16,7 @@ export function appendText(message: AppendMessage): string {
     .join("\n");
 }
 
-type TextReader = (row: ChatMessage) => { text: string };
+type TextReader = (row: ChatMessage) => { text: string; isPrefix?: boolean };
 
 /**
  * Projects the merged bounded history plus the latest live row into the
@@ -36,16 +37,22 @@ export function projectMessages(
   if (!selectedId) return [];
   const projected: ThreadMessageLike[] = [...rows, ...live].map((message) => {
     const createdAt = storedDate(message.createdAt);
+    const text = textFor(message);
+    const tools = message.role === "assistant" ? (message.tools ?? []) : [];
+    const isPrefix = text.isPrefix !== false;
     return {
       id: message.id,
       role: message.role,
-      content: textFor(message).text,
+      content: tools.length ? toolMessageContent(text.text, tools, isPrefix) : text.text,
       // Empty tool-calling assistant rows still own their persisted image receipts.
       metadata: {
         custom: {
           hasGeneratedFiles: message.hasGeneratedFiles,
           attemptOf: message.attemptOf,
           incomplete: message.incomplete,
+          toolsTruncated: message.toolsTruncated === true,
+          toolsDeferred: isPrefix && tools.some((tool) => tool.textOffset > text.text.length),
+          toolPositionsUnavailable: !isPrefix && tools.length > 0,
         },
       },
       ...(createdAt ? { createdAt } : {}),

@@ -11,7 +11,6 @@ import { encodeNativeFrame, NativeWireError } from "@starter/office-contract/nat
 import type { NativeInputFrame } from "../ports/jobs.ts";
 import { loadOfflineRuntime } from "./offline.ts";
 import { requireSheetProfile, checkedImportSheet } from "./sheet-profile.ts";
-import { requireEmptySheetResources } from "./sheet-resources.ts";
 import { prepareSheetStyles } from "./sheet-styles.ts";
 import { JOB_NATIVE_LIMITS } from "./frames.ts";
 import { preflightSheetLoads } from "./sheet-load-preflight.ts";
@@ -123,8 +122,8 @@ export async function prepareSheetInsertions(
   target: NativeInputFrame,
   action: ImportInto,
 ): Promise<readonly IMutation[]> {
+  // preflightSheetLoads also refuses non-empty ORIGINAL resource graphs before SDK loading.
   preflightSheetLoads([source.native, target.native]);
-  requireEmptySheetResources(source.native.snapshot.workbook?.resources);
   const from = await loadOfflineRuntime(source);
   try {
     const into = await loadOfflineRuntime(target);

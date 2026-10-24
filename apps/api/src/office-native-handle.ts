@@ -48,6 +48,22 @@ export function closeOfficeNativeHandle(handle: OfficeNativeHandle): Promise<voi
   });
   return handle.closing;
 }
+/** Reclaim only successfully joined handles; retain small idempotent-close tombstones.
+ * The original frame's call budget bounds history. Failed cleanup keeps its occupied slot. */
+export async function retireOfficeNativeHandle(
+  handles: Map<string, OfficeNativeHandle>,
+  closed: Set<string>,
+  id: string,
+): Promise<void> {
+  const handle = handles.get(id);
+  if (handle === undefined) {
+    if (closed.has(id)) return;
+    throw officeDenied();
+  }
+  await closeOfficeNativeHandle(handle);
+  closed.add(id);
+  if (handles.get(id) === handle) handles.delete(id);
+}
 /** Actual body lease owned before response transfer. Close cancels it BEFORE joining its drain. */
 export function holdOfficeNativeIO(handle: OfficeNativeHandle, resource: OfficePrivateIO): void {
   handle.io.add(resource);

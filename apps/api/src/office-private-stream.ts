@@ -1,7 +1,11 @@
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import type { FailureContext } from "@starter/diagnostics";
 import { officeReadable } from "./office-platform.ts";
-
-const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+import {
+  officeStreamFailures,
+  officeStreamCompletion,
+  officeStreamFinish,
+  officeStreamUnavailable as unavailable,
+} from "./office-stream-failure.ts";
 /** Opaque Worker bytes. Source join, owning finish and actual outgoing pull completion are distinct. */
 export function officePrivateStream(
   source: unknown,
@@ -10,14 +14,13 @@ export function officePrivateStream(
   deadline: number,
   finish: () => Promise<void>,
   revoke: () => void,
+  context?: FailureContext,
 ) {
   if (!Number.isSafeInteger(maximum) || maximum < 1 || !Number.isSafeInteger(deadline))
-    throw unavailable();
+    throw unavailable("transfer-configuration");
+  const failures = officeStreamFailures();
   const reader = officeReadable(source).getReader();
-  const closed = reader.closed.then(
-    () => ({ ok: true as const }),
-    () => ({ ok: false as const }),
-  );
+  const closed = failures.observe(reader.closed, "source-closed");
   let count = 0,
     empty = 0,
     ended = false,
@@ -25,33 +28,36 @@ export function officePrivateStream(
     fault = false,
     bodyRevoked = false;
   let pending: Promise<unknown> | undefined, pulling: Promise<void> | undefined;
-  let cancellation: Promise<boolean> | undefined;
+  let cancellation: ReturnType<typeof failures.observe> | undefined;
   let sourceJoining: Promise<void> | undefined,
     finishing: Promise<void> | undefined,
     owning: Promise<void> | undefined;
   let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
-  let resolveDone: (() => void) | undefined, rejectDone: ((error: unknown) => void) | undefined;
-  const done = new Promise<void>((resolve, reject) => {
-    resolveDone = resolve;
-    rejectDone = reject;
-  });
-  void done.catch(() => undefined);
-  const settle = () => {
-    if (fault) rejectDone?.(unavailable());
-    else resolveDone?.();
-  };
+  const completion = officeStreamCompletion(
+    failures,
+    () => pulling,
+    context,
+    () => ({
+      bytes: count,
+      sourceEOF,
+      ended,
+      revoked: bodyRevoked,
+      aborted: signal.aborted,
+      deadlineAt: deadline,
+    }),
+  );
+  const settle = () => completion.settle(fault);
   const check = () => {
     signal.throwIfAborted();
-    if (owning !== undefined || Date.now() >= deadline) throw unavailable();
+    if (owning !== undefined || Date.now() >= deadline)
+      throw unavailable(owning !== undefined ? "transfer-revoked" : "transfer-deadline");
   };
   function cancel() {
     if (sourceEOF) return;
-    cancellation ??= Promise.resolve()
-      .then(() => reader.cancel())
-      .then(
-        () => true,
-        () => false,
-      );
+    cancellation ??= failures.observe(
+      Promise.resolve().then(() => reader.cancel()),
+      "source-cancel",
+    );
   }
   function sourceClosed(cancelSource: boolean): Promise<void> {
     sourceJoining ??= Promise.resolve().then(async () => {
@@ -59,13 +65,14 @@ export function officePrivateStream(
       const outcome = await closed,
         cancelled = await cancellation;
       signal.removeEventListener("abort", abort);
-      let failed = !outcome.ok || cancelled === false;
+      let failed = !outcome.ok || cancelled?.ok === false;
       try {
         reader.releaseLock();
-      } catch {
+      } catch (cause) {
+        failures.capture(cause, "source-release");
         failed = true;
       }
-      if (failed) throw unavailable();
+      if (failed) throw failures.error();
       return undefined;
     });
     if (cancelSource) {
@@ -82,21 +89,9 @@ export function officePrivateStream(
       }
       return finishing;
     }
-    finishing = Promise.resolve().then(async () => {
-      let failed = false;
-      try {
-        await sourceClosed(cancelSource);
-      } catch {
-        failed = true;
-      }
-      try {
-        await finish();
-      } catch {
-        failed = true;
-      }
-      if (failed) throw unavailable();
-      return undefined;
-    });
+    finishing = Promise.resolve().then(() =>
+      officeStreamFinish(() => sourceClosed(cancelSource), finish, failures),
+    );
     return finishing;
   }
   function close(abortBody: boolean = true): Promise<void> {
@@ -105,17 +100,24 @@ export function officePrivateStream(
       if (!ended && abortBody) {
         bodyRevoked = true;
         try {
-          controller?.error(unavailable());
-        } catch {
+          controller?.error(
+            failures.failed
+              ? failures.error()
+              : unavailable("outgoing-revoked", signal.aborted ? signal.reason : undefined),
+          );
+        } catch (cause) {
+          failures.capture(cause, "outgoing-error");
           fault = true;
         }
       }
       const closures = await Promise.allSettled([closePhase(!ended)]);
       const pulled = await Promise.allSettled([pulling]);
+      for (const item of [...closures, ...pulled])
+        if (item.status === "rejected") failures.capture(item.reason, "outgoing-join");
       if (fault || [...closures, ...pulled].some((item) => item.status === "rejected")) {
         fault = true;
         settle();
-        throw unavailable();
+        throw failures.error();
       }
       settle();
       return undefined;
@@ -123,6 +125,7 @@ export function officePrivateStream(
     return owning;
   }
   function abort() {
+    failures.capture(signal.reason, "transfer-abort");
     void close().catch(() => undefined);
   }
   signal.addEventListener("abort", abort, { once: true });
@@ -133,10 +136,7 @@ export function officePrivateStream(
       check();
       phase = "read";
       const actual = reader.read();
-      pending = actual.then(
-        () => undefined,
-        () => undefined,
-      );
+      pending = failures.observe(actual, "source-read");
       const part = await actual;
       phase = "check";
       check();
@@ -153,21 +153,28 @@ export function officePrivateStream(
         settle();
         return;
       }
-      if (!(part.value instanceof Uint8Array)) throw unavailable();
+      if (!(part.value instanceof Uint8Array)) throw unavailable("transfer-chunk-type");
       count += part.value.byteLength;
-      if (count > maximum || (part.value.byteLength === 0 && ++empty > 1024)) throw unavailable();
+      if (count > maximum || (part.value.byteLength === 0 && ++empty > 1024))
+        throw unavailable("transfer-byte-bound");
       phase = "write";
       outgoing.enqueue(part.value);
     } catch (error) {
+      failures.capture(
+        error,
+        phase === "read" ? "source-read" : phase === "write" ? "outgoing-write" : "transfer-check",
+      );
       if (phase === "read" || phase === "write") fault = true; // Includes rejection/throw undefined.
       try {
         await closePhase(true);
-      } catch {
+      } catch (cause) {
+        failures.capture(cause, "transfer-close");
         fault = true;
       }
       try {
         outgoing.error(error);
-      } catch {
+      } catch (cause) {
+        failures.capture(cause, "outgoing-error");
         fault = true;
       }
       settle();
@@ -188,9 +195,6 @@ export function officePrivateStream(
     body,
     close,
     sourceClosed: () => sourceClosed(!sourceEOF),
-    async drain() {
-      await done;
-      await pulling;
-    },
+    drain: () => completion.drain(),
   };
 }

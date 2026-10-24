@@ -1,4 +1,5 @@
 /** Typed skill failures shared by the attempt lifecycle and request facade. */
+import { reportFailure, withCause, withDiagnostic } from "@starter/diagnostics";
 import { SkillDocumentError } from "./chat-skills-document.ts";
 import { SkillLibraryError } from "./chat-skills-library.ts";
 
@@ -29,14 +30,49 @@ export class SkillRuntimeError extends Error {
   }
 }
 
+/** Final recovery owner for a swallowed skill persistence/abort observation. */
+export const reportSkillRecovery = (
+  error: unknown,
+  operation: string,
+  reason: string,
+  operationId: string,
+  taskId?: string | number,
+): void =>
+  reportFailure(error, {
+    component: "skills",
+    operation,
+    reason,
+    operationId,
+    ...(taskId === undefined ? {} : { taskId: String(taskId) }),
+    event: "application.recovery",
+  });
+
+const translated = (
+  code: SkillRuntimeErrorCode,
+  message: string,
+  reason: string,
+): SkillRuntimeError => withDiagnostic(new SkillRuntimeError(code, message), reason);
+
 export const translateSkillError = (error: unknown): SkillRuntimeError => {
   if (error instanceof SkillRuntimeError) return error;
-  if (error instanceof SkillLibraryError)
-    return new SkillRuntimeError(
-      error.kind === "integrity" ? "integrity" : "unavailable",
-      error.kind === "integrity" ? SKILLS_INTEGRITY : SKILLS_UNAVAILABLE,
+  if (error instanceof SkillLibraryError) {
+    const integrity = error.kind === "integrity";
+    return withCause(
+      translated(
+        integrity ? "integrity" : "unavailable",
+        integrity ? SKILLS_INTEGRITY : SKILLS_UNAVAILABLE,
+        integrity ? "skills_library_integrity" : "skills_library_unavailable",
+      ),
+      error,
     );
+  }
   if (error instanceof SkillDocumentError)
-    return new SkillRuntimeError("unavailable", SKILLS_UNAVAILABLE);
-  return new SkillRuntimeError("unavailable", SKILLS_UNAVAILABLE);
+    return withCause(
+      translated("unavailable", SKILLS_UNAVAILABLE, "skills_document_unavailable"),
+      error,
+    );
+  return withCause(
+    translated("unavailable", SKILLS_UNAVAILABLE, "skills_translation_unknown"),
+    error,
+  );
 };

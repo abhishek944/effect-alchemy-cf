@@ -87,7 +87,12 @@ Mutations require an exact same-origin Origin header and bounded bodies. Provide
 product IDs, user IDs, metadata and redirect destinations are selected server-side.
 Checkout return is the account billing page and grants nothing based on its query.
 Read responses are non-cacheable and owner-filtered. Billing errors are generic;
-provider bodies, keys and personal data are not logged or returned.
+provider bodies, keys and personal data are not logged or returned. Storage,
+decode and SDK failures keep their existing `BillingError` kind and attach the
+original failure only as a non-enumerable in-memory cause; the HTTP group and
+webhook ingress report it once with fixed labels, then encode the same status.
+Lease release and failed-event bookkeeping report separately and never change a
+known checkout outcome or authorize a retry.
 
 ## Checkout and customers
 

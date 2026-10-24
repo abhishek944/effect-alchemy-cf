@@ -1,4 +1,5 @@
 import { Clock, Effect } from "effect";
+import { reportFailureEffect } from "@starter/diagnostics";
 import {
   decodeWireSync,
   OfficeInvalid,
@@ -114,9 +115,18 @@ export function makeIsolatedJobs(options: IsolatedJobsOptions): IsolatedJobs {
         updatedAt: claimedAt,
       };
       // A failed/lost claim acknowledgement NEVER authorizes dispatch, even if a later read sees it.
-      const ack = yield* metadata
-        .advanceJob(claimed, reserved.version)
-        .pipe(Effect.catch(() => Effect.succeed(null)));
+      const ack = yield* metadata.advanceJob(claimed, reserved.version).pipe(
+        Effect.catch((error) =>
+          reportFailureEffect(error, {
+            component: "office.job-supervisor",
+            operation: "claim",
+            reason: "claim-ack-unavailable",
+            operationId: job.binding.operationId,
+            taskId: job.binding.jobId,
+            event: "application.failure",
+          }).pipe(Effect.as(null)),
+        ),
+      );
       if (
         !ack ||
         ack.version !== 1 ||
@@ -144,7 +154,16 @@ export function makeIsolatedJobs(options: IsolatedJobsOptions): IsolatedJobs {
           .advanceJob({ ...ack, state, version: ack.version + 1, updatedAt: finished }, ack.version)
           .pipe(
             Effect.map((record) => record.state),
-            Effect.catch(() => winner(owner, job.binding.jobId)),
+            Effect.catch((error) =>
+              reportFailureEffect(error, {
+                component: "office.job-supervisor",
+                operation: "finalize",
+                reason: "terminal-ack-unavailable",
+                operationId: job.binding.operationId,
+                taskId: job.binding.jobId,
+                event: "application.failure",
+              }).pipe(Effect.andThen(winner(owner, job.binding.jobId))),
+            ),
           );
       });
       return yield* compute;

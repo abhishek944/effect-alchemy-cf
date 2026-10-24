@@ -16,10 +16,16 @@ import {
   type OfficeTaskSelector,
 } from "./office-task-proof.ts";
 import { resolveOfficeTaskTarget, type OfficeTaskTarget } from "./office-task-target.ts";
-import { officeDenied, officeSame } from "./office-private-authority.ts";
+import { officeCaught, officeSame } from "./office-private-authority.ts";
+import {
+  officeDeny,
+  officeReportBranch,
+  type OfficeDiagnosticMetadata,
+} from "./office-diagnostic-report.ts";
 import { assertOfficeTaskReceipt } from "./office-task-command.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 import { initializeOfficeStorageSchema } from "./office-storage-schema.ts";
+import { readOfficeTaskAttachment } from "./office-task-attachment.ts";
 
 export type OfficeTaskLive<A> = Effect.Effect<
   A,
@@ -48,55 +54,92 @@ export function prepareOfficeTask(
   options: OfficeProviderOptions,
   live: (session: OfficeSessionBinding) => OfficeTaskLive<void>,
   observeOnly: boolean,
+  metadata: OfficeDiagnosticMetadata,
 ): OfficeTaskLive<OfficeTaskInvocation> {
   const read = () =>
-    Effect.tryPromise({ try: () => readProof(owner, selector), catch: officeDenied });
+    Effect.tryPromise({ try: () => readProof(owner, selector), catch: officeCaught });
   return Effect.gen(function* () {
     const proof = yield* read();
+    const base = {
+      ...metadata,
+      operation: "prepare-task",
+      operationId: proof.association.intent.operationId,
+      taskId: proof.association.acceptedInput.toolTaskId,
+      callId: proof.association.callId,
+    };
+    const deny = (reason: string) => officeDeny({ ...base, reason });
+    /** Fixed failing step so a fault keeps its branch label and the original association. */
+    const step = <A, R2>(reason: string, effect: Effect.Effect<A, OfficeError, R2>) =>
+      effect.pipe(
+        Effect.tapError((error: OfficeError) =>
+          Effect.sync(() => officeReportBranch(error, { ...base, reason })),
+        ),
+      );
     const session = proof.association.session;
-    yield* live(session);
+    yield* step("session-check", live(session));
     if (
       options.stage !== owner.stage ||
       session.stage !== owner.stage ||
       session.ownerId !== owner.ownerId
     )
-      return yield* Effect.fail(officeDenied());
-    yield* Effect.tryPromise({
-      try: () => initializeOfficeStorageSchema(options.database),
-      catch: officeDenied,
-    });
-    const binding = yield* Effect.gen(function* () {
+      return yield* Effect.fail(deny("owner-stage-mismatch"));
+    yield* step(
+      "storage-schema",
+      Effect.tryPromise({
+        try: () => initializeOfficeStorageSchema(options.database),
+        catch: officeCaught,
+      }),
+    );
+    const metadataStore = createOfficeMetadata(options);
+    const attachment = yield* step(
+      "attachment-read",
+      Effect.tryPromise({
+        try: () => readOfficeTaskAttachment(metadataStore, proof, observeOnly),
+        catch: officeCaught,
+      }),
+    );
+    const selected = yield* Effect.gen(function* () {
       if (observeOnly) {
         const command = proof.association.intent.command;
         const operationId =
           command.command === "operation"
             ? command.operationId
             : proof.association.intent.operationId;
-        yield* Effect.try({
-          try: () =>
-            assertOfficeTaskReceipt(proof, { method: "office.receipt", input: { operationId } }),
-          catch: officeDenied,
-        });
+        yield* step(
+          "receipt-proof",
+          Effect.try({
+            try: () =>
+              assertOfficeTaskReceipt(proof, { method: "office.receipt", input: { operationId } }),
+            catch: officeCaught,
+          }),
+        );
         return Object.freeze({ target: null, fork: null, readView: null });
       }
-      const metadata = createOfficeMetadata(options);
-      const operations = yield* readConfirmedTaskOperations(options, {
-        owner,
-        principalId: session.ownerId,
-        sessionEpoch: session.sessionEpoch,
-        acceptedInput: proof.association.acceptedInput,
-      });
-      return yield* Effect.tryPromise({
-        try: () => resolveOfficeTaskTarget(metadata, proof, operations),
-        catch: officeDenied,
-      });
+      const operations = yield* step(
+        "operations-read",
+        readConfirmedTaskOperations(options, {
+          owner,
+          principalId: session.ownerId,
+          sessionEpoch: session.sessionEpoch,
+          acceptedInput: proof.association.acceptedInput,
+        }),
+      );
+      return yield* step(
+        "target-resolve",
+        Effect.tryPromise({
+          try: () => resolveOfficeTaskTarget(metadataStore, proof, operations, attachment),
+          catch: officeCaught,
+        }),
+      );
     });
-    const current = yield* read();
-    if (!officeSame(current, proof)) return yield* Effect.fail(officeDenied());
-    yield* live(session);
+    const binding = Object.freeze({ ...selected, attachment });
+    const current = yield* step("proof-reread", read());
+    if (!officeSame(current, proof)) return yield* Effect.fail(deny("proof-changed"));
+    yield* step("session-recheck", live(session));
     const now = yield* Clock.currentTimeMillis;
     const deadline = proof.lease.notAfter;
-    if (deadline <= now || deadline > session.expiresAt) return yield* Effect.fail(officeDenied());
+    if (deadline <= now || deadline > session.expiresAt)
+      return yield* Effect.fail(deny("lease-deadline-invalid"));
     const sourceFile = officeTaskSourceFile(proof);
     const actor: TaskActor = {
       capability: "draft-task",
@@ -120,12 +163,20 @@ export function prepareOfficeTask(
 export function revalidateOfficeTask(
   original: OfficeTaskInvocation,
 ): Effect.Effect<void, OfficeError> {
+  const proof = original.task.proof;
+  const base = {
+    operation: "revalidate-task",
+    operationId: proof.association.intent.operationId,
+    taskId: proof.association.acceptedInput.toolTaskId,
+    callId: proof.association.callId,
+  };
   return Effect.tryPromise({
     try: async () => {
       const current = await original.task.readProof(original.actor.owner, original.task.selector);
-      if (!officeSame(current, original.task.proof) || original.deadline <= Date.now())
-        throw officeDenied();
+      if (original.deadline <= Date.now()) throw officeDeny({ ...base, reason: "lease-expired" });
+      if (!officeSame(current, original.task.proof))
+        throw officeDeny({ ...base, reason: "proof-changed" });
     },
-    catch: officeDenied,
+    catch: officeCaught,
   }).pipe(Effect.uninterruptible);
 }

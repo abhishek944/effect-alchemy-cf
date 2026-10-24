@@ -1,3 +1,5 @@
+import { Target } from "@starter/office-contract";
+import { Schema, Option } from "effect";
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
 import type { SkillRecovery } from "@/lib/chat-skills-api";
 import { parseCoverage, parseMessage } from "@/lib/chat-history-validate";
@@ -63,6 +65,22 @@ export function parseSnapshotValue(value: unknown): ChatSnapshot | null {
   if (!isText(value.usageRevision)) return null;
   const skillRecovery = parseSkillRecovery(value.skillRecovery);
   if (skillRecovery === undefined) return null;
+  let panelRequest: ChatSnapshot["panelRequest"] = null;
+  if (value.panelRequest !== undefined && value.panelRequest !== null) {
+    const event = value.panelRequest;
+    if (
+      !isRecord(event) ||
+      !isUuid(event.id) ||
+      typeof event.expiresAt !== "number" ||
+      !Number.isFinite(event.expiresAt)
+    )
+      return null;
+    const target = Option.getOrNull(
+      Schema.decodeUnknownOption(Target, { onExcessProperty: "error" })(event.target),
+    );
+    if (target === null) return null;
+    panelRequest = { id: event.id, target, expiresAt: event.expiresAt };
+  }
   return {
     chat,
     messages,
@@ -74,6 +92,7 @@ export function parseSnapshotValue(value: unknown): ChatSnapshot | null {
     thinking: value.thinking,
     usageRevision: value.usageRevision,
     skillRecovery,
+    panelRequest,
   };
 }
 

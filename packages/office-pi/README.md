@@ -1,147 +1,89 @@
 # @starter/office-pi
 
-One portable Office capability for the host's **Pi Durable 1.1.0** registry.
-This package does not host native Univer, construct principals, run shell/code,
-or own authentication, storage, queue workers, approvals or file-panel selection.
+Attachment-oriented Univer CLI for the application's Pi Durable registry.
+It uses the shared native document server; it is not the unchanged local
+`univer-cli` executable or Highsku's Workspace CLI.
 
-## Public API
+## Model-facing interface
 
-`makeOfficeExtension(host: OfficePiHost): Extension` installs exactly one tool
-named `office`, one static `office_workflow` prompt section, sequential execution
-and `replay: "unsafe"`. Install it alongside existing extensions before
-Harness.open/resume. The extension name is stable (`office`).
+`makeOfficeExtension(host, display)` registers only:
 
-Root exports also include `OfficeToolRequest`, `officeToolParameters`,
-`OFFICE_TOOL_RESULT_BYTES` (16 KiB), `OFFICE_GUIDANCE` and the host types.
-`@starter/office-pi/guidance` exports that same static guidance.
+- `univer_cli({attachmentId, command: string[]})`
+- `open_in_panel({attachmentId})`, when a display callback is supplied.
 
-Tool argument shape is `{request: OfficeCommand}`. Its nested finite schema is
-generated from the frozen portable contract, not a second hand-maintained list.
-The object wrapper satisfies provider root-object rules. Execute redecodes with
-excess-field rejection, including UTF-8 source limits absent from JSON Schema.
+The legacy `office({request: ...})` tool is no longer registered. One bundled
+Univer Skill supplies workflow and command guidance without version negotiation.
+Commands are real Commander argv, never shell input. No user/owner, credentials,
+host path, backend address, Unit ID or worktree ID is accepted by the tool.
+Worksheet/paragraph/slide IDs remain ordinary content selectors from inspection.
 
-Allowed commands: list, drafts, draft, open, stage-code, stage-file, create (new-draft only),
-create-draft, execute, inspect, render, export, ready, review, reopen, discard,
-operation. Import is create from a previously staged upload with finite options.
-No main-create, approve, merge, arbitrary shell, URL, host path or credential.
-
-### Draft discovery and generation caller
-
-After create/create-draft, observe its returned operation until confirmed, then
-call `{request:{command:"draft",draftId:receipt.draftId}}`. Receipts carry no
-generation. Use the returned Draft.documentId/id/generation to open its draft
-Target, then use View.revision as execute.target.expectedRevision. For discovery,
-`{request:{command:"drafts",cursor:null}}` returns validated DraftPage metadata;
-continue only with its genuine next cursor. Neither read needs an operation ID.
-After reopen confirms, reread draft and open again. Never infer generation+1,
-use a native revision as a generation or manufacture a tool context/operation.
-These are existing authenticated read endpoints, not new main-write powers.
-`examples/draft-basis.ts` compiles this read-draft → open → execution-basis
-sequence against the real client; it accepts no invented operation or context.
-
-## Real host injection
-
-`OfficePiHost.resolve({api,context,intent})` is mandatory. It must prove this
-executing tool's native accepted-input lineage, immutable command/target and
-private authenticated principal. No fallback to latest transcript, selected pane,
-model-provided IDs or task IDs alone. `intent.command` replaces transient code
-with its digest/length, so this bounded metadata can be joined without copying
-source into Office operation records. Its digest is a private tool-intent binding,
-not a substitute for the core's canonical operation digest or a credential.
-
-Return an `OfficeTaskAccess` with:
-
-- `client`: the actual generated OfficeClient.office task subset, capturing
-  verified private host authority. Bound response bytes before JSON decoding.
-- `upload`: an authenticated immutable binary upload capability, normally
-  `uploadOfficeBytes(origin,input,verifiedRequest)` from the public client.
-- `acceptedFile`: opens only this input's immutable accepted attachment fileRef
-  and returns its proved filename/length/SHA-256 and original byte stream.
-  It must reject nonaccepted files, wrong owner, replaced/unavailable bytes and
-  unsupported media. No model-selected URL/filesystem fetch.
-
-Concrete composition (all functions/values below are real required host inputs):
-
-```ts
-import { makeOfficeExtension } from "@starter/office-pi";
-import { uploadOfficeBytes } from "@starter/office-contract/client";
-
-registry.install(
-  makeOfficeExtension({
-    resolve: async (input) => {
-      const verified = await proveAndBind(input);
-      return {
-        client: verified.client,
-        acceptedFile: verified.acceptedFile,
-        upload: (upload) => uploadOfficeBytes(verified.origin, upload, verified.request),
-      };
-    },
-  }),
-);
+```text
+univer_cli({attachmentId, command:["import"]})
+univer_cli({attachmentId, command:["inspect","workbook"]})
+univer_cli({attachmentId, command:["execute","-e","...Facade code..."]})
+open_in_panel({attachmentId})
 ```
 
-`proveAndBind` is not an existing exported host function or a supplied stub:
-T11 supplies its real implementation using private accepted-input/principal
-resources. A fully typed version is in
-`packages/office-pi/examples/host-injection.ts`. The plugin makes no auth headers or
-Actor fields and imports no server/Cloudflare package. The host must capture the
-original bounded TaskActor claims in durable operation admission and use the
-fresh `verifyActor` hook at actual final commit, recovery-observe and separately
-authorized recovery-dispatch. A queued accepted operation may legitimately
-outlive its tool callback; final authorization is NOT a live UI/tool check.
+Use `command:["--help"]` for the actual command grammar. Supported operations are
+import, status, inspect, execute, export, worktree ready/reopen and operation.
+The application owns the CLI command program; existing official Univer headless,
+inspection, execution, Exchange and Collaboration capabilities execute the work.
+No custom local-file database or second collaboration authority is introduced.
 
-## Staging, identity and recovery
+## One original, one working document
 
-Stage-code encodes validated <=32 KiB UTF-8 source, hashes it, streams an immutable
-code upload and returns the exact acknowledged code ArtifactRef. Execute carries
-only codeId and the explicit draft/generation/basis. Stage-file streams the host
-accepted original, never model bytes; source reader is cancelled/released even
-if transport fails before reading. Upload acknowledgement must match kind,
-digest and length. The actual endpoint enforces immutable source-byte integrity.
+An attachment must be an immutable accepted upload/reference in the executing
+input. `import` resolves that proven original, imports once and returns the saved
+original operation. The existing explicit user opener uses the same operation
+IDs: `file_open_<attachmentId>` and `file_upload_<attachmentId>`.
 
-Model mutation/staging operationId is correlation only and gets replaced with a
-private, memoized UUID bound to this task/conversation/call and intent digest.
-The actual ID is returned and persisted in small tool details before dispatch.
-For an operation read, command.operationId remains the requested original receipt;
-intent.operationId is only that new read invocation's private correlation ID.
-A committed first-writer dispatch claim prevents a duplicate callback from
-sending again. A new tool invocation is new intent, not an automatic retry.
+Root validates the owner-scoped operation, original digest/length, import options,
+real document, Unit and draft before resolving a working target. CSV, XLSX, DOCX
+and PPTX use the shared import policy. The original stays unchanged in Files.
+Reopening the panel or issuing another CLI command never reimports it. A discarded
+or merged draft is not silently replaced with a new import.
 
-Unknown mutation delivery reads only that exact operation receipt. Missing,
-mismatched or unavailable evidence stays OUTCOME_UNKNOWN. No hidden resend,
-source replay, latest-state guess or polling loop. Recovered receipts are marked
-historical. Staging does not have a public mutation Receipt kind; its unknown
-outcome is reported honestly without inventing one or automatically reuploading.
+The CLI reads actual draft generation and a native View's revision before edits.
+Human and AI changes therefore use the same native draft and existing revision
+checks. Ready freezes a result for human review; only existing Human workflows
+may approve or merge. `open_in_panel` proves the target before emitting navigation,
+but success means requested, not rendered. Unsupported formats return
+`UNSUPPORTED_PREVIEW` without changing the panel.
 
-Private memos contain identity/digest/dispatch metadata only. Office operation
-records never contain source/native data/bytes. Pi Durable itself persists model
-tool arguments (including bounded stage-code source) in its own transcript/tool
-intent before execute; this package cannot claim that source never persists
-anywhere. No duplicate source is added by its Office memos or receipt output.
+## Host and execution boundary
 
-## Results and lifecycle
+`OfficePiHost.resolve` proves the real native input/tool lineage and private
+principal at every step. The concrete host supplies:
 
-Success returns validated finite DTOs, not native workbook data, source, stdout,
-private actor or credentials. Oversize result returns LIMIT_EXCEEDED, not a
-truncated prefix labelled complete. All Draft/DraftPage fields and real page
-cursor are preserved if the complete envelope fits. A schema-valid 100-row page
-can exceed 16 KiB; it is explicitly rejected, never locally repaged with a fake
-cursor or silently shortened. Use the selected known draft ID with draft or the
-right tools UI. Host must not claim all contract-sized pages necessarily fit.
-Queued/running is not confirmed persistence.
-Document data and inspected text remain untrusted data, not model instructions.
-Cancellation propagates to the request wait and does not claim durable rollback
-or cancel already admitted queued Office work. The host owns explicit revocation
-policy and receipt recovery after callback loss.
+- an authorized Office client and immutable upload capability;
+- the proven attachment descriptor and Root-read original import receipt;
+- an accepted original stream, never a model-provided file path or URL.
 
-All native documents and immutable generated/exported files remain in the
-existing right tools/files panel. Human review alone approves/merges main;
-the tool's Ready action is not approval. Opening a View is not a write grant.
+One CLI call can perform several internal server operations. Each has a private
+step-scoped memo, intent digest, dispatch claim and lease bound to the actual
+outer tool arguments. Source is represented by digest/length in those memos,
+not duplicated as JavaScript. These are internal authorization operations, not
+additional model-facing tools.
 
-## Verification boundary
+Facade source still runs in the existing fresh credential-free isolated job.
+The CLI parser, runtime pool and worker process alone are not a JavaScript sandbox.
+The trusted native host still owns revision admission and final persistence.
 
-Scoped typecheck/build, type-aware lint, strict schema/Pi validator/guidance
-artifact checks and an actual portable ESM bundle graph are recorded in
-`var/office/implement-details/pi-result.md`. No unit tests, models or live
-authenticated E2E are included. Host proof/staging backend/native queued workflows
-and UI wiring require the parent/user's real integration acceptance.
+## Errors, cancellation and limits
+
+Only confirmed receipts with accepted revisions prove saved edits. Pending or
+uncertain import operations retain their original IDs; `import` reports them
+rather than allocating another document. Duplicate execution callbacks observe
+only their original receipt. Cancellation is not rollback or retry permission.
+`operation` observes an exact operation from the same accepted input.
+
+Results are validated DTOs bounded to 16 KiB. Narrow inspection or use its real
+cursor; oversize output is an error, not a silently shortened complete page.
+Document text is untrusted data. Existing upload/conversion/native limits remain;
+this interface alone does not add 100 MB file support. CSV originals are compact
+model references, not complete prompt text. Other text hydration remains unchanged.
+
+Verification uses typechecks, lint, builds and source review. Live authenticated
+import/edit/save/reopen and concurrent UI/AI behavior require user acceptance;
+static checks alone do not prove native runtime operation. No unit tests are
+required or authorized by this package documentation.

@@ -84,7 +84,14 @@ export async function prepareImageInputFiles(
     files.set(file.id, file);
     originals.set(
       file.id,
-      binding(file, authority.digest, authority.originOperationId, origin, existing),
+      // Retain compatibility metadata without verifying a saved-reference checksum.
+      binding(
+        file,
+        existing?.digest ?? authority.digest,
+        authority.originOperationId,
+        origin,
+        existing,
+      ),
     );
   }
   if (uploadIds.length > 0) {

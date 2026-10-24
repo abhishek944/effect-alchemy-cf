@@ -1,10 +1,6 @@
 import { Effect } from "effect";
-import {
-  ArtifactRef,
-  OfficeUnavailable,
-  decodeWireSync,
-  safeFailure,
-} from "@starter/office-contract";
+import { ArtifactRef, decodeWireSync } from "@starter/office-contract";
+import { officeStagingFailure, type OfficeStagingPhase } from "@starter/office-pi";
 import type { BinaryUpload } from "@starter/office-contract/client";
 import { officeBinaryUpload } from "../../office/src/native-transfer-upload.ts";
 import { assertOfficeTaskUpload } from "./office-task-command.ts";
@@ -21,6 +17,8 @@ export function officeTaskUpload(
   parent: AbortSignal | undefined,
   input: BinaryUpload,
 ) {
+  let phase: OfficeStagingPhase = "upload-validation";
+  let submitted = false;
   return Effect.tryPromise({
     try: async () => {
       const stop = new AbortController();
@@ -58,6 +56,7 @@ export function officeTaskUpload(
               .map((unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, "0")}`)
               .join(""),
           );
+          phase = "upload-transport";
           const value = await transport.request(
             "upload",
             {
@@ -66,6 +65,7 @@ export function officeTaskUpload(
             },
             false,
             async (response, responseSignal, deadline) => {
+              phase = "upload-response";
               if (response.status !== 200) throw officeDenied();
               const ref = decodeWireSync(ArtifactRef)(
                 await readOfficePrivateJson(response.body, responseSignal, deadline, 16 * 1024),
@@ -81,12 +81,17 @@ export function officeTaskUpload(
               signal.throwIfAborted();
               return ref;
             },
+            () => {
+              submitted = true;
+            },
           );
           result = { value };
         } catch (error) {
           result = { error };
         }
+        const failedPhase = phase;
         try {
+          phase = "upload-cleanup";
           await source.cancel();
         } catch (error) {
           throw new AggregateError(
@@ -95,8 +100,12 @@ export function officeTaskUpload(
             { cause: error },
           );
         }
-        if ("error" in result) throw result.error;
+        if ("error" in result) {
+          phase = failedPhase;
+          throw result.error;
+        }
         signal.throwIfAborted();
+        phase = "upload-acknowledgement";
         await broker.acknowledge(lease, result.value);
         signal.throwIfAborted();
         if (Date.now() >= lease.notAfter) throw officeDenied();
@@ -106,6 +115,6 @@ export function officeTaskUpload(
         signal.removeEventListener("abort", abort);
       }
     },
-    catch: () => new OfficeUnavailable(safeFailure("UNAVAILABLE", input.operationId)),
+    catch: (error) => officeStagingFailure(input.operationId, phase, submitted, error),
   }).pipe(Effect.uninterruptible);
 }

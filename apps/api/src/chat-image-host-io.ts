@@ -1,9 +1,14 @@
 import type { ImageHost } from "@abhishek944/pi-image-gen/core";
+import { reportFailure } from "@starter/diagnostics";
 import { readAcceptedOriginal } from "./chat-image-original.ts";
 import { runImageIO } from "./chat-image-io.ts";
 import { retainImageResponseBody } from "./chat-image-io-response.ts";
 import { ImageIOError } from "./chat-image-io-error.ts";
-import { NATIVE_IMAGE_TIMEOUT_MS, nativeImageLimits } from "./chat-image-policy.ts";
+import {
+  NATIVE_IMAGE_RESPONSE_BYTES,
+  NATIVE_IMAGE_TIMEOUT_MS,
+  nativeImageLimits,
+} from "./chat-image-policy.ts";
 import { assertImageHostReady } from "./chat-image-host-proof.ts";
 import { imageHostRefusal } from "./chat-image-host-sources.ts";
 import { rememberImageHostFile } from "./chat-image-host-settlement.ts";
@@ -21,15 +26,32 @@ export function assertImageHostLogical(execution: ImageHostExecution): void {
     imageHostRefusal();
 }
 
+/** The single established provider-output origin: AI Gateway's own object storage. */
+const GATEWAY_OUTPUT_HOST_PREFIX = "ai-gateway-outputs.";
+const GATEWAY_OUTPUT_HOST_SUFFIX = ".r2.cloudflarestorage.com";
+
+/** https-only allowlist for Gateway-minted output links; every other URL stays refused. */
+function safeGatewayOutputUrl(value: string): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:") return null;
+  if (parsed.username !== "" || parsed.password !== "") return null;
+  const host = parsed.hostname.toLowerCase();
+  if (!host.startsWith(GATEWAY_OUTPUT_HOST_PREFIX) || !host.endsWith(GATEWAY_OUTPUT_HOST_SUFFIX))
+    return null;
+  return parsed;
+}
+
 /** No serializer: the package's exact model/input/options go to the actual binding. */
 export function imageHostIO(
   execution: ImageHostExecution,
   context: ImageHostContext,
 ): ImageHost<SavedFile> {
   const { deps, plan, lifetime, client } = execution;
-  const lease = lifetime.lease;
-  // Same decoder ceiling already included by T27's generation memory estimate.
-  const backingLimit = Math.max(lease.outputBytes, Math.ceil((lease.responseBytes * 3) / 4));
   const ownerScope = deps.catalog.id.toString();
   if (ownerScope !== deps.expectedOwnerScope) return imageHostRefusal();
   const referenceBytes = plan.sources.reduce((sum, item) => sum + item.authority.file.byteSize, 0);
@@ -50,19 +72,28 @@ export function imageHostIO(
           state: "accepted",
           ownerScope,
           file: source.authority.file,
-          digest: source.authority.digest,
         },
-        lease,
+        track: lifetime.track,
         ...(signal === undefined ? {} : { signal }),
       });
     },
-    async loadOutput() {
-      // No provider output origins are established. Do not fetch an arbitrary URL or invent DNS safety.
-      throw new ImageIOError("output_url_refused", "Image output URLs are not enabled.");
+    async loadOutput(providerUrl, signal) {
+      const parsed = safeGatewayOutputUrl(providerUrl);
+      if (parsed === null)
+        throw new ImageIOError("output_url_refused", "Image output URLs are not enabled.");
+      signal?.throwIfAborted();
+      const response = await fetch(parsed.toString(), { signal: signal ?? null });
+      if (!response.ok) throw new ImageIOError("io_failed", "The image output download failed.");
+      const buffer = await response.arrayBuffer();
+      signal?.throwIfAborted();
+      return {
+        bytes: new Uint8Array(buffer),
+        mimeType: response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() ?? "",
+      };
     },
     cloudflareRun(model, input, options) {
       return runImageIO({
-        lease,
+        track: lifetime.track,
         signal: options.signal,
         async run() {
           assertImageHostReady(deps, context);
@@ -70,7 +101,14 @@ export function imageHostIO(
           assertImageHostLogical(execution);
           try {
             await deps.dispatchGate(plan.proof.snapshot.operationId);
-          } catch {
+          } catch (error) {
+            reportFailure(error, {
+              component: "chat-image",
+              operation: "dispatch-gate",
+              event: options.signal?.aborted ? "application.cancelled" : "application.failure",
+              operationId: plan.proof.snapshot.operationId,
+              callId: plan.key,
+            });
             return imageHostRefusal();
           }
           // Stop, readiness or the logical state may have changed while the
@@ -93,13 +131,22 @@ export function imageHostIO(
           )
             return imageHostRefusal();
           execution.dispatched = true;
-          const raw = await binding(model, input, options);
+          // Log every image request at the gateway: the package defaults
+          // per-request collection off, which would hide these calls.
+          const loggingOptions = {
+            ...options,
+            gateway: { ...options.gateway, collectLog: true },
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberate opt-in: Workers AI accepts boolean, package types pin false.
+          } as unknown as typeof options;
+          const raw = await binding(model, input, loggingOptions);
           if (!(raw instanceof Response))
             throw new ImageIOError("io_failed", "The image binding did not return a raw response.");
           // Headers-only transport completion is not body completion.
           const response = await retainImageResponseBody({
             response: raw,
-            lease,
+            track: lifetime.track,
+            responseBytes: NATIVE_IMAGE_RESPONSE_BYTES,
+            operationId: plan.proof.snapshot.operationId,
             ...(options.signal === undefined ? {} : { signal: options.signal }),
           });
           execution.responses.add(response);
@@ -108,18 +155,22 @@ export function imageHostIO(
         async disposeLate(response) {
           await response.body?.cancel().catch(() => undefined);
         },
+        onLateFailure(error) {
+          if (!execution.dispatched) return;
+          reportFailure(error, {
+            component: "chat-image",
+            operation: "late-provider",
+            event: "application.failure",
+            operationId: plan.proof.snapshot.operationId,
+            callId: plan.key,
+          });
+        },
       });
     },
     store(output, index, storeContext) {
       storeContext.signal.throwIfAborted();
-      if (!(output.bytes.buffer instanceof ArrayBuffer)) return imageHostRefusal();
-      const backingBytes = output.bytes.buffer.byteLength;
-      if (backingBytes > backingLimit - execution.retainedOutputBackingBytes)
-        throw new ImageIOError("lease_capacity", "Image output backing exceeds reserved memory.");
-      lease.claim("output", output.bytes.byteLength);
-      execution.retainedOutputBackingBytes += backingBytes;
       execution.storing = true;
-      return lease.track(async () => {
+      return lifetime.track(async () => {
         // Track hash + real RPC/PUT/receipt, not core's abort-raced await.
         const file = await sink(output, index, storeContext);
         rememberImageHostFile(execution, index, file);

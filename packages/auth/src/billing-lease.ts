@@ -1,5 +1,6 @@
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import { billingError, type BillingError } from "@starter/integrations/billing";
+import { reportFailureEffect } from "@starter/diagnostics";
+import { billingFailure, type BillingError } from "@starter/integrations/billing";
 import { Effect } from "effect";
 import { billingQuery, DB_NOW } from "./billing-store.ts";
 
@@ -9,18 +10,20 @@ export type BillingFence = { sql: string; args: [string, string, string] };
 const acquire = (scope: string) =>
   Effect.gen(function* () {
     const token = crypto.randomUUID();
-    const row = yield* billingQuery((db) =>
-      db
-        .prepare(
-          `INSERT INTO billing_lock (id, token, admittedToken, expiresAt)
+    const row = yield* billingQuery(
+      (db) =>
+        db
+          .prepare(
+            `INSERT INTO billing_lock (id, token, admittedToken, expiresAt)
      VALUES (?, ?, '', ${DB_NOW} + 30)
      ON CONFLICT(id) DO UPDATE SET token=excluded.token, admittedToken='', expiresAt=excluded.expiresAt
      WHERE billing_lock.expiresAt <= ${DB_NOW} RETURNING token`,
-        )
-        .bind(scope, token)
-        .first<{ token: string }>(),
+          )
+          .bind(scope, token)
+          .first<{ token: string }>(),
+      "lease-acquire-write",
     );
-    if (row?.token !== token) return yield* Effect.fail(billingError("Busy"));
+    if (row?.token !== token) return yield* Effect.fail(billingFailure("Busy", "lease-contended"));
     return { scope, token };
   });
 
@@ -32,14 +35,27 @@ export const withBillingLease = <A, R>(
     const lease = yield* acquire(scope);
     return yield* run(lease).pipe(
       Effect.ensuring(
-        billingQuery((db) =>
-          db
-            .prepare(
-              "UPDATE billing_lock SET token='', admittedToken='', expiresAt=0 WHERE id=? AND token=?",
-            )
-            .bind(scope, lease.token)
-            .run(),
-        ).pipe(Effect.catch(() => Effect.void)),
+        billingQuery(
+          (db) =>
+            db
+              .prepare(
+                "UPDATE billing_lock SET token='', admittedToken='', expiresAt=0 WHERE id=? AND token=?",
+              )
+              .bind(scope, lease.token)
+              .run(),
+          "lease-release-write",
+        ).pipe(
+          // Best-effort release: report the failure with request context, keep the outcome.
+          // A zero-row release is a legitimate expired/replaced lease, never a failure.
+          Effect.catch((error) =>
+            reportFailureEffect(error, {
+              component: "billing",
+              operation: "billing.lease.release",
+              phase: "lease-release",
+              event: "application.cleanup",
+            }),
+          ),
+        ),
       ),
     );
   });
@@ -47,6 +63,7 @@ export const withBillingLease = <A, R>(
 /** Each transaction uses a new nonce, so expired batches cannot reuse admission. */
 export const fencedBillingBatch = (
   lease: BillingLease,
+  reason: string,
   build: (db: D1Database, fence: BillingFence) => D1PreparedStatement[],
   admission?: { sql: string; args: string[] },
 ) =>
@@ -64,9 +81,9 @@ export const fencedBillingBatch = (
           .bind(nonce, lease.scope, lease.token, ...(admission?.args ?? [])),
         ...build(db, fence),
       ]);
-    });
+    }, reason);
     if (result.length < 2 || result.some((row) => row.meta.changes !== 1)) {
-      return yield* Effect.fail(billingError("Busy"));
+      return yield* Effect.fail(billingFailure("Busy", "fence-refused"));
     }
     return undefined;
   });

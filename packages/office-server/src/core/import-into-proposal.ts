@@ -10,8 +10,7 @@ import { ImportedOutputSchema } from "../jobs/output.ts";
 import { JOB_OUTPUT_LIMITS, requireBinding, requireSnapshot } from "../jobs/frames.ts";
 import { prepareSheetInsertions } from "../jobs/sheet-insert.ts";
 import { replayMutationCandidate } from "../jobs/replay.ts";
-import { nativeCall, nativeFailure, officeFailure } from "./failure.ts";
-import { preflightSheetLoads } from "../jobs/sheet-load-preflight.ts";
+import { nativeCall, officeFailure } from "./failure.ts";
 import { operationRecord } from "./operation-read.ts";
 import { operationTarget } from "./operation-caller.ts";
 import { verifyOperation } from "./claims.ts";
@@ -47,13 +46,11 @@ export const stageImportIntoProposal = Effect.fn("Office.stageImportIntoProposal
     },
     catch: () => officeFailure("CONTENT_REQUIRED", action.operationId),
   });
-  yield* Effect.try({ try: () => preflightSheetLoads([source.native]), catch: nativeFailure });
+  // Pre-materialization admission of this source+target pair (with target history) belongs to
+  // importIntoInput; prepareSheetInsertions re-admits the same pair immediately before SDK load,
+  // which is the boundary that also covers an already-pinned input artifact.
   const pinned = yield* importIntoInput(deps, runtime, original, job, source, phase);
   const record = pinned.record;
-  yield* Effect.try({
-    try: () => preflightSheetLoads([source.native, pinned.frame.native]),
-    catch: nativeFailure,
-  });
   if (record.artifacts.proposal !== null)
     return {
       record,

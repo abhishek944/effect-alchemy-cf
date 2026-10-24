@@ -8,6 +8,7 @@
  * library is ready without an object binding.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure } from "@starter/diagnostics";
 import { SKILLS_INTEGRITY, SKILLS_UNAVAILABLE } from "./chat-skills-errors.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { verifySkillManifest } from "./skills-manifest.ts";
@@ -27,6 +28,15 @@ const unavailable = (message: string): SkillReadiness => ({
   files: 0,
 });
 
+const reportUnready = (reason: string, error?: unknown, status?: number): void =>
+  reportFailure(error ?? new Error("Skill readiness could not be verified"), {
+    component: "skills",
+    operation: "readiness",
+    reason,
+    ...(status === undefined ? {} : { status }),
+    event: "application.recovery",
+  });
+
 export const readSkillReadiness = async (
   source: { readonly catalog: cf.DurableObjectStub; readonly bucket: cf.R2Bucket | null } | null,
   ownerId: string | null,
@@ -38,9 +48,13 @@ export const readSkillReadiness = async (
       method: "GET",
       headers: { accept: "application/json", "x-chat-owner": ownerId },
     });
-    if (response.status !== 200) return unavailable(SKILLS_UNAVAILABLE);
+    if (response.status !== 200) {
+      reportUnready("skills_readiness_status", undefined, response.status);
+      return unavailable(SKILLS_UNAVAILABLE);
+    }
     raw = await response.json();
-  } catch {
+  } catch (error) {
+    reportUnready("skills_readiness_transport", error);
     return unavailable(SKILLS_UNAVAILABLE);
   }
   const value: unknown =
@@ -50,9 +64,17 @@ export const readSkillReadiness = async (
         : null
       : raw;
   const manifest = decodeOption(SkillManifest, value);
-  if (manifest === null) return unavailable(SKILLS_INTEGRITY);
-  if (!(await verifySkillManifest(manifest, source.catalog.id.toString())))
+  if (manifest === null) {
+    reportUnready("skills_readiness_integrity");
     return unavailable(SKILLS_INTEGRITY);
-  if (manifest.files.length > 0 && source.bucket === null) return unavailable(SKILLS_UNAVAILABLE);
+  }
+  if (!(await verifySkillManifest(manifest, source.catalog.id.toString()))) {
+    reportUnready("skills_readiness_integrity");
+    return unavailable(SKILLS_INTEGRITY);
+  }
+  if (manifest.files.length > 0 && source.bucket === null) {
+    reportUnready("skills_readiness_storage");
+    return unavailable(SKILLS_UNAVAILABLE);
+  }
   return { ready: true, message: "", revision: manifest.revision, files: manifest.files.length };
 };

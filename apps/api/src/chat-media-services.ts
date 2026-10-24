@@ -1,4 +1,5 @@
 import type * as cf from "@cloudflare/workers-types";
+import { withCause } from "@starter/diagnostics";
 import { type Context, Schema } from "effect";
 import type { ChatNamespaces } from "./chat-bindings.ts";
 import { SpeechClaimResult } from "./chat-catalog-speech.ts";
@@ -7,6 +8,8 @@ import { Chat } from "./chat-model.ts";
 import type { SpeechHandlerServices } from "./chat-speech-handler.ts";
 
 const Ok = Schema.Struct({ ok: Schema.Literal(true) });
+const nativeFailure = (message: string, status?: number): Error =>
+  Object.assign(new Error(message), status === undefined ? {} : { status });
 
 /** Native response interop, validated at this private RPC boundary. */
 export const nativeJson = async <S extends Schema.ConstraintDecoder<unknown>>(
@@ -22,10 +25,15 @@ export const nativeJson = async <S extends Schema.ConstraintDecoder<unknown>>(
     headers: { "content-type": "application/json", ...headers },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  if (!response.ok) throw new Error("Private chat service unavailable");
-  const raw: unknown = await response.json();
+  if (!response.ok) throw nativeFailure("Private chat service unavailable", response.status);
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch (error) {
+    throw withCause(nativeFailure("Private chat service returned invalid data"), error);
+  }
   const decoded = decodeOption(schema, raw);
-  if (decoded === null) throw new Error("Private chat service returned invalid data");
+  if (decoded === null) throw nativeFailure("Private chat service returned invalid data");
   return decoded;
 };
 
@@ -43,9 +51,13 @@ export const nativeSpeechServices = (
         `/get?id=${encodeURIComponent(chatId)}`,
         Chat,
       );
-      return chat.id === chatId;
-    } catch {
-      return false;
+      if (chat.id !== chatId) throw nativeFailure("Private chat service returned another chat");
+      return true;
+    } catch (error) {
+      // Only an authoritative 404 is owner-scoped absence; every other failure propagates.
+      if (error instanceof Error && Object.getOwnPropertyDescriptor(error, "status")?.value === 404)
+        return false;
+      throw error;
     }
   },
   claimOperation: async (input) => {

@@ -61,6 +61,7 @@ export const progressMerge = Effect.fn("Office.progressMerge")(function* (
     !dispatch ||
     (context.record !== null &&
       (context.record.receipt.phase !== "admitted" ||
+        context.record.merge !== null ||
         context.record.artifacts.proposal !== null ||
         (yield* nativeWrites(deps, context.record)).length > 0));
   const previousBarrier = yield* deps.metadata.publicationBarrier(review.owner, review.documentId);
@@ -159,6 +160,7 @@ export const progressMerge = Effect.fn("Office.progressMerge")(function* (
           if (
             observing ||
             record.receipt.phase !== "admitted" ||
+            record.merge !== null ||
             record.artifacts.proposal !== null ||
             (yield* nativeWrites(deps, record)).length > 0
           )

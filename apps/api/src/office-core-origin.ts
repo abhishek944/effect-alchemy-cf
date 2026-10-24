@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import type { VerifiedCoordinatorContext } from "@starter/office-cloudflare/coordinator-control";
 import type { ActorVerification, NativeTarget, OfficeMetadata } from "@starter/office-server/ports";
+import { mergeOperationTuple } from "@starter/office-server/native-remote";
 import {
   officeDenied,
   officeSame,
@@ -159,17 +160,17 @@ export async function verifyOfficeActorPhase(
     held.permit.reviewFingerprint !== review.fingerprint
   )
     throw officeDenied();
-  // Recompute Core's fixed merge-intent tuple. The digest correlates the genuine held origin only.
+  // Exact persisted merge identity, shared with Core. The digest correlates the genuine held origin only.
   const bytes = new TextEncoder().encode(
-    JSON.stringify([
-      "office-operation",
-      1,
-      ["office-intent", 1, "merge", input.operationId, command.input.approvalOperationId],
-      input.target.documentId,
-      input.target.unitId,
-      draft.worktreeId,
-      policyVersion,
-    ]),
+    JSON.stringify(
+      mergeOperationTuple(
+        input.operationId,
+        command.input.approvalOperationId,
+        input.target,
+        draft.worktreeId,
+        policyVersion,
+      ),
+    ),
   );
   if (bytes.byteLength > 16 * 1024) throw officeDenied();
   const hash = await crypto.subtle.digest("SHA-256", bytes);

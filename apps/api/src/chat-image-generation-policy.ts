@@ -15,7 +15,7 @@ export const IMAGE_WORKFLOW_POLICY = [
   "Use normal native tool calls and parallelism for requested outputs, without app fan-out or an added image-count cap. Supported explicit tool controls override response-frozen defaults; omitted controls use those defaults. Do not add a settings tool or a per-call confirmation requirement.",
 ].join("\n");
 
-/** Rebuild the host-owned section at the mandatory final gate, before memory/token preflight. */
+/** Rebuild the host-owned section at the mandatory final gate, before model-limit checks. */
 export const canonicalImageGenerationContext = (context: Context): Context => {
   const folded = collapseSystemMessages(normalizeContext(context));
   const first = folded.messages[0];

@@ -10,7 +10,8 @@ import type * as cf from "@cloudflare/workers-types";
 import { Auth } from "@starter/auth";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { RuntimeContext } from "alchemy";
-import { Effect } from "effect";
+import { Cause, Effect, Schema } from "effect";
+import { reportFailureEffect } from "@starter/diagnostics";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall } from "./chat-bindings.ts";
@@ -77,39 +78,47 @@ export const handleProfilePhoto = Effect.gen(function* () {
     // uncertain put can never become an untracked orphan the sweep cannot see.
     const reserved = yield* doCall(catalog, "POST", "/profile/photo/reserve", { avatarId });
     if (reserved.status !== 200)
-      return fail(503, "Avatar storage is unavailable. Nothing was saved.");
+      return fail(503, "Avatar storage is unavailable. Your saved profile is unchanged.");
     const key = avatarObjectKey(scope, avatarId);
-    const retire = Effect.promise(async () => {
-      try {
-        return await Effect.runPromise(
-          doCall(
-            catalog,
-            "DELETE",
-            `/profile/photo?id=${encodeURIComponent(avatarId)}`,
-            undefined,
-            seed,
-          ),
-        );
-      } catch {
-        return null;
-      }
-    });
-    const stored = yield* Effect.promise(async () => {
-      try {
-        await putAvatarObject(bucket, key, decoded.value.bytes, {
-          mediaType: decoded.value.mediaType,
-          digest: decoded.value.digest,
-          avatarId,
-        });
-        return true;
-      } catch {
-        return false;
-      }
-    });
+    const retire = doCall(
+      catalog,
+      "DELETE",
+      `/profile/photo?id=${encodeURIComponent(avatarId)}`,
+      undefined,
+      seed,
+    ).pipe(
+      Effect.catch((cause) =>
+        reportFailureEffect(cause, {
+          component: "profile",
+          operation: "avatar.retire",
+          operationId: avatarId,
+          event: "application.cleanup",
+        }).pipe(Effect.as(null)),
+      ),
+    );
+    const stored = yield* Effect.promise(() =>
+      putAvatarObject(bucket, key, decoded.value.bytes, {
+        mediaType: decoded.value.mediaType,
+        digest: decoded.value.digest,
+        avatarId,
+      }),
+    ).pipe(
+      Effect.tapCause((cause) =>
+        Cause.hasInterruptsOnly(cause)
+          ? Effect.void
+          : reportFailureEffect(cause, {
+              component: "profile",
+              operation: "avatar.put",
+              operationId: avatarId,
+            }),
+      ),
+      Effect.as(true),
+      Effect.catchDefect(() => Effect.succeed(false)),
+    );
     if (!stored) {
       // The reservation is durable, so the sweep retries even if this fails.
       yield* retire;
-      return fail(503, "Avatar storage is unavailable. Nothing was saved.");
+      return fail(503, "Avatar storage is unavailable. Your saved profile is unchanged.");
     }
     const call = yield* doCall(catalog, "POST", "/profile/photo", {
       avatarId,
@@ -123,10 +132,17 @@ export const handleProfilePhoto = Effect.gen(function* () {
     const avatar =
       call.status === 200 ? (decodeOption(AvatarUploadResponse, call.body)?.avatar ?? null) : null;
     if (avatar === null) {
+      yield* reportFailureEffect(new Error("Private avatar staging was not acknowledged"), {
+        component: "profile",
+        operation: "avatar.stage",
+        operationId: avatarId,
+        status: call.status,
+        event: call.status === 409 ? "application.denial" : "application.failure",
+      });
       yield* retire;
       return fail(
         call.status === 409 ? 409 : 503,
-        "That photo could not be staged. Nothing was saved.",
+        "That photo could not be acknowledged. Your saved profile is unchanged.",
       );
     }
     return HttpServerResponse.fromWeb(jsonResponse({ avatar }, 200));
@@ -146,9 +162,10 @@ export const handleProfilePhoto = Effect.gen(function* () {
   }
 
   const call = yield* doCall(catalog, "GET", "/profile/photo", undefined, seed);
-  const avatar =
-    call.status === 200 ? (decodeOption(AvatarRefResponse, call.body)?.avatar ?? null) : null;
-  if (avatar === null || avatar.kind !== "photo") return fail(404, "No profile photo is saved.");
+  if (call.status !== 200)
+    throw Object.assign(new Error("Private avatar catalog read failed"), { status: call.status });
+  const avatar = Schema.decodeUnknownSync(AvatarRefResponse)(call.body).avatar;
+  if (avatar.kind !== "photo") return fail(404, "No profile photo is saved.");
   const stored = yield* Effect.promise(() =>
     readAvatar(bucket, avatarObjectKey(scope, avatar.avatarId)),
   );
@@ -160,6 +177,11 @@ export const handleProfilePhoto = Effect.gen(function* () {
   );
 }).pipe(
   Effect.provide(RuntimeContext.phantom),
+  Effect.tapCause((cause) =>
+    Cause.hasInterruptsOnly(cause)
+      ? Effect.void
+      : reportFailureEffect(cause, { component: "profile", operation: "http.request" }),
+  ),
   Effect.catch(() => Effect.succeed(fail(503, "Avatar service unavailable."))),
   Effect.catchDefect(() => Effect.succeed(fail(503, "Avatar service unavailable."))),
 );

@@ -20,6 +20,7 @@ import type { ChatSource } from "./chat-source.ts";
 import type { ChatRuntime } from "./chat-runtime.ts";
 import { streamChat } from "./chat-sse.ts";
 import { SUBMISSION_FAILED } from "./chat-model.ts";
+import * as observation from "./chat-observation.ts";
 import { conversationApplicationOrigin } from "./chat-public-origin.ts";
 import type { ChatAccounting } from "./chat-accounting.ts";
 import type { ChatLedger } from "./chat-ledger.ts";
@@ -79,22 +80,15 @@ export class ChatConversation extends Agent<ChatEnv> {
       return conversationCatalogStub(env, owner);
     };
     this.skills = services.skills;
+    // Safe service/stage/release labels for every object-owned report; never authority.
+    services.runtime.diagnostic = observation.chatObjectMetadata(env);
     this.lifecycle.use(services.harness);
-  }
-
-  private async stop(operationId: string): Promise<Response> {
-    try {
-      // Exact native input/run task only; no placed-input conversation-wide wrapper.
-      await this.runtime.stop(operationId);
-    } catch {
-      // A genuine abort failure must not be reported as success or masked as a stop.
-      return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
-    }
-    return json({ ok: true });
   }
 
   async onRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    let stopped: string | null = null;
+    // Office task callbacks use a separate private origin without a chat header.
     const office = await chatOfficeTaskEndpoint(request, this.officeTasks);
     if (office !== null) return office;
     const chat = chatFromHeader(request.headers.get("x-chat-json"));
@@ -125,6 +119,7 @@ export class ChatConversation extends Agent<ChatEnv> {
             subscribe: (invalidate) => this.source.subscribe(invalidate),
           },
           request.signal,
+          observation.chatEventContext(request, chat.id, this.runtime.diagnostic),
         );
       }
       if (request.method === "GET" && url.pathname === "/snapshot") {
@@ -164,21 +159,36 @@ export class ChatConversation extends Agent<ChatEnv> {
         const applicationOrigin = conversationApplicationOrigin(request);
         if (applicationOrigin === null) return json({ message: "Missing application origin" }, 400);
         const officeSession = chatOfficeSessionFromRequest(request, ownerId);
-        return await this.submission.send(body, {
-          chat,
-          ownerId,
-          applicationOrigin,
-          ...(officeSession === null ? {} : { officeSession }),
-        });
+        return await this.submission.send(
+          body,
+          {
+            chat,
+            ownerId,
+            applicationOrigin,
+            ...(officeSession === null ? {} : { officeSession }),
+          },
+          observation.chatRequestObservation(request),
+        );
       }
       if (request.method === "POST" && url.pathname === "/stop") {
         const body = decodeOption(ConversationStopBody, await requestBody(request));
         if (body === null) return json({ message: "Invalid request" }, 400);
-        return await this.stop(body.operationId);
+        stopped = body.operationId;
+        // Exact native input/run task only; no placed-input conversation-wide wrapper.
+        await this.runtime.stop(body.operationId);
+        return json({ ok: true });
       }
       return json({ message: "Not found" }, 404);
     } catch (error) {
       if (error instanceof RefreshFence) return json({ message: "Refresh required" }, 409);
+      observation.reportObjectFailure(
+        error,
+        "conversation",
+        request,
+        chat.id,
+        this.runtime.diagnostic,
+        stopped === null ? undefined : { phase: "native-stop", operationId: stopped },
+      );
       return json({ message: SUBMISSION_FAILED, code: "submission_failed" }, 503);
     }
   }

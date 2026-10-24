@@ -6,6 +6,7 @@
  * authenticated internal endpoint dispatch. No browser or model argument can
  * choose the owner scope.
  */
+import type { Target } from "@starter/office-contract";
 import type { Registry, Storage } from "@earendil-works/pi-durable";
 import { Harness, createRegistry } from "@earendil-works/pi-durable";
 import { createModels } from "@earendil-works/pi-ai/models";
@@ -105,6 +106,7 @@ export const conversationHarnessFactory =
     readonly skills: ConversationSkills;
     readonly images: ConversationImages;
     readonly office: OfficePiHost;
+    readonly displayOffice: (target: Target) => void;
     readonly selection: () => Promise<ChatSelection | null>;
     readonly setRegistry: (registry: Registry) => void;
     readonly setStorage: (storage: Storage) => void;
@@ -117,7 +119,7 @@ export const conversationHarnessFactory =
     deps.setRegistry(registry);
     registry.install(deps.accounting.extension(() => deps.selection()));
     registry.install(accountTools(accountToolAccess(deps.account)));
-    registry.install(makeOfficeExtension(deps.office));
+    registry.install(makeOfficeExtension(deps.office, deps.displayOffice));
     const prepare = deps.images.install(storage, context, registry, deps.skills);
     installSkillModelsGuard(models, {
       observeCompactions: () => deps.accounting.observeCompactions(models),

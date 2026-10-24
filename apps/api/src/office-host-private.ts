@@ -5,7 +5,7 @@ import {
   NativePrivateMember,
   NativePrivateResolution,
 } from "../../office/src/native-private-wire.ts";
-import { officeDenied } from "./office-private-authority.ts";
+import { officeCaught, officeDenied } from "./office-private-authority.ts";
 import { officeHostCleanup, assertOfficeHostFrame } from "./office-host-auth.ts";
 import { officePrivateControl } from "./office-private-control.ts";
 import { officeHostBinary } from "./office-host-binary.ts";
@@ -33,10 +33,10 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
       boot = request.headers.get("x-office-boot");
     const cleanup = ["cleanup", "closed", "finished", "socket-closed", "job-status"].includes(role);
     // ORIGINAL native loopback audience + actual physical pinned process BEFORE selecting any record.
-    yield* Effect.tryPromise({ try: () => root.process.peer(boot, cleanup), catch: officeDenied });
+    yield* Effect.tryPromise({ try: () => root.process.peer(boot, cleanup), catch: officeCaught });
     const entry = root.entries.get(id);
     if (entry === undefined || entry.canonical) return yield* Effect.fail(officeDenied());
-    if (cleanup) yield* Effect.try({ try: () => officeHostCleanup(entry), catch: officeDenied });
+    if (cleanup) yield* Effect.try({ try: () => officeHostCleanup(entry), catch: officeCaught });
     else yield* assertOfficeHostFrame(root, entry);
     const frame = entry.frame;
     const signal = cleanup ? frame.cleanup.signal : frame.work.signal;
@@ -57,7 +57,7 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
         frame.request.charge,
       );
     return yield* Effect.tryPromise({
-      catch: officeDenied,
+      catch: officeCaught,
       try: () =>
         frame.io.track(async () => {
           if (["control", "manifest", "cleanup"].includes(role)) {
@@ -119,7 +119,7 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
             frame.reportFinished(value.kind, value.clean);
           } else if (role === "socket-closed") frame.reportSocketClosed();
           else if (role === "closed") {
-            await entry.backend.channel?.revoke();
+            await entry.backend.channel?.close(frame.id);
             frame.reportSDKClosed();
           } else throw officeDenied();
           return json(null);
@@ -138,10 +138,10 @@ export const officeHostBootstrap = (root: OfficeHostRuntime, request: Request) =
       return yield* Effect.fail(officeDenied());
     yield* Effect.tryPromise({
       try: () => root.process.peer(boot, path !== "/bootstrap/ready"),
-      catch: officeDenied,
+      catch: officeCaught,
     });
     return yield* Effect.tryPromise({
-      catch: officeDenied,
+      catch: officeCaught,
       try: () =>
         root.bootIO.track(async () => {
           const payload = await readOfficePrivateJson(

@@ -1,11 +1,11 @@
 import { Effect } from "effect";
 import { Draft, View, OfficeInvalid, decodeWireSync } from "@starter/office-contract";
-import type { OfficeTaskClient } from "@starter/office-pi";
+import type { OfficeTaskPort } from "@starter/office-pi";
 
 /** Use after a confirmed create/reopen receipt, or with an authorized discovered draft ID. */
-export const readDraftExecutionBasis = (client: OfficeTaskClient, draftId: string) =>
+export const readDraftExecutionBasis = (client: OfficeTaskPort, draftId: string) =>
   Effect.gen(function* () {
-    const draft = decodeWireSync(Draft)(yield* client.draft({ params: { draftId } }));
+    const draft = decodeWireSync(Draft)(yield* Effect.promise(() => client.draft({ id: draftId })));
     if (draft.id !== draftId || draft.status !== "draft")
       return yield* new OfficeInvalid({
         code: "NOT_EDITABLE",
@@ -14,12 +14,12 @@ export const readDraftExecutionBasis = (client: OfficeTaskClient, draftId: strin
         message: "Read the current editable draft before opening its execution basis.",
       });
     const view = decodeWireSync(View)(
-      yield* client.open({
-        payload: {
+      yield* Effect.promise(() =>
+        client.open({
           documentId: draft.documentId,
           scope: { kind: "draft", draftId: draft.id, generation: draft.generation },
-        },
-      }),
+        }),
+      ),
     );
     if (
       view.documentId !== draft.documentId ||

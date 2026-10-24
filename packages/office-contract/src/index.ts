@@ -1,8 +1,10 @@
 export * from "./primitives.ts";
 export * from "./limits.ts";
 export * from "./errors.ts";
+export { jobDiagnostics } from "./job-diagnostics.ts";
 export * from "./models.ts";
 export * from "./requests.ts";
+export * from "./attachment.ts";
 export * from "./import-into.ts";
 export * from "./send-target.ts";
 export * from "./channel.ts";

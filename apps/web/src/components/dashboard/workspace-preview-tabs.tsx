@@ -16,7 +16,7 @@ import "./workspace-preview-tabs.css";
 export const workspacePanelId = (id: string) => `workspace-preview-panel-${id}`;
 export const workspaceTabId = (id: string) => `workspace-preview-tab-${id}`;
 const labelOf = (tab: WorkspacePreviewTab) =>
-  tab.kind === "image"
+  tab.kind === "image" || tab.kind === "text" || tab.kind === "office-file"
     ? tab.file.name
     : tab.kind === "office"
       ? tab.selection.title

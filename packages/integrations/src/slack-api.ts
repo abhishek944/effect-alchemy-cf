@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Config, Effect, Layer, type Redacted, Schema } from "effect";
 import * as HttpClient from "effect/http/HttpClient";
 import type { IntegrationError } from "./error.ts";
@@ -41,7 +42,7 @@ const layer = (
       return Slack.of({
         postMessage: Effect.fn("integrations.slack.postMessage")(function* (input: SlackMessage) {
           const message = yield* Schema.decodeUnknownEffect(SlackMessage)(input).pipe(
-            Effect.mapError(() => failure("slack", "InvalidInput")),
+            Effect.mapError((cause) => withCause(failure("slack", "InvalidInput"), cause)),
           );
           const response = yield* postJson(
             client,
@@ -59,7 +60,9 @@ const layer = (
             },
           );
           const result = yield* Schema.decodeUnknownEffect(Response)(response.body).pipe(
-            Effect.mapError(() => failure("slack", "InvalidResponse", response.status)),
+            Effect.mapError((cause) =>
+              withCause(failure("slack", "InvalidResponse", response.status), cause),
+            ),
           );
           if (!result.ok) {
             return yield* Effect.fail(

@@ -5,7 +5,7 @@ import { Effect } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { Api } from "./api.ts";
 import { CurrentAdmin, Forbidden, UserNotFound } from "./admin-model.ts";
-import { AuthenticationUnavailable } from "./model.ts";
+import { authUnavailableEffect } from "./auth-failure.ts";
 
 export const AdminLive = HttpApiBuilder.group(Api, "admin", (handlers) =>
   Effect.gen(function* () {
@@ -15,7 +15,7 @@ export const AdminLive = HttpApiBuilder.group(Api, "admin", (handlers) =>
       .handle("searchUsers", ({ payload }) =>
         findUserByEmail(payload.email).pipe(
           Effect.map((user) => ({ user })),
-          Effect.mapError(() => new AuthenticationUnavailable()),
+          Effect.catch((cause) => authUnavailableEffect("admin.users.search", cause)),
           Effect.provideService(Auth, auth),
           Effect.provide(RuntimeContext.phantom),
         ),
@@ -28,7 +28,7 @@ export const AdminLive = HttpApiBuilder.group(Api, "admin", (handlers) =>
             return yield* Effect.fail(new Forbidden());
           }
           const found = yield* setUserRole(params.id, payload.role).pipe(
-            Effect.mapError(() => new AuthenticationUnavailable()),
+            Effect.catch((cause) => authUnavailableEffect("admin.users.setRole", cause)),
           );
           if (!found) return yield* Effect.fail(new UserNotFound());
           return { ok: true };

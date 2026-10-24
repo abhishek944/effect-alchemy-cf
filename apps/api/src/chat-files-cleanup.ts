@@ -37,6 +37,11 @@ import {
   promoteAcceptedBound,
 } from "./chat-files-mutations.ts";
 import { retainedObjectKey, stagingObjectKey } from "./chat-files-store.ts";
+import {
+  awaitFileAttempt,
+  fileSweepDiagnostics,
+  type FileAttempt,
+} from "./chat-files-sweep-diagnostics.ts";
 import { fileRow, staleFileRows, usageBytes } from "./chat-files-table.ts";
 
 /** Internal sweep dependency set; the catalog supplies its private db/scope. */
@@ -53,13 +58,7 @@ export type ChatFilesSweepInput = {
 export type ChatFilesSweepRequest = Omit<ChatFilesSweepInput, "db" | "scope">;
 
 /** Confirms a copy or delete; a rejected promise or an explicit `false` both fail. */
-const confirmed = async (task: Promise<boolean>): Promise<boolean> => {
-  try {
-    return await task;
-  } catch {
-    return false;
-  }
-};
+const confirmed = (task: Promise<boolean>): Promise<FileAttempt> => awaitFileAttempt(() => task);
 
 /** Fresh unbound due check; a retried row with a new lease/deadline is not due. */
 const unboundDue = (row: ChatFileRecord | null, now: number): boolean =>
@@ -68,17 +67,11 @@ const unboundDue = (row: ChatFileRecord | null, now: number): boolean =>
   ((row.state === "uploading" && row.createdAt <= now - UPLOAD_LEASE_MS) ||
     (row.state === "ready" && row.expiresAt !== null && row.expiresAt <= now));
 
-const deleted = async (
-  objects: ChatFilesObjectStore,
-  keys: readonly string[],
-): Promise<boolean> => {
-  try {
+const deleted = (objects: ChatFilesObjectStore, keys: readonly string[]): Promise<FileAttempt> =>
+  awaitFileAttempt(async () => {
     await objects.delete(keys);
     return true;
-  } catch {
-    return false;
-  }
-};
+  });
 
 export const sweepChatFiles = async (
   input: ChatFilesSweepInput,
@@ -87,6 +80,7 @@ export const sweepChatFiles = async (
   let promoted = 0;
   let failed = 0;
   let deferred = 0;
+  const diagnostics = fileSweepDiagnostics();
   const db = input.db;
   const due = staleFileRows(db, input.now, input.now - UPLOAD_LEASE_MS, input.limit);
   for (const row of due) {
@@ -94,19 +88,19 @@ export const sweepChatFiles = async (
     const retainKey = retainedObjectKey(input.scope, row.chatId, row.fileId);
     if (row.state === "deleted" || row.state === "expired") {
       const purged = await deleted(input.objects, [stageKey, retainKey]);
-      if (purged) clearPurge(db, row.fileId);
+      if (!diagnostics.deleteFailed(purged)) clearPurge(db, row.fileId);
       else deferPurge(db, row.fileId, input.now, input.now + PURGE_RETRY_MS);
-      deletedCount += purged ? 1 : 0;
-      deferred += purged ? 0 : 1;
+      deletedCount += purged.ok ? 1 : 0;
+      deferred += purged.ok ? 0 : 1;
       continue;
     }
     if (row.state === "accepted") {
       // Only the redundant staging copy is purged; retained bytes stay untouched.
       const purged = await deleted(input.objects, [stageKey]);
-      if (purged) clearPurge(db, row.fileId);
+      if (!diagnostics.deleteFailed(purged)) clearPurge(db, row.fileId);
       else deferPurge(db, row.fileId, input.now, input.now + PURGE_RETRY_MS);
-      deletedCount += purged ? 1 : 0;
-      deferred += purged ? 0 : 1;
+      deletedCount += purged.ok ? 1 : 0;
+      deferred += purged.ok ? 0 : 1;
       continue;
     }
     if (row.state === "failed") {
@@ -126,10 +120,10 @@ export const sweepChatFiles = async (
       }
       markTerminalUnbound(db, row.fileId, "expired", input.now);
       const purged = await deleted(input.objects, [stageKey, retainKey]);
-      if (purged) clearPurge(db, row.fileId);
+      if (!diagnostics.deleteFailed(purged)) clearPurge(db, row.fileId);
       else deferPurge(db, row.fileId, input.now, input.now + PURGE_RETRY_MS);
-      deletedCount += purged ? 1 : 0;
-      deferred += purged ? 0 : 1;
+      deletedCount += purged.ok ? 1 : 0;
+      deferred += purged.ok ? 0 : 1;
       continue;
     }
     if (row.state === "uploading" || row.operationId === null) {
@@ -160,14 +154,15 @@ export const sweepChatFiles = async (
     };
     if (verdict === "accepted") {
       const copied = await confirmed(input.objects.copy(stageKey, retainKey));
-      if (!copied || stillBound() === null) {
+      if (diagnostics.copyFailed(copied) || stillBound() === null) {
         deferProbe(db, row.fileId, input.now, input.now + ACCEPTANCE_RETRY_MS);
         deferred += 1;
         continue;
       }
       promoteAcceptedBound(db, row.fileId, operationId, input.now, input.now + PURGE_RETRY_MS);
       const purged = await deleted(input.objects, [stageKey]);
-      if (!purged) deferPurge(db, row.fileId, input.now, input.now + PURGE_RETRY_MS);
+      if (!diagnostics.deleteFailed(purged))
+        deferPurge(db, row.fileId, input.now, input.now + PURGE_RETRY_MS);
       promoted += 1;
       continue;
     }
@@ -178,15 +173,16 @@ export const sweepChatFiles = async (
       }
       markTerminalBound(db, row.fileId, operationId, input.now);
       const purged = await deleted(input.objects, [stageKey, retainKey]);
-      if (purged) clearPurge(db, row.fileId);
+      if (!diagnostics.deleteFailed(purged)) clearPurge(db, row.fileId);
       else deferPurge(db, row.fileId, input.now, input.now + PURGE_RETRY_MS);
-      deletedCount += purged ? 1 : 0;
-      deferred += purged ? 0 : 1;
+      deletedCount += purged.ok ? 1 : 0;
+      deferred += purged.ok ? 0 : 1;
       continue;
     }
     deferProbe(db, row.fileId, input.now, input.now + ACCEPTANCE_RETRY_MS);
     deferred += 1;
   }
+  diagnostics.report();
   const usage = usageBytes(db);
   return filesOk({
     deleted: deletedCount,

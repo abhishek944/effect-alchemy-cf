@@ -27,6 +27,7 @@ const owned = (
       "packages/office-server/src/storage-remote",
       "packages/office-server/src/render-page",
       "packages/office-contract/src",
+      "packages/diagnostics/src",
     ].map(sources),
   )
 ).flat();
@@ -34,8 +35,10 @@ const declarations = [
   "package.json",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
+  "patches/@alchemy.run__cloudflare-runtime@2.0.0-beta.80.patch",
   "packages/office-server/package.json",
   "packages/office-contract/package.json",
+  "packages/diagnostics/package.json",
 ];
 const context = await prepareOfficeFoundation(join(root, "var/office/jobs-details/context"), {
   dockerfile: "Dockerfile.jobs",

@@ -5,6 +5,7 @@ import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { CurrentAdmin, Forbidden } from "./admin-model.ts";
+import { authUnavailableEffect } from "./auth-failure.ts";
 import { AuthenticationUnavailable, Unauthorized } from "./model.ts";
 
 export class AdminAuthentication extends HttpApiMiddleware.Service<
@@ -28,8 +29,8 @@ export class AdminAuthentication extends HttpApiMiddleware.Service<
           }
           // No cookie cache: getSession reads the current role from the database.
           const session = yield* auth.getSession().pipe(
-            Effect.mapError(() => new AuthenticationUnavailable()),
-            Effect.catchDefect(() => Effect.fail(new AuthenticationUnavailable())),
+            Effect.catch((cause) => authUnavailableEffect("admin.session", cause)),
+            Effect.catchDefect((defect) => authUnavailableEffect("admin.session", defect)),
           );
           if (!session) return yield* Effect.fail(new Unauthorized());
           if (session.user.role !== "admin") return yield* Effect.fail(new Forbidden());

@@ -1,10 +1,12 @@
 import { useCallback, useState } from "react";
 import type { SavedFile } from "@/lib/chat-library-types";
-import { savedOriginalUrl } from "@/lib/chat-library-api";
+import { isNativeOpenFile } from "@/lib/office-original";
 import { ChatLibraryImage, type LibraryImageState } from "./chat-library-image";
+import { AttachmentArt, AttachmentPreview } from "./attachment-preview";
 import { ChatLibraryResultActions, type LibraryResultActions } from "./chat-library-result-actions";
 import { savedIdentityLabel, savedOrigin } from "./chat-library-format";
 import { useChatLibraryOriginal } from "./use-chat-library-original";
+import { useMessageImageAlts } from "./chat-message-image-alts";
 import "./chat-library-results.css";
 import "./chat-library-image.css";
 
@@ -19,6 +21,8 @@ function Result({
   active: boolean;
   actions: LibraryResultActions;
 }) {
+  const [preview, setPreview] = useState(false);
+  if (!active && preview) setPreview(false);
   const original = useChatLibraryOriginal(file, active);
   const saved = original.file;
   const [image, setImage] = useState<{ file: SavedFile; state: LibraryImageState } | null>(null);
@@ -35,9 +39,14 @@ function Result({
     !original.error &&
     !original.reading &&
     !(image?.file === saved && image.state === "error");
+  const alts = useMessageImageAlts();
+  const caption = alts.find((entry) => entry.src.includes(saved.id))?.alt.trim() || null;
   const copy = (
     <span data-cx="chat-library-result-copy">
-      <strong>{saved.name}</strong>
+      <strong>
+        {saved.name}
+        {caption ? ` — ${caption}` : null}
+      </strong>
       <small>
         {savedOrigin(saved)} ·{" "}
         {saved.width && saved.height
@@ -52,10 +61,10 @@ function Result({
   const art =
     saved.kind === "image" && saved.state === "ready" ? (
       <ChatLibraryImage file={saved} thumbnail active={active} onState={onState} />
+    ) : saved.state === "ready" ? (
+      <AttachmentArt source={saved} active={active} />
     ) : (
-      <span data-cx="chat-library-result-kind" aria-hidden="true">
-        {saved.kind === "image" ? "Image" : saved.kind === "office" ? "Office" : "Aa"}
-      </span>
+      <span data-cx="chat-library-result-kind">Original unavailable</span>
     );
   return (
     <div data-cx="chat-library-result">
@@ -70,20 +79,34 @@ function Result({
           {copy}
         </button>
       ) : readable ? (
-        <a
+        <button
+          type="button"
           data-cx="chat-library-result-card"
-          href={savedOriginalUrl(saved)}
-          download={saved.name}
-          aria-label={`Download ${savedIdentityLabel(saved)}`}
+          aria-label={`Preview ${savedIdentityLabel(saved)}`}
+          onClick={() => setPreview(true)}
         >
           {art}
           {copy}
-        </a>
+        </button>
       ) : (
         <div data-cx="chat-library-result-card">
           {art}
           {copy}
         </div>
+      )}
+      {preview && active && (
+        <AttachmentPreview
+          source={saved}
+          onClose={() => setPreview(false)}
+          onOpenOffice={
+            isNativeOpenFile(saved)
+              ? () => {
+                  setPreview(false);
+                  actions.onOpenImage(saved);
+                }
+              : undefined
+          }
+        />
       )}
       <ChatLibraryResultActions
         file={saved}

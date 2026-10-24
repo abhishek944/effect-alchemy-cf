@@ -6,6 +6,7 @@ import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatForbidden } from "./chat-model.ts";
+import { authUnavailableEffect } from "./auth-failure.ts";
 import { AuthenticationUnavailable, CurrentUser, Unauthorized } from "./model.ts";
 import { CurrentChatOfficeSession, makeChatOfficeSessionCapture } from "./chat-office-session.ts";
 
@@ -34,8 +35,8 @@ export class ChatAuthentication extends HttpApiMiddleware.Service<
             }
           }
           const session = yield* auth.getSession().pipe(
-            Effect.mapError(() => new AuthenticationUnavailable()),
-            Effect.catchDefect(() => Effect.fail(new AuthenticationUnavailable())),
+            Effect.catch((cause) => authUnavailableEffect("chat.session", cause)),
+            Effect.catchDefect((defect) => authUnavailableEffect("chat.session", defect)),
           );
           if (session === null) return yield* Effect.fail(new Unauthorized());
           const officeSession =

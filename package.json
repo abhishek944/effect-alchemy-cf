@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
-    "dev": "pnpm build && node scripts/local.mjs",
+    "dev": "node scripts/local.mjs",
+    "dev:web": "pnpm --filter @starter/web dev",
+    "dev:office": "node scripts/local-office.mjs",
     "lint": "pnpm lint:format:check && node packages/config/env.mjs && oxlint --type-aware --deny-warnings && node scripts/check-lines.mjs && pnpm lint:effect && pnpm lint:typecheck",
     "lint:format": "oxfmt .",
     "lint:format:check": "oxfmt --check .",

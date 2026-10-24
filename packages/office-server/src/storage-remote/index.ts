@@ -33,3 +33,4 @@ export { HostEditorProducer, HostNativeProducer } from "./producer-wire.ts";
 export * from "./control-wire.ts";
 export { HostOffice, HostOfficeRequest } from "./office-wire.ts";
 export { reviewFingerprintInput } from "./review-identity.ts";
+export { mergeIntentTuple, mergeOperationTuple, operationTuple } from "./operation-identity.ts";

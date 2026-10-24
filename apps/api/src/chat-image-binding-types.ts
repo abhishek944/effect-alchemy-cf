@@ -1,16 +1,13 @@
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
-
 export type ImageGenerationTransportScope = {
   readonly signal: AbortSignal;
-  /** Closes new dispatch/body admission; pending actual transport work retains the lease. */
+  /** Abort owned provider transport and response bodies. */
   close(): void;
 };
 export type ImageGenerationTransport = {
   /** Register a brand-new signal BEFORE passing it to rawStream options. */
-  open(lease: ImageMemoryLease, signal?: AbortSignal): ImageGenerationTransportScope;
+  open(signal?: AbortSignal): ImageGenerationTransportScope;
 };
 export type ImageBindingScope = ImageGenerationTransportScope & {
-  readonly lease: ImageMemoryLease;
   active(): boolean;
 };
 export const bindingScopeFailure = (): Error =>

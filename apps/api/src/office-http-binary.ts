@@ -114,7 +114,7 @@ export const channel = (
     const session = yield* CurrentOfficeSession;
     const input = officeChannelRequest(yield* officeReadJson(body, 4096));
     if (input === null) return officeInvalid();
-    const invocationId = yield* officeInvocation(dispatch);
+    const invocationId = yield* officeInvocation(dispatch, "channel");
     const response = yield* officeHostFetch(dispatch, session, `/channel/${invocationId}`, {
       method: "POST",
       headers: { "content-type": "application/json" },

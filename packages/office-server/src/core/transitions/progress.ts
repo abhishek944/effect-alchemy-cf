@@ -79,10 +79,6 @@ export const progressTransition = Effect.fn("Office.transitions.progress")(funct
           if (current.policyVersion !== deps.policy.version)
             return yield* Effect.fail(officeFailure("EXECUTOR_UNCONFIGURED", permit.operationId));
           yield* verifyOperation(deps, current, target, phase);
-          // This is a quiescence precheck; atomic editor admission remains T22's obligation.
-          const editors = yield* deps.metadata.editors(current.owner, current.documentId);
-          if (editors.some((editor) => ["active", "draining", "unclean"].includes(editor.state)))
-            return yield* Effect.fail(officeFailure("BUSY", permit.operationId));
           const journal = yield* makeNativeJournal(
             deps,
             current,

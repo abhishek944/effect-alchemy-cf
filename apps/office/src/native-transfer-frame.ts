@@ -49,10 +49,17 @@ export function officeBinaryCursor(
   charge: (bytes: number) => void,
 ) {
   const reader = body.getReader();
-  // Observe immediately even if a fetch-body error precedes the first header read.
+  // A terminal reader needs lock release, not cancel() rethrowing its stored operation error.
+  let terminal = false;
   const closed = reader.closed.then(
-    () => undefined,
-    () => undefined,
+    () => {
+      terminal = true;
+      return undefined;
+    },
+    () => {
+      terminal = true;
+      return undefined;
+    },
   );
   let chunk: Uint8Array = new Uint8Array(0);
   let offset = 0,
@@ -100,7 +107,8 @@ export function officeBinaryCursor(
       if (closing !== undefined) return closing;
       closing = Promise.resolve().then(async () => {
         const results = await Promise.allSettled([
-          Promise.resolve().then(() => reader.cancel()),
+          // Do not suppress a rejection from cancellation actually started on a live reader.
+          Promise.resolve().then(() => (terminal ? undefined : reader.cancel())),
           closed,
         ]);
         reader.releaseLock();

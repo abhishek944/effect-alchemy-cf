@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { nativeFailure, officeFailure } from "./failure.ts";
 import type { ActorClaims, OperationIntent } from "../ports/index.ts";
 import type { ImportOptions, ExportOptions, RenderSelection } from "@starter/office-contract";
+import { mergeIntentTuple } from "../storage-remote/operation-identity.ts";
 
 export const sha256 = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
@@ -119,7 +120,7 @@ export function intentIdentity(intent: OperationIntent): readonly unknown[] {
     case "approve":
       return [...base, intent.input.reviewId];
     case "merge":
-      return [...base, intent.input.approvalOperationId];
+      return mergeIntentTuple(intent.input.operationId, intent.input.approvalOperationId);
     case "ready":
     case "reopen":
     case "discard":

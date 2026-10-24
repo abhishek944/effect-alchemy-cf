@@ -1,13 +1,17 @@
 import { Effect } from "effect";
-import { OfficeSourcePage, OfficeSourceRequest, decodeWireSync } from "@starter/office-contract";
-import { readOfficeDocumentSources } from "@starter/office-cloudflare/metadata";
+import { OfficeSourceReadRequest, decodeWireSync } from "@starter/office-contract";
+import {
+  readOfficeDocumentSources,
+  readOfficeOriginalTarget,
+} from "@starter/office-cloudflare/metadata";
 import type { OfficeHostActive, OfficeHostRuntime } from "./office-host-state.ts";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import { officeHostOriginal } from "./office-host-auth.ts";
-import { officeDenied } from "./office-private-authority.ts";
+import { officeCaught, officeDenied } from "./office-private-authority.ts";
+import { officeReportBranch } from "./office-diagnostic-report.ts";
 import { readOfficePrivateJson } from "./office-private-json.ts";
 
-/** Human-only binding audience; IDs and decoded source metadata are never authorization. */
+/** Human-only binding audience; identifiers/descriptive Targets are never authorization. */
 export const officeHostSources = (
   root: OfficeHostRuntime,
   active: OfficeHostActive,
@@ -19,10 +23,10 @@ export const officeHostSources = (
       return yield* Effect.fail(officeDenied());
     const input = yield* Effect.tryPromise({
       try: async () =>
-        decodeWireSync(OfficeSourceRequest)(
+        decodeWireSync(OfficeSourceReadRequest)(
           await readOfficePrivateJson(request.body, request.signal, original.deadline, 2048),
         ),
-      catch: officeDenied,
+      catch: officeCaught,
     });
     const live = Effect.gen(function* () {
       if (
@@ -34,19 +38,30 @@ export const officeHostSources = (
       return undefined;
     });
     yield* live;
-    const value = yield* readOfficeDocumentSources(
-      active.options,
-      original.actor.owner,
-      input.documentId,
-      input.cursor,
-    );
-    yield* live; // Actual provider settlement precedes eligibility; no abort race or renewed session.
+    const value = yield* "fileRef" in input
+      ? readOfficeOriginalTarget(active.options, original.actor.owner, input)
+      : readOfficeDocumentSources(
+          active.options,
+          original.actor.owner,
+          input.documentId,
+          input.cursor,
+        );
+    yield* live; // Actual IO settles before eligibility; original session/deadline, never renewal.
     return yield* Effect.try({
       try: () => {
-        const body = JSON.stringify(decodeWireSync(OfficeSourcePage)(value));
+        const body = JSON.stringify(value); // Each metadata reader validates its own finite DTO.
         if (new TextEncoder().encode(body).byteLength > 12 * 1024) throw officeDenied();
         return new Response(body, { headers: { "content-type": "application/json" } });
       },
-      catch: officeDenied,
+      catch: officeCaught,
     });
-  });
+  }).pipe(
+    Effect.mapError((error) =>
+      officeReportBranch(error, {
+        component: "office.sources",
+        operation: "read",
+        reason: "source-read-rejected",
+        eventId: original.actor.invocationId,
+      }),
+    ),
+  );

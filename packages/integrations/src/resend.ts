@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Config, Effect, Layer, type Redacted, Schema } from "effect";
 import * as HttpClient from "effect/http/HttpClient";
 import { Email, EmailMessage, EmailReceipt } from "./email.ts";
@@ -21,7 +22,9 @@ const layer = (
         send: Effect.fn("integrations.email.send")(function* (input: EmailMessage) {
           const message = yield* Schema.decodeUnknownEffect(EmailMessage, {
             onExcessProperty: "error",
-          })(input).pipe(Effect.mapError(() => failure("resend", "InvalidInput")));
+          })(input).pipe(
+            Effect.mapError((cause) => withCause(failure("resend", "InvalidInput"), cause)),
+          );
           const response = yield* postJson(
             client,
             "resend",
@@ -39,7 +42,9 @@ const layer = (
             },
           );
           return yield* Schema.decodeUnknownEffect(EmailReceipt)(response.body).pipe(
-            Effect.mapError(() => failure("resend", "InvalidResponse", response.status)),
+            Effect.mapError((cause) =>
+              withCause(failure("resend", "InvalidResponse", response.status), cause),
+            ),
           );
         }),
       });

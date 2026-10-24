@@ -38,7 +38,7 @@ export default Alchemy.Stack(
         id: expectedDevGateway,
         authentication: true,
         cacheTtl: null,
-        collectLogs: false,
+        collectLogs: true,
       });
     } else if (!local && production) {
       // Production never references the development gateway. Without an

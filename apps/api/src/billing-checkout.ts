@@ -12,47 +12,36 @@ import {
   reserveCustomer,
   saveCustomer,
 } from "@starter/auth/billing-writes";
-import { billingError, type ProviderId } from "@starter/integrations/billing";
+import { billingError, billingFailure } from "@starter/integrations/billing";
 import { Effect } from "effect";
 import { BillingRuntime, scopeById, type BillingScope } from "./billing-config.ts";
+import { billingDeadline, type BillingPhase } from "./billing-deadline.ts";
+import { hostedBillingUrl } from "./billing-url.ts";
 import type { User } from "./model.ts";
-
-export const hostedBillingUrl = (provider: ProviderId, value: string) =>
-  Effect.try({
-    try: () => {
-      const url = new URL(value);
-      const domain = provider === "dodo" ? "dodopayments.com" : "polar.sh";
-      if (
-        url.protocol !== "https:" ||
-        url.username ||
-        url.password ||
-        !(url.hostname === domain || url.hostname.endsWith(`.${domain}`))
-      )
-        throw new Error();
-      return url.href;
-    },
-    catch: () => billingError("Provider"),
-  });
 
 const savedCheckout = (row: CheckoutRow, slug: string) =>
   Effect.gen(function* () {
     if (row.slug !== slug) return yield* Effect.fail(billingError("Conflict"));
     const entry = yield* scopeById(row.scope);
     if (row.state !== "ready" || !row.sessionId || !row.url) {
-      return yield* Effect.fail(billingError("UnknownOutcome"));
+      return yield* Effect.fail(
+        billingFailure("UnknownOutcome", "checkout-not-ready", entry.provider),
+      );
     }
     return { id: row.sessionId, url: yield* hostedBillingUrl(entry.provider, row.url) };
   });
 
 const requireNoSubscription = (userId: string) =>
   Effect.gen(function* () {
-    const pending = yield* billingQuery((db) =>
-      db
-        .prepare(
-          "SELECT id FROM billing_checkout WHERE userId=? AND kind='subscription' AND resolution='pending' LIMIT 1",
-        )
-        .bind(userId)
-        .first<{ id: string }>(),
+    const pending = yield* billingQuery(
+      (db) =>
+        db
+          .prepare(
+            "SELECT id FROM billing_checkout WHERE userId=? AND kind='subscription' AND resolution='pending' LIMIT 1",
+          )
+          .bind(userId)
+          .first<{ id: string }>(),
+      "checkout-subscription-read",
     );
     if (pending !== null) return yield* Effect.fail(billingError("Conflict"));
     const rows = yield* billingQuery(async (db) => {
@@ -61,7 +50,7 @@ const requireNoSubscription = (userId: string) =>
         .bind(userId)
         .all<Parameters<typeof decodeSnapshot>[0]>();
       return result.results.map(decodeSnapshot);
-    });
+    }, "resource-subscription-read");
     const terminal = ["cancelled", "canceled", "expired", "failed", "unpaid", "incomplete_expired"];
     if (
       rows.length > 100 ||
@@ -98,18 +87,22 @@ export const startBillingCheckout = (
       return yield* Effect.fail(billingError("InvalidInput"));
     const productId = product[entry.provider];
     if (productId === undefined) return yield* Effect.fail(billingError("InvalidInput"));
-    return yield* withBillingLease(entry.scope, (lease) =>
-      Effect.gen(function* () {
+    return yield* withBillingLease(entry.scope, (lease) => {
+      // Fiber-local phase marker: names the pending dependency if the deadline fires.
+      let phase: BillingPhase = "reserve";
+      return Effect.gen(function* () {
         const repeated = yield* checkoutForRequest(user.id, requestId);
         if (repeated !== null) return yield* savedCheckout(repeated, slug);
         if (product.kind === "subscription") yield* requireNoSubscription(user.id);
-        const unresolved = yield* billingQuery((db) =>
-          db
-            .prepare(
-              "SELECT id FROM billing_checkout WHERE userId=? AND slug=? AND resolution='pending' LIMIT 1",
-            )
-            .bind(user.id, slug)
-            .first<{ id: string }>(),
+        const unresolved = yield* billingQuery(
+          (db) =>
+            db
+              .prepare(
+                "SELECT id FROM billing_checkout WHERE userId=? AND slug=? AND resolution='pending' LIMIT 1",
+              )
+              .bind(user.id, slug)
+              .first<{ id: string }>(),
+          "checkout-unresolved-read",
         );
         if (unresolved !== null) return yield* Effect.fail(billingError("Conflict"));
         const id = yield* billingKey(user.id, requestId);
@@ -127,6 +120,7 @@ export const startBillingCheckout = (
           url: null,
           createdAt: 0,
         });
+        phase = "customer";
         const customer = yield* resolveCustomer(entry, user);
         let customerId: string;
         if (typeof customer === "string") customerId = customer;
@@ -135,7 +129,9 @@ export const startBillingCheckout = (
             customer.row !== null &&
             (entry.provider === "dodo" || Date.now() / 1000 - customer.row.createdAt > 23 * 3600)
           ) {
-            return yield* Effect.fail(billingError("UnknownOutcome"));
+            return yield* Effect.fail(
+              billingFailure("UnknownOutcome", "customer-age-uncertain", entry.provider),
+            );
           }
           if (customer.row === null) yield* reserveCustomer(lease, customer.key, user.id);
           customerId = yield* entry.adapter.customer({
@@ -145,20 +141,27 @@ export const startBillingCheckout = (
           });
           yield* saveCustomer(lease, customer.key, customerId);
         }
+        phase = "checkout";
         const checkout = yield* entry.adapter.checkout({
           customerId,
           productId,
           requestId: id,
           returnUrl: `${origin}/settings/account?billing=return`,
         });
+        phase = "complete";
         const url = yield* hostedBillingUrl(entry.provider, checkout.url);
         yield* completeCheckout(lease, id, customerId, checkout.id, url);
         return { id: checkout.id, url };
       }).pipe(
-        Effect.timeout("20 seconds"),
-        Effect.catchTag("TimeoutError", () => Effect.fail(billingError("UnknownOutcome"))),
-      ),
-    );
+        // The write is uncertain, not retryable: the deadline keeps its TimeoutError cause.
+        billingDeadline({
+          duration: "20 seconds",
+          kind: "UnknownOutcome",
+          phase: () => phase,
+          provider: entry.provider,
+        }),
+      );
+    });
   });
 
 export const openBillingPortal = (userId: string, scope: string, origin: string) =>

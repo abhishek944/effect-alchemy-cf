@@ -7,6 +7,7 @@
  * truncates, repairs or substitutes bytes, so a failed check is a hard error.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { withCause } from "@starter/diagnostics";
 import { skillObjectKey } from "./skills-manifest.ts";
 import { MAX_SKILL_BYTES, type SkillVersionRef } from "./skills-model.ts";
 
@@ -25,8 +26,8 @@ export const skillDigest = async (bytes: Uint8Array): Promise<string> => {
 const decodeText = (bytes: Uint8Array): string => {
   try {
     return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes);
-  } catch {
-    throw new SkillObjectUnavailable("The skill file is not valid UTF-8 text.");
+  } catch (cause) {
+    throw withCause(new SkillObjectUnavailable("The skill file is not valid UTF-8 text."), cause);
   }
 };
 

@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect, Schema } from "effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import {
@@ -29,29 +30,38 @@ const statusOf = (error: OfficeError): number =>
               ? 413
               : 503;
 const encodeOfficeError = Schema.encodeSync(Schema.Union([...OfficeErrors]));
-export const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
-export const invalid = () => new OfficeInvalid(safeFailure("INVALID_INPUT"));
+export const unavailable = (cause?: unknown): OfficeError => {
+  for (const Type of OfficeErrors) if (cause instanceof Type) return cause;
+  return withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE")), cause);
+};
+export const invalid = (cause?: unknown): OfficeError => {
+  for (const Type of OfficeErrors) if (cause instanceof Type) return cause;
+  return withCause(new OfficeInvalid(safeFailure("INVALID_INPUT")), cause);
+};
+
+/** One Failure-to-error classification for public HTTP replies and the private command port. */
+export const officeErrorFromFailure = (failure: Failure): OfficeError =>
+  failure.code === "UNAUTHENTICATED"
+    ? new OfficeUnauthorized(failure)
+    : failure.code === "FORBIDDEN"
+      ? new OfficeForbidden(failure)
+      : failure.code === "NOT_FOUND"
+        ? new OfficeNotFound(failure)
+        : failure.code === "INVALID_INPUT" || failure.code === "CONTENT_REQUIRED"
+          ? new OfficeInvalid(failure)
+          : failure.code === "LIMIT_EXCEEDED"
+            ? new OfficeLimited(failure)
+            : failure.code === "IDEMPOTENCY_CONFLICT" ||
+                failure.code === "NOT_EDITABLE" ||
+                failure.code === "STALE_BASIS" ||
+                failure.code === "STALE_REVIEW" ||
+                failure.code === "NATIVE_CONFLICT"
+              ? new OfficeConflict(failure)
+              : new OfficeUnavailable(failure);
 
 /** Public Office error encoding: real tagged error with only the safe failure fields. */
 export function officeFailure(failure: Failure): HttpServerResponse.HttpServerResponse {
-  const error: OfficeError =
-    failure.code === "UNAUTHENTICATED"
-      ? new OfficeUnauthorized(failure)
-      : failure.code === "FORBIDDEN"
-        ? new OfficeForbidden(failure)
-        : failure.code === "NOT_FOUND"
-          ? new OfficeNotFound(failure)
-          : failure.code === "INVALID_INPUT" || failure.code === "CONTENT_REQUIRED"
-            ? new OfficeInvalid(failure)
-            : failure.code === "LIMIT_EXCEEDED"
-              ? new OfficeLimited(failure)
-              : failure.code === "IDEMPOTENCY_CONFLICT" ||
-                  failure.code === "NOT_EDITABLE" ||
-                  failure.code === "STALE_BASIS" ||
-                  failure.code === "STALE_REVIEW" ||
-                  failure.code === "NATIVE_CONFLICT"
-                ? new OfficeConflict(failure)
-                : new OfficeUnavailable(failure);
+  const error = officeErrorFromFailure(failure);
   return HttpServerResponse.setHeader(
     HttpServerResponse.jsonUnsafe(encodeOfficeError(error), { status: statusOf(error) }),
     "cache-control",

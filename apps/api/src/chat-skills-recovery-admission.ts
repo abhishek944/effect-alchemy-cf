@@ -26,7 +26,10 @@ export const conversationRecoveryAdmission = (env: ConversationFileEnv) => ({
       nativeAccepted: false,
       attemptId: input.leaseId,
     });
-    return raw === null ? null : decodeOption(AdmitDecision, raw);
+    const decision = decodeOption(AdmitDecision, raw);
+    if (decision === null)
+      throw new Error("Private chat catalog returned an invalid admission decision");
+    return decision;
   },
   releaseAdmission: (operationId: string, leaseId: string, ownerId: string) =>
     conversationCatalogPost(env, ownerId, "/release", {

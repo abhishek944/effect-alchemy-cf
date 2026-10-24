@@ -4,6 +4,7 @@
  * Cancellation propagates before dispatch, after awaits and during recovery.
  */
 import type { ToolExecutionResult } from "@earendil-works/pi-durable";
+import { reportThemeObservation } from "./chat-account-diagnostics.ts";
 import { decodeOption } from "./chat-internal.ts";
 import {
   abortIfRequested,
@@ -100,6 +101,10 @@ export const dispatchThemeCommand = async (
   body: { readonly origin: string; readonly command: ThemeCommand },
 ): Promise<ToolExecutionResult> => {
   abortIfRequested(context);
+  let observation: unknown;
+  let dispatch: unknown;
+  let recovery: unknown;
+  let dispatchStatus: number | undefined;
   // An existing exact receipt is the recorded original result: report it as
   // historical instead of re-applying under a new turn.
   try {
@@ -107,6 +112,7 @@ export const dispatchThemeCommand = async (
     if (existing !== null) return report(existing, true);
   } catch (error) {
     if (!(error instanceof AccountCallUncertain)) throw error;
+    observation = error;
   }
   abortIfRequested(context);
   // Exact proven operation only; a latched or corrupt skill state stops the
@@ -123,12 +129,23 @@ export const dispatchThemeCommand = async (
   if (blocked !== null) return unavailable(blocked);
   try {
     const response = await catalogCall(access, ownerId, "POST", path, body, undefined, context);
+    dispatchStatus = response.status;
     const decoded =
       response.status === 200 ? decodeOption(ThemeCommandResponse, response.body) : null;
-    if (decoded !== null && matches(decoded.receipt, body.origin, command))
+    if (decoded !== null && matches(decoded.receipt, body.origin, command)) {
+      if (observation !== undefined)
+        reportThemeObservation(
+          observation,
+          executingOperationId,
+          command.actionId,
+          "receipt-lookup",
+          "confirmed",
+        );
       return report(decoded.receipt);
+    }
   } catch (error) {
     if (!(error instanceof AccountCallUncertain)) throw error;
+    dispatch = error;
   }
   abortIfRequested(context);
   let recovered: ActionReceipt | null = null;
@@ -137,9 +154,30 @@ export const dispatchThemeCommand = async (
   } catch (error) {
     abortIfRequested(context);
     if (!(error instanceof AccountCallUncertain)) throw error;
+    recovery = error;
   }
   abortIfRequested(context);
-  if (recovered !== null) return report(recovered, true);
+  const causes = [dispatch, observation, recovery].filter((item) => item !== undefined);
+  const cause = causes.length > 1 ? new AggregateError(causes) : causes[0];
+  if (recovered !== null) {
+    reportThemeObservation(
+      cause,
+      executingOperationId,
+      command.actionId,
+      "dispatch",
+      "confirmed",
+      dispatchStatus,
+    );
+    return report(recovered, true);
+  }
+  reportThemeObservation(
+    cause,
+    executingOperationId,
+    command.actionId,
+    "receipt-recovery",
+    "unknown",
+    dispatchStatus,
+  );
   return toolResult(
     {
       ok: false,

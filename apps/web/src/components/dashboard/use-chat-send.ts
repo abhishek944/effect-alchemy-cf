@@ -139,9 +139,11 @@ export function useChatSend({
         attachments: files.files.map((file) => file.id),
         references: [...referencesRef.current.ids],
       };
+      // Explicit references replace implicit active-panel targeting; plain chat keeps it.
+      const explicit = frozen.attachments.length > 0 || frozen.references.length > 0;
       preparing.current = true;
       try {
-        const target = await prepareSend(originChatId);
+        const target = await prepareSend(originChatId, explicit);
         if (
           selectionRef.current !== originChatId ||
           stoppingRef.current !== null ||

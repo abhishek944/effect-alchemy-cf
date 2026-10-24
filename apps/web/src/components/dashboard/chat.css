@@ -25,6 +25,13 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+/* File-only entries already reserve their file actions, not a second reply toolbar. */
+[data-dashboard]
+  [data-cx="chat-message"][data-role="assistant"]:has([data-cx="chat-message-generated-files"]):not(
+    :has([data-cx="chat-reply-actions"])
+  ) {
+  margin-bottom: 0;
+}
 [data-dashboard] [data-cx="chat-message"][data-role="user"] {
   width: fit-content;
   max-width: 85%;
@@ -97,6 +104,14 @@
   color: var(--cx-muted);
   font-size: 11px;
   line-height: 1.4;
+}
+[data-dashboard] [data-cx="chat-reconnecting"] {
+  flex-shrink: 0;
+  padding: 8px 24px;
+  color: var(--cx-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
 }
 [data-dashboard] [data-cx="chat-empty"] {
   margin: 0 auto 24px;

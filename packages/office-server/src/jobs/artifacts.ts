@@ -1,3 +1,4 @@
+import { reportFailure, withCause } from "@starter/diagnostics";
 import { Effect } from "effect";
 import {
   OfficeInvalid,
@@ -26,8 +27,10 @@ export const readJobArtifact = Effect.fn("Office.jobs.readArtifact")(function* (
     try: async (interrupted) => {
       const signal = cancellation ? AbortSignal.any([interrupted, cancellation]) : interrupted;
       const reader = found.body.getReader();
+      let cancelling: Promise<void> | undefined;
       const abort = () => {
-        void reader.cancel().catch(() => undefined);
+        cancelling ??= reader.cancel();
+        void cancelling.catch(() => undefined); // Original cancellation is joined below.
       };
       signal.addEventListener("abort", abort, { once: true });
       if (signal.aborted) abort();
@@ -52,10 +55,18 @@ export const readJobArtifact = Effect.fn("Office.jobs.readArtifact")(function* (
         return result;
       } finally {
         signal.removeEventListener("abort", abort);
-        await reader.cancel().catch(() => undefined);
+        abort();
+        await cancelling?.catch((cause: unknown) => {
+          reportFailure(cause, {
+            component: "office.job-supervisor",
+            operation: "cancel-artifact",
+            event: "application.cleanup",
+          });
+        });
+        reader.releaseLock();
       }
     },
-    catch: () => new OfficeUnavailable(safeFailure("UNAVAILABLE")),
+    catch: (cause) => withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE")), cause),
   });
 });
 export function byteStream(bytes: Uint8Array): ReadableStream<Uint8Array> {

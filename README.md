@@ -47,22 +47,22 @@ pnpm build
 
 Run `pnpm run` to list scripts:
 
-| Command                                | Purpose                                                                   |
-| -------------------------------------- | ------------------------------------------------------------------------- |
-| `pnpm lint`                            | Formatting, matching env keys, Oxlint/shadcn, file lengths, Effect, types |
-| `pnpm lint:format`                     | Apply formatting fixes                                                    |
-| `pnpm lint:format:check`               | Check formatting without changes                                          |
-| `pnpm lint:effect`                     | Effect correctness diagnostics for API/auth/infra                         |
-| `pnpm lint:typecheck`                  | All workspace and root TypeScript checks                                  |
-| `pnpm build`                           | Build the frontend and Worker without deploying                           |
-| `pnpm dev`                             | Build, then run local Worker/D1 at localhost:1337 without Access OTP      |
-| `pnpm audit`                           | Audit production dependencies for high/critical advisories                |
-| `pnpm plan:dev` / `pnpm plan:prod`     | Lint, build, preview infrastructure changes                               |
-| `pnpm deploy:dev` / `pnpm deploy:prod` | Lint, build, deploy the chosen cloud stage                                |
+| Command                                | Purpose                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `pnpm lint`                            | Formatting, matching env keys, Oxlint/shadcn, file lengths, Effect, types                         |
+| `pnpm lint:format`                     | Apply formatting fixes                                                                            |
+| `pnpm lint:format:check`               | Check formatting without changes                                                                  |
+| `pnpm lint:effect`                     | Effect correctness diagnostics for API/auth/infra                                                 |
+| `pnpm lint:typecheck`                  | All workspace and root TypeScript checks                                                          |
+| `pnpm build`                           | Build frontend and Worker without deploying; `pnpm dev:office` explicitly builds the Office image |
+| `pnpm dev` / `pnpm dev:web`            | Run local Worker/D1 at localhost:1337 (no build); Vite HMR frontend at 5173                       |
+| `pnpm audit`                           | Audit production dependencies for high/critical advisories                                        |
+| `pnpm plan:dev` / `pnpm plan:prod`     | Lint, build, preview infrastructure changes                                                       |
+| `pnpm deploy:dev` / `pnpm deploy:prod` | Lint, build, deploy the chosen cloud stage                                                        |
 
 `pnpm lint` never applies formatting fixes. The commit hook runs it; CI runs a
 frozen install, audit, lint, and build. See [local development](docs/local-development.md)
-for `pnpm dev`; workspace `typecheck` scripts are internal Turbo tasks.
+for the local workflow; workspace `typecheck` scripts are internal Turbo tasks.
 
 Install creates `packages/config/.env.dev` and `.env.prod`, appending new default
 keys without overwriting edits. Both are gitignored and share `DEV_ACCESS_EMAILS`,

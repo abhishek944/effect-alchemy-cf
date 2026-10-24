@@ -1,3 +1,4 @@
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
 
 /** One REAL fetch/upload/response-body lifetime, not an authority grant or an Effect completion hint. */
@@ -11,13 +12,19 @@ export class OfficeBinaryResource {
   private closing: Promise<void> | undefined;
   private revoked = false;
   private failed = false;
+  private failureCause: unknown;
   private readonly timer: ReturnType<typeof setTimeout>;
   readonly deadline: number;
-  private readonly failure: () => void;
+  private readonly failure: (cause: unknown) => void;
   private readonly aborted = () => {
-    void this.close().catch(() => this.failure());
+    void this.close().catch((cause) => this.failure(cause));
   };
-  constructor(parent: AbortSignal, effect: AbortSignal, deadline: number, failure: () => void) {
+  constructor(
+    parent: AbortSignal,
+    effect: AbortSignal,
+    deadline: number,
+    failure: (cause: unknown) => void,
+  ) {
     this.deadline = deadline;
     this.failure = failure;
     this.done = new Promise<void>((resolve) => {
@@ -56,9 +63,10 @@ export class OfficeBinaryResource {
       .then(close)
       .then(
         () => undefined,
-        () => {
+        (cause) => {
+          if (!this.failed) this.failureCause = cause;
           this.failed = true;
-          this.failure();
+          this.failure(cause);
           return undefined;
         },
       );
@@ -76,7 +84,14 @@ export class OfficeBinaryResource {
       await Promise.all([...this.closers.keys()].map((close) => this.start(close)));
       clearTimeout(this.timer);
       this.signal.removeEventListener("abort", this.aborted);
-      if (this.failed) throw new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+      if (this.failed)
+        throw withCause(
+          withDiagnostic(
+            new OfficeUnavailable(safeFailure("UNAVAILABLE")),
+            "binary-resource-close",
+          ),
+          this.failureCause,
+        );
       return undefined;
     });
     // A terminal observer of the REAL close, not an early "current map is empty" assertion.

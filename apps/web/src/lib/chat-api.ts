@@ -1,9 +1,10 @@
-import type { OfficeSendTarget } from "@starter/office-contract";
-import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
+import type { OfficeSendTarget, Target } from "@starter/office-contract";
 import type { ChatSelection } from "@/lib/chat-capability-types";
-import type { ChatUsageAmount } from "@/lib/chat-capability-usage-types";
+import type { ChatMessage } from "@/lib/chat-message-types";
+export type { ChatMessage } from "@/lib/chat-message-types";
 import { rejectionOf, type NoAdmissionRejection } from "@/lib/chat-api-rejection";
-import type { Coverage, TextInfo } from "@/lib/chat-history-types";
+import { readResponseRequestId, serverReference, withReference } from "@/lib/browser-diagnostics";
+import type { Coverage } from "@/lib/chat-history-types";
 import type { SkillRecovery } from "@/lib/chat-skills-api";
 import {
   parseAccepted,
@@ -12,7 +13,6 @@ import {
   parseOk,
   parseSnapshotValue,
 } from "@/lib/chat-validate";
-
 export type Chat = {
   id: string;
   title: string;
@@ -20,27 +20,6 @@ export type Chat = {
   createdAt: string;
   updatedAt: string;
 };
-
-export type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  /** Exact ordered prefix of this message's public text, never an ellipsis. */
-  text: string;
-  createdAt: string;
-  /** Original send operation UUID for public user messages, else null. */
-  operationId: string | null;
-  /** Staged originals submitted with this user message; empty on replies. */
-  attachments: ChatFileDescriptor[];
-  /** True only for actual saved receipts tied to this exact assistant entry/model slot. */
-  hasGeneratedFiles: boolean;
-  /** Logical operation a retry answer belongs to; null for an original send. */
-  attemptOf: string | null;
-  /** True only for an answer whose pinned attempt failed; partials stay visible. */
-  incomplete: boolean;
-  /** Message-specific reported/estimated counters; null while streaming or unknown. */
-  usage: ChatUsageAmount | null;
-} & TextInfo;
-
 export type ChatSnapshot = {
   chat: Chat;
   messages: ChatMessage[];
@@ -56,17 +35,25 @@ export type ChatSnapshot = {
   usageRevision: string;
   /** Present only while a pinned skill attempt still needs an explicit recovery action. */
   skillRecovery: SkillRecovery | null;
+  panelRequest?: { id: string; target: Target; expiresAt: number } | null;
 };
-
 export class ChatApiError extends Error {
   readonly status: number;
   readonly rejection: NoAdmissionRejection | null;
-
-  constructor(status: number, message: string, rejection: NoAdmissionRejection | null = null) {
-    super(message);
+  readonly requestId: string | null;
+  constructor(
+    status: number,
+    message: string,
+    rejection: NoAdmissionRejection | null = null,
+    requestId: string | null = null,
+    operation = "chat.request",
+    responseStatus = status,
+  ) {
+    super(withReference(message, serverReference(operation, responseStatus, requestId)));
     this.name = "ChatApiError";
     this.status = status;
     this.rejection = rejection;
+    this.requestId = requestId;
   }
 }
 const statusMessages: Record<number, string> = {
@@ -94,79 +81,89 @@ export function errorMessage(error: unknown): string {
   return "Something went wrong. Please try again.";
 }
 
-export async function request(path: string, init?: RequestInit): Promise<unknown> {
+/** Per-response metadata only; never shared between requests. */
+export type JsonResponse = { body: unknown; requestId: string | null; status: number };
+export async function requestJson(
+  path: string,
+  operation: string,
+  init?: RequestInit,
+): Promise<JsonResponse> {
   const response = await fetch(path, {
     credentials: "same-origin",
     headers: { accept: "application/json" },
     ...init,
   });
+  const requestId = readResponseRequestId(response);
   if (!response.ok) {
-    let message = statusMessages[response.status] ?? `Request failed (${response.status}).`;
+    const message = statusMessages[response.status] ?? `Request failed (${response.status}).`;
     let rejection: NoAdmissionRejection | null = null;
     try {
       const body: unknown = await response.json();
-      if (
-        body &&
-        typeof body === "object" &&
-        "message" in body &&
-        typeof body.message === "string" &&
-        body.message.trim()
-      ) {
-        message = body.message;
-      }
       rejection = rejectionOf(body, response.status);
-    } catch {
+    } catch (cause) {
+      if (init?.signal?.aborted) throw cause;
       // Keep the safe status message when the body is not JSON.
     }
-    throw new ChatApiError(response.status, message, rejection);
+    throw new ChatApiError(response.status, message, rejection, requestId, operation);
   }
-  if (response.status === 204) return undefined;
-  const body: unknown = await response.json();
-  return body;
+  if (response.status === 204) return { body: undefined, requestId, status: response.status };
+  try {
+    return { body: await response.json(), requestId, status: response.status };
+  } catch (cause) {
+    if (init?.signal?.aborted) throw cause;
+    throw unexpectedResponse(requestId, operation, response.status);
+  }
 }
 
+export const request = (path: string, init?: RequestInit): Promise<unknown> =>
+  requestJson(path, "chat.request", init).then((seen) => seen.body);
 const json = (body: unknown): RequestInit => ({
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify(body),
 });
-
-export async function listChats(): Promise<Chat[]> {
-  const chats = parseChatList(await request("/api/chats"));
-  if (!chats) throw unexpectedResponse();
-  return chats;
-}
-
-export function unexpectedResponse(): ChatApiError {
-  return new ChatApiError(502, "The server returned an unexpected response.");
-}
-
-export async function createChat(id: string): Promise<Chat> {
-  const chat = parseChat(await request("/api/chats", json({ id })));
-  if (!chat) throw unexpectedResponse();
-  return chat;
-}
-
-export async function updateChat(
-  id: string,
-  patch: { title?: string; archived?: boolean },
-): Promise<Chat> {
-  const chat = parseChat(
-    await request(`/api/chats/${encodeURIComponent(id)}`, {
-      ...json(patch),
-      method: "PATCH",
-    }),
+export const listChats = (): Promise<Chat[]> =>
+  requestDecoded("/api/chats", "chat.list", parseChatList);
+export const unexpectedResponse = (
+  requestId: string | null = null,
+  operation = "chat.request",
+  responseStatus = 502,
+): ChatApiError =>
+  new ChatApiError(
+    502,
+    "The server returned an unexpected response.",
+    null,
+    requestId,
+    operation,
+    responseStatus,
   );
-  if (!chat) throw unexpectedResponse();
-  return chat;
+
+export async function requestDecoded<T>(
+  path: string,
+  operation: string,
+  parse: (body: unknown) => T | null,
+  init?: RequestInit,
+): Promise<T> {
+  const { body, requestId, status } = await requestJson(path, operation, init);
+  const value = parse(body);
+  if (value === null) throw unexpectedResponse(requestId, operation, status);
+  return value;
+}
+export async function createChat(id: string): Promise<Chat> {
+  return requestDecoded("/api/chats", "chat.create", parseChat, json({ id }));
+}
+
+type ChatPatch = { title?: string; archived?: boolean };
+export async function updateChat(id: string, patch: ChatPatch): Promise<Chat> {
+  return requestDecoded(`/api/chats/${encodeURIComponent(id)}`, "chat.update", parseChat, {
+    ...json(patch),
+    method: "PATCH",
+  });
 }
 
 export async function getSnapshot(id: string, signal: AbortSignal): Promise<ChatSnapshot> {
-  const snapshot = parseSnapshotValue(
-    await request(`/api/chats/${encodeURIComponent(id)}`, { signal }),
-  );
-  if (!snapshot) throw unexpectedResponse();
-  return snapshot;
+  const path = `/api/chats/${encodeURIComponent(id)}`;
+  return requestDecoded(path, "chat.snapshot", parseSnapshotValue, { signal });
 }
 
 export async function sendMessage(
@@ -180,18 +177,21 @@ export async function sendMessage(
     officeTarget?: OfficeSendTarget;
   },
 ): Promise<{ accepted: boolean }> {
-  const accepted = parseAccepted(
-    await request(`/api/chats/${encodeURIComponent(id)}/messages`, json(input)),
-  );
-  if (accepted === null) throw unexpectedResponse();
-  return { accepted };
+  return requestDecoded(
+    `/api/chats/${encodeURIComponent(id)}/messages`,
+    "chat.send",
+    parseAccepted,
+    json(input),
+  ).then((accepted) => ({ accepted }));
 }
 
 export async function stopChat(id: string, operationId: string): Promise<{ ok: true }> {
-  const ok = parseOk(
-    await request(`/api/chats/${encodeURIComponent(id)}/stop`, json({ operationId })),
+  await requestDecoded(
+    `/api/chats/${encodeURIComponent(id)}/stop`,
+    "chat.stop",
+    (body) => (parseOk(body) ? true : null),
+    json({ operationId }),
   );
-  if (!ok) throw unexpectedResponse();
   return { ok: true };
 }
 

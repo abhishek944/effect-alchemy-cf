@@ -15,10 +15,12 @@ export function readOfficeDocumentSources(
   owner: OwnerScope,
   documentId: string,
   cursor: string | null,
+  operationId: string | null = null,
 ): Store<OfficeSourcePage> {
   const db = new MetadataStore(options);
   return storeEffect(async () => {
     const id = decodeWireSync(Id)(documentId);
+    if (operationId !== null) decodeWireSync(Id)(operationId);
     let after = "";
     if (cursor !== null) {
       const position = decodeWireSync(Position)(JSON.parse(cursor));
@@ -35,12 +37,12 @@ export function readOfficeDocumentSources(
     if (doc.document.id !== id || canonical(doc.owner) !== canonical(owner)) throw invalid();
     const rows = await db.all<{ id: string; record: string }>(
       `SELECT id,record FROM office_meta_operations WHERE owner=? AND document=?
-       AND phase='confirmed' AND id>?
+       AND phase='confirmed' AND id>? AND (? IS NULL OR id=?)
        AND json_extract(record,'$.actor.capability')='draft-task'
        AND json_extract(record,'$.actor.sourceFile') IS NOT NULL
        AND json_extract(record,'$.intent.kind') IN ('create','import-into')
        ORDER BY id LIMIT 21`,
-      [scope, id, after],
+      [scope, id, after, operationId, operationId],
     );
     const items: OfficeSourceLink[] = [];
     let bytes = 512;

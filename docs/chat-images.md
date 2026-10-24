@@ -47,14 +47,16 @@ identifiers, not base64 or complete file bodies. Exact accepted input/submission
 entry/model slot, task/attempt/cutoff, owner and chat-model proof is required at the
 final Models boundary. Only that request receives transient original bytes and
 quoted text; hydrated values never enter checkpoints, memos, history or compaction.
+Saved references resolve authorized immutable file IDs without recalculating or
+comparing content checksums. Ownership, accepted state and bounded file-content
+validation remain enforced; upload/ingest content identity is unchanged.
 Hook exceptions alone cannot authorize fallback inference. Historical rows are not
 rewritten or backfilled. Proven pre-image ordinary text-only continuations use a
 fixed startup boundary and the same final native checks, without image-generation
 authority; missing image-era sidecars and unprovable old binary recovery are refused.
 
 Generation uses the actual configured Cloudflare catalog/Gateway route with one
-provider attempt. The host reserves both transient memory and owner output storage
-before dispatch permission. Each immutable output is stored privately before a
+provider attempt. The host reserves owner output storage before dispatch permission. Each immutable output is stored privately before a
 compact link is returned. Receipts bind the real tool-calling assistant entry and
 native call/output order, not whichever later prose reply is newest.
 
@@ -68,13 +70,13 @@ Existing uploads remain at 10 MiB / 16 MP per image, 1 MiB per safe-text file an
 five files / 20 MiB per message, including references. These are not a promise that
 every original fits a chat model or a 128 MiB Worker request.
 
-The conservative shared transient image pool is 96 MiB per isolate. Current native
-generation uses a 4 MiB output ceiling without references and a 3 MiB edit/output
-ceiling with references, matching bounded base64 envelopes and a 120-second package
-deadline. Aggregate original occurrences and actual model/context limits can refuse
-work earlier. There is no resizing, app queue, fan-out or new image-count cap.
-Oversized references fail before provider contact; oversized provider outputs can
-fail after charging. No refund or free-failure promise is made.
+There is no application-side image RAM estimate, shared reservation pool or
+memory-admission gate. Generation and edits use the existing10MiB image-file
+ceiling and a bounded encoded response body, with a120-second package deadline.
+Actual model/context, file-size and storage-quota limits still apply. There is no
+resizing, app queue, fan-out or new image-count cap. Cloudflare runtime memory
+limits still apply: large requests can fail at runtime, including after charging.
+No refund or free-failure promise is made.
 
 Native generation allocates at most the lesser of advertised output,32,768 tokens
 and half the model context, respecting a smaller explicit allowance. Earlier
@@ -82,14 +84,18 @@ Skills and final hydrated-input budgets reserve that same allocation; catalog
 maximum output is not subtracted as though every response requested all of it.
 The separate native compaction path is unchanged.
 
-Actual transport, original reads, body decoding and storage retain their memory
-leases until real completion, including ignored-abort work. These are conservative
-policy budgets, not a measured heap sandbox: SDK/platform copies, GC and unrelated
-avatar/voice/Office workloads still need live acceptance. Arbitrary remote output
+Cancellation still disposes owned response bodies. The image host waits for real
+provider/body/storage work before finishing durable output intent; this is not
+memory accounting or admission. Runtime heap behavior remains unverified. Arbitrary remote output
 URLs are denied without established trusted origins; inline catalog outputs use the
 shared package materializer. Original URL identifiers are never fetched externally.
 
 A dispatched/uncertain failure never triggers automatic image regeneration.
+Internal adapter, response-body and bookkeeping failures retain their original
+native causes for fixed, correlated diagnostics; only allowlisted classification,
+owner/operation and existing operation/call IDs are emitted. These reports never
+replace a known accepted or partial output, add a retry, release an uncertain
+claim or rewrite an uncertain write, and user/tool-facing messages stay unchanged.
 Read-only Retry checks the same metadata/original/receipt; another paid attempt needs
 a new explicit user request. Missing bytes keep file identity and an honest local
 unavailable state. Partial successful outputs are retained. Interrupted unsafe native
@@ -128,8 +134,8 @@ provision keys, change production resources or call providers without approval.
 Build/type/lint/source review cannot prove provider eligibility, charges, R2/SQLite
 crash recovery, actual Proxy/stream behavior, aggregate heap or authenticated visuals.
 After permitted live setup, verify two-user isolation; upload and @ retention across
-reload/archive; original-byte integrity and source links; preference CAS/outages;
-native parallel resource refusals; Stop before/during provider/storage work; lost
+reload/archive; readable saved originals and source links; preference CAS/outages;
+runtime failures under load; Stop before/during provider/storage work; lost
 consume/PUT/acceptance acknowledgments; retained partial outputs; no replay after
 crash/reconnect/Skills Retry; exact assistant receipt/cost association; Unknown,
 partial, zero and mixed-currency costs; and keyboard/IME/narrow/all-theme UI behavior.

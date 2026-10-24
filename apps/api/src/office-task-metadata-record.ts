@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { ArtifactRef } from "@starter/office-contract";
+import { officeImportOptions, type ArtifactRef } from "@starter/office-contract";
 import type { OfficeMetadata, OperationRecord, JobRecord } from "@starter/office-server/ports";
 import type { OfficeTaskInvocation } from "./office-task-issuance.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
@@ -21,7 +21,10 @@ export function officeTaskOriginalRef(original: OfficeTaskInvocation, ref: Artif
     ref.kind === "upload" &&
     ref.id === id &&
     original.task.proof.association.originals.some(
-      (file) => file.kind === "office" && file.digest === ref.digest && file.byteSize === ref.bytes,
+      (file) =>
+        officeImportOptions(file.mediaType, file.name) !== null &&
+        file.digest === ref.digest &&
+        file.byteSize === ref.bytes,
     )
   );
 }

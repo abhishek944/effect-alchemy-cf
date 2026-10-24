@@ -2,11 +2,11 @@ import type { ImageContent, TextContent, UserMessage } from "@earendil-works/pi-
 import { MAX_EXCERPT_CHARS, MAX_QUOTED_TEXT_CHARS } from "./chat-attachment-schema.ts";
 import { chatFilesImageCompatibility } from "./chat-files-native.ts";
 import { attachmentBoundary, decodeTextFile, quotedAttachmentBlock } from "./chat-files-text.ts";
+import { csvReferenceBlock, isCsvOriginal } from "./chat-image-hydration-csv.ts";
 import { createChatLibraryClient } from "./chat-library-client.ts";
 import type { SavedOriginalMetadata } from "./chat-library-original.ts";
 import { readAcceptedOriginal } from "./chat-image-original.ts";
 import { runImageIO } from "./chat-image-io.ts";
-import type { ImageMemoryLease } from "./chat-image-memory.ts";
 import { encodeHydrationBase64 } from "./chat-image-hydration-codec.ts";
 import type { HydrationOccurrence, ImageHydrationPlan } from "./chat-image-hydration-plan.ts";
 import {
@@ -23,7 +23,6 @@ export type AuthorizedHydrationOccurrence = HydrationOccurrence & {
 export const authorizeHydrationOriginals = async (
   input: ImageHydrationInput,
   plan: ImageHydrationPlan,
-  lease: ImageMemoryLease,
 ): Promise<readonly AuthorizedHydrationOccurrence[]> => {
   if (!plan.occurrences.some((item) => item.occurrence.originals.length > 0))
     return plan.occurrences.map((item) => ({ ...item, originals: [] }));
@@ -38,7 +37,6 @@ export const authorizeHydrationOriginals = async (
     for (const binding of item.occurrence.originals) {
       hydrationSignal(input.signal);
       const authority = await runImageIO({
-        lease,
         signal: input.signal,
         run: () => client.original(chatId, binding.fileId),
       });
@@ -47,7 +45,6 @@ export const authorizeHydrationOriginals = async (
       if (
         file.id !== binding.fileId ||
         file.chatId !== chatId ||
-        authority.digest !== binding.digest ||
         authority.originOperationId !== binding.originOperationId ||
         file.name !== binding.name ||
         file.kind !== binding.kind ||
@@ -77,7 +74,6 @@ export const authorizeHydrationOriginals = async (
 export const loadHydrationOccurrence = async (
   input: ImageHydrationInput,
   item: AuthorizedHydrationOccurrence,
-  lease: ImageMemoryLease,
 ): Promise<UserMessage> => {
   if (item.originals.length === 0) return item.message;
   const content: (TextContent | ImageContent)[] =
@@ -90,17 +86,28 @@ export const loadHydrationOccurrence = async (
     return hydrationFailure("original_unavailable");
   const ownerScope = catalog.id.toString();
   const boundary = attachmentBoundary();
-  const textTotal = item.originals.filter((original) => original.file.kind === "text").length;
+  const textTotal = item.originals.filter(
+    (original) => original.file.kind === "text" && !isCsvOriginal(original.file),
+  ).length;
+  const csvTotal = item.originals.filter((original) => isCsvOriginal(original.file)).length;
   let textIndex = 0;
+  let csvIndex = 0;
   let quotedChars = 0;
   for (const original of item.originals) {
     hydrationSignal(input.signal);
+    if (isCsvOriginal(original.file)) {
+      content.push({
+        type: "text",
+        text: csvReferenceBlock(original.file, boundary, csvIndex, csvTotal, original.digest),
+      });
+      csvIndex += 1;
+      continue;
+    }
     const loaded = await readAcceptedOriginal({
       bucket,
       ownerScope,
       chatId: input.proof.current.candidate.chatId,
-      metadata: { state: "accepted", ownerScope, file: original.file, digest: original.digest },
-      lease,
+      metadata: { state: "accepted", ownerScope, file: original.file },
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     });
     hydrationSignal(input.signal);

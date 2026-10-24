@@ -10,10 +10,11 @@ import type {
 } from "../ports/index.ts";
 import { officeFailure } from "./failure.ts";
 
-import { Intent, StoredOperation } from "./record-schemas.ts";
-import { actorIdentity, intentIdentity, boundedMetadataDigest } from "./control-identity.ts";
+import { StoredOperation } from "./record-schemas.ts";
+import { actorIdentity, boundedMetadataDigest } from "./control-identity.ts";
 export { sha256, metadataDigest, boundedMetadataDigest } from "./control-identity.ts";
-import { initialOperation } from "./operation-create.ts";
+import { createOperationRecord } from "./operation-create.ts";
+import { prepareOperation } from "./operation-prepare.ts";
 export const reserveOperation = Effect.fn("Office.reserveOperation")(function* (
   deps: OfficeDependencies,
   actor: ActorClaims,
@@ -21,38 +22,15 @@ export const reserveOperation = Effect.fn("Office.reserveOperation")(function* (
   document: DocumentRecord,
   draft: DraftRecord | null,
 ) {
-  const intent = yield* decodeWire(Intent)(intentValue).pipe(
-    Effect.mapError(() => officeFailure("INVALID_INPUT")),
-  );
-  if (
-    actor.capability === "draft-task" &&
-    (intent.kind === "approve" ||
-      intent.kind === "merge" ||
-      (intent.kind === "create" && intent.input.destination !== "new-draft"))
-  )
-    return yield* Effect.fail(officeFailure("FORBIDDEN", intent.input.operationId));
+  const prepared = yield* prepareOperation(deps, actor, intentValue, document, draft);
+  const { intent, intentDigest, lineageDigest } = prepared;
+  // Capability/idempotency restriction is prepared; this is reserve's own fresh-basis rule.
   if (
     actor.capability === "draft-task" &&
     (intent.kind === "execute" || intent.kind === "import-into") &&
     actor.target?.expectedRevision !== intent.input.target.expectedRevision
   )
     return yield* Effect.fail(officeFailure("STALE_BASIS", intent.input.operationId));
-  const lineageDigest = yield* boundedMetadataDigest(
-    actorIdentity(actor),
-    deps.policy.limits.metadataBytes,
-  );
-  const intentDigest = yield* boundedMetadataDigest(
-    [
-      "office-operation",
-      1,
-      intentIdentity(intent),
-      document.document.id,
-      document.unitId,
-      draft?.worktreeId ?? null,
-      deps.policy.version,
-    ],
-    deps.policy.limits.metadataBytes,
-  );
   const accept = (raw: unknown) =>
     Effect.gen(function* () {
       const accepted = yield* decodeWire(StoredOperation)(raw).pipe(
@@ -79,7 +57,7 @@ export const reserveOperation = Effect.fn("Office.reserveOperation")(function* (
     });
   const previous = yield* deps.metadata.operation(actor.owner, intent.input.operationId);
   if (previous !== null) return yield* accept(previous);
-  const normalized = yield* initialOperation(deps, actor, intent, document, draft);
+  const normalized = yield* createOperationRecord(deps, actor, prepared, document, draft);
   const acceptedRaw = yield* deps.metadata.reserveOperation(normalized).pipe(
     Effect.catch((error) => {
       if (error.code !== "IDEMPOTENCY_CONFLICT" && error.code !== "NATIVE_CONFLICT")
@@ -95,7 +73,7 @@ export const advanceOperation = Effect.fn("Office.advanceOperation")(function* (
   deps: OfficeDependencies,
   record: OperationRecord,
   phase: OperationPhase,
-  update: Partial<Pick<OperationRecord, "artifacts" | "jobId">> = {},
+  update: Partial<Pick<OperationRecord, "artifacts" | "jobId" | "merge">> = {},
   receiptUpdate: Partial<
     Pick<OperationRecord["receipt"], "artifact" | "acceptedRevision" | "reviewId" | "error">
   > = {},

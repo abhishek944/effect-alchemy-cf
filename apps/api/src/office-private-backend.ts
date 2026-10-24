@@ -21,6 +21,7 @@ import {
 } from "../../office/src/native-private-wire.ts";
 import {
   officePrivateAuthority,
+  officeCaught,
   officeDenied,
   officeSame,
   type OfficePrivateRequest,
@@ -39,7 +40,6 @@ import { officePrivateJobs } from "./office-private-jobs.ts";
 import { officeTaskStorage } from "./office-task-storage.ts";
 
 export { OfficePrivateCall, OfficePrivateReply };
-
 /** Concrete finite backend after genuine original process/session/View proof; no generic property/SQL RPC. */
 export function officePrivateBackend(
   options: OfficeProviderOptions,
@@ -79,7 +79,6 @@ export function officePrivateBackend(
     async call(payload: unknown, cleanup: boolean) {
       const call = decodeWireSync(OfficePrivateCall)(payload);
       if (cleanup && !cleanupMethods.has(call.method)) throw officeDenied();
-      if (!cleanup) await request.live();
       if (Schema.is(metadataRequest)(call)) {
         const response = await Effect.runPromise(
           dispatchOfficeMetadata(
@@ -93,7 +92,7 @@ export function officePrivateBackend(
                       if ("permit" in candidate.input) turns.verifyPermit(candidate.input.permit);
                       await claims.before(candidate);
                     },
-                    catch: officeDenied,
+                    catch: officeCaught,
                   }),
                 ),
               ),
@@ -105,6 +104,7 @@ export function officePrivateBackend(
         await request.live();
         return response;
       }
+      if (!cleanup) await request.live();
       let value: unknown;
       if (Schema.is(readRequest)(call))
         value = await handles.use(
@@ -128,7 +128,7 @@ export function officePrivateBackend(
         value = null;
       } else if (Schema.is(NativeChannelMember.request)(call)) {
         if (channel === null || call.input.channelId !== channel.channelId) throw officeDenied();
-        await channel.member(call.input);
+        await channel.member(call.input, request.id);
         value = { invocationId: request.id };
       } else if (Schema.is(NativeChannelSubmission.request)(call)) {
         if (channel === null || editor === null || call.input.channelId !== channel.channelId)
@@ -171,8 +171,6 @@ export function officePrivateBackend(
               call.input.admission,
             );
             break;
-          case "turn.renew":
-            throw officeDenied(); // No renewal permission: retain original absolute admission.
           case "turn.release":
             value = await turns.release(call.input.turnId, call.input.expectedVersion);
             break;

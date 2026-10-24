@@ -1,8 +1,7 @@
 /** Safe host I/O failures. Never include private keys, URLs or foreign error bodies. */
+import { withCause } from "@starter/diagnostics";
+
 export type ImageIOCode =
-  | "invalid_memory_estimate"
-  | "lease_closed"
-  | "lease_capacity"
   | "cancelled"
   | "invalid_metadata"
   | "original_unavailable"
@@ -31,4 +30,4 @@ export const checkImageIOSignal = (signal?: AbortSignal): void => {
 export const safeImageIOError = (error: unknown): ImageIOError =>
   error instanceof ImageIOError
     ? error
-    : new ImageIOError("io_failed", "Private image I/O could not be completed.");
+    : withCause(new ImageIOError("io_failed", "Private image I/O could not be completed."), error);

@@ -68,6 +68,14 @@ controls. File and voice controls follow their configured capability gates; see
 the browser. Inference requires explicit Gateway/BYOK setup and is remotely
 billable even on localhost. See [Pi chat setup and acceptance](pi-chat.md).
 The message renderer supports user bubbles and assistant prose on the canvas.
+Tool calls use compact T3code-style activity groups, collapsed by default after a
+run. Expand a group to see its calls; expand a call for bounded public input and
+result previews. Failures remain visible in the collapsed summary. Running,
+pending, cancelled and unknown outcomes stay explicit; missing results are never
+shown as success. Truncated previews say so. Disclosures do not rerun tools.
+Tool-only assistant entries use compact outer spacing with timestamp and Response
+facts beside the group. Prose and saved-file entries keep their existing spacing
+and actions; native message identities are not merged across tool rounds.
 Archived chats replace the entire composer with an archived notice and inline
 Unarchive. A running answer continues, with a compact Stop outside the input area.
 Unarchiving restores the existing current-page draft. New chats get a separate,
@@ -97,11 +105,17 @@ shell and session, including modifier-click/new-tab behavior. Chat drafts and
 pane choices survive Home/Settings switches in the current page; reloads still
 clear drafts. Home and Settings each retain their own right-pane layout.
 
-The existing top toolbar contains neutral right-pane tabs: Files keeps its folder
-icon and text, images open exact preview tabs, and + creates an empty Tools tab.
-Files search/filter/sort the saved collection, independent of loaded messages;
-images appear above details, while nonimages are download-only. Compact message
-file actions prepare exact @ references without sending; upper-draft chips retain
+The existing top toolbar contains neutral outlined right-pane tabs, preceded by
+a short divider matching the chat-title divider. Files keeps its folder icon and
+text, images open exact preview tabs, and the matching outlined + creates an empty
+Tools tab. New chats start with Tools; Files opens only when selected there.
+Files stays blank without a selected chat. Empty/unavailable optional Office lists
+show no read-error banner or Retry button. A refresh icon beside sort reloads both
+file lists without resetting filters. Files search/filter/sort the saved collection, independent of loaded messages;
+images appear above details; text/CSV and Office originals show content previews.
+Non-image cards open a read-only preview dialog; text source/panel actions open a
+text tab. Only explicit Office Open in panel imports a Univer draft. Composer
+previews stay local until Send. Saved originals retain Download actions. Both use Add reference (@) without sending; upper-draft chips retain
 identity and offer read-only recovery. Image preferences live only in Settings →
 Images. Existing Response facts and Cost details keep image costs separate from
 text/voice totals. See [chat images](chat-images.md) for behavior and limits.
@@ -162,6 +176,12 @@ their existing local presentation and recovery. Signin and admin are unchanged.
     Escape returns to the initiating button; outside clicks keep their native focus.
     Shift+Tab from Usage to model/effort must close the old ledger, not cover the picker.
     Cancel Rename with Escape and confirm focus returns without saving.
+
+11. Include populated message layouts, not only an empty chat: an image-only
+    assistant entry followed by text, image entries with Copy, and ordinary text.
+    A file-only entry must not reserve space for an absent reply toolbar; per-file
+    actions keep their own row. Use existing non-sensitive content or a clearly
+    labeled local visual fixture rather than triggering paid generation.
 
 Stop local dev before frontend build checks, then restart it. Otherwise the asset
 manifest can become stale and return SPA HTML for new hashed JS/CSS requests.

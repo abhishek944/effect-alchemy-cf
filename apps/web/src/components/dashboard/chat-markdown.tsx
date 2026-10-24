@@ -5,6 +5,7 @@ import {
 } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyButton, useMessageCopy } from "./chat-copy";
+import { useMessageImageAlts } from "./chat-message-image-alts";
 import "./chat-markdown.css";
 
 /** The native URL transform runs first; further restrict links to public outbound URLs. */
@@ -46,7 +47,7 @@ function CodeBlock({ code, components: { Pre, Code } }: SyntaxHighlighterProps) 
   );
 }
 
-const components: MarkdownTextPrimitiveProps["components"] = {
+const staticComponents: MarkdownTextPrimitiveProps["components"] = {
   SyntaxHighlighter: CodeBlock,
   a: ({ href, children, title }) => {
     const safeHref = outboundUrl(href);
@@ -59,7 +60,7 @@ const components: MarkdownTextPrimitiveProps["components"] = {
     );
   },
   // Never emit an img/src: even Markdown images remain inert text.
-  img: ({ alt }) => <span data-cx="chat-markdown-image">[Image: {alt || "omitted"}]</span>,
+  // The contextual img renderer is added by ChatMarkdown below.
   // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard scrolling of code.
   pre: ({ children }) => <pre tabIndex={0}>{children}</pre>,
   table: ({ children }) => (
@@ -74,6 +75,22 @@ const remarkPlugins = [remarkGfm];
 const containerProps: NonNullable<MarkdownTextPrimitiveProps["containerProps"]> & {
   "data-cx": string;
 } = { "data-cx": "chat-markdown" };
+
+/** File cards show the caption, so claimed images stay screen-reader-only here. */
+function MarkdownImage({ alt, src }: { alt?: string | undefined; src?: string | undefined }) {
+  const alts = useMessageImageAlts();
+  const claimed = typeof src === "string" && alts.some((entry) => entry.src === src);
+  return claimed ? (
+    <span data-cx="chat-sr-only">{alt || "Image"}</span>
+  ) : (
+    <span data-cx="chat-markdown-image">[Image: {alt || "omitted"}]</span>
+  );
+}
+
+const components: MarkdownTextPrimitiveProps["components"] = {
+  ...staticComponents,
+  img: MarkdownImage,
+};
 
 /** Must be mounted as MessagePrimitive.Parts' Text renderer, not outside a part. */
 export function ChatMarkdown() {

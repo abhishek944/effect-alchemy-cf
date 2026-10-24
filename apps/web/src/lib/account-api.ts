@@ -5,7 +5,7 @@
  * dedicated photo route; the browser never sees an object key, and the only
  * avatar URL is the owner-authenticated photo endpoint itself.
  */
-import { errorMessage, request, unexpectedResponse } from "@/lib/chat-api";
+import { errorMessage, requestJson, requestDecoded } from "@/lib/chat-api";
 import {
   envelopeField,
   parseAccountThemeView,
@@ -27,21 +27,25 @@ export type ProfileWriteInput = {
 };
 
 export async function getProfile(signal?: AbortSignal): Promise<ProfileView> {
-  const body = await request("/api/profile", signal ? { signal } : undefined);
-  const profile = parseProfileView(envelopeField(body, "profile"));
-  if (!profile) throw unexpectedResponse();
-  return profile;
+  return requestDecoded(
+    "/api/profile",
+    "account.profile",
+    (body) => parseProfileView(envelopeField(body, "profile")),
+    signal ? { signal } : undefined,
+  );
 }
 
 export async function writeProfile(input: ProfileWriteInput): Promise<ProfileView> {
-  const body = await request("/api/profile", {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  const profile = parseProfileView(envelopeField(body, "profile"));
-  if (!profile) throw unexpectedResponse();
-  return profile;
+  return requestDecoded(
+    "/api/profile",
+    "account.profile-write",
+    (body) => parseProfileView(envelopeField(body, "profile")),
+    {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 /**
@@ -49,23 +53,29 @@ export async function writeProfile(input: ProfileWriteInput): Promise<ProfileVie
  * completeness, size and pixel validation; the browser declares nothing.
  */
 export async function uploadAvatar(file: File, name: string): Promise<AvatarUploadView> {
-  const body = await request(PROFILE_PHOTO_URL, {
-    method: "POST",
-    headers: {
-      "content-type": file.type || "application/octet-stream",
-      "x-file-name": encodeURIComponent(name),
+  return requestDecoded(
+    PROFILE_PHOTO_URL,
+    "account.avatar-upload",
+    (body) => parseAvatarUpload(envelopeField(body, "avatar")),
+    {
+      method: "POST",
+      headers: {
+        "content-type": file.type || "application/octet-stream",
+        "x-file-name": encodeURIComponent(name),
+      },
+      body: file,
     },
-    body: file,
-  });
-  const avatar = parseAvatarUpload(envelopeField(body, "avatar"));
-  if (!avatar) throw unexpectedResponse();
-  return avatar;
+  );
 }
 
 /** Cancels a staged upload. A missing stage is already gone, so it is not an error. */
 export async function cancelAvatar(avatarId: string): Promise<void> {
   try {
-    await request(`${PROFILE_PHOTO_URL}?id=${encodeURIComponent(avatarId)}`, { method: "DELETE" });
+    await requestJson(
+      `${PROFILE_PHOTO_URL}?id=${encodeURIComponent(avatarId)}`,
+      "account.avatar-cancel",
+      { method: "DELETE" },
+    );
   } catch {
     // The object is unreferenced either way; the catalog sweep owns retrying.
   }
@@ -76,10 +86,12 @@ export function profilePhotoUrl(avatarId: string): string {
 }
 
 export async function getAccountTheme(signal?: AbortSignal): Promise<AccountThemeView> {
-  const body = await request("/api/theme", signal ? { signal } : undefined);
-  const view = parseAccountThemeView(envelopeField(body, "theme"));
-  if (!view) throw unexpectedResponse();
-  return view;
+  return requestDecoded(
+    "/api/theme",
+    "account.theme",
+    (body) => parseAccountThemeView(envelopeField(body, "theme")),
+    signal ? { signal } : undefined,
+  );
 }
 
 export async function writeAccountTheme(
@@ -87,14 +99,16 @@ export async function writeAccountTheme(
   theme: AccountTheme,
   actionId: string,
 ): Promise<AccountThemeView> {
-  const body = await request("/api/theme", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ expectedRevision, theme, actionId }),
-  });
-  const view = parseAccountThemeView(envelopeField(body, "theme"));
-  if (!view) throw unexpectedResponse();
-  return view;
+  return requestDecoded(
+    "/api/theme",
+    "account.theme-write",
+    (body) => parseAccountThemeView(envelopeField(body, "theme")),
+    {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ expectedRevision, theme, actionId }),
+    },
+  );
 }
 
 export { errorMessage };

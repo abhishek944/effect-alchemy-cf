@@ -1,4 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
+import { withCause } from "@starter/diagnostics";
 import type { RuntimeContext } from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Context, Effect, Layer, Schema } from "effect";
@@ -54,7 +55,7 @@ export class OfficeSessionEpochs extends Context.Service<
             stage,
             ownerId,
             sessionId,
-          }).pipe(Effect.mapError(() => new OfficeSessionUnavailable()));
+          }).pipe(Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)));
           const db: D1Database = yield* client.raw;
           const row = yield* Effect.tryPromise({
             try: async () => {
@@ -77,10 +78,10 @@ export class OfficeSessionEpochs extends Context.Service<
                 .bind(input.stage, input.sessionId)
                 .first();
             },
-            catch: () => new OfficeSessionUnavailable(),
+            catch: (cause) => withCause(new OfficeSessionUnavailable(), cause),
           });
           const binding = yield* Schema.decodeUnknownEffect(Binding)(row).pipe(
-            Effect.mapError(() => new OfficeSessionUnavailable()),
+            Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)),
           );
           if (
             binding.owner_id !== input.ownerId ||
@@ -99,7 +100,7 @@ export class OfficeSessionEpochs extends Context.Service<
             stage,
             ownerId,
             sessionId,
-          }).pipe(Effect.mapError(() => new OfficeSessionUnavailable()));
+          }).pipe(Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)));
           const db = yield* client.raw;
           const row = yield* Effect.tryPromise({
             try: () =>
@@ -108,11 +109,11 @@ export class OfficeSessionEpochs extends Context.Service<
               WHERE stage=? AND owner_id=? AND session_id=?`)
                 .bind(input.stage, input.ownerId, input.sessionId)
                 .first(),
-            catch: () => new OfficeSessionUnavailable(),
+            catch: (cause) => withCause(new OfficeSessionUnavailable(), cause),
           });
           if (row === null) return null;
           const binding = yield* Schema.decodeUnknownEffect(Binding)(row).pipe(
-            Effect.mapError(() => new OfficeSessionUnavailable()),
+            Effect.mapError((cause) => withCause(new OfficeSessionUnavailable(), cause)),
           );
           if (
             binding.stage !== input.stage ||

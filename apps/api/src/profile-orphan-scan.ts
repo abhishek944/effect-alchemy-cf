@@ -6,6 +6,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import type { AgentContext } from "agents";
 import { Schema } from "effect";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { avatarObjectPrefix, deleteAvatarKeys } from "./profile-avatar.ts";
@@ -32,7 +33,17 @@ export const reconcileAvatarOrphans = async (scope: Scope): Promise<void> => {
     page = await bucket.list({ prefix, limit: 50, ...(cursor === null ? {} : { cursor }) });
   } catch (cause) {
     // A stale provider cursor must not permanently disable discovery.
-    await storage.delete(CURSOR);
+    try {
+      await storage.delete(CURSOR);
+    } catch (cleanup) {
+      throw withDiagnostic(
+        withCause(
+          new Error("Avatar discovery and cursor cleanup failed"),
+          new AggregateError([cause, cleanup]),
+        ),
+        "profile_orphan_scan_failed",
+      );
+    }
     throw cause;
   }
   const saved = profile.find()?.avatar;

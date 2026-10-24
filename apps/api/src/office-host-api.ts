@@ -1,4 +1,7 @@
 import { Effect, Schema } from "effect";
+import { withCause } from "@starter/diagnostics";
+import { officeReportBranch } from "./office-diagnostic-report.ts";
+import { officeCaught } from "./office-failure.ts";
 import {
   Count,
   Digest,
@@ -29,7 +32,16 @@ const Upload = Schema.Struct({
   bytes: Count,
   digest: Schema.NullOr(Digest),
 });
-const uncertain = () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
+const uncertain = (cause?: unknown) =>
+  withCause(new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")), cause);
+const diagnosed = (cause: unknown, reason: string, callId?: string, mode = "ingress") =>
+  officeReportBranch(officeCaught(cause), {
+    component: "office.host-api",
+    operation: "request",
+    phase: mode,
+    reason,
+    callId,
+  });
 /** ONLY actual authenticated Worker private namespace can reach this audience, never Node callbacks. */
 export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
   let registered: OfficeInvocation | undefined;
@@ -40,29 +52,51 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
       url.pathname,
     );
     if (root.closing || match === null || match[1] === undefined || match[2] === undefined)
-      return yield* Effect.fail(officeDenied());
+      return yield* Effect.fail(
+        diagnosed(officeDenied(), root.closing ? "api-closing" : "api-route-invalid"),
+      );
     const mode = match[1],
       id = decodeWireSync(Id)(match[2]),
       suffix = match[3] ?? "";
     // Actual same-script API association precedes this synchronous ownership claim.
-    registered = root.registry.claim(id);
-    const original = yield* officeHostOriginal(root, id);
-    if (original !== registered) return yield* Effect.fail(officeDenied());
-    yield* Effect.try({ try: () => assertOfficeTaskRoute(original, mode), catch: officeDenied });
+    try {
+      registered = root.registry.claim(id);
+    } catch (cause) {
+      throw diagnosed(cause, "registry-claim", id, mode);
+    }
+    const original = yield* officeHostOriginal(root, id).pipe(
+      Effect.mapError((cause) => diagnosed(cause, "registry-resolve", id, mode)),
+    );
+    if (original !== registered)
+      return yield* Effect.fail(diagnosed(officeDenied(), "invocation-mismatch", id, mode));
+    if ("purpose" in original && (original.purpose === "channel") !== (mode === "channel"))
+      return yield* Effect.fail(diagnosed(officeDenied(), "invocation-purpose", id, mode));
+    yield* Effect.try({
+      try: () => assertOfficeTaskRoute(original, mode),
+      catch: (cause) => diagnosed(cause, "task-route", id, mode),
+    });
     for (const [key, until] of root.consumed) if (until <= Date.now()) root.consumed.delete(key);
     if (root.consumed.has(id) || root.consumed.size >= 4096)
-      return yield* Effect.fail(officeDenied());
+      return yield* Effect.fail(
+        diagnosed(
+          officeDenied(),
+          root.consumed.has(id) ? "invocation-reused" : "invocation-capacity",
+          id,
+          mode,
+        ),
+      );
     root.consumed.set(id, original.deadline); // One actual original forward, never admission-ACK replay.
     const active = yield* Effect.tryPromise({ try: () => root.active(), catch: uncertain });
     if (mode === "protocol")
       return yield* officeHostProtocol(root, active, original, request, suffix);
     if (mode === "sources") {
-      if (suffix !== "") return yield* Effect.fail(officeDenied());
+      if (suffix !== "")
+        return yield* Effect.fail(diagnosed(officeDenied(), "sources-suffix", id, mode));
       return yield* officeHostSources(root, active, original, request);
       // No handed frame: finally releases the Human registration after actual IO joins.
     }
     if (request.method !== "POST" || (!["download", "artifact"].includes(mode) && suffix !== ""))
-      return yield* Effect.fail(officeDenied());
+      return yield* Effect.fail(diagnosed(officeDenied(), "api-method", id, mode));
     if (mode === "channel") {
       const input = decodeWireSync(Channel)(
         yield* Effect.tryPromise({
@@ -73,7 +107,7 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
       );
       const value = yield* Effect.tryPromise({
         try: () => createOfficeHostChannel(root, active, original, input.viewId, input.editorId),
-        catch: uncertain,
+        catch: (cause) => diagnosed(uncertain(cause), "channel-create", id, mode),
       });
       handed = true;
       return Response.json(value);
@@ -112,19 +146,24 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
     }
     yield* Effect.try({
       try: () => assertOfficeTaskBody(original, command, file),
-      catch: officeDenied,
+      catch: (cause) => diagnosed(cause, "task-body", id, mode),
     });
-    const entry = officeHostEntry(root, active, original, {
-      command,
-      view: null,
-      binding: null,
-      channelId: null,
-      canonical: false,
-      kind: "http",
-      deadline: original.deadline,
-      access: null,
-      file,
-    });
+    let entry: ReturnType<typeof officeHostEntry>;
+    try {
+      entry = officeHostEntry(root, active, original, {
+        command,
+        view: null,
+        binding: null,
+        channelId: null,
+        canonical: false,
+        kind: "http",
+        deadline: original.deadline,
+        access: null,
+        file,
+      });
+    } catch (cause) {
+      throw diagnosed(cause, "entry-create", id, mode);
+    }
     handed = true;
     const callId = command === null ? null : crypto.randomUUID();
     if (command !== null)

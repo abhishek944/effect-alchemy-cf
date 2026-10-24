@@ -21,6 +21,7 @@ export function useUnsavedGuard(
   dirty: boolean,
   restoreRootRef: RefObject<HTMLElement | null>,
   enabled = true,
+  warn = dirty,
 ) {
   const [pending, setPending] = useState<DeferredLeave | null>(null);
   const [lastDirty, setLastDirty] = useState(dirty);
@@ -36,7 +37,12 @@ export function useUnsavedGuard(
   const atIndex = useRef(currentHistoryIndex());
   const owned = useRef<OwnedTraversal | null>(null);
   const dirtyRef = useRef(dirty);
+  const warnRef = useRef(warn);
   const mounted = useRef(true);
+
+  useLayoutEffect(() => {
+    warnRef.current = warn;
+  }, [warn]);
 
   useEffect(() => {
     mounted.current = true;
@@ -99,6 +105,7 @@ export function useUnsavedGuard(
       atIndex,
       queued,
       dirty: () => dirtyRef.current,
+      warn: () => warnRef.current,
       defer,
       setDecision,
     });

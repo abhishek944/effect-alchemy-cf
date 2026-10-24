@@ -3,7 +3,7 @@ import type {
   OfficePiHost,
   OfficeResolution,
   OfficeTaskAccess,
-  OfficeTaskClient,
+  OfficeTaskPort,
 } from "@starter/office-pi";
 import { uploadOfficeBytes } from "@starter/office-contract/client";
 import type { Registry } from "@earendil-works/pi-durable";
@@ -11,7 +11,7 @@ import type { Registry } from "@earendil-works/pi-durable";
 /** T11 must supply real verified private host resources; this example constructs no actor. */
 type PrivateAccess = {
   readonly origin: URL;
-  readonly client: OfficeTaskClient;
+  readonly client: OfficeTaskPort;
   readonly request: (url: URL, init: RequestInit) => Promise<Response>;
   readonly acceptedFile: OfficeTaskAccess["acceptedFile"];
 };

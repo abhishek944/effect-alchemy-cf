@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import {
   DocumentPage,
   Draft,
@@ -53,44 +52,35 @@ export const checkDraft = (raw: unknown, draftId: string): Draft => {
   return draft;
 };
 
-/** Real endpoint mapping; principal/authenticated transport stay captured in the host client. */
+/** Real endpoint mapping; principal/authenticated transport stay captured in the host port. */
 export const dispatch = async (
   command: OfficeCommand,
   access: OfficeTaskAccess,
   signal?: AbortSignal,
 ): Promise<OfficeOutput> => {
   const client = access.client;
-  const run = <A, E>(effect: Effect.Effect<A, E>) =>
-    Effect.runPromise(effect, signal === undefined ? {} : { signal });
   switch (command.command) {
     case "list":
       return {
         kind: "documents",
-        value: decodeWireSync(DocumentPage)(
-          await run(client.list({ query: { cursor: command.cursor } })),
-        ),
+        value: decodeWireSync(DocumentPage)(await client.list({ cursor: command.cursor })),
       };
     case "draft":
       return {
         kind: "draft",
-        value: checkDraft(
-          await run(client.draft({ params: { draftId: command.draftId } })),
-          command.draftId,
-        ),
+        value: checkDraft(await client.draft({ id: command.draftId }), command.draftId),
       };
     case "drafts":
       return {
         kind: "drafts",
-        value: decodeWireSync(DraftPage)(
-          await run(client.drafts({ query: { cursor: command.cursor } })),
-        ),
+        value: decodeWireSync(DraftPage)(await client.drafts({ cursor: command.cursor })),
       };
     case "open": {
-      const view = decodeWireSync(View)(await run(client.open({ payload: command.input })));
+      const view = decodeWireSync(View)(await client.open(command.input));
       const scope = command.input.scope;
       if (
         view.documentId !== command.input.documentId ||
-        view.nativeTarget.kind !== scope.kind ||
+        (view.nativeTarget.kind !== "pinned-snapshot" && view.nativeTarget.kind !== scope.kind) ||
         (scope.kind === "draft" &&
           view.nativeTarget.kind === "draft" &&
           view.nativeTarget.generation !== scope.generation)
@@ -102,21 +92,14 @@ export const dispatch = async (
     case "stage-file":
       return { kind: "artifact", value: await stage(command, access, signal) };
     case "inspect": {
-      const inspection = decodeWireSync(Inspection)(
-        await run(client.inspect({ payload: command.input })),
-      );
+      const inspection = decodeWireSync(Inspection)(await client.inspect(command.input));
       if (inspection.viewId !== command.input.viewId)
         throw new Error("Office inspection identity mismatch");
       return { kind: "inspection", value: inspection };
     }
     case "review": {
       const review = decodeWireSync(ReviewPage)(
-        await run(
-          client.review({
-            params: { reviewId: command.reviewId },
-            query: { cursor: command.cursor },
-          }),
-        ),
+        await client.review({ reviewId: command.reviewId, cursor: command.cursor }),
       );
       if (review.reviewId !== command.reviewId) throw new Error("Office review identity mismatch");
       return { kind: "review", value: review };
@@ -125,11 +108,7 @@ export const dispatch = async (
       return {
         kind: "receipt",
         value: checkReceipt(
-          await run(
-            client.receipt({
-              params: { operationId: command.operationId },
-            }),
-          ),
+          await client.receipt({ operationId: command.operationId }),
           command.operationId,
           null,
         ),
@@ -143,30 +122,54 @@ export const dispatch = async (
     case "ready":
     case "reopen":
     case "discard": {
-      const input = command.input;
-      const result =
-        command.command === "create"
-          ? client.create({ payload: command.input })
-          : command.command === "create-draft"
-            ? client.createDraft({ payload: command.input })
-            : command.command === "import-into"
-              ? client.importInto({ payload: command.input })
-              : command.command === "execute"
-                ? client.execute({ payload: command.input })
-                : command.command === "render"
-                  ? client.render({ payload: command.input })
-                  : command.command === "export"
-                    ? client.export({ payload: command.input })
-                    : command.command === "ready"
-                      ? client.ready({ payload: command.input })
-                      : command.command === "reopen"
-                        ? client.reopen({ payload: command.input })
-                        : client.discard({ payload: command.input });
+      const operationId = command.input.operationId;
+      const raw = await receiptCall(command, client);
       return {
         kind: "receipt",
-        value: checkReceipt(await run(result), input.operationId, receiptKind(command)),
+        value: checkReceipt(raw, operationId, receiptKind(command)),
       };
     }
+  }
+  throw new Error("Unsupported Office command");
+};
+
+const receiptCall = (
+  command: Extract<
+    OfficeCommand,
+    {
+      command:
+        | "create"
+        | "create-draft"
+        | "execute"
+        | "import-into"
+        | "render"
+        | "export"
+        | "ready"
+        | "reopen"
+        | "discard";
+    }
+  >,
+  client: OfficeTaskAccess["client"],
+): Promise<unknown> => {
+  switch (command.command) {
+    case "create":
+      return client.create(command.input);
+    case "create-draft":
+      return client.createDraft(command.input);
+    case "execute":
+      return client.execute(command.input);
+    case "import-into":
+      return client.importInto(command.input);
+    case "render":
+      return client.render(command.input);
+    case "export":
+      return client.export(command.input);
+    case "ready":
+      return client.ready(command.input);
+    case "reopen":
+      return client.reopen(command.input);
+    case "discard":
+      return client.discard(command.input);
   }
   throw new Error("Unsupported Office command");
 };

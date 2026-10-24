@@ -45,6 +45,7 @@ export const createConversationImageAccess = (input: {
     throw new ChatUnavailable();
   return {
     storage: input.storage,
+    inputs: input.responses,
     responses: input.responses,
     legacyEra: input.legacyEra,
     ownerId,

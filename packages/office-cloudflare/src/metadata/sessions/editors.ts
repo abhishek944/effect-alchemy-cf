@@ -1,4 +1,3 @@
-import { Count, decodeWireSync } from "@starter/office-contract";
 import type { Editor, EditorAction } from "@starter/office-contract";
 import type { OwnerScope, ViewRecord } from "@starter/office-server/ports";
 import type { MetadataStore, Statement } from "../store.ts";
@@ -25,15 +24,12 @@ export async function acquireEditor(
       canonical({ documentId: input.target.documentId, scope: input.target.scope })
   )
     throw invalid();
-  const plan = await prepareView(db, input, true),
+  const plan = await prepareView(db, input, false),
     key = db.owner(owner),
-    branch = viewBranch(plan.record);
-  const previous = await db.first<{ epoch: number }>(
-    "SELECT epoch FROM office_meta_editor_epochs WHERE owner=? AND document=? AND branch=?",
-    [key, action.target.documentId, branch],
-  );
-  const epoch = decodeWireSync(Count)((previous?.epoch ?? 0) + 1),
+    branch = viewBranch(plan.record),
     now = await clock(db);
+  // Each ID owns its own revocation epoch; another open never invalidates this session.
+  const epoch = 1;
   const ttl = editorTtl(db),
     editor: Editor = {
       id: crypto.randomUUID(),
@@ -46,30 +42,11 @@ export async function acquireEditor(
     editor.view.mode === "edit"
       ? noBarrier(db, owner, action.target.documentId)
       : { sql: "1", values: [] };
-  const epochSQL = previous
-    ? "EXISTS(SELECT 1 FROM office_meta_editor_epochs WHERE owner=? AND document=? AND branch=? AND epoch=?)"
-    : "NOT EXISTS(SELECT 1 FROM office_meta_editor_epochs WHERE owner=? AND document=? AND branch=?)";
   await db.write(
-    `(${plan.fence.sql}) AND (${barrier.sql}) AND ?>${sqlNow} AND ${epochSQL}
-    AND NOT EXISTS(SELECT 1 FROM office_meta_editors WHERE owner=? AND document=? AND branch=? AND state IN ('active','draining','unclean'))`,
-    [
-      ...plan.fence.values,
-      ...barrier.values,
-      editor.expiresAt,
-      key,
-      action.target.documentId,
-      branch,
-      ...(previous ? [previous.epoch] : []),
-      key,
-      action.target.documentId,
-      branch,
-    ],
+    `(${plan.fence.sql}) AND (${barrier.sql}) AND ?>${sqlNow}`,
+    [...plan.fence.values, ...barrier.values, editor.expiresAt],
     [
       ...plan.statements,
-      [
-        "INSERT INTO office_meta_editor_epochs VALUES(?,?,?,?) ON CONFLICT(owner,document,branch) DO UPDATE SET epoch=excluded.epoch",
-        [key, action.target.documentId, branch, epoch],
-      ],
       [
         "INSERT INTO office_meta_editors VALUES(?,?,?,?,?,?,?,?)",
         [
@@ -85,7 +62,7 @@ export async function acquireEditor(
       ],
       leaseEvent(db, owner, plan.record),
     ],
-    "BUSY",
+    "NOT_EDITABLE",
   );
   return editor;
 }
@@ -126,20 +103,8 @@ export async function renewEditor(
       : { sql: "1", values: [] };
   await db.write(
     `(${plan.fence.sql}) AND (${barrier.sql}) AND EXISTS(SELECT 1 FROM office_meta_editors
-    WHERE owner=? AND id=? AND epoch=? AND state='active' AND expires>${sqlNow} AND record=?)
-    AND EXISTS(SELECT 1 FROM office_meta_editor_epochs WHERE owner=? AND document=? AND branch=? AND epoch=?)`,
-    [
-      ...plan.fence.values,
-      ...barrier.values,
-      key,
-      id,
-      expected,
-      previous.row.record,
-      key,
-      old.view.documentId,
-      previous.row.branch,
-      expected,
-    ],
+    WHERE owner=? AND id=? AND epoch=? AND state='active' AND expires>${sqlNow} AND record=?)`,
+    [...plan.fence.values, ...barrier.values, key, id, expected, previous.row.record],
     [...plan.statements, leaseUpdate(db, key, editor, null), leaseEvent(db, owner, plan.record)],
     "NOT_EDITABLE",
   );

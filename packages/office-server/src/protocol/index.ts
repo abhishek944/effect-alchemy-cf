@@ -23,9 +23,10 @@ export type { OfficeSubmissionAuthority } from "./submission-services.ts";
 export { evaluateNativePermissions, type PermissionChannel } from "./authz.ts";
 export { evaluateViewPermissions } from "./view-permissions.ts";
 export { classifyNativeRoute } from "./routes.ts";
-type Joined = {
+/** Draft-only membership: the SDK already owns real Main joined-member state. */
+type DraftJoined = {
   readonly session: EndpointSession;
-  readonly worktreeId: string | null;
+  readonly worktreeId: string;
   readonly units: Set<string>;
 };
 /** Real SDK endpoints/transport only. Host authority callbacks acquire each actual fenced scope. */
@@ -49,60 +50,46 @@ export function createOfficeProtocol(
     ticketStore: tickets,
     sessionTicketTtlMs: 30_000,
   });
-  const joined = new Map<string, Joined>();
-  const connections = new Map<
-    string,
-    { connection: NodeTransportConnection; timer: ReturnType<typeof setTimeout> }
-  >();
+  const joined = new Map<string, DraftJoined>();
+  const connections = new Map<string, NodeTransportConnection>();
   const forget = (connection: NodeTransportConnection) => {
-    const record = connections.get(connection.id);
-    if (record) clearTimeout(record.timer);
     connections.delete(connection.id);
     joined.delete(connection.id);
     authority.closed(connection);
   };
-  const track = (
-    connection: NodeTransportConnection,
-    session: EndpointSession,
-    worktreeId: string | null,
-  ) => {
+  /** Physical transport tracking only; it proves neither membership nor authority. */
+  const attach = (connection: NodeTransportConnection) => {
     if (connections.size >= 64) {
       connection.close(1013, "Office channel limit");
-      return;
+      return false;
     }
-    const timer = setTimeout(
-      () => connection.close(4401, "Office channel renewal required"),
-      60_000,
-    );
-    timer.unref();
-    connections.set(connection.id, { connection, timer });
-    joined.set(connection.id, { session, worktreeId, units: new Set() });
+    connections.set(connection.id, connection);
+    return true;
   };
   main.use("connect", async (ctx, next) => {
     await authority.session(ctx.session, null, null);
     await next();
-    track(ctx.connection, ctx.session, null);
+    attach(ctx.connection);
   });
   drafts.use("connect", async (ctx, next) => {
     await authority.session(ctx.session, ctx.worktreeID, null);
     await next();
-    track(ctx.connection, ctx.session, ctx.worktreeID);
+    if (attach(ctx.connection))
+      joined.set(ctx.connection.id, {
+        session: ctx.session,
+        worktreeId: ctx.worktreeID,
+        units: new Set(),
+      });
   });
   main.use("joinUnit", async (ctx, next) => {
     await authority.session(ctx.session, null, ctx.unitID);
     await next();
-    for (const entry of joined.values())
-      if (entry.session === ctx.session) entry.units.add(ctx.unitID);
   });
   drafts.use("joinUnit", async (ctx, next) => {
     await authority.session(ctx.session, ctx.worktreeID, ctx.unitID);
     await next();
     for (const entry of joined.values())
       if (entry.session === ctx.session) entry.units.add(ctx.unitID);
-  });
-  main.on("memberLeftUnit", (event) => {
-    for (const entry of joined.values())
-      if (entry.session === event.session) entry.units.delete(event.unitID);
   });
   drafts.on("memberLeftUnit", (event) => {
     for (const entry of joined.values())
@@ -166,10 +153,8 @@ export function createOfficeProtocol(
       );
     },
     async dispose() {
-      for (const { connection, timer } of connections.values()) {
-        clearTimeout(timer);
+      for (const connection of connections.values())
         connection.close(1001, "Office channel closed");
-      }
       connections.clear();
       joined.clear();
       await transport.dispose();

@@ -15,6 +15,16 @@ const NativeRequest = Schema.declare<cf.Request>(
 );
 export const officeNativeSignal = Schema.decodeUnknownSync(NativeSignal);
 export const officeNativeRequest = Schema.decodeUnknownSync(NativeRequest);
+/** Pair the native stop reason with its monitor; every other failure remains a real failure. */
+export function officeNativeMonitor(native: cf.Container) {
+  const stopped = new Error("Office container stopped by its owner.");
+  return {
+    wait: native.monitor().catch((cause: unknown) => {
+      if (cause !== stopped) throw cause;
+    }),
+    destroy: () => native.destroy(stopped),
+  };
+}
 export function officeWebResponse(value: unknown): Response {
   if (!(value instanceof Response)) throw unavailable();
   // Transfer the SAME body/socket; native Response init retains WebSocket101 and makes headers mutable.

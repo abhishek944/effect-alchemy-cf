@@ -8,6 +8,7 @@
  * folded into an unavailable result.
  */
 import type { ToolExecutionApi, ToolExecutionResult } from "@earendil-works/pi-durable";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import { Effect } from "effect";
 import { doCall, type ChatCatalogStub, type DoCall } from "./chat-bindings.ts";
 import type { ResolveResult, ToolContext } from "./chat-account-resolver.ts";
@@ -64,6 +65,6 @@ export const catalogCall = async (
     return result;
   } catch (error) {
     if (context !== undefined) abortIfRequested(context);
-    throw new AccountCallUncertain(String(error));
+    throw withCause(withDiagnostic(new AccountCallUncertain(), "account_call_uncertain"), error);
   }
 };

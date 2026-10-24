@@ -13,6 +13,13 @@ import type { ChatSendRecords } from "./chat-send-records.ts";
 import type { ChatSkillsNoAdmissions } from "./chat-skills-no-admission.ts";
 import type { SendMessage } from "./chat-model.ts";
 
+export type SendProgress = {
+  phase: string;
+  outcome: "confirmed" | "failed" | "unknown" | "not-submitted" | "cancelled";
+};
+/** Caller-immutable per-request correlation; never stored or used for authority. */
+export type SendObservation = { readonly requestId?: string | undefined };
+
 export type PreparedChatSend = { content: UserInput; files: readonly FileDescriptor[] };
 export type ChatSendScope = {
   chat: Chat;

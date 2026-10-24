@@ -1,8 +1,9 @@
 import type * as cf from "@cloudflare/workers-types";
 import { Auth } from "@starter/auth";
+import { reportFailureEffect, requestDiagnosticContext } from "@starter/diagnostics";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { RuntimeContext } from "alchemy";
-import { Effect, Schema } from "effect";
+import { Cause, Effect, Schema } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces } from "./chat-bindings.ts";
@@ -49,6 +50,7 @@ export const handleChatMedia = Effect.gen(function* () {
     const candidate = env.CHAT_FILES;
     if (!bucketBinding(candidate))
       return fail(503, "Private attachment storage is not configured.");
+    const diagnostic = Object.freeze(yield* requestDiagnosticContext);
     const response = yield* Effect.promise(async () => {
       await nativeJson(
         ns.catalog(ownerId),
@@ -59,6 +61,7 @@ export const handleChatMedia = Effect.gen(function* () {
       );
       return handleChatFilesRequest({
         request: web,
+        diagnostic,
         route,
         ownerId,
         bucket: candidate,
@@ -84,6 +87,11 @@ export const handleChatMedia = Effect.gen(function* () {
   return fail(404, "Not found.");
 }).pipe(
   Effect.provide(RuntimeContext.phantom),
+  Effect.tapCause((cause) =>
+    Cause.hasInterruptsOnly(cause)
+      ? Effect.void
+      : reportFailureEffect(cause, { component: "chat-media", operation: "request" }),
+  ),
   Effect.catch(() => Effect.succeed(fail(503, "Chat service unavailable."))),
   Effect.catchDefect(() => Effect.succeed(fail(503, "Chat service unavailable."))),
 );

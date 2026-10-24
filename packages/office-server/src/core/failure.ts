@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import { withCause } from "@starter/diagnostics";
 import {
   OfficeConflict,
   OfficeForbidden,
@@ -43,6 +44,9 @@ export const isOfficeError = (value: unknown): value is OfficeError =>
   value instanceof OfficeUnauthorized;
 export function nativeFailure(cause: unknown): OfficeError {
   if (isOfficeError(cause)) return cause;
+  return withCause(classifyNativeFailure(cause), cause);
+}
+function classifyNativeFailure(cause: unknown): OfficeError {
   if (cause instanceof CollabError) {
     if (cause.code === "UNAUTHENTICATED") return officeFailure("UNAUTHENTICATED");
     if (cause.code === "PERMISSION_DENIED") return officeFailure("FORBIDDEN");

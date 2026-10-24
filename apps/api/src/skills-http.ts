@@ -11,7 +11,8 @@ import type * as cf from "@cloudflare/workers-types";
 import { Auth } from "@starter/auth";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { RuntimeContext } from "alchemy";
-import { Effect } from "effect";
+import { Cause, Effect, Schema } from "effect";
+import { reportFailureEffect } from "@starter/diagnostics";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall } from "./chat-bindings.ts";
@@ -91,17 +92,10 @@ export const handleSkills = Effect.gen(function* () {
       owner,
     );
     if (call.status !== 200) return internalFailure(call, "That skill file is not available.");
-    const ref = decodeOption(SkillVersionRef, call.body);
-    if (ref === null || ref.id !== id || ref.version !== version)
-      return unavailable("That skill file is not available.", 404);
-    const bytes = yield* Effect.promise(async () => {
-      try {
-        return await readSkillBytes(bucket, scope, ref);
-      } catch {
-        return null;
-      }
-    });
-    if (bytes === null) return unavailable("That skill file could not be verified.");
+    const ref = Schema.decodeUnknownSync(SkillVersionRef)(call.body);
+    if (ref.id !== id || ref.version !== version)
+      throw new Error("Private skill file identity does not match the requested version");
+    const bytes = yield* Effect.promise(() => readSkillBytes(bucket, scope, ref));
     return downloadResponse(ref, bytes);
   }
 
@@ -111,13 +105,12 @@ export const handleSkills = Effect.gen(function* () {
     if (uploadId === null) return invalidSkill("Provide a valid upload id.", 400);
     const call = yield* doCall(catalog, "POST", "/skills/cancel", { uploadId }, owner);
     if (call.status !== 200) return internalFailure(call, "The skill library is unavailable.");
-    const receipt = decodeOption(SkillUploadReceipt, call.body);
+    const receipt = Schema.decodeUnknownSync(SkillUploadReceipt)(call.body);
     if (
-      receipt === null ||
       receipt.uploadId !== uploadId ||
       (receipt.state !== "published" && receipt.state !== "expired")
     )
-      return unavailable("The skill library returned an invalid cancellation.");
+      throw new Error("Private skill cancellation acknowledgement does not match");
     return jsonResponse(receipt, 200);
   }
 
@@ -136,10 +129,8 @@ export const handleSkills = Effect.gen(function* () {
       owner,
     );
     if (call.status !== 200) return internalFailure(call, "The skill library is unavailable.");
-    const list = decodeOption(SkillList, call.body);
-    return list === null
-      ? unavailable("The skill library returned an invalid response.")
-      : jsonResponse(list, 200);
+    const list = Schema.decodeUnknownSync(SkillList)(call.body);
+    return jsonResponse(list, 200);
   }
 
   if (web.method !== "POST") return invalidSkill("That skills method is not supported.", 405);
@@ -147,6 +138,11 @@ export const handleSkills = Effect.gen(function* () {
   return yield* uploadSkill({ catalog, owner, scope, bucket, url, web });
 }).pipe(
   Effect.provide(RuntimeContext.phantom),
+  Effect.tapCause((cause) =>
+    Cause.hasInterruptsOnly(cause)
+      ? Effect.void
+      : reportFailureEffect(cause, { component: "skills", operation: "http.request" }),
+  ),
   Effect.catch(() => Effect.succeed(unavailable("Skills service unavailable."))),
   Effect.catchDefect(() => Effect.succeed(unavailable("Skills service unavailable."))),
 );

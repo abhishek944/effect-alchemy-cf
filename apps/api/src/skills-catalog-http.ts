@@ -7,6 +7,7 @@
  * SkillError envelopes with honest codes and the nullable current conflict file.
  */
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure } from "@starter/diagnostics";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import {
   SkillCancelRequest,
@@ -35,42 +36,58 @@ export const handleSkillsCatalog = async (
   const url = new URL(request.url);
   const route = `${request.method} ${url.pathname}`;
   const now = Date.now();
-  switch (route) {
-    case "GET /skills": {
-      const uploadId = url.searchParams.get("uploadId");
-      if (uploadId !== null && decodeOption(SkillId, uploadId) === null)
-        return invalid("That upload id is not valid.");
-      return respond(await catalog.list(uploadId));
+  let operationId: string | undefined;
+  try {
+    switch (route) {
+      case "GET /skills": {
+        const uploadId = url.searchParams.get("uploadId");
+        if (uploadId !== null && decodeOption(SkillId, uploadId) === null)
+          return invalid("That upload id is not valid.");
+        return respond(await catalog.list(uploadId));
+      }
+      case "GET /skills/snapshot": {
+        const revision = url.searchParams.get("revision");
+        if (revision !== null && decodeOption(SkillRevision, revision) === null)
+          return invalid("That revision is not valid.");
+        return respond(await catalog.snapshot(revision));
+      }
+      case "POST /skills/reserve": {
+        const body = decodeOption(SkillReservationRequest, await requestBody(request));
+        if (body === null) return invalid("That skill reservation is not valid.");
+        operationId = body.uploadId;
+        return respond(catalog.reserve(body, now));
+      }
+      case "POST /skills/publish": {
+        const body = decodeOption(SkillPublishRequest, await requestBody(request));
+        if (body === null) return invalid("That publish request is not valid.");
+        operationId = body.uploadId;
+        return respond(await catalog.publish(body.uploadId, bucket, now));
+      }
+      case "POST /skills/cancel": {
+        const body = decodeOption(SkillCancelRequest, await requestBody(request));
+        if (body === null) return invalid("That cancellation request is not valid.");
+        operationId = body.uploadId;
+        return respond(catalog.cancel(body.uploadId, now));
+      }
+      case "GET /skills/file": {
+        const id = decodeOption(SkillId, url.searchParams.get("id"));
+        const version = decodeOption(SkillId, url.searchParams.get("version"));
+        if (id === null || version === null)
+          return invalid("That skill file reference is not valid.");
+        return respond(catalog.file(id, version));
+      }
+      default:
+        return null;
     }
-    case "GET /skills/snapshot": {
-      const revision = url.searchParams.get("revision");
-      if (revision !== null && decodeOption(SkillRevision, revision) === null)
-        return invalid("That revision is not valid.");
-      return respond(await catalog.snapshot(revision));
-    }
-    case "POST /skills/reserve": {
-      const body = decodeOption(SkillReservationRequest, await requestBody(request));
-      if (body === null) return invalid("That skill reservation is not valid.");
-      return respond(catalog.reserve(body, now));
-    }
-    case "POST /skills/publish": {
-      const body = decodeOption(SkillPublishRequest, await requestBody(request));
-      if (body === null) return invalid("That publish request is not valid.");
-      return respond(await catalog.publish(body.uploadId, bucket, now));
-    }
-    case "POST /skills/cancel": {
-      const body = decodeOption(SkillCancelRequest, await requestBody(request));
-      if (body === null) return invalid("That cancellation request is not valid.");
-      return respond(catalog.cancel(body.uploadId, now));
-    }
-    case "GET /skills/file": {
-      const id = decodeOption(SkillId, url.searchParams.get("id"));
-      const version = decodeOption(SkillId, url.searchParams.get("version"));
-      if (id === null || version === null)
-        return invalid("That skill file reference is not valid.");
-      return respond(catalog.file(id, version));
-    }
-    default:
-      return null;
+  } catch (cause) {
+    reportFailure(cause, { component: "skills", operation: "catalog.request", operationId });
+    return json(
+      {
+        code: "skills_unavailable",
+        message: "The skill request failed. Check the original upload before retrying.",
+        current: null,
+      },
+      503,
+    );
   }
 };

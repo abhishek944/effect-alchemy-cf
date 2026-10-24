@@ -45,7 +45,7 @@ export const outputResult = (
     ...(recovered
       ? {
           historical: true,
-          note: "This is the exact original operation receipt, not a new execution or today's document state.",
+          note: "This observes the exact original operation; it is not a new execution or today's document state.",
         }
       : {}),
   });

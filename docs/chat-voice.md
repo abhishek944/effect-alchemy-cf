@@ -57,6 +57,11 @@ not request headers. Reported seconds/tokens and estimated characters stay separ
 from chat context counters; unknown prices remain Unknown/Partial. An operation's
 Unknown usage record must persist before its paid request, then upgrade with
 available results. Attribution failure never authorizes a provider retry.
+Transport, admission, settlement and usage failures are reported at the operation
+owner with the existing operation id and preserved native cause; caller
+cancellation is distinct from provider timeout, network and rejection. A failed
+secondary write is reported without replacing a known provider result or
+replaying the consumed one-attempt claim.
 
 Audio is disabled in production, which loads no audio credential. Development
 sends Bearer-authenticated requests to

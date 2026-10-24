@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import type { D1DatabaseSession, D1PreparedStatement } from "@cloudflare/workers-types";
 import { prepareNativePublication } from "./prepared-publication.ts";
 import {
@@ -182,9 +183,12 @@ export class NativeDatabase {
       return true;
     } catch (cause) {
       if (String(cause).includes("office_native_fence")) {
-        throw new NativeStorageError(
-          "FENCE",
-          "Native authority, head or lifecycle changed; no publication occurred",
+        throw withCause(
+          new NativeStorageError(
+            "FENCE",
+            "Native authority, head or lifecycle changed; no publication occurred",
+          ),
+          cause,
         );
       }
       throw cause;

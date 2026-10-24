@@ -3,7 +3,7 @@ import type { ArtifactRef, OfficeError } from "@starter/office-contract";
 import type { OfficeBytes, OfficeMetadata } from "@starter/office-server/ports";
 import type { OfficeMetadataCall, OfficeMetadataResponse } from "./office-metadata-dispatch.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
-import { officeDenied, officeSame } from "./office-private-authority.ts";
+import { officeCaught, officeDenied, officeSame } from "./office-private-authority.ts";
 import { sameOfficeTaskInput } from "./office-task-lineage.ts";
 import { authorizeOfficeTaskMetadata } from "./office-task-metadata.ts";
 import { officeTaskOriginalRef } from "./office-task-metadata-record.ts";
@@ -36,7 +36,7 @@ export function officeTaskStorage(
   let putting = 0;
   const acknowledged = (ref: ArtifactRef) => officeSame(produced.get(ref.id), ref);
   const awaitGraph = () =>
-    Effect.tryPromise({ try: () => officeTaskReviewGraph(metadata, request), catch: officeDenied });
+    Effect.tryPromise({ try: () => officeTaskReviewGraph(metadata, request), catch: officeCaught });
   const allowed = (ref: ArtifactRef) =>
     Effect.gen(function* () {
       const original = request.original;
@@ -98,7 +98,7 @@ export function officeTaskStorage(
                       remember(produced, ref);
                       return ref;
                     },
-                    catch: officeDenied,
+                    catch: officeCaught,
                   }),
                 ),
                 Effect.ensuring(
@@ -116,14 +116,15 @@ export function officeTaskStorage(
             yield* awaitGraph();
             const value = yield* raw.get(owner, id);
             if (value === null) return null;
-            let permitted = false;
             const checked = yield* Effect.exit(allowed(value.ref));
-            if (Exit.isSuccess(checked)) permitted = checked.value;
-            if (!permitted) {
-              yield* Effect.tryPromise({
-                try: () => value.body.cancel(),
-                catch: officeDenied,
-              }).pipe(Effect.uninterruptible);
+            const cleanup = Effect.tryPromise({
+              try: () => value.body.cancel(),
+              catch: officeCaught,
+            }).pipe(Effect.uninterruptible);
+            if (Exit.isFailure(checked))
+              return yield* Effect.failCause(checked.cause).pipe(Effect.onExit(() => cleanup));
+            if (!checked.value) {
+              yield* cleanup;
               return yield* Effect.fail(officeDenied());
             }
             return value;
@@ -135,7 +136,7 @@ export function officeTaskStorage(
     authorize: (call: OfficeMetadataCall): Effect.Effect<void, OfficeError> =>
       Effect.tryPromise({
         try: () => authorizeOfficeTaskMetadata(metadata, request, call, acknowledged),
-        catch: officeDenied,
+        catch: officeCaught,
       }),
     async after(response: OfficeMetadataResponse) {
       if (!("task" in request.original) || !("value" in response)) return;

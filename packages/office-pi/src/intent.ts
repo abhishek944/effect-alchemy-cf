@@ -1,5 +1,11 @@
 import { Schema } from "effect";
-import { Digest, Id, OfficeCommand, decodeWireSync } from "@starter/office-contract";
+import {
+  Digest,
+  Id,
+  OfficeCommand,
+  decodeWireSync,
+  type DraftTarget,
+} from "@starter/office-contract";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
 import type { OfficeIntentCommand, OfficeToolContext, OfficeToolIntent } from "./types.ts";
 
@@ -7,6 +13,13 @@ const KEY = "office.intent.v1";
 const CLAIM = "office.dispatch.v1";
 const IntentMemo = Schema.Struct({ version: Schema.Literal(1), operationId: Id, digest: Digest });
 const DispatchMemo = Schema.Struct({ ...IntentMemo.fields, nonce: Id });
+export type OfficeStep = {
+  readonly attachmentId: string;
+  readonly step: string;
+  readonly operationId?: string;
+  readonly basis?: DraftTarget;
+};
+export const officeMemoKey = (key: string, step?: string) => (step ? `${key}.${step}` : key);
 
 export const digestBytes = async (bytes: Uint8Array): Promise<string> => {
   const hash = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
@@ -40,6 +53,7 @@ export const bindIntent = async (
   command: OfficeCommand,
   api: ToolExecutionApi,
   context: OfficeToolContext,
+  step?: OfficeStep,
 ): Promise<{ command: OfficeCommand; intent: OfficeToolIntent }> => {
   context.abortSignal?.throwIfAborted();
   const description = await describe(assignOperation(command, "office_intent_placeholder"));
@@ -51,17 +65,30 @@ export const bindIntent = async (
         String(api.conversationId),
         api.callId,
         description,
+        ...(step ? [step.attachmentId, step.step, step.basis ?? null] : []),
       ]),
     ),
   );
-  const previous = await api.memo(KEY, context);
-  const candidate = { version: 1, operationId: crypto.randomUUID(), digest };
-  const memo = decodeWireSync(IntentMemo)(previous ?? (await api.memo(KEY, candidate, context)));
+  const key = officeMemoKey(KEY, step?.step);
+  const previous = await api.memo(key, context);
+  const candidate = { version: 1, operationId: step?.operationId ?? crypto.randomUUID(), digest };
+  const memo = decodeWireSync(IntentMemo)(previous ?? (await api.memo(key, candidate, context)));
   if (memo.digest !== digest) throw new Error("Office tool intent changed");
   const bound = assignOperation(command, memo.operationId);
   return {
     command: bound,
-    intent: { operationId: memo.operationId, digest, command: await describe(bound) },
+    intent: {
+      operationId: memo.operationId,
+      digest,
+      command: await describe(bound),
+      ...(step
+        ? {
+            attachmentId: step.attachmentId,
+            step: step.step,
+            ...(step.basis ? { basis: step.basis } : {}),
+          }
+        : {}),
+    },
   };
 };
 
@@ -71,7 +98,8 @@ export const claimDispatch = async (
   api: ToolExecutionApi,
   context: OfficeToolContext,
 ): Promise<boolean> => {
-  const previous = await api.memo(CLAIM, context);
+  const key = officeMemoKey(CLAIM, intent.step);
+  const previous = await api.memo(key, context);
   if (previous !== undefined) {
     const saved = decodeWireSync(DispatchMemo)(previous);
     if (saved.operationId !== intent.operationId || saved.digest !== intent.digest)
@@ -81,7 +109,7 @@ export const claimDispatch = async (
   const nonce = crypto.randomUUID();
   const saved = decodeWireSync(DispatchMemo)(
     await api.memo(
-      CLAIM,
+      key,
       {
         version: 1,
         operationId: intent.operationId,

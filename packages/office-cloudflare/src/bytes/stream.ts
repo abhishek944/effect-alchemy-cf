@@ -1,3 +1,4 @@
+import { withCause } from "@starter/diagnostics";
 import type * as cf from "@cloudflare/workers-types";
 import { invalid } from "../metadata/store.ts";
 import { missingContent } from "./data.ts";
@@ -16,13 +17,18 @@ export async function transfer(
 ): Promise<{ digest: string; bytes: number }> {
   const { reader, digest, hashing } = await openSource<Uint8Array>(body);
   let writing: WritableStreamDefaultWriter<ArrayBuffer | ArrayBufferView> | undefined;
+  let aborting: Promise<PromiseSettledResult<unknown>[]> | undefined;
   const abort = () => {
-    void reader.cancel().catch(() => undefined);
-    void hashing.abort().catch(() => undefined);
-    if (writing) void writing.abort().catch(() => undefined);
+    aborting ??= Promise.allSettled([
+      Promise.resolve().then(() => reader.cancel()),
+      Promise.resolve().then(() => hashing.abort()),
+      Promise.resolve().then(() => writing?.abort()),
+    ]);
   };
   signal.addEventListener("abort", abort, { once: true });
   let bytes = 0;
+  let primary: { cause: unknown } | undefined;
+  let result: { digest: string; bytes: number } | undefined;
   try {
     writing = sink?.getWriter();
     signal.throwIfAborted();
@@ -41,17 +47,34 @@ export async function transfer(
     const hash = hex(await digest.digest);
     signal.throwIfAborted();
     if (writing) await writing.close();
-    return { digest: hash, bytes };
+    result = { digest: hash, bytes };
   } catch (cause) {
+    primary = { cause };
     abort();
-    throw cause;
   } finally {
     signal.removeEventListener("abort", abort);
-    await reader.cancel().catch(() => undefined);
-    reader.releaseLock();
-    hashing.releaseLock();
-    writing?.releaseLock();
   }
+  const settled = await Promise.allSettled([Promise.resolve().then(() => reader.cancel())]);
+  const aborted = (await aborting) ?? [];
+  const released = await Promise.allSettled([
+    Promise.resolve().then(() => reader.releaseLock()),
+    Promise.resolve().then(() => hashing.releaseLock()),
+    Promise.resolve().then(() => writing?.releaseLock()),
+  ]);
+  const failures = [...settled, ...aborted, ...released]
+    .filter((item) => item.status === "rejected")
+    .map((item): unknown => item.reason);
+  if (failures.length) {
+    const cleanup = new AggregateError(failures, "Byte transfer cleanup failed");
+    throw primary?.cause instanceof Error
+      ? withCause(primary.cause, cleanup)
+      : primary === undefined
+        ? cleanup
+        : new AggregateError([primary.cause, cleanup], "Byte transfer failed");
+  }
+  if (primary !== undefined) throw primary.cause;
+  if (result === undefined) throw missingContent();
+  return result;
 }
 
 export async function writeObject(
@@ -63,10 +86,14 @@ export async function writeObject(
 ): Promise<{ digest: string; bytes: number; etag: string }> {
   const controller = new AbortController();
   const stream = new FixedLengthStream(input.declaredBytes);
+  let cancellation: Promise<void> | undefined;
   const abort = () => {
     controller.abort();
     // A rejected put may never acquire a reader. Abort alone can wait on an in-flight write.
-    if (!stream.readable.locked) void stream.readable.cancel().catch(() => undefined);
+    if (!stream.readable.locked) {
+      cancellation ??= stream.readable.cancel();
+      void cancellation.catch(() => undefined); // Joined with the original copy/put below.
+    }
   };
   signal.addEventListener("abort", abort, { once: true });
   const copying = transfer(input.body, input.declaredBytes, controller.signal, stream.writable);
@@ -89,7 +116,17 @@ export async function writeObject(
     return { ...verified, etag: object.etag };
   } catch (cause) {
     abort();
-    await Promise.allSettled([copying, storing]);
+    const settled = await Promise.allSettled([copying, storing, cancellation]);
+    const failures = settled
+      .filter((item) => item.status === "rejected")
+      .map((item): unknown => item.reason);
+    const secondary = failures.filter((failure) => failure !== cause);
+    if (secondary.length) {
+      const cleanup = new AggregateError(secondary, "Byte copy and storage failed");
+      throw cause instanceof Error
+        ? withCause(cause, cleanup)
+        : new AggregateError([cause, cleanup], "Byte storage failed");
+    }
     throw cause;
   } finally {
     signal.removeEventListener("abort", abort);

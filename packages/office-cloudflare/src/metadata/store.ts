@@ -1,5 +1,6 @@
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { Effect, Schema } from "effect";
+import { withCause } from "@starter/diagnostics";
 import {
   OfficeConflict,
   OfficeForbidden,
@@ -33,12 +34,8 @@ export const conflict = (code: ErrorCode = "IDEMPOTENCY_CONFLICT") =>
 export const invalid = () => new OfficeInvalid(safeFailure("INVALID_INPUT"));
 export const missing = () => new OfficeNotFound(safeFailure("NOT_FOUND"));
 export function failure(cause: unknown): OfficeError {
-  if (OfficeErrors.some((ErrorType) => cause instanceof ErrorType)) {
-    // Foreign exceptions never cross the port; these are the shared tagged error constructors.
-    const parsed = Schema.decodeUnknownSync(Schema.Union(OfficeErrors))(cause);
-    return parsed;
-  }
-  return new OfficeUnavailable(safeFailure("UNAVAILABLE"));
+  for (const Type of OfficeErrors) if (cause instanceof Type) return cause;
+  return withCause(new OfficeUnavailable(safeFailure("UNAVAILABLE")), cause);
 }
 export const storeEffect = <A>(body: () => Promise<A>): Store<A> =>
   Effect.tryPromise({ try: body, catch: failure });
@@ -89,8 +86,8 @@ export class MetadataStore {
       throw new OfficeUnavailable(safeFailure("CONTENT_REQUIRED"));
     try {
       return decodeWireSync(Schema.fromJsonString(schema))(text);
-    } catch {
-      throw new OfficeUnavailable(safeFailure("CONTENT_REQUIRED"));
+    } catch (cause) {
+      throw withCause(new OfficeUnavailable(safeFailure("CONTENT_REQUIRED")), cause);
     }
   }
   async hash(value: unknown): Promise<string> {
@@ -133,7 +130,7 @@ export class MetadataStore {
         db.prepare("DELETE FROM office_meta_guard WHERE token=?").bind(token),
       ]);
     } catch (cause) {
-      if (String(cause).includes("office_metadata_guard")) throw conflict(code);
+      if (String(cause).includes("office_metadata_guard")) throw withCause(conflict(code), cause);
       throw cause;
     }
   }

@@ -82,8 +82,4 @@
   [data-dashboard] [data-cx="file-list"] {
     max-height: min(260px, var(--chat-file-budget, 260px));
   }
-  [data-dashboard] [data-cx="file-preview-button"] {
-    width: 42px;
-    height: 42px;
-  }
 }

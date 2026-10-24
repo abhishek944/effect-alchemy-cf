@@ -12,7 +12,7 @@ export type {
 
 /**
  * Wrap the actual AI binding BEFORE createAI. No model/input/options rewriting.
- * Unregistered signals bypass tracking; closed registered signals never bypass it.
+ * Unregistered signals keep native behavior; closed registered signals stay cancelled.
  */
 export const createImageGenerationBinding = <T extends object>(
   binding: T,
@@ -72,20 +72,18 @@ export const createImageGenerationBinding = <T extends object>(
   return {
     binding: wrap(binding, 2),
     transport: {
-      open(lease, signal) {
+      open(signal) {
         const controller = new AbortController();
         let live = true;
         const close = (): void => {
           if (!live) return;
           live = false;
           signal?.removeEventListener("abort", close);
-          // Cancels unconsumed/locked owned bodies; their real cleanup is still tracked.
+          // Cancel unconsumed/locked owned bodies through their existing signal handlers.
           controller.abort();
-          lease.releaseWhenSettled();
         };
         const scope: ImageBindingScope = {
           signal: controller.signal,
-          lease,
           active: () => live && !controller.signal.aborted,
           close,
         };

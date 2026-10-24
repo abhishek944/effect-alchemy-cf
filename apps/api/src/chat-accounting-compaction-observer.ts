@@ -9,14 +9,17 @@
  */
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { Models } from "@earendil-works/pi-ai/models";
+import { reportFailure } from "@starter/diagnostics";
 import { amountOfUsage } from "./chat-accounting-amount.ts";
 import { effortOf, messageModelId, modelIdOf, unknownAmount } from "./chat-accounting-model.ts";
 import type { ChatAccountingStore } from "./chat-accounting-store.ts";
+import type { ChatObjectMetadata } from "./chat-observation.ts";
 
 export const installCompactionObserver = (
   store: ChatAccountingStore,
   notify: () => void,
   models: Models,
+  metadata: ChatObjectMetadata = {},
 ): void => {
   const original = models.completeSimple.bind(models);
   models.completeSimple = (model, context, options) => {
@@ -39,9 +42,28 @@ export const installCompactionObserver = (
               : amountOfUsage(message.usage, actual ?? pinned, pinned),
           recordedAt: Date.now(),
         });
+      } catch (error) {
+        reportFailure(error, {
+          ...metadata,
+          component: "chat-accounting",
+          operation: "compaction.observe",
+          phase: "record",
+          reason: "accounting_record_failed",
+          event: "application.recovery",
+        });
+        return;
+      }
+      try {
         notify();
-      } catch {
-        // Native observer: a failed record must never break summarization.
+      } catch (error) {
+        reportFailure(error, {
+          ...metadata,
+          component: "chat-accounting",
+          operation: "compaction.observe",
+          phase: "notify",
+          reason: "accounting_notify_failed",
+          event: "application.recovery",
+        });
       }
     };
     let call: Promise<AssistantMessage>;

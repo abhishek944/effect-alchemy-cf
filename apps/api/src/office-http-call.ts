@@ -1,10 +1,12 @@
 import type { WorkerEnvironment } from "alchemy/Cloudflare";
+import { reportEventEffect, requestDiagnosticContext } from "@starter/diagnostics";
 import type { RuntimeContext } from "alchemy";
-import { Effect, Option, Schema } from "effect";
+import { Cause, Effect, Option, Schema } from "effect";
 import type * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { decodeWireSync, safeFailure } from "@starter/office-contract";
 import type { OfficeError } from "@starter/office-contract";
 import { HostOffice, HostOfficeRequest, hostEnvelope } from "@starter/office-server/native-remote";
+import { reportOfficeHttpFailure } from "./office-http-failure.ts";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import { officeHostName } from "./office-host-object.ts";
 import { officeNativeRequest, officeWebResponse } from "./office-platform.ts";
@@ -75,8 +77,10 @@ export const officeHostRequest = (
   });
 
 /** One NEW real registrar invocation for this incoming request; released by the private root. */
-export const officeInvocation = (dispatch: OfficeDispatch) =>
-  Effect.map(dispatch.registry, ({ invocationId }) => invocationId);
+export const officeInvocation = (
+  dispatch: OfficeDispatch,
+  purpose: "request" | "channel" = "request",
+) => Effect.map(dispatch.registry(purpose), ({ invocationId }) => invocationId);
 
 /** Public command -> real HostOfficeRequest JSON after strict private-contract validation. */
 export const officeCommand = (key: keyof typeof HostOffice, input: unknown) =>
@@ -110,11 +114,10 @@ export const officeCommandResponse = (
         : Option.getOrNull(
             Schema.decodeUnknownOption(ReplyPayload, { onExcessProperty: "error" })(value),
           );
-    if (payload === null || payload.method !== method)
-      return officeFailure(safeFailure("UNAVAILABLE"));
+    if (payload === null || payload.method !== method) throw unavailable();
     return "error" in payload ? officeFailure(payload.error) : officeJson(payload.value);
-  } catch {
-    return officeFailure(safeFailure("UNAVAILABLE"));
+  } catch (cause) {
+    throw unavailable(cause);
   }
 };
 
@@ -132,6 +135,14 @@ export const officeCore = (
     const session = yield* CurrentOfficeSession;
     const encoded = yield* officeCommand(key, input);
     const invocationId = yield* officeInvocation(dispatch);
+    yield* reportEventEffect({
+      ...(yield* requestDiagnosticContext),
+      component: "office.http",
+      operation: encoded.command.method,
+      event: "application.phase",
+      phase: "host-dispatch",
+      eventId: invocationId,
+    });
     const response = yield* officeHostFetch(dispatch, session, `/core/${invocationId}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -139,5 +150,21 @@ export const officeCore = (
     });
     if (response.status !== 200) return officeFailure(safeFailure("UNAVAILABLE"));
     const bytes = yield* readBounded(response, replyBytes);
-    return officeCommandResponse(key, invocationId, bytes);
-  }).pipe(Effect.catch((error: OfficeError) => Effect.succeed(officeFailure(error))));
+    return yield* Effect.try({
+      try: () => officeCommandResponse(key, invocationId, bytes),
+      catch: unavailable,
+    });
+  }).pipe(
+    Effect.catchCause((cause) => {
+      if (Cause.hasInterruptsOnly(cause))
+        return Effect.failCause(
+          Cause.fromReasons<never>(cause.reasons.filter(Cause.isInterruptReason)),
+        );
+      const reason = cause.reasons[0];
+      const error =
+        cause.reasons.length === 1 && reason !== undefined && Cause.isFailReason(reason)
+          ? reason.error
+          : unavailable();
+      return reportOfficeHttpFailure(cause, "core").pipe(Effect.as(officeFailure(error)));
+    }),
+  );

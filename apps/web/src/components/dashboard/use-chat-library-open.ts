@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
-import {
-  getSavedFile,
-  libraryReadMessage,
-  readSavedOriginal,
-  savedOriginalUrl,
-} from "@/lib/chat-library-api";
+import { getSavedFile, libraryReadMessage } from "@/lib/chat-library-api";
 import { useWorkspacePreview } from "./workspace-preview-context";
 
 type Read = {
@@ -71,16 +66,8 @@ export function useChatLibraryOpen({ active = true }: { active?: boolean } = {})
     let settled = false;
     try {
       const file = await getSavedFile(origin.chatId, fileId, signal);
-      if (file.kind === "text") await readSavedOriginal(file, signal);
       if (!current()) return;
-      if (file.kind === "image") {
-        latest.current?.openImage(file);
-      } else {
-        const link = document.createElement("a");
-        link.href = savedOriginalUrl(file);
-        link.download = file.name;
-        link.click();
-      }
+      latest.current?.openImage(file);
       settled = true;
       setRead({ scope: origin.scope, fileId, state: "ready", error: null });
     } catch (error) {

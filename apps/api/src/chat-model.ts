@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { OfficeSendTarget } from "@starter/office-contract";
+import { OfficeSendTarget, Target } from "@starter/office-contract";
 import { ChatSelection } from "./chat-capabilities.ts";
 import {
   AttachmentReferences,
@@ -8,6 +8,7 @@ import {
 } from "./chat-attachment-schema.ts";
 import { UsageAmount } from "./chat-usage-schema.ts";
 import { SkillRecovery } from "./skills-model.ts";
+import { ChatTools } from "./chat-tool-schema.ts";
 
 const Uuid = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
@@ -53,6 +54,8 @@ export const ChatMessage = Schema.Struct({
   operationId: Schema.NullOr(OperationId),
   attachments: Schema.Array(FileDescriptor).check(Schema.isMaxLength(5)),
   hasGeneratedFiles: Schema.optionalKey(Schema.Boolean),
+  tools: Schema.optionalKey(ChatTools),
+  toolsTruncated: Schema.optionalKey(Schema.Boolean),
   usage: Schema.NullOr(UsageAmount),
   textState: Schema.Literals(["complete", "preview"]),
   textRevision: Schema.String,
@@ -63,6 +66,9 @@ export const ChatMessage = Schema.Struct({
   incomplete: Schema.Boolean,
 });
 export type ChatMessage = typeof ChatMessage.Type;
+
+export const PanelRequest = Schema.Struct({ id: Uuid, target: Target, expiresAt: Schema.Number });
+export type PanelRequest = typeof PanelRequest.Type;
 
 export const ChatSnapshot = Schema.Struct({
   chat: Chat,
@@ -76,6 +82,7 @@ export const ChatSnapshot = Schema.Struct({
   usageRevision: Schema.String.check(Schema.isMaxLength(128)),
   /** Present only while a pinned skill attempt still needs an explicit recovery action. */
   skillRecovery: Schema.NullOr(SkillRecovery),
+  panelRequest: Schema.optionalKey(Schema.NullOr(PanelRequest)),
 });
 export type ChatSnapshot = typeof ChatSnapshot.Type;
 

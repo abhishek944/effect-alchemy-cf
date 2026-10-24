@@ -1,7 +1,7 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useState } from "react";
 import type { OfficeChannel, View } from "@starter/office-contract";
 import { OfficeNativeEditor } from "./editor.tsx";
-import type { FrameStatus, NativeTheme, NativeUser } from "./frame/messages.ts";
+import type { NativeTheme, NativeUser } from "./frame/messages.ts";
 import type { OfficeRuntime } from "./runtime.ts";
 
 type Props = OfficeRuntime & {
@@ -9,7 +9,6 @@ type Props = OfficeRuntime & {
   readonly user: NativeUser;
   readonly theme: NativeTheme;
   readonly frameUrl: string;
-  readonly onStatus: (id: string, status: FrameStatus, revision: number) => void;
 };
 type State = { kind: "loading" } | { kind: "ready"; channel: OfficeChannel } | { kind: "error" };
 
@@ -17,19 +16,14 @@ type State = { kind: "loading" } | { kind: "ready"; channel: OfficeChannel } | {
 export function ReviewNative(props: Props) {
   const [state, setState] = useState<State>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
-  const report = useEffectEvent((status: FrameStatus, revision = 0) => {
-    props.onStatus(props.view.id, status, revision);
-  });
   const { client, run, view } = props;
   useEffect(() => {
     const active = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     setState({ kind: "loading" });
-    report("loading");
     const fail = () => {
       if (active.signal.aborted) return;
       setState({ kind: "error" });
-      report("error");
     };
     if (view.mode !== "read-only" || view.nativeTarget.kind !== "pinned-snapshot") fail();
     else {
@@ -58,7 +52,8 @@ export function ReviewNative(props: Props) {
   if (state.kind === "error")
     return (
       <div data-office="notice" role="alert">
-        Exact native view is unavailable or its channel expired. Approval remains unavailable.
+        This exact view is unavailable or its channel expired. Review evidence, not this render,
+        decides approval.
         <button
           type="button"
           disabled={view.expiresAt <= Date.now()}
@@ -75,11 +70,10 @@ export function ReviewNative(props: Props) {
       theme={props.theme}
       frameUrl={props.frameUrl}
       channelId={state.channel.channelId}
-      onStatus={(status, revision) => {
-        report(
-          Date.now() >= state.channel.expiresAt || Date.now() >= view.expiresAt ? "error" : status,
-          revision,
-        );
+      onStatus={(status) => {
+        if (Date.now() >= state.channel.expiresAt || Date.now() >= view.expiresAt)
+          setState({ kind: "error" });
+        else if (status === "error") setState({ kind: "error" });
       }}
     />
   );

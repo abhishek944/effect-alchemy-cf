@@ -1,7 +1,7 @@
+import { withCause } from "@starter/diagnostics";
 import { decodeWireSync, Failure, type ErrorCode } from "@starter/office-contract";
 import { isOfficeError, officeFailure } from "../core/failure.ts";
 import { DOC_READ_LIMITS } from "./read-wire.ts";
-
 type IoOptions = {
   readonly origin: string;
   readonly requestId: string;
@@ -20,8 +20,8 @@ export function createDocReadIo(options: IoOptions) {
   const controller = new AbortController(),
     pending = new Set<Promise<unknown>>();
   const managed = new WeakSet<ReadableStream<Uint8Array>>();
-  let active = true,
-    cleanupFailed = false;
+  let active = true;
+  const cleanupFailures: unknown[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
   const close = () => {
     active = false;
@@ -65,8 +65,8 @@ export function createDocReadIo(options: IoOptions) {
     }
   };
   const cleanup = (promise: Promise<unknown>) => {
-    const settled = promise.catch(() => {
-      cleanupFailed = true;
+    const settled = promise.catch((cause: unknown) => {
+      cleanupFailures.push(cause);
       close();
     });
     pending.add(settled);
@@ -180,7 +180,7 @@ export function createDocReadIo(options: IoOptions) {
     ) {
       const task = perform(path, text, maximum, prepaid).catch((cause) => {
         close();
-        throw isOfficeError(cause) ? cause : officeFailure("UNAVAILABLE");
+        throw isOfficeError(cause) ? cause : withCause(officeFailure("UNAVAILABLE"), cause);
       });
       pending.add(task);
       void task.then(
@@ -192,7 +192,8 @@ export function createDocReadIo(options: IoOptions) {
     async dispose() {
       close();
       while (pending.size) await Promise.allSettled(pending);
-      if (cleanupFailed) throw officeFailure("UNAVAILABLE");
+      const cause = new AggregateError(cleanupFailures, "Remote reader cleanup failed");
+      if (cleanupFailures.length) throw withCause(officeFailure("UNAVAILABLE"), cause);
     },
   };
 }

@@ -1,3 +1,5 @@
+import { Schema } from "effect";
+import { Digest, Id, Revision } from "@starter/office-contract";
 import type {
   ArtifactRef,
   CreateDocument,
@@ -75,6 +77,24 @@ export type OperationArtifacts = {
   readonly code: ArtifactRef | null;
   readonly proposal: ArtifactRef | null;
 };
+/** Durable proof of completed semantic merge verification, owned by its operation record. */
+export const MergeWitness = Schema.Struct({
+  purpose: Schema.Literal("office-merge-verified"),
+  version: Schema.Literal(1),
+  operationId: Id,
+  reviewId: Id,
+  fingerprint: Digest,
+  previewDigest: Digest,
+  outcome: Schema.Literals(["merged", "unchanged"]),
+  acceptedRevision: Schema.NullOr(Revision),
+  native: Schema.Struct({
+    unitID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256)),
+    type: Schema.Literals([1, 2, 3]),
+    rev: Revision,
+  }),
+  nativeDigest: Digest,
+});
+export type MergeWitness = typeof MergeWitness.Type;
 export type OperationRecord = {
   readonly owner: OwnerScope;
   readonly actor: ActorClaims;
@@ -86,6 +106,8 @@ export type OperationRecord = {
   readonly lineageDigest: string;
   readonly receipt: Receipt;
   readonly artifacts: OperationArtifacts;
+  /** Set once by completed semantic verification; never grants later native reads. */
+  readonly merge: MergeWitness | null;
   readonly jobId: string | null;
   readonly policyVersion: string;
   readonly createdAt: number;

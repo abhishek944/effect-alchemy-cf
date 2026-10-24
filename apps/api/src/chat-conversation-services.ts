@@ -8,6 +8,7 @@ import {
 } from "./chat-account-preparation.ts";
 import { ChatAdmissionFence } from "./chat-admission-fence.ts";
 import { ChatAccounting } from "./chat-accounting.ts";
+import { chatObjectMetadata } from "./chat-observation.ts";
 import {
   releaseConversationFiles,
   validateChatImageContext,
@@ -75,7 +76,11 @@ export const createChatConversationServices = (
   const derivedOwner = conversationOwner(ctx.id.name);
   if (derivedOwner !== null) owners.bind(derivedOwner, Date.now());
 
-  const accounting = new ChatAccounting(ctx.storage.sql, () => source.invalidateUsage());
+  const accounting = new ChatAccounting(
+    ctx.storage.sql,
+    () => source.invalidateUsage(),
+    chatObjectMetadata(env),
+  );
   const fence = new ChatAdmissionFence(),
     noAdmissions = new ChatSkillsNoAdmissions(ctx.storage.sql);
   let registryRef: Registry | null = null,
@@ -126,6 +131,7 @@ export const createChatConversationServices = (
       skills,
       images,
       office: createOfficePiHost(env, () => images.nativeAccess(), officeTasks),
+      displayOffice: (target) => source.requestPanel(target),
       selection: () => runtime.selection(),
       setRegistry: (registry) => {
         registryRef = registry;

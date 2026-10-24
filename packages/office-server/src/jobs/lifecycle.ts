@@ -1,4 +1,5 @@
 import { Clock, Effect } from "effect";
+import { reportFailureEffect } from "@starter/diagnostics";
 import { OfficeInvalid, OfficeNotFound, safeFailure } from "@starter/office-contract";
 import type { JobRecord, JobState, OfficeMetadata, OwnerScope } from "../ports/index.ts";
 import { jobScopeKey, requireJobRecord, unknownJobState } from "./identity.ts";
@@ -22,7 +23,15 @@ export function jobObservers(metadata: JobMetadata, active: ReadonlyMap<string, 
       .advanceJob({ ...record, state, version: record.version + 1, updatedAt: now }, record.version)
       .pipe(
         Effect.map((value) => value.state),
-        Effect.catch(() => winner(owner, record.job.binding.jobId)),
+        Effect.catch((error) =>
+          reportFailureEffect(error, {
+            component: "office.job-supervisor",
+            operation: "transition",
+            operationId: record.job.binding.operationId,
+            taskId: record.job.binding.jobId,
+            event: "application.failure",
+          }).pipe(Effect.andThen(winner(owner, record.job.binding.jobId))),
+        ),
       );
   const observe = Effect.fn("Office.jobs.status")(function* (owner: OwnerScope, id: string) {
     let record = yield* load(owner, id);

@@ -57,58 +57,51 @@ export const cancelSkillUpload = (input: CancelSkillInput): SkillsResult<SkillUp
         "skills_unavailable",
         "That upload could not be retired safely. Retry the cancellation.",
       );
-    try {
-      storage.transactionSync(() => {
-        const retired = storage.sql
-          .exec<{ readonly upload_id: string; readonly state: string; readonly version: string }>(
-            `UPDATE skill_uploads SET state = 'expired', updated_at = ?
+    storage.transactionSync(() => {
+      const retired = storage.sql
+        .exec<{ readonly upload_id: string; readonly state: string; readonly version: string }>(
+          `UPDATE skill_uploads SET state = 'expired', updated_at = ?
              WHERE upload_id = ? AND state = 'pending'
              RETURNING upload_id, state, version`,
-            now,
-            uploadId,
-          )
-          .toArray();
-        const retiredRow = retired[0];
-        if (
-          retired.length !== 1 ||
-          retiredRow === undefined ||
-          retiredRow.upload_id !== uploadId ||
-          retiredRow.state !== "expired" ||
-          retiredRow.version !== upload.version
+          now,
+          uploadId,
         )
-          throw new Error("skill upload cancellation fence lost");
-        const claimed = storage.sql
-          .exec<{
-            readonly version: string;
-            readonly upload_id: string;
-            readonly skill_id: string;
-            readonly state: string;
-          }>(
-            `UPDATE skill_versions SET state = 'retiring'
+        .toArray();
+      const retiredRow = retired[0];
+      if (
+        retired.length !== 1 ||
+        retiredRow === undefined ||
+        retiredRow.upload_id !== uploadId ||
+        retiredRow.state !== "expired" ||
+        retiredRow.version !== upload.version
+      )
+        throw new Error("skill upload cancellation fence lost");
+      const claimed = storage.sql
+        .exec<{
+          readonly version: string;
+          readonly upload_id: string;
+          readonly skill_id: string;
+          readonly state: string;
+        }>(
+          `UPDATE skill_versions SET state = 'retiring'
              WHERE version = ? AND upload_id = ? AND skill_id = ? AND state = 'reserved'
              RETURNING version, upload_id, skill_id, state`,
-            upload.version,
-            uploadId,
-            upload.skill_id,
-          )
-          .toArray();
-        const claimedRow = claimed[0];
-        if (
-          claimed.length !== 1 ||
-          claimedRow === undefined ||
-          claimedRow.version !== upload.version ||
-          claimedRow.upload_id !== uploadId ||
-          claimedRow.skill_id !== upload.skill_id ||
-          claimedRow.state !== "retiring"
+          upload.version,
+          uploadId,
+          upload.skill_id,
         )
-          throw new Error("skill version cancellation fence lost");
-      });
-    } catch {
-      return skillsFail(
-        "skills_unavailable",
-        "That upload could not be retired safely. Retry the cancellation.",
-      );
-    }
+        .toArray();
+      const claimedRow = claimed[0];
+      if (
+        claimed.length !== 1 ||
+        claimedRow === undefined ||
+        claimedRow.version !== upload.version ||
+        claimedRow.upload_id !== uploadId ||
+        claimedRow.skill_id !== upload.skill_id ||
+        claimedRow.state !== "retiring"
+      )
+        throw new Error("skill version cancellation fence lost");
+    });
     return skillsOk(expired(uploadId));
   }
   // A repeated cancellation of an existing negative id stays idempotent even at

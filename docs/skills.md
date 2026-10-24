@@ -120,6 +120,15 @@ or UUID reuse from resurrecting an old intent. Original-byte quota is released
 only after confirmed retirement. Active model context also has separate storage
 and selected-model request budgets; it must not silently truncate instructions.
 
+## Failure diagnostics
+
+Stored-manifest corruption and storage/transport exceptions remain internal
+failures, not missing Skills or empty libraries. Private catalog and public HTTP
+handlers report safe correlated diagnostics before encoding unavailable responses.
+Confirmed concurrent publication can recover to its original receipt; this does
+not permit another upload. Cleanup failures retain retirement obligations/quota.
+Uncertain writes never imply that no bytes were saved. See [observability](observability.md).
+
 ## Verification and rollout
 
 Typechecks, lint, builds and source inspection do not prove runtime acceptance.

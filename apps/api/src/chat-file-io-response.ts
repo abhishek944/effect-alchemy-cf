@@ -1,8 +1,9 @@
 import type * as cf from "@cloudflare/workers-types";
+import { reportFailure, type FailureContext } from "@starter/diagnostics";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { publicFail } from "./chat-files-public.ts";
 import { holdFileBody } from "./chat-file-io-body.ts";
-import { ChatFileIOUnavailable, withFileMemory } from "./chat-file-io-memory.ts";
+import { fileIOUnavailable } from "./chat-file-io-limits.ts";
 import { openFileObject, statFileObject } from "./chat-file-io-objects.ts";
 
 const asciiName = (name: string): string =>
@@ -45,29 +46,55 @@ export const serveFileOriginal = async (
   descriptor: FileDescriptor,
   bucket: cf.R2Bucket,
   keys: readonly string[],
+  diagnostic: Omit<FailureContext, "component" | "operation">,
 ): Promise<Response> => {
   try {
     for (const key of keys) {
       const head = await statFileObject(bucket, key, descriptor);
       if (head === null) continue;
       if (request.method === "HEAD") return originalResponse(request, descriptor, null);
-      const response = await withFileMemory(descriptor.kind, descriptor.byteSize, async (lease) => {
-        if (request.signal.aborted) throw new ChatFileIOUnavailable();
-        const object = await openFileObject(bucket, key, head, descriptor);
-        if (object === null) return null;
-        const held = await holdFileBody(object.body, descriptor.byteSize, lease, request.signal);
+      if (request.signal.aborted) throw fileIOUnavailable("abort");
+      const object = await openFileObject(bucket, key, head, descriptor);
+      if (object === null) continue;
+      const held = await holdFileBody(
+        object.body,
+        descriptor.byteSize,
+        request.signal,
+        (cause, phase) => {
+          if (request.signal.aborted) return;
+          reportFailure(cause, {
+            ...diagnostic,
+            chatId: descriptor.chatId,
+            component: "chat-files",
+            operation: "serve-original",
+            phase,
+            reason: phase === "read" ? "serve-body" : "serve-cleanup",
+            event: phase === "read" ? "application.failure" : "application.cleanup",
+          });
+        },
+      );
+      try {
+        return originalResponse(request, descriptor, held.body);
+      } catch (cause) {
         try {
-          return originalResponse(request, descriptor, held.body);
-        } catch {
           await held.cancel();
-          throw new ChatFileIOUnavailable();
+        } catch (cleanup) {
+          throw fileIOUnavailable("storage", new AggregateError([cause, cleanup]));
         }
-      });
-      // Headers resolved, but the actual counted response body remains tracked through EOF/cancel/error.
-      if (response !== null) return response;
+        throw fileIOUnavailable("storage", cause);
+      }
     }
     return publicFail("attachment_not_ready", 410);
-  } catch {
+  } catch (cause) {
+    // Client-cancelled reads stay silent; the typed chain keeps the file reason.
+    if (!request.signal.aborted)
+      reportFailure(cause, {
+        ...diagnostic,
+        chatId: descriptor.chatId,
+        component: "chat-files",
+        operation: "serve-original",
+        reason: "serve",
+      });
     return publicFail("unavailable", 503);
   }
 };

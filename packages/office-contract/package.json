@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@msgpack/msgpack": "3.1.3",
+    "@starter/diagnostics": "workspace:*",
     "effect": "4.0.1"
   },
   "devDependencies": {

@@ -16,7 +16,7 @@ function rowReason(files: readonly LocalFile[]): string | null {
   if (files.some((file) => file.state === "preparing" || file.state === "uploading"))
     return "Wait for the added files to finish preparing.";
   const rejected = files.find((file) => file.state === "unsupported" || file.state === "failed");
-  if (rejected) return `Remove or retry "${rejected.name}" before sending.`;
+  if (rejected) return `Remove "${rejected.name}" and attach it again before sending.`;
   const bytes = files.reduce((sum, file) => sum + file.byteSize, 0);
   if (bytes > MAX_MESSAGE_ATTACHMENT_BYTES)
     return `Files for one message can total at most ${formatFileSize(MAX_MESSAGE_ATTACHMENT_BYTES)}.`;

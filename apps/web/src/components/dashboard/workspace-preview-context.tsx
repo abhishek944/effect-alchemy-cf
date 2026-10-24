@@ -9,11 +9,12 @@ import {
 } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
 import { useWorkspaceOffice } from "./workspace-office-context";
+import { useWorkspacePreviewOpen } from "./use-workspace-preview-open";
 import {
   activatePreview,
   closePreview,
   initialPreview,
-  officeTabId,
+  resolveOfficePreview,
 } from "./workspace-preview-model";
 import type {
   OfficeSelection,
@@ -31,6 +32,7 @@ type PreviewContext = PreviewView & {
   showFiles: () => void;
   openImage: (file: WorkspaceImageFile) => void;
   openOffice: (selection: OfficeSelection) => void;
+  resolveOffice: (id: string, chatId: string, selection: OfficeSelection) => void;
   registerReveal: (reveal: () => void) => () => void;
 };
 const Context = createContext<PreviewContext | null>(null);
@@ -57,7 +59,11 @@ export function WorkspacePreviewProvider({
   const activeTab = view.tabs.find((tab) => tab.id === view.activeId);
   if (activeTab === undefined) throw new Error("The workspace tab selection is inconsistent.");
   useLayoutEffect(() => {
-    activate(active && activeTab.kind === "office" ? activeTab.id : null);
+    activate(
+      active && (activeTab.kind === "office" || activeTab.kind === "office-file")
+        ? activeTab.id
+        : null,
+    );
     return () => activate(null);
   }, [active, activeTab.id, activeTab.kind, activate]);
   const nextId = () => `workspace-tab-${++serial.current}`;
@@ -67,71 +73,64 @@ export function WorkspacePreviewProvider({
       if (reveal.current === callback) reveal.current = null;
     };
   }, []);
-  const change = (action: () => void) => {
-    const captured = scope.current;
-    void office.transition(() => {
-      if (scope.current === captured) action();
-    });
-  };
+  // Tab focus and re-click are not destructive: retained editors keep their sessions.
   const select = (id: string) => {
     if (id === view.activeId) return;
-    change(() =>
-      setView((current) => {
-        const tab = current.tabs.find((value) => value.id === id);
-        return tab === undefined ? current : activatePreview(current, tab);
-      }),
-    );
+    setView((current) => {
+      const tab = current.tabs.find((value) => value.id === id);
+      return tab === undefined ? current : activatePreview(current, tab);
+    });
   };
-  const close = (id: string) =>
-    change(() => {
+  /** New native surfaces enter the same synchronous command gate as close and navigation. */
+  const allocate = (action: () => void): boolean => {
+    const release = office.beginCommand();
+    if (release === null) {
+      office.report("Finishing an Office save. Keep the editor open and try again.");
+      return false;
+    }
+    try {
+      action();
+      return true;
+    } finally {
+      release();
+    }
+  };
+  /** Closing finishes and drains only this tab's editor before its surface unmounts. */
+  const close = (id: string) => {
+    const captured = scope.current;
+    void office.leave(id).then((allowed) => {
+      if (!allowed || scope.current !== captured) return undefined;
       const replacement = nextId();
       setView((current) => closePreview(current, id, replacement));
-    });
-  const add = () =>
-    change(() => {
-      const id = nextId();
-      setView((current) => activatePreview(current, { id, kind: "tools" }));
-      reveal.current?.();
-    });
-  const showFiles = () =>
-    change(() => {
-      setView((current) => ({
-        ...current,
-        tabs: current.tabs.map((tab) =>
-          tab.id === current.activeId ? { id: tab.id, kind: "files" } : tab,
-        ),
-        focus: { sequence: current.focus.sequence + 1, target: "tab" },
-      }));
-      reveal.current?.();
-    });
-  const openImage = (file: WorkspaceImageFile) => {
-    if (!scope.current.active || file.kind !== "image" || file.chatId !== scope.current.selectedId)
-      return;
-    change(() => {
-      setView((current) =>
-        current.chatId === file.chatId
-          ? activatePreview(current, { id: `workspace-image-${file.id}`, kind: "image", file })
-          : current,
-      );
-      reveal.current?.();
+      return undefined;
     });
   };
-  const openOffice = (selection: OfficeSelection) => {
-    if (!scope.current.active || scope.current.selectedId === null) return;
-    const id = officeTabId(selection);
-    if (
-      !view.tabs.some((tab) => tab.id === id) &&
-      view.tabs.filter((tab) => tab.kind === "office").length >= 8
-    ) {
-      office.report(
-        "Close a saved Office tab before opening another; eight native surfaces are the browser limit.",
-      );
-      return;
-    }
-    change(() => {
-      setView((current) => activatePreview(current, { id, kind: "office", selection }));
-      reveal.current?.();
-    });
+  const add = () => {
+    const id = nextId();
+    setView((current) => activatePreview(current, { id, kind: "tools" }));
+    reveal.current?.();
+  };
+  const showFiles = () => {
+    setView((current) => ({
+      ...current,
+      tabs: current.tabs.map((tab) =>
+        tab.id === current.activeId ? { id: tab.id, kind: "files" } : tab,
+      ),
+      focus: { sequence: current.focus.sequence + 1, target: "tab" },
+    }));
+    reveal.current?.();
+  };
+  const { openImage, openOffice } = useWorkspacePreviewOpen({
+    scope,
+    view,
+    setView,
+    allocate,
+    report: office.report,
+    reveal: () => reveal.current?.(),
+  });
+  /** Resolution reports the target an attachment tab now shows; the tab set stays authoritative. */
+  const resolveOffice = (id: string, chatId: string, selection: OfficeSelection) => {
+    setView((current) => resolveOfficePreview(current, id, chatId, selection));
   };
   return (
     <Context.Provider
@@ -144,6 +143,7 @@ export function WorkspacePreviewProvider({
         showFiles,
         openImage,
         openOffice,
+        resolveOffice,
         registerReveal,
       }}
     >

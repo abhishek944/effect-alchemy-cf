@@ -55,6 +55,10 @@ export async function assertOfficeTaskView(
   )
     throw officeDenied();
   if (bound !== null) {
+    const freshAttachmentRead =
+      original.task.binding.attachment?.target !== null &&
+      original.task.binding.attachment?.target !== undefined &&
+      original.task.proof.association.intent.basis === undefined;
     const scope = record.target.scope;
     const draft = await Effect.runPromise(metadata.draft(record.owner, bound.draftId));
     if (
@@ -62,9 +66,11 @@ export async function assertOfficeTaskView(
       scope.kind !== "draft" ||
       scope.draftId !== bound.draftId ||
       scope.generation !== bound.generation ||
-      record.view.revision !== bound.expectedRevision ||
+      (freshAttachmentRead
+        ? record.view.revision < bound.expectedRevision
+        : record.view.revision !== bound.expectedRevision) ||
       record.source.kind !== "draft" ||
-      record.source.revision !== bound.expectedRevision ||
+      record.source.revision !== record.view.revision ||
       draft === null ||
       draft.generation !== bound.generation ||
       draft.worktreeId !== record.source.worktreeId

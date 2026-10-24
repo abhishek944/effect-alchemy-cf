@@ -25,6 +25,7 @@ export type OfficeHostChannel = {
   readonly binding: OfficeEditorBinding;
   readonly frames: Set<OfficeHostEntry>;
   readonly expiresAt: number;
+  readonly maintain: () => Promise<void>;
   closing?: Promise<void>;
 };
 export type OfficeHostActive = {

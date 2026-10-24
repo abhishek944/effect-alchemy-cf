@@ -1,4 +1,5 @@
 import { Clock, Effect, Schema } from "effect";
+import { withCause } from "@starter/diagnostics";
 import { decodeWire } from "@starter/office-contract";
 import type {
   FrozenReview,
@@ -27,6 +28,8 @@ export const publishReadyReview = Effect.fn("Office.publishReadyReview")(functio
   input: ReadyCapture,
   phase: "final-commit" | "recovery-dispatch",
 ) {
+  const contentFailure = (cause: unknown) =>
+    withCause(officeFailure("CONTENT_REQUIRED", permit.operationId), cause);
   const record = yield* operationRecord(deps, original.owner, original.receipt.operationId);
   if (record === null || record.intent.kind !== "ready" || record.artifacts.proposal === null)
     return yield* Effect.fail(officeFailure("CONTENT_REQUIRED", permit.operationId));
@@ -35,9 +38,7 @@ export const publishReadyReview = Effect.fn("Office.publishReadyReview")(functio
     return yield* Effect.fail(officeFailure("OUTCOME_UNKNOWN", permit.operationId));
   if (record.policyVersion !== deps.policy.version)
     return yield* Effect.fail(officeFailure("EXECUTOR_UNCONFIGURED", permit.operationId));
-  const capture = yield* decodeWire(ReadyCapture)(input).pipe(
-    Effect.mapError(() => officeFailure("CONTENT_REQUIRED", permit.operationId)),
-  );
+  const capture = yield* decodeWire(ReadyCapture)(input).pipe(Effect.mapError(contentFailure));
   if (
     permit.operationId !== record.receipt.operationId ||
     capture.operationId !== record.receipt.operationId ||
@@ -92,7 +93,7 @@ export const publishReadyReview = Effect.fn("Office.publishReadyReview")(functio
   if (nativeResult !== null) {
     const equal = yield* Effect.try({
       try: () => snapshotDigest(nativeResult) === snapshotDigest(capture.draft),
-      catch: () => officeFailure("CONTENT_REQUIRED", permit.operationId),
+      catch: (cause) => withCause(officeFailure("CONTENT_REQUIRED", permit.operationId), cause),
     });
     result = equal ? draft : yield* makeView("result");
   }
@@ -104,7 +105,7 @@ export const publishReadyReview = Effect.fn("Office.publishReadyReview")(functio
     version: 1,
     capture,
     ...compared,
-  }).pipe(Effect.mapError(() => officeFailure("CONTENT_REQUIRED", permit.operationId)));
+  }).pipe(Effect.mapError(contentFailure));
   const preview = yield* stageNativeArtifact(
     deps,
     record.owner,
@@ -164,12 +165,8 @@ export const publishReadyReview = Effect.fn("Office.publishReadyReview")(functio
     return yield* Effect.fail(officeFailure("OUTCOME_UNKNOWN", permit.operationId));
   yield* verifyOperation(deps, record, permit.target, phase);
   const published = yield* deps.metadata.putReview(review);
-  const actual = yield* decodeWire(Schema.Json)(published).pipe(
-    Effect.mapError(() => officeFailure("CONTENT_REQUIRED", permit.operationId)),
-  );
-  const expected = yield* decodeWire(Schema.Json)(review).pipe(
-    Effect.mapError(() => officeFailure("CONTENT_REQUIRED", permit.operationId)),
-  );
+  const actual = yield* decodeWire(Schema.Json)(published).pipe(Effect.mapError(contentFailure));
+  const expected = yield* decodeWire(Schema.Json)(review).pipe(Effect.mapError(contentFailure));
   if (!sameReview(actual, expected))
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", permit.operationId));
   const current = yield* operationRecord(deps, record.owner, permit.operationId);

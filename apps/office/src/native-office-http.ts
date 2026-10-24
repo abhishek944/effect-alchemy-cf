@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { finished } from "node:stream/promises";
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
+import { reportFailure } from "@starter/diagnostics";
 import {
   OfficeInvalid,
   OfficeUnavailable,
@@ -91,10 +92,24 @@ export async function handleOfficeControl(
   );
   let payload: unknown;
   try {
-    payload = await Effect.runPromise(invokeOfficeCall(service, binding.actor, input.payload));
+    const exit = await Effect.runPromiseExit(
+      invokeOfficeCall(service, binding.actor, input.payload, input.callId),
+      { signal: binding.signal },
+    );
+    if (Exit.isFailure(exit)) throw exit.cause;
+    payload = exit.value;
     binding.signal.throwIfAborted();
     if (Date.now() >= binding.deadline) throw new Error("Office request expired");
-  } catch {
+  } catch (cause) {
+    reportFailure(cause, {
+      component: "office.node",
+      operation: "control",
+      callId: input.callId,
+      event:
+        Cause.isCause(cause) && Cause.hasInterruptsOnly(cause)
+          ? "application.cancelled"
+          : "application.failure",
+    });
     payload = {
       method: input.payload.method,
       error: safeFailure(reads.has(input.payload.method) ? "UNAVAILABLE" : "OUTCOME_UNKNOWN"),

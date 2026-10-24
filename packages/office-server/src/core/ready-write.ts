@@ -96,9 +96,6 @@ export const prepareReady = Effect.fn("Office.prepareReady")(function* (
           const ready = yield* readyEvidence(deps, record);
           if (ready !== null && ready !== head)
             return yield* Effect.fail(officeFailure("OUTCOME_UNKNOWN", permit.operationId));
-          const editors = yield* deps.metadata.editors(record.owner, record.documentId);
-          if (editors.some((editor) => ["active", "draining", "unclean"].includes(editor.state)))
-            return yield* Effect.fail(officeFailure("BUSY", permit.operationId));
           if (record.receipt.phase === "reserved")
             record = yield* advanceOperation(deps, record, "admitted");
           const document = yield* deps.metadata.document(record.owner, record.documentId);

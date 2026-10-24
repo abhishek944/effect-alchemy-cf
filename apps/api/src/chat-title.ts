@@ -6,6 +6,7 @@ import {
   type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
 import { createAI } from "agents/models/pi-ai";
+import { reportFailure, withDiagnostic } from "@starter/diagnostics";
 import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
 import { guardTitlePayload, titleReasoning, TITLE_MAX_TOKENS } from "./chat-title-policy.ts";
@@ -23,6 +24,21 @@ export type ChatTitleNamer = (
 const TITLE_MAX_CHARS = 60;
 const TITLE_MAX_INPUT = 2000;
 const TITLE_DEADLINE_MS = 10_000;
+
+/** Title naming is best effort; this is its final owner for otherwise-lost evidence. */
+export const reportTitleFailure = (
+  error: unknown,
+  operation: "title.setup" | "title.generate" | "title.usage" | "title.persist",
+  reason: string,
+  ids: { readonly chatId?: string; readonly operationId?: string; readonly phase?: string } = {},
+): void =>
+  reportFailure(error, {
+    component: "chat-title",
+    operation,
+    reason,
+    ...ids,
+    event: "application.recovery",
+  });
 
 export const TITLE_INSTRUCTIONS = `Name this saved chat from the user's first message.
 Reply with only the title: 3 to 6 words, at most 60 characters, in the message's main language.
@@ -104,7 +120,9 @@ export const sanitizeTitle = (raw: string): string | null => {
 };
 
 const titleFromMessage = (message: AssistantMessage): string | null => {
-  if (message.stopReason !== "stop" || message.errorMessage !== undefined) return null;
+  if (message.stopReason === "error" || message.errorMessage !== undefined)
+    throw withDiagnostic(new Error("Title generation failed"), "title_provider_result_failed");
+  if (message.stopReason !== "stop") return null;
   const text = message.content
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join(" ");
@@ -125,7 +143,8 @@ export const makeChatTitleNamer = (
     const effective: ChatSelection = { ...selection, effort: reasoning ?? "off" };
     try {
       await recordUsage(null, effective);
-    } catch {
+    } catch (error) {
+      reportTitleFailure(error, "title.usage", "title_usage_claim_failed", { phase: "claim" });
       return null;
     } // Do not initiate paid naming if its claim cannot be attributed.
     const options: SimpleStreamOptions = {
@@ -142,16 +161,12 @@ export const makeChatTitleNamer = (
         { role: "user", content: sliceCodePoints(text, TITLE_MAX_INPUT), timestamp: Date.now() },
       ],
     };
+    const message = await ai.completeSimple(model, context, options);
     try {
-      const message = await ai.completeSimple(model, context, options);
-      try {
-        await recordUsage(message, effective);
-      } catch {
-        /* Accounting cannot change the completed naming outcome. */
-      }
-      return titleFromMessage(message);
-    } catch {
-      return null;
+      await recordUsage(message, effective);
+    } catch (error) {
+      reportTitleFailure(error, "title.usage", "title_usage_record_failed", { phase: "record" });
     }
+    return titleFromMessage(message);
   };
 };

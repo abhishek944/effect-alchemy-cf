@@ -8,7 +8,7 @@
  * GET receipts instead of replaying a possibly accepted write.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import type * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { readBoundedBody } from "./body-limit.ts";
 import { doCall } from "./chat-bindings.ts";
@@ -21,7 +21,7 @@ import {
   SkillReservation,
   SkillUploadReceipt,
 } from "./skills-model.ts";
-import { invalidSkill, internalFailure, jsonResponse, unavailable } from "./skills-http-shared.ts";
+import { invalidSkill, internalFailure, jsonResponse } from "./skills-http-shared.ts";
 import { putSkillObject } from "./skills-objects.ts";
 import { validateSkillUpload } from "./skills-upload.ts";
 
@@ -68,18 +68,17 @@ export const uploadSkill = (
         reservation,
         "The skill library is unavailable. Nothing was published.",
       );
-    const reserved = decodeOption(SkillReservation, reservation.body);
+    const reserved = Schema.decodeUnknownSync(SkillReservation)(reservation.body);
     // The reservation must describe this exact owner scope, upload id and file
     // intent before any returned version ref or acknowledgement is trusted.
     if (
-      reserved === null ||
       reserved.uploadId !== uploadId ||
       reserved.ownerScope !== scope ||
       reserved.file.filename !== filename ||
       reserved.file.digest !== validation.digest ||
       reserved.file.byteSize !== bytes.byteLength
     )
-      return unavailable("The skill library returned an invalid reservation.");
+      throw new Error("Private skill reservation does not match its immutable input");
     if (reserved.revision !== null) {
       const already = decodeOption(SkillUploadReceipt, {
         uploadId,
@@ -99,37 +98,26 @@ export const uploadSkill = (
         already.file.version !== reserved.file.version ||
         already.file.filename !== filename
       )
-        return unavailable("The skill library returned an invalid acknowledgement.");
+        throw new Error("Private skill acknowledgement does not match its reservation");
       return jsonResponse(already, 200);
     }
-    const stored = yield* Effect.promise(async () => {
-      try {
-        await putSkillObject(bucket, scope, reserved.file, bytes);
-        return true;
-      } catch {
-        return false;
-      }
-    });
-    if (!stored)
-      return unavailable("The file could not be saved privately. Your local file is unchanged.");
+    // A failed PUT remains uncertain; the existing reservation/receipt is retained.
+    yield* Effect.promise(() => putSkillObject(bucket, scope, reserved.file, bytes));
     const publish = yield* doCall(catalog, "POST", "/skills/publish", { uploadId }, owner);
     if (publish.status !== 200)
       return internalFailure(
         publish,
         "The upload is not yet acknowledged. Check the library before uploading again.",
       );
-    const receipt = decodeOption(SkillUploadReceipt, publish.body);
+    const receipt = Schema.decodeUnknownSync(SkillUploadReceipt)(publish.body);
     // The acknowledgement must be a publication of this exact reserved version.
     if (
-      receipt === null ||
       receipt.state !== "published" ||
       receipt.uploadId !== uploadId ||
       receipt.file.id !== reserved.file.id ||
       receipt.file.version !== reserved.file.version ||
       receipt.file.filename !== filename
     )
-      return unavailable(
-        "The upload is not yet acknowledged. Check the library before uploading again.",
-      );
+      throw new Error("Private skill publication acknowledgement does not match its reservation");
     return jsonResponse(receipt, 200);
   });

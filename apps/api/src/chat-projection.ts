@@ -19,8 +19,8 @@ import {
 } from "./chat-contract.ts";
 import type { Chat, ChatMessage, Position } from "./chat-model.ts";
 import { isEntryId, publicRole, sliceText, textInfo } from "./chat-text.ts";
+import { ToolHistory, type LiveToolRound } from "./chat-tool-history.ts";
 export type PiContext = Parameters<Conversation["configure"]>[1];
-
 /** Full native public log, not the compacted context view. Native limit 1 may hydrate lookahead. */
 export const buildWindow = async (
   conversation: Conversation,
@@ -36,19 +36,26 @@ export const buildWindow = async (
   attemptState?: (
     operationId: string,
   ) => { readonly logicalOperationId: string; readonly incomplete: boolean } | null,
+  liveTools?: LiveToolRound,
 ): Promise<HistoryPage> => {
   let ceiling = cursor?.ceiling ?? null;
   let after = cursor?.after ?? null;
   let entryResume = cursor?.entry ?? null;
   let indexResume = cursor?.index ?? null;
   let through: Position | null = null;
-  let fetches = 0;
-  let candidates = 0;
-  let blocks = 0;
+  const budget = { fetches: 0, candidates: 0, blocks: 0 };
+  const toolHistory = new ToolHistory(
+    cursor !== null,
+    conversation,
+    context,
+    budget,
+    blockBudget,
+    candidateBudget,
+  );
   let exhausted = false;
   let used = 4096; // Coverage/cursor/envelope reserve exceeds all bounded v1 metadata.
   const messages: ChatMessage[] = [];
-  while (fetches < MAX_ENTRY_FETCHES && messages.length < limit) {
+  while (budget.fetches < MAX_ENTRY_FETCHES && messages.length < limit) {
     const max = ceiling !== null && isEntryId(ceiling) ? ceiling : undefined;
     const exact = entryResume !== null && isEntryId(entryResume) ? entryResume : undefined;
     const query =
@@ -61,7 +68,7 @@ export const buildWindow = async (
       exact === undefined ? (after ?? undefined) : undefined,
       context,
     );
-    fetches += 1;
+    budget.fetches += 1;
     const entry = page.items[0];
     if (entry === undefined) {
       if (entryResume !== null) throw new InvalidCursor();
@@ -82,8 +89,7 @@ export const buildWindow = async (
         ? attempt.logicalOperationId
         : null;
     const incomplete = role === "assistant" && attempt?.incomplete === true;
-    // An explicit retry copies the original user command; keep one logical
-    // command in history and let its attempt answers carry the retries.
+    // Retry copies retain one logical command; answers carry the attempts.
     const groupedCopy =
       role === "user" &&
       input !== null &&
@@ -91,19 +97,24 @@ export const buildWindow = async (
       input.logicalOperationId !== input.operationId;
     let finished = true;
     for (let i = start; i >= 0; i -= 1) {
-      if (candidates >= candidateBudget || blocks >= blockBudget || messages.length >= limit) {
+      if (
+        budget.candidates >= candidateBudget ||
+        budget.blocks >= blockBudget ||
+        messages.length >= limit
+      ) {
         entryResume = entry.id;
         indexResume = i;
         finished = false;
         break;
       }
-      candidates += 1;
+      budget.candidates += 1;
       if (groupedCopy) {
         through = { entryId: entry.id, modelIndex: i };
         continue;
       }
       const message = models[i];
       if (message === undefined || role === null || message.role !== role) {
+        if (message !== undefined) toolHistory.observe(entry, message);
         through = { entryId: entry.id, modelIndex: i };
         continue;
       }
@@ -115,14 +126,14 @@ export const buildWindow = async (
         finished = false;
         break;
       }
-      const slice = sliceText(
-        publicInputMessage(message, role === "user" ? input : null),
-        0,
-        0,
-        units,
-        blockBudget - blocks,
-      );
-      blocks += slice.visited;
+      const source = publicInputMessage(message, role === "user" ? input : null);
+      const slice = sliceText(source, 0, 0, units, blockBudget - budget.blocks);
+      budget.blocks += slice.visited;
+      const available = Math.max(0, byteBudget - used - 1024 - slice.text.length * 6);
+      const tools =
+        message.role === "assistant"
+          ? await toolHistory.project(entry, message, ceiling, available, liveTools)
+          : {};
       const id = `${entry.id}:${i}`;
       const candidate: ChatMessage = {
         id,
@@ -136,6 +147,7 @@ export const buildWindow = async (
         hasGeneratedFiles: role === "assistant" && hasGeneratedFiles(entry.id, i),
         usage: message.role === "assistant" ? messageUsage(message) : null,
         ...textInfo(chat.id, id, `e${entry.id}`, slice),
+        ...tools,
       };
       const size = encodedBytes(candidate) + 1;
       if (used + size > byteBudget) {
@@ -149,11 +161,11 @@ export const buildWindow = async (
       through = { entryId: entry.id, modelIndex: i };
     }
     if (!finished) break;
+    toolHistory.finish(entry);
     entryResume = null;
     indexResume = null;
     through = { entryId: entry.id, modelIndex: 0 };
-    // An exact unfinished-entry read cannot tell whether older native entries exist.
-    // Continue exclusively below this consumed entry; an empty next page is valid.
+    // Exact entry reads continue exclusively below the consumed entry.
     if (exact !== undefined) after = { after: entry.id, order: "descending" };
     else if (page.next === undefined) {
       exhausted = true;

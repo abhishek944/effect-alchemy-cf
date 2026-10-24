@@ -17,10 +17,8 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
   const [moreBusy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState("");
   const [error, setError] = useState("");
-  const [version, setVersion] = useState(0);
   const request = useRef<AbortController | null>(null);
-  const readKey = `${refreshKey}:${version}`;
-  const busy = moreBusy || loaded !== readKey;
+  const busy = moreBusy || loaded !== refreshKey;
   useEffect(() => {
     if (!active) return undefined;
     const controller = new AbortController();
@@ -41,21 +39,19 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
         }
         return undefined;
       })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError("Office documents could not be read. Saved originals are unchanged.");
-      })
+      // Optional account descriptors stay quiet; the Files refresh control retries reads.
+      .catch(() => undefined)
       .finally(() => {
         if (!controller.signal.aborted) {
           setBusy(false);
-          setLoaded(readKey);
+          setLoaded(refreshKey);
         }
       });
     return () => {
       controller.abort();
       request.current?.abort();
     };
-  }, [runtime, active, readKey]);
+  }, [runtime, active, refreshKey]);
   const more = async (kind: "documents" | "drafts") => {
     const cursor = cursors[kind];
     const rows = kind === "documents" ? documents : drafts;
@@ -87,7 +83,7 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
     } catch {
       if (!controller.signal.aborted)
         setError(
-          "More Office rows are unavailable or exceed the 200-row browser budget. Refresh to retry.",
+          "More Office rows are unavailable or exceed the 200-row browser budget. Refresh reloads the first pages; it cannot raise that limit or restore an unavailable service.",
         );
     } finally {
       if (!controller.signal.aborted) setBusy(false);
@@ -99,48 +95,37 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
     },
     [],
   );
+  const savedDocuments = documents.filter((document) => document.revision !== null);
+  if (
+    savedDocuments.length === 0 &&
+    drafts.length === 0 &&
+    cursors.documents === null &&
+    cursors.drafts === null
+  )
+    return null;
   return (
     <section data-cx="office-files" aria-label="Account Office documents">
-      <header>
-        <h3>Office documents · your account</h3>
-        <button
-          type="button"
-          disabled={busy || !active}
-          onClick={() => setVersion((value) => value + 1)}
-        >
-          Refresh Office files
-        </button>
-      </header>
-      <p>
-        Saved Office documents and drafts across your account. Attaching an original never creates a
-        document automatically.
-      </p>
       {error && <p role="alert">{error}</p>}
       {busy && <output>Reading Office files…</output>}
-      {!busy && !error && documents.length === 0 && drafts.length === 0 && (
-        <p>No Office documents yet. Send an original and ask the assistant what to create.</p>
-      )}
       <ul>
-        {documents
-          .filter((document) => document.revision !== null)
-          .map((document) => (
-            <li key={document.id}>
-              <button
-                type="button"
-                disabled={!active || busy}
-                onClick={() =>
-                  preview.openOffice({
-                    title: `${document.title} · Main`,
-                    target: { documentId: document.id, scope: { kind: "main" } },
-                    reviewId: null,
-                  })
-                }
-              >
-                {document.title} · Main r{document.revision}
-              </button>
-              <OfficeSources documentId={document.id} active={active} />
-            </li>
-          ))}
+        {savedDocuments.map((document) => (
+          <li key={document.id}>
+            <button
+              type="button"
+              disabled={!active || busy}
+              onClick={() =>
+                preview.openOffice({
+                  title: `${document.title} · Main`,
+                  target: { documentId: document.id, scope: { kind: "main" } },
+                  reviewId: null,
+                })
+              }
+            >
+              {document.title} · Main r{document.revision}
+            </button>
+            <OfficeSources documentId={document.id} active={active} />
+          </li>
+        ))}
       </ul>
       <ul>
         {drafts.map((draft) => (

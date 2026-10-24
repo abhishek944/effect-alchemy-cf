@@ -1,4 +1,5 @@
 import { Effect, Exit, Scope } from "effect";
+import { withCause } from "@starter/diagnostics";
 import { OfficeInvalid, OfficeUnavailable, safeFailure } from "@starter/office-contract";
 import type { createOfficeProtocol } from "@starter/office-server/native-protocol";
 import type { makeNativeApplication } from "./native-app.ts";
@@ -15,9 +16,8 @@ export const makeOfficeProtocolPool = Effect.fn("Office.protocolPool")(function*
     return yield* Effect.fail(new OfficeInvalid(safeFailure("INVALID_INPUT")));
   const root = yield* Scope.make();
   const protocols = new Map<string, Promise<Protocol>>();
-  let revoked = false,
-    cleanupFailed = false,
-    closing: Promise<void> | undefined;
+  let revoked = false;
+  let cleanupFailure: Error | undefined, closing: Promise<void> | undefined;
   const check = () => {
     if (revoked || application.signal.aborted) throw unavailable();
   };
@@ -40,8 +40,8 @@ export const makeOfficeProtocolPool = Effect.fn("Office.protocolPool")(function*
       } catch (cause) {
         try {
           await Effect.runPromise(Scope.close(scope, Exit.void));
-        } catch {
-          cleanupFailed = true;
+        } catch (cleanupCause) {
+          cleanupFailure ??= withCause(unavailable(), cleanupCause);
         }
         throw cause;
       }
@@ -61,7 +61,7 @@ export const makeOfficeProtocolPool = Effect.fn("Office.protocolPool")(function*
       await Promise.allSettled(protocols.values());
       await Effect.runPromise(Scope.close(root, Exit.void));
       protocols.clear();
-      if (cleanupFailed) throw unavailable();
+      if (cleanupFailure !== undefined) throw cleanupFailure;
       return undefined;
     });
     return closing;

@@ -1,4 +1,5 @@
 import type { HostOfficeRequest } from "@starter/office-server/native-remote";
+import { withCause, withDiagnostic } from "@starter/diagnostics";
 import type { NativeAccess, ViewRecord } from "@starter/office-server/ports";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { NativePrivateResolution } from "../../office/src/native-private-wire.ts";
@@ -24,7 +25,8 @@ export function officeHostEntry(
     readonly file: NativePrivateResolution["file"];
   },
 ): OfficeHostEntry {
-  if (root.closing || root.entries.size >= 128) throw officeDenied();
+  if (root.closing) throw withDiagnostic(officeDenied(), "entry-closing");
+  if (root.entries.size >= 128) throw withDiagnostic(officeDenied(), "entry-capacity");
   const frame = new OfficeHostFrame({
     original,
     command: options.command,
@@ -81,32 +83,39 @@ export function closeOfficeHostEntry(
   if (entry.closing !== undefined) return entry.closing;
   entry.closing = Promise.resolve().then(async () => {
     const failures: unknown[] = [];
-    const join = async (body: () => Promise<unknown>) => {
+    const join = async (reason: string, body: () => Promise<unknown>) => {
       try {
         await body();
       } catch (error) {
-        failures.push(error);
+        failures.push(withCause(withDiagnostic(officeDenied(), reason), error));
         entry.frame.revoke();
       }
     };
     if (!entry.canonical) {
-      await join(() => Promise.race([entry.frame.nativeFinished, root.process.actualGone]));
+      await join("entry-native-finish", () =>
+        Promise.race([entry.frame.nativeFinished, root.process.actualGone]),
+      );
       // A failed logical report never skips the separate actual upgrade socket join.
       if (entry.frame.kind === "upgrade")
-        await join(() => Promise.race([entry.frame.socketClosed, root.process.actualGone]));
+        await join("entry-socket-close", () =>
+          Promise.race([entry.frame.socketClosed, root.process.actualGone]),
+        );
     }
     entry.frame.revoke();
-    await join(() => entry.frame.io.drain());
+    await join("entry-io-before-sdk", () => entry.frame.io.drain());
     if (entry.frame.sdkExpected)
-      await join(() => Promise.race([entry.frame.sdkClosed, root.process.actualGone]));
-    await join(() => entry.frame.io.drain());
-    await join(() => entry.backend.drain());
-    if (entry.frame.cleanupFailed) failures.push(officeDenied());
+      await join("entry-sdk-close", () =>
+        Promise.race([entry.frame.sdkClosed, root.process.actualGone]),
+      );
+    await join("entry-io-after-sdk", () => entry.frame.io.drain());
+    await join("entry-provider-drain", () => entry.backend.drain());
+    if (entry.frame.cleanupFailed)
+      failures.push(withDiagnostic(officeDenied(), "entry-cleanup-reported-failed"));
     if (failures.length > 0)
       throw new AggregateError(failures, "Office entry cleanup failed", { cause: failures[0] });
     entry.frame.complete();
-    // HTTP request scopes are fully joined; ticket capsules only retain canonical identity, not these channels.
-    if (entry.channelId !== null && entry.frame.kind === "http") {
+    // All native/socket/SDK/IO joins passed. Retain only canonical identity, not closed children.
+    if (entry.channelId !== null) {
       root.entries.delete(entry.frame.id);
       root.channels.get(entry.channelId)?.frames.delete(entry);
     }

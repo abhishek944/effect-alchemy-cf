@@ -10,24 +10,18 @@ import type {
 } from "@earendil-works/pi-durable";
 import type { ChatImageResponseStore } from "./chat-image-response-store.ts";
 import type { ChatImageLegacyEra } from "./chat-image-legacy-era.ts";
-import type { ImageBoundInput, ImageOriginalBinding } from "./chat-image-response-schema.ts";
+import type { AcceptedInputAccess } from "./chat-accepted-input.ts";
+import type {
+  ImageBoundInput,
+  ImageOriginalBinding,
+  ImageResponseCandidate,
+} from "./chat-image-response-schema.ts";
 
 export type ImageNativeContext = Parameters<Storage["task"]>[1];
 
 /** Host dependencies, never model-supplied identity or PiHarness.pi(). */
-export type ImageNativeAccess = {
-  readonly storage: Storage;
+export type ImageNativeAccess = AcceptedInputAccess<ImageResponseCandidate> & {
   readonly responses: ChatImageResponseStore;
-  readonly ownerId: string;
-  readonly chatId: string;
-  readonly chatScope: string;
-  readonly conversationId: ConversationId;
-  readonly owner: () => string | null;
-  /**
-   * False until all accepted unbound candidates are reconstructed in native entry
-   * order, then both Skills/image recovery finish. Current-only bind is insufficient.
-   */
-  readonly ready: () => boolean;
 };
 
 export type ImageRequestAccess = ImageNativeAccess & {

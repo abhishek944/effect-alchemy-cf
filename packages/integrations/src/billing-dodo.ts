@@ -1,6 +1,12 @@
+import { withCause } from "@starter/diagnostics";
 import { Effect, Schema } from "effect";
 import type { DisputeStatus } from "dodopayments/resources";
-import { billingError, type BillingAdapter, type ProviderOptions } from "./billing.ts";
+import {
+  billingError,
+  billingFailure,
+  type BillingAdapter,
+  type ProviderOptions,
+} from "./billing.ts";
 import { makeDodoSdk, printable, webhookError } from "./billing-dodo-client.ts";
 import { DodoEnvelope, dodoEventKind, dodoResourceId } from "./billing-dodo-events.ts";
 import {
@@ -103,24 +109,34 @@ export const makeDodoBilling = (options: ProviderOptions): BillingAdapter => {
         const client = yield* sdk;
         const eventId = headers.get("webhook-id");
         if (eventId === null || eventId === "")
-          return yield* Effect.fail(billingError("Signature"));
+          return yield* Effect.fail(billingFailure("Signature", "webhook-id-missing", "dodo"));
         const secret = printable(options.webhookSecret);
-        if (secret === null) return yield* Effect.fail(billingError("Configuration"));
+        if (secret === null)
+          return yield* Effect.fail(
+            billingFailure("Configuration", "webhook-secret-invalid", "dodo"),
+          );
         const payload = yield* Effect.tryPromise({
           try: async () =>
             client.webhooks.unwrap(raw, { headers: Object.fromEntries(headers), key: secret }),
           catch: webhookError,
         });
         const envelope = yield* Schema.decodeUnknownEffect(DodoEnvelope)(payload).pipe(
-          Effect.mapError(() => billingError("Signature")),
+          Effect.mapError((cause) =>
+            withCause(billingFailure("Signature", "webhook-envelope-invalid", "dodo"), cause),
+          ),
         );
         if (envelope.business_id !== options.accountId) {
-          return yield* Effect.fail(billingError("Signature"));
+          return yield* Effect.fail(
+            billingFailure("Signature", "webhook-account-mismatch", "dodo"),
+          );
         }
         const kind = dodoEventKind(envelope.type);
         if (kind === null) return { id: eventId, type: envelope.type, resource: null };
         const id = yield* dodoResourceId(kind, envelope.data);
-        if (id === null) return yield* Effect.fail(billingError("Provider"));
+        if (id === null)
+          return yield* Effect.fail(
+            billingFailure("Provider", "webhook-resource-unmapped", "dodo"),
+          );
         return { id: eventId, type: envelope.type, resource: { kind, id } };
       }),
 

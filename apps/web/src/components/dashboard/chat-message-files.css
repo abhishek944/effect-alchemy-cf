@@ -1,3 +1,18 @@
+[data-dashboard]
+  [data-cx="chat-message"][data-role="user"]:has(> [data-cx="chat-message-sent-files"]) {
+  padding-bottom: 8px;
+}
+[data-cx="chat-message-sent-files"] {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+[data-cx="chat-message-sent-files"]:first-child {
+  margin-top: 0;
+}
+[data-cx="chat-message-sent-files"] [data-cx="chat-library-result"] {
+  margin-bottom: 0;
+}
 [data-cx="chat-message-file-read"] {
   display: block;
   padding: 8px 0;

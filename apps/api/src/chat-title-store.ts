@@ -3,7 +3,12 @@ import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
 import { digestText } from "./chat-internal.ts";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
-import { excerptTitle, makeChatTitleNamer, type ChatTitleNamer } from "./chat-title.ts";
+import {
+  excerptTitle,
+  makeChatTitleNamer,
+  reportTitleFailure,
+  type ChatTitleNamer,
+} from "./chat-title.ts";
 
 export type ChatTitleEnv = { AI?: Ai; CHAT_GATEWAY_ID?: string };
 
@@ -116,8 +121,8 @@ export class ChatTitles {
     ensureSchema(this.db);
     try {
       this.namer = makeChatTitleNamer(options.env.AI, options.env.CHAT_GATEWAY_ID);
-    } catch {
-      // A provider-adapter problem must not break catalog metadata.
+    } catch (error) {
+      reportTitleFailure(error, "title.setup", "title_namer_unavailable");
       this.namer = null;
     }
   }
@@ -137,7 +142,12 @@ export class ChatTitles {
     const at = this.options.nextUpdatedAt(chat.updatedAt);
     if (!claimRow(this.db, chatId, operationId, excerpt, at)) return false;
     this.options.waitUntil(
-      this.name(chatId, operationId, text, excerpt, selection).catch(() => undefined),
+      this.name(chatId, operationId, text, excerpt, selection).catch((error) =>
+        reportTitleFailure(error, "title.persist", "title_persist_failed", {
+          chatId,
+          operationId,
+        }),
+      ),
     );
     return true;
   }
@@ -162,7 +172,11 @@ export class ChatTitles {
           : await this.namer(text, selection, (message, effective) =>
               this.options.recordUsage(chatId, operationId, effective, message),
             );
-    } catch {
+    } catch (error) {
+      reportTitleFailure(error, "title.generate", "title_generation_failed", {
+        chatId,
+        operationId,
+      });
       title = null;
     }
     const chat = this.options.chat(chatId);

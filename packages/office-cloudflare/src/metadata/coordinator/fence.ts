@@ -35,16 +35,14 @@ const core = `EXISTS(SELECT 1 FROM office_meta_operations o
       AND json_extract(a.record,'$.fingerprint')=json_extract(t.record,'$.admission.reviewFingerprint')
       AND json_extract(a.record,'$.expiresAt')>${sqlNow})
    ELSE NOT EXISTS(SELECT 1 FROM office_meta_barriers b WHERE b.owner=t.owner AND b.document=t.document) END)
-  AND NOT EXISTS(SELECT 1 FROM office_meta_editors e WHERE e.owner=t.owner AND e.document=t.document
-    AND e.state IN ('active','draining','unclean'))`;
+`;
 const editor = `EXISTS(SELECT 1 FROM office_coord_channels c
   JOIN office_meta_editors e ON e.owner=c.owner AND e.id=c.editor_id
-  JOIN office_meta_editor_epochs x ON x.owner=e.owner AND x.document=e.document AND x.branch=e.branch
   JOIN office_meta_views v ON v.owner=e.owner AND v.id=c.view_id
   JOIN office_coord_editor_submissions s ON s.id=t.command_id AND s.turn_id=t.id
   WHERE (c.id=t.channel_id AND c.owner=t.owner AND c.document=t.document AND c.unit=d.unit
     AND c.state='live' AND c.deadline>${sqlNow})
-    AND (e.id=t.editor_id AND e.epoch=t.editor_epoch AND x.epoch=e.epoch
+    AND (e.id=t.editor_id AND e.epoch=t.editor_epoch
       AND c.editor_epoch=e.epoch AND e.state='active' AND e.expires>${sqlNow})
     AND (json_extract(e.record,'$.editor.view.mode')='edit'
       AND json_extract(e.record,'$.editor.view.id')=v.id

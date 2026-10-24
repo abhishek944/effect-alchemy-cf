@@ -1,3 +1,4 @@
+import { reportFailure, type FailureContext } from "@starter/diagnostics";
 import {
   LiveDoc,
   ROOT_CONVERSATION_ID,
@@ -11,6 +12,7 @@ import {
 } from "@earendil-works/pi-durable";
 import { ROOT_SESSION, type PiHarness } from "agents/harness/pi";
 import type { ChatLedger } from "./chat-ledger.ts";
+import { reportSettlement } from "./chat-observation.ts";
 import { INFERENCE_FAILURE } from "./chat-model.ts";
 import { ChatSelection } from "./chat-capabilities.ts";
 import { decodeOption } from "./chat-internal.ts";
@@ -31,6 +33,8 @@ export class ChatRuntime {
   private readonly operationCache = new Map<string, string>();
   private repaired = false;
   private readonly stops: ChatStop;
+  /** Safe composition-supplied labels; never request identity or authority. */
+  diagnostic: Pick<FailureContext, "service" | "stage" | "release"> = {};
   constructor(harness: PiHarness, ledger: ChatLedger, sends: ChatSendRecords) {
     this.harness = harness;
     this.ledger = ledger;
@@ -102,7 +106,7 @@ export class ChatRuntime {
   stop(operationId: string): Promise<boolean> {
     return this.stops.stop(operationId);
   }
-  async ensureRoot(): Promise<void> {
+  async ensureRoot(chatId?: string): Promise<void> {
     if (this.repaired) return;
     try {
       const conversation = await this.conversation();
@@ -113,9 +117,18 @@ export class ChatRuntime {
         await conversation.configure(this.harness.agentDefaults(), PI_BACKGROUND);
       }
       this.repaired = true;
-    } catch {}
+    } catch (error) {
+      // Best-effort initialization: report without claiming the root was repaired.
+      reportFailure(error, {
+        ...this.diagnostic,
+        component: "chat-runtime",
+        operation: "ensure-root",
+        chatId,
+        event: "application.recovery",
+      });
+    }
   }
-  async reconcile(): Promise<void> {
+  async reconcile(chatId?: string): Promise<void> {
     const page = this.ledger.unmappedPage(6);
     if (page.length === 0) return;
     try {
@@ -131,17 +144,22 @@ export class ChatRuntime {
         }
       }
       this.ledger.advance(page.at(-1)?.rowid ?? 0);
-    } catch {}
+    } catch (error) {
+      // Ledger repair is best effort; a failed read must not look like a mapped page.
+      reportFailure(error, {
+        ...this.diagnostic,
+        component: "chat-runtime",
+        operation: "ledger-reconcile",
+        chatId,
+        event: "application.recovery",
+      });
+    }
   }
   private async submissionRecord(id: SubmissionId): Promise<SubmissionRecord | null> {
-    try {
-      const pi = await this.pi();
-      const submission = await pi.submission(id, PI_BACKGROUND);
-      if (submission === undefined) return null;
-      return await submission.status(PI_BACKGROUND);
-    } catch {
-      return null;
-    }
+    const pi = await this.pi();
+    const submission = await pi.submission(id, PI_BACKGROUND);
+    if (submission === undefined) return null;
+    return await submission.status(PI_BACKGROUND);
   }
   async operationIdOf(submission: SubmissionId): Promise<string | null> {
     const key = String(submission);
@@ -158,17 +176,20 @@ export class ChatRuntime {
     );
     return record.requestId;
   }
-  async settlementError(): Promise<string | null> {
+  async settlementError(chatId: string): Promise<string | null> {
     const latest = this.ledger.latest();
     if (latest === null) return null;
     const record = await this.receiptRecord(latest.operationId);
     if (record === undefined) return null; // Absence is unconfirmed, never synthetic not_found.
-    if (this.ledger.statusOf(latest.operationId) === "stopped") return null;
+    const previous = this.ledger.statusOf(latest.operationId);
+    if (previous === "stopped") return null;
     if (record.status === "queued" || record.status === "placed") {
       this.ledger.accepted(latest.operationId, Date.now());
       return null;
     }
     this.ledger.setStatus(latest.operationId, record.status, Date.now());
+    if (record.status === "unanswered" && previous !== "unanswered")
+      reportSettlement(record, { operationId: latest.operationId, chatId }, this.diagnostic);
     return record.status === "unanswered" ? INFERENCE_FAILURE : null;
   }
 }
