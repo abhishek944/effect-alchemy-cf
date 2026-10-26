@@ -16,8 +16,7 @@ const matches = (pending: PendingSend | null, expected: OperationRef): pending i
 /** Retry reuses the exact frozen tuple. Discard touches uploads, never saved references. */
 export function useChatSendRecovery(options: {
   pendingRef: RefObject<PendingSend | null>;
-  filesRef: RefObject<ChatFilesControls>;
-  selectionRef: RefObject<string | null>;
+  readFiles: () => ChatFilesControls;
   stoppingRef: RefObject<StopTarget | null>;
   inFlightRef: RefObject<string | null>;
   submit: (
@@ -31,8 +30,7 @@ export function useChatSendRecovery(options: {
 }) {
   const {
     pendingRef,
-    filesRef,
-    selectionRef,
+    readFiles,
     stoppingRef,
     inFlightRef,
     submit,
@@ -57,8 +55,6 @@ export function useChatSendRecovery(options: {
         return blocked("This send is no longer waiting to be retried.");
       if (!failed.frozen)
         return blocked("This send lost its frozen settings. Discard and send again.");
-      if (selectionRef.current !== failed.chatId)
-        return blocked("This chat is no longer selected. Open it to retry.");
       setPendingSend((current) =>
         current?.operationId === failed.operationId
           ? { ...current, phase: "posting", error: null }
@@ -68,9 +64,9 @@ export function useChatSendRecovery(options: {
         ...failed.frozen,
         references: failed.frozen.references ?? [],
       });
-      return { status: "dispatched" };
+      return { status: "dispatched", operationId: failed.operationId };
     },
-    [pendingRef, selectionRef, setActionError, setPendingSend, stoppingRef, inFlightRef, submit],
+    [pendingRef, setActionError, setPendingSend, stoppingRef, inFlightRef, submit],
   );
   const discardSend = useCallback(
     (expected: OperationRef) => {
@@ -83,10 +79,10 @@ export function useChatSendRecovery(options: {
         return;
       }
       setActionError(null);
-      filesRef.current.discard(expected.chatId, current.frozen?.attachments ?? []);
+      readFiles().discard(expected.chatId, current.frozen?.attachments ?? []);
       setPendingSend((value) => (matches(value, expected) ? null : value));
     },
-    [pendingRef, filesRef, inFlightRef, setActionError, setPendingSend],
+    [pendingRef, readFiles, inFlightRef, setActionError, setPendingSend],
   );
   return { retrySend, discardSend };
 }

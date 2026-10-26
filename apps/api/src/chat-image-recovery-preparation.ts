@@ -1,5 +1,5 @@
 import { UserEntry, type UserInput } from "@earendil-works/pi-durable";
-import type { OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
 import { installedChatModel } from "./chat-capability-catalog.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import { ChatInvalid } from "./chat-model.ts";
@@ -48,6 +48,7 @@ export const prepareChatImageRecovery = async (
   }
   const known = preparation.responses.read(input.operationId);
   let officeTarget: OfficeSendTarget | undefined = known?.officeTarget;
+  let referenceInputs: ChatReferenceInputs | undefined = known?.referenceInputs;
   let text: string;
   let sources: ImageInputSource[];
   if (known !== null) {
@@ -113,6 +114,7 @@ export const prepareChatImageRecovery = async (
       sources = [];
     } else {
       officeTarget = original.officeTarget;
+      referenceInputs = original.referenceInputs;
       const bound = preparation.responses.forEntry(String(proof.conversationId), native.entry, 0);
       if (
         bound === null ||
@@ -166,6 +168,7 @@ export const prepareChatImageRecovery = async (
       applicationOrigin: input.scope.applicationOrigin,
       text,
       ...(officeTarget === undefined ? {} : { officeTarget }),
+      ...(referenceInputs === undefined ? {} : { referenceInputs }),
       sources,
       model,
     });

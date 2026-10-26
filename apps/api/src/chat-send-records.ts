@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
 import type { OfficeSessionBinding } from "@starter/auth/office-session";
 import { decodeChatOfficeSession } from "./chat-office-session.ts";
 import { ChatSelection } from "./chat-capabilities.ts";
@@ -25,6 +26,8 @@ export type PublicChatInput = {
   logicalOperationId: string | null;
   files: readonly FileDescriptor[];
   textLength: number | null;
+  /** Associated immutable accepted entry, for display projection only. */
+  accepted?: AcceptedInputRecord | null;
 };
 
 /** Immutable per-send metadata; native Pi still owns execution and the transcript. */

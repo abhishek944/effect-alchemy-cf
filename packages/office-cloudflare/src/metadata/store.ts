@@ -1,5 +1,5 @@
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import { Effect, Schema } from "effect";
+import { Effect, type Schema } from "effect";
 import { withCause } from "@starter/diagnostics";
 import {
   OfficeConflict,
@@ -15,6 +15,7 @@ import {
   safeFailure,
 } from "@starter/office-contract";
 import type { ErrorCode, OfficeError } from "@starter/office-contract";
+import { readLegacyFailureMetadata } from "./legacy-failure.ts";
 import { OwnerClaims } from "@starter/office-server/ports";
 import type { OwnerScope, Store } from "@starter/office-server/ports";
 
@@ -85,7 +86,7 @@ export class MetadataStore {
     if (new TextEncoder().encode(text).length > this.limits.metadataBytes)
       throw new OfficeUnavailable(safeFailure("CONTENT_REQUIRED"));
     try {
-      return decodeWireSync(Schema.fromJsonString(schema))(text);
+      return decodeWireSync(schema)(readLegacyFailureMetadata(JSON.parse(text)));
     } catch (cause) {
       throw withCause(new OfficeUnavailable(safeFailure("CONTENT_REQUIRED")), cause);
     }

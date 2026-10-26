@@ -72,7 +72,8 @@ export async function parseUniverCommand(argv: readonly string[]): Promise<Unive
     .description("Export the current draft through the native server")
     .option("--worksheet <id>", "worksheet ID for CSV/TSV")
     .action((format: string, options: { worksheet?: string }) => {
-      const kind = format === "docx" ? "doc" : format === "pptx" ? "slide" : "sheet";
+      const kind =
+        format === "docx" || format === "txt" ? "doc" : format === "pptx" ? "slide" : "sheet";
       action = {
         kind: "export",
         options: decodeWireSync(ExportOptions)({

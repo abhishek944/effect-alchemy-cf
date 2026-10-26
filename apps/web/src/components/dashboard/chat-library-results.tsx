@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { formatFileSize } from "@/lib/chat-file-local";
 import type { SavedFile } from "@/lib/chat-library-types";
 import { isNativeOpenFile } from "@/lib/office-original";
 import { ChatLibraryImage, type LibraryImageState } from "./chat-library-image";
@@ -15,8 +16,10 @@ function Result({
   archived,
   active,
   actions,
+  sent,
 }: {
   file: SavedFile;
+  sent: boolean;
   archived: boolean;
   active: boolean;
   actions: LibraryResultActions;
@@ -43,18 +46,27 @@ function Result({
   const caption = alts.find((entry) => entry.src.includes(saved.id))?.alt.trim() || null;
   const copy = (
     <span data-cx="chat-library-result-copy">
-      <strong>
+      <strong title={saved.name}>
         {saved.name}
         {caption ? ` — ${caption}` : null}
       </strong>
       <small>
-        {savedOrigin(saved)} ·{" "}
-        {saved.width && saved.height
-          ? `${saved.width} × ${saved.height}`
-          : saved.kind === "office"
-            ? "Office original"
-            : "Safe text"}{" "}
-        · Saved
+        {sent ? (
+          <>
+            {saved.kind === "image" ? "Attached image" : "Attached file"} ·{" "}
+            {formatFileSize(saved.byteSize)}
+          </>
+        ) : (
+          <>
+            {savedOrigin(saved)} ·{" "}
+            {saved.width && saved.height
+              ? `${saved.width} × ${saved.height}`
+              : saved.kind === "office"
+                ? "Office original"
+                : "Safe text"}{" "}
+            · Saved
+          </>
+        )}
       </small>
     </span>
   );
@@ -138,16 +150,25 @@ export function ChatLibraryResults({
   files,
   archived,
   active = true,
+  presentation,
   ...actions
 }: LibraryResultActions & {
   files: readonly SavedFile[];
   archived: boolean;
   active?: boolean;
+  presentation?: "sent";
 }) {
   return (
     <div data-cx="chat-library-results">
       {files.map((file) => (
-        <Result key={file.id} file={file} archived={archived} active={active} actions={actions} />
+        <Result
+          key={file.id}
+          file={file}
+          archived={archived}
+          active={active}
+          actions={actions}
+          sent={presentation === "sent"}
+        />
       ))}
     </div>
   );

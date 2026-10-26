@@ -5,7 +5,7 @@ import { safeToolText, toolInputExcerpt } from "./chat-tool-excerpts.ts";
 import {
   TOOL_LIMIT,
   TOOL_PREVIEW_BYTES,
-  TOOL_PREVIEW_UNITS,
+  TOOL_OUTPUT_BYTES,
   type ChatTool,
 } from "./chat-tool-schema.ts";
 
@@ -36,7 +36,7 @@ export const toolResultPreview = (
     truncated ||= code === "truncated" || code === "interrupted" || code === "aborted";
   }
   for (let i = 0; i < length; i += 1) {
-    if (visited >= budget || visited >= 32 || output.length >= 1024) {
+    if (visited >= budget || visited >= 32 || output.length >= TOOL_OUTPUT_BYTES) {
       truncated = true;
       break;
     }
@@ -46,10 +46,14 @@ export const toolResultPreview = (
       truncated = true;
       continue;
     }
-    const excerpt = safeToolText(block.text, Math.max(0, 1024 - output.length - 1));
+    const excerpt = safeToolText(
+      block.text,
+      Math.max(0, TOOL_OUTPUT_BYTES - output.length - (output.length === 0 ? 0 : 1)),
+    );
     output += `${output.length === 0 ? "" : "\n"}${excerpt.text}`;
     truncated ||= excerpt.truncated;
   }
+  const bounded = safeToolText(output, TOOL_OUTPUT_BYTES);
   return {
     visited,
     result: {
@@ -61,8 +65,8 @@ export const toolResultPreview = (
           : message.isError
             ? "failed"
             : "succeeded",
-      output,
-      truncated,
+      output: bounded.text,
+      truncated: truncated || bounded.truncated,
     },
   };
 };
@@ -81,7 +85,6 @@ export const projectPublicTools = (
   let textOffset = 0;
   let visited = 0;
   let used = 64;
-  let remaining = TOOL_PREVIEW_UNITS;
   let toolsTruncated = evidenceTruncated;
   for (const block of message.content) {
     if (visited >= blockBudget || tools.length >= TOOL_LIMIT) {
@@ -105,8 +108,7 @@ export const projectPublicTools = (
       toolsTruncated = true;
       continue;
     }
-    const input = toolInputExcerpt(block.arguments, Math.min(768, remaining));
-    remaining -= input.text.length;
+    const input = toolInputExcerpt(block.arguments, TOOL_OUTPUT_BYTES);
     const result = results.get(block.id);
     const matching = result?.name === block.name ? result : undefined;
     const slot = slots
@@ -115,8 +117,7 @@ export const projectPublicTools = (
     const liveOutput =
       matching === undefined && slot?.status === "running" ? slot.output : undefined;
     const rawOutput = matching?.output ?? liveOutput;
-    const output = rawOutput === undefined ? null : safeToolText(rawOutput, remaining);
-    remaining -= output?.text.length ?? 0;
+    const output = rawOutput === undefined ? null : safeToolText(rawOutput, TOOL_OUTPUT_BYTES);
     const tool: ChatTool = {
       id: block.id,
       name: block.name,

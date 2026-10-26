@@ -9,6 +9,7 @@ type Phase = "idle" | "pending" | "confirmed" | "failed";
 
 /** One actual Human ready→draft request; uncertain attempts only observe the original selector. */
 export function OfficeReopen({
+  chatId,
   runtime,
   selection,
   onOperation,
@@ -16,6 +17,7 @@ export function OfficeReopen({
   admit,
   disabled,
 }: {
+  chatId: string;
   runtime: OfficeRuntime;
   selection: OfficeSelection;
   onOperation: (id: string) => void;
@@ -58,14 +60,21 @@ export function OfficeReopen({
         )
           throw new Error("Reopened scope changed.");
         release(); // Existing preview transition must claim its OWN gate, not deadlock on ours.
-        preview.openOffice({
-          title: `${captured.title} · generation ${next.generation}`,
-          target: {
-            documentId: next.documentId,
-            scope: { kind: "draft", draftId: next.id, generation: next.generation },
+        // Publish into the origin workspace; the reveal guard keeps a hidden origin in the
+        // background even if another chat is selected now.
+        preview.openOfficeIn(
+          chatId,
+          {
+            title: `${captured.title} · generation ${next.generation}`,
+            target: {
+              documentId: next.documentId,
+              scope: { kind: "draft", draftId: next.id, generation: next.generation },
+            },
+            reviewId: null,
+            attachments: captured.attachments,
           },
-          reviewId: null,
-        });
+          true,
+        );
         setMessage("Reopen confirmed. New-generation tab requested; the old review is unchanged.");
         return;
       }

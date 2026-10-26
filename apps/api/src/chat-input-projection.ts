@@ -2,19 +2,35 @@ import type { Message } from "@earendil-works/pi-ai";
 import { UserEntry, type EntryRecord } from "@earendil-works/pi-durable";
 import { RefreshFence } from "./chat-contract.ts";
 import type { ChatSendRecords, PublicChatInput } from "./chat-send-records.ts";
+import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
 
-/** Quoted file bodies belong in provider context, not in the visible draft caption. */
+export function acceptedPublicInput(
+  input: PublicChatInput | null,
+  accepted: AcceptedInputRecord | null,
+): PublicChatInput | null {
+  if (input === null) return null;
+  if (accepted !== null && accepted.operationId !== input.operationId)
+    throw new Error("Stored accepted input does not match send");
+  return { ...input, accepted };
+}
+
+/** Structured context belongs to the provider, even when a Send contains no files. */
 export const publicInputMessage = (message: Message, input: PublicChatInput | null): Message => {
   if (message.role !== "user") return message;
   // Structured file inputs must wait for their durable metadata mapping, never expose quoted originals.
   if (Array.isArray(message.content) && (input === null || input.textLength === null))
     throw new RefreshFence();
-  if (input === null || input.files.length === 0) return message;
+  if (input === null || input.textLength === null) return message;
   if (input.textLength === 0) return { ...message, content: "" };
-  const first = Array.isArray(message.content) ? message.content[0] : undefined;
-  if (first?.type !== "text" || first.text.length !== input.textLength)
-    throw new Error("Stored attachment caption does not match native input");
-  return { ...message, content: first.text };
+  const caption =
+    typeof message.content === "string"
+      ? message.content
+      : message.content[0]?.type === "text"
+        ? message.content[0].text
+        : null;
+  if (caption === null || caption.length !== input.textLength)
+    throw new Error("Stored caption does not match native input");
+  return { ...message, content: caption };
 };
 
 export const publicInputEntry = (entry: EntryRecord, records: ChatSendRecords): EntryRecord => {

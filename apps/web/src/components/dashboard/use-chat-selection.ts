@@ -2,6 +2,8 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { chatIdFromPath, chatPath, isChatLanding } from "@/lib/chat-route";
 import { navigate } from "@/lib/router";
 import { requestLeave } from "./account-leave-guard";
+import { useWorkspaceOffice } from "./workspace-office-context";
+import { rememberChat, rememberedChat } from "./workspace-session";
 
 function selectedChat(pathname: string, remembered: string | null): string | null {
   const requested = chatIdFromPath(pathname);
@@ -12,11 +14,14 @@ function selectedChat(pathname: string, remembered: string | null): string | nul
 
 /** URL owns explicit selection; Settings keeps the last chat and its draft alive. */
 export function useChatSelection(pathname: string) {
-  const [selection, setSelection] = useState(() => ({
-    id: chatIdFromPath(pathname),
-    remembered: chatIdFromPath(pathname),
-    generation: 0,
-  }));
+  const { accountId } = useWorkspaceOffice();
+  const [selection, setSelection] = useState(() => {
+    const remembered = chatIdFromPath(pathname) ?? rememberedChat(accountId);
+    return { id: selectedChat(pathname, remembered), remembered, generation: 0 };
+  });
+  useLayoutEffect(() => {
+    rememberChat(accountId, selection.remembered);
+  }, [accountId, selection.remembered]);
   const requested = selectedChat(pathname, selection.remembered);
   if (requested !== selection.id) {
     setSelection({
@@ -44,7 +49,10 @@ export function useChatSelection(pathname: string) {
       setSelection((current) => ({ id, remembered: id, generation: current.generation + 1 }));
       navigate(path);
     };
-    if (requestLeave({ intent: { kind: "route", path, via: "link" }, action })) action();
+    if (
+      requestLeave({ intent: { kind: "route", path, via: "link", resetChat: id === null }, action })
+    )
+      action();
   }, []);
   return { selectedId: selection.id, generation: selection.generation, selectionRef, select };
 }

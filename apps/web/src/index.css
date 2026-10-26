@@ -48,6 +48,9 @@
 
 * {
   box-sizing: border-box;
+  /* Share the conversation's quiet, theme-aware thumb and transparent track site-wide. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--cx-selected, var(--border)) transparent;
 }
 
 html,

@@ -7,6 +7,7 @@ import type { OfficeTaskAssociation } from "./chat-office-task-association.ts";
 import { OfficeStageReceipt, OfficeStageReceipts } from "./office-task-proof.ts";
 import { freezeAcceptedInputValue, sameAcceptedInputValue } from "./chat-accepted-input-values.ts";
 import { officeDenied } from "./office-private-authority.ts";
+import { officeTaskFile } from "./office-task-file.ts";
 
 const Name = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 const Binding = Schema.Struct({
@@ -95,7 +96,7 @@ export async function recordOfficeStageReceipt(
     )
       throw officeDenied();
   } else if (command.command === "stage-file") {
-    const file = association.originals.find((item) => item.fileId === command.input.fileRef);
+    const file = officeTaskFile(association, command.input.fileRef);
     if (
       !file ||
       !officeImportOptions(file.mediaType, file.name) ||

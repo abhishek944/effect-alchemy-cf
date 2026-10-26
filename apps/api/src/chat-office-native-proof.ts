@@ -47,7 +47,8 @@ export async function resolveOfficeCall(
   requireAcceptedInputAccess(access, context);
   if (api.conversationId !== access.conversationId) return deny("conversation-mismatch");
   if (!intent.step) return deny("intent-step-missing");
-  if (!intent.attachmentId) return deny("intent-attachment-missing");
+  if ((intent.attachmentId === undefined) === (intent.referenceId === undefined))
+    return deny("intent-source-invalid");
   const stepMemo = await api.memo(`univer.step.v1.${intent.step}`, context);
   const memo = decodeOption(IntentMemo, await api.memo(`office.intent.v1.${intent.step}`, context));
   if (memo === null) return deny("intent-memo-invalid");

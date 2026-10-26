@@ -138,7 +138,6 @@ body:has([data-dashboard]) {
   overflow: auto;
   background: var(--cx-canvas);
   border-radius: 0 var(--cx-radius-frame) var(--cx-radius-frame) 0;
-  scrollbar-color: var(--cx-selected) transparent;
 }
 [data-dashboard] [data-cx="canvas"]:focus {
   outline: none;

@@ -10,6 +10,7 @@ import { useSpeechAdapters } from "@/lib/chat-speech-adapters";
 import { HistoryUiProvider } from "./chat-history-ui";
 import { ChatConversationView } from "./chat-conversation-view";
 import { ChatReferenceFocusProvider } from "./chat-reference-focus";
+import { useReferenceWorkspace } from "./reference-workspace";
 import { appendText, convertMessage, projectMessages } from "./chat-projection";
 import { composerSendLabel, composerStatus } from "./chat-composer-status";
 import { useChatFacts } from "./use-chat-facts";
@@ -26,13 +27,10 @@ export default function ChatConversation({
   active: boolean;
 }) {
   const store = useChatStore();
-  const { snapshot, pendingSend, stopping, connection, selectedId, chats, attachment } = store;
+  const references = useReferenceWorkspace();
+  const { snapshot, pendingSend, stopping, connection, selectedId, attachment } = store;
   const chatId = snapshot?.chat.id ?? selectedId ?? "none";
   const pending = pendingSend?.chatId === chatId ? pendingSend : null;
-  const otherPending = pendingSend && pendingSend.chatId !== chatId ? pendingSend : null;
-  const otherTitle = otherPending
-    ? (chats.find((chat) => chat.id === otherPending.chatId)?.title ?? "another chat")
-    : null;
   const stoppingHere = stopping?.chatId === chatId;
   const running = Boolean(snapshot?.isRunning) || pending?.phase === "accepted";
   const archived = Boolean(snapshot?.chat.archived);
@@ -53,7 +51,7 @@ export default function ChatConversation({
     [history.rows, history.live, history.textFor, pending, selectedId],
   );
   const voice = useSpeechAdapters({ chatId: () => selectedId });
-  const { attachmentsFor, generatedFor, factsFor, stampFor } = useChatFacts(
+  const { attachmentsFor, selectionsFor, generatedFor, factsFor, stampFor } = useChatFacts(
     history.rows,
     history.live,
     Boolean(snapshot?.isRunning),
@@ -68,7 +66,11 @@ export default function ChatConversation({
       if (runtime.thread.composer.getState().dictation) {
         throw new MessageNotSentError("Stop or cancel dictation before sending.");
       }
-      const outcome = await store.send(appendText(message), chatId);
+      const text = appendText(message);
+      const draft = references.editor(chatId)?.read();
+      if (draft && draft.text !== text)
+        throw new MessageNotSentError("The reference draft changed.");
+      const outcome = await store.send(text, chatId, draft?.inputs);
       if (outcome.status === "blocked") throw new MessageNotSentError(outcome.message);
     },
     onCancel: async () => {
@@ -111,9 +113,7 @@ export default function ChatConversation({
           : "Working"
         : "";
   const stopLabel = stopping
-    ? stoppingHere
-      ? "Stopping the current answer…"
-      : `Stopping the answer in "${stopping.title}"…`
+    ? "Stopping the current answer…"
     : stopRef
       ? "Stop the current answer"
       : "Waiting for the run to identify itself before it can be stopped";
@@ -127,8 +127,7 @@ export default function ChatConversation({
   });
   const sendLabel = composerSendLabel({
     canSend,
-    stoppingTitle: stopping?.title ?? null,
-    otherTitle,
+    stoppingHere: Boolean(stopping),
     pendingHere: Boolean(pending),
     running,
     archived,
@@ -139,6 +138,7 @@ export default function ChatConversation({
       value={{
         textFor: history.textForById,
         attachmentsFor,
+        selectionsFor,
         generatedFor,
         active,
         stampFor,
@@ -158,7 +158,6 @@ export default function ChatConversation({
               runError={runError}
               actionError={store.actionError}
               chatId={chatId}
-              otherTitle={otherTitle}
               footer={{
                 archived,
                 chatId,

@@ -1,7 +1,7 @@
 import { LifecycleService, LifecycleStages, type Injector } from "@univerjs/core";
 import { DocSkeletonManagerService } from "@univerjs/docs";
 import { IRenderManagerService } from "@univerjs/engine-render";
-import { filter, firstValueFrom, timeout } from "rxjs";
+import { EMPTY, filter, firstValueFrom, map, startWith, switchMap, timeout } from "rxjs";
 import type { Kind } from "@starter/office-contract";
 
 /** A loaded model or empty canvas is not evidence that the native result is laid out. */
@@ -14,6 +14,15 @@ export async function confirmNativeRendering(injector: Injector, kind: Kind, uni
     const layout = render.with(DocSkeletonManagerService);
     await firstValueFrom(
       layout.currentSkeleton$.pipe(
+        switchMap((skeleton) =>
+          skeleton === null || skeleton === undefined
+            ? EMPTY
+            : skeleton.layoutProgress$.pipe(
+                // Check existing completion as well as subsequent layout progress.
+                startWith(null),
+                map(() => skeleton),
+              ),
+        ),
         filter(
           (skeleton) =>
             skeleton !== null &&

@@ -3,6 +3,7 @@ import { officeAttachmentIds, officeImportOptions } from "@starter/office-contra
 import type { DraftTarget } from "@starter/office-contract";
 import type { OfficeMetadata, OperationRecord } from "@starter/office-server/ports";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
+import { officeTaskFile } from "./office-task-file.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 
 export type OfficeTaskAttachment = {
@@ -16,9 +17,10 @@ export async function readOfficeTaskAttachment(
   proof: OfficeTaskProof,
   observeOnly = false,
 ): Promise<OfficeTaskAttachment | null> {
-  const { intent, originals, session } = proof.association;
+  const { intent, session } = proof.association;
   if (!intent.attachmentId) return null;
-  const file = originals.find((item) => item.fileId === intent.attachmentId);
+  // Same-Send original or the ready retained file of this owner/chat; both proved before use.
+  const file = officeTaskFile(proof.association, intent.attachmentId);
   if (!file) throw officeDenied();
   const options = officeImportOptions(file.mediaType, file.name);
   if (options === null) return null;

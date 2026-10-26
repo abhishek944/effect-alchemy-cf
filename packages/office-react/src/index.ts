@@ -1,6 +1,7 @@
 export { OfficeNativeEditor } from "./editor.tsx";
 export type { OfficeNativeEditorProps } from "./editor.tsx";
 export type { OfficeEditorHandle, OfficeSave } from "./connection.ts";
+export type { NativeSelectionCapture } from "./capture.ts";
 export type { NativeTheme, NativeUser, FrameStatus } from "./frame/messages.ts";
 export { OfficeReview } from "./review.tsx";
 export type { OfficeReviewProps } from "./review.tsx";

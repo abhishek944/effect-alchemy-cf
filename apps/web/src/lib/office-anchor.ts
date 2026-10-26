@@ -1,7 +1,33 @@
-import { freezeOfficeSendTarget, type Target, type View } from "@starter/office-contract";
-import type { OfficeRuntime, OfficeSave } from "@starter/office-react";
+import {
+  MAX_OFFICE_SEND_ATTACHMENTS,
+  Id,
+  freezeOfficeSendTarget,
+  type OfficeSendContext,
+  type Target,
+  type View,
+} from "@starter/office-contract";
+import type { OfficeEditorHandle, OfficeRuntime, OfficeSave } from "@starter/office-react";
+import { Schema } from "effect";
 import { officeFail } from "@/lib/browser-diagnostics";
 import { assertOfficeViewTarget, type OpenOffice } from "@/lib/office-runtime";
+
+const isId = Schema.is(Id);
+/**
+ * Descriptive Send context: the files this tab actually opened plus the cell selection the editor
+ * showed. It is not a task, View or read/write grant, and a malformed identity is dropped rather
+ * than allowed to block a real Send.
+ */
+export const officeSendContext = (
+  attachmentIds: readonly string[],
+  sheet: OfficeSendContext["sheet"],
+): OfficeSendContext | undefined => {
+  const ids = [...new Set(attachmentIds)].filter(isId).slice(0, MAX_OFFICE_SEND_ATTACHMENTS);
+  if (ids.length === 0 && sheet === undefined) return undefined;
+  return {
+    ...(ids.length === 0 ? {} : { attachmentIds: ids }),
+    ...(sheet === undefined ? {} : { sheet }),
+  };
+};
 
 /**
  * The server binds a Send target to one exact stored View. The displayed View is older than
@@ -34,6 +60,7 @@ export function officeSendAnchor(
   acknowledged: OfficeSave | null,
   checkpoint: View | null,
   target: Target,
+  context: OfficeSendContext | undefined,
 ) {
   if (opened.view.nativeTarget.kind === "pinned-snapshot") return null;
   assertOfficeViewTarget(opened.view, target);
@@ -52,29 +79,48 @@ export function officeSendAnchor(
     documentKind: checkpoint.kind,
     expectedRevision: acknowledged.revision,
   };
+  const extra = context === undefined ? {} : { context };
   return freezeOfficeSendTarget(
     target.scope.kind === "main"
-      ? { kind: "main", ...common }
+      ? { kind: "main", ...common, ...extra }
       : {
           kind: "draft",
           ...common,
           draftId: target.scope.draftId,
           generation: target.scope.generation,
+          ...extra,
         },
   );
 }
 
-/** Checkpoint capture plus the frozen anchor, in the one order Send requires. */
-export async function checkpointOfficeSendTarget(
+/** Send checkpoints pending edits without ending the editor session or its transport. */
+export async function prepareOfficeSendTarget(
   runtime: OfficeRuntime,
-  target: Target,
+  selection: { readonly target: Target; readonly attachments: readonly string[] },
   opened: OpenOffice,
-  acknowledged: OfficeSave | null,
+  handle: OfficeEditorHandle,
   signal: AbortSignal,
 ) {
-  const checkpoint =
-    acknowledged === null
-      ? null
-      : await captureOfficeCheckpoint(runtime, target, opened, acknowledged, signal);
-  return officeSendAnchor(opened, acknowledged, checkpoint, target);
+  signal.throwIfAborted();
+  const acknowledged = await handle.hold();
+  try {
+    const checkpoint = await captureOfficeCheckpoint(
+      runtime,
+      selection.target,
+      opened,
+      acknowledged,
+      signal,
+    );
+    // The hold captured the real selection before native input was sealed; context stays descriptive.
+    return officeSendAnchor(
+      opened,
+      acknowledged,
+      checkpoint,
+      selection.target,
+      officeSendContext(selection.attachments, acknowledged.selection),
+    );
+  } finally {
+    // Release only our temporary hold, never revive an explicitly drained editor.
+    if (opened.editor?.state === "active") await handle.resume();
+  }
 }

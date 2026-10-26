@@ -12,23 +12,33 @@ import { OfficeStagingFailure, officeStagingFailure } from "./staging-failure.ts
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
 import { dispatch, checkReceipt, receiptKind, type OfficeOutput } from "./dispatch.ts";
 import { bindIntent, claimDispatch, digestBytes, hasOperation, type OfficeStep } from "./intent.ts";
-import type { OfficeAttachment, OfficePiHost, OfficeToolContext } from "./types.ts";
+import type { OfficeToolSource } from "./parameters.ts";
+import type {
+  OfficeTaskAccess,
+  OfficeAttachment,
+  OfficePiHost,
+  OfficeToolContext,
+} from "./types.ts";
 
 export type OfficeWorkflow = ReturnType<typeof officeWorkflow>;
 /** Internal orchestration; private step attestations bind every operation to the real tool call. */
 export function officeWorkflow(
   request: unknown,
-  attachmentId: string,
+  source: string | OfficeToolSource,
   api: ToolExecutionApi,
   context: OfficeToolContext,
   host: OfficePiHost,
 ) {
+  const selector = typeof source === "string" ? { attachmentId: source } : source;
+  const attachmentId = "attachmentId" in selector ? selector.attachmentId : undefined;
+  let reference: OfficeTaskAccess["reference"];
+  let referenceBasis: DraftTarget | undefined;
   let attachment: OfficeAttachment | undefined;
   let receipt: Receipt | null | undefined;
   let basis: DraftTarget | undefined;
   const prepare = async (raw: OfficeCommand, label: string, operationId?: string) => {
     const step: OfficeStep = {
-      attachmentId,
+      ...selector,
       step: label,
       ...(operationId ? { operationId } : {}),
       ...(basis ? { basis } : {}),
@@ -50,19 +60,37 @@ export function officeWorkflow(
           throw officeStagingFailure(binding.intent.operationId, "stage-admission", true, error);
         throw error;
       });
-    if (access.attachment?.id !== attachmentId)
+    if (
+      "referenceId" in selector
+        ? access.reference?.id !== selector.referenceId
+        : access.attachment?.id !== attachmentId
+    )
       throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
+    reference = access.reference;
+    referenceBasis = access.referenceBasis;
     attachment = access.attachment;
     receipt = access.attachmentReceipt;
     context.abortSignal?.throwIfAborted();
     return { ...binding, access };
   };
   return {
+    get referenceBasis() {
+      return referenceBasis;
+    },
     get attachment() {
       return attachment;
     },
     set basis(value: DraftTarget) {
       basis = value;
+    },
+    async describeReference() {
+      if (!("referenceId" in selector)) throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
+      await prepare(
+        { command: "operation", operationId: `reference_open_${selector.referenceId}` },
+        "describe",
+      );
+      if (reference === undefined) throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
+      return reference;
     },
     async describe() {
       await prepare({ command: "operation", operationId: `file_open_${attachmentId}` }, "describe");

@@ -18,6 +18,7 @@ export type {
   BoundAcceptedInput,
 } from "./chat-accepted-input-schema.ts";
 import { acceptedInputFailure } from "./chat-accepted-input-values.ts";
+import { matchingCompactReferenceInput } from "./chat-reference-integrity.ts";
 import { digestCompactImageInput } from "./chat-image-response-digest.ts";
 
 export type AcceptedInputContext = Parameters<Storage["task"]>[1];
@@ -90,6 +91,7 @@ export const verifyAcceptedInputEntry = async (
     binding.conversationId !== String(entry.conversationId) ||
     binding.operationId !== candidate.operationId ||
     binding.inputDigest !== candidate.inputDigest ||
+    !matchingCompactReferenceInput(message.content, candidate) ||
     (await digestCompactImageInput(message.content)) !== candidate.inputDigest
   )
     acceptedInputFailure();

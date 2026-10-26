@@ -1,27 +1,33 @@
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
+import type { Target } from "@starter/office-contract";
 import { useChatStore } from "@/lib/chat-store-context";
 import { useWorkspacePreview } from "./workspace-preview-context";
 
-/** Consume fresh tool requests only; initial/reloaded snapshots never reopen old tool intent. */
+/**
+ * Consumes fresh tool requests for every retained chat. The request always opens in the chat that
+ * owns it; only that chat's visible workspace reveals or focuses anything, so a hidden running chat
+ * can finish its Office work without taking focus from the conversation on screen.
+ */
 export function OfficePanelRequests({ active }: { active: boolean }) {
-  const { selectedId, snapshot, attachment } = useChatStore();
+  const { panelRequests, claimPanelRequest } = useChatStore();
   const preview = useWorkspacePreview();
-  const seen = useRef<{ scope: string; id: string | null } | null>(null);
-  const scope = `${selectedId}/${attachment}`;
-  const request = snapshot?.chat.id === selectedId ? snapshot.panelRequest : null;
-  const open = useEffectEvent(() => {
-    if (!request) return;
-    preview.openOffice({ title: "Office document", target: request.target, reviewId: null });
+  const open = useEffectEvent((chatId: string, requestId: string, target: Target) => {
+    // Consume before opening: a refused allocation is still handled once, never retried per render.
+    claimPanelRequest(chatId, requestId);
+    // The preview provider reveals only when this exact chat is the one on screen.
+    preview.openOfficeIn(
+      chatId,
+      { title: "Office document", target, reviewId: null, attachments: [] },
+      true,
+    );
   });
   useEffect(() => {
-    if (snapshot?.chat.id !== selectedId) return;
-    if (seen.current?.scope !== scope) {
-      seen.current = { scope, id: request?.id ?? null };
-      return;
+    // Every request is consumed exactly once, even while another section is showing; only a
+    // visible, still-fresh request opens a panel, matching the old first-observation rule.
+    for (const { chatId, request } of panelRequests) {
+      if (!active || request.expiresAt <= Date.now()) claimPanelRequest(chatId, request.id);
+      else open(chatId, request.id, request.target);
     }
-    if (!request || seen.current.id === request.id) return;
-    seen.current.id = request.id;
-    if (active && request.expiresAt > Date.now()) open();
-  }, [scope, selectedId, snapshot?.chat.id, request, active]);
+  }, [active, claimPanelRequest, panelRequests]);
   return null;
 }

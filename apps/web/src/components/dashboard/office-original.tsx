@@ -10,6 +10,7 @@ import { errorMessage } from "@/lib/chat-api";
 import { useWorkspaceOffice } from "./workspace-office-context";
 import { useWorkspacePreview } from "./workspace-preview-context";
 import { OfficeSurface } from "./office-surface";
+import { useOriginalReferenceSource } from "./reference-original-source";
 
 type Props = { file: SavedFile; id: string; archived: boolean };
 export function OfficeOriginal(props: Props) {
@@ -47,20 +48,25 @@ function OriginalAttempt({
   );
   const [unresolved, setUnresolved] = useState(true);
   const [selection, setSelection] = useState<OriginalOffice | null>(null);
+  useOriginalReferenceSource(selection === null ? file : null, async (capture) => {
+    if (capture !== null)
+      throw new Error("Native Office originals do not expose text-preview offsets.");
+    preview.show(file.chatId, id);
+  });
   const [error, setError] = useState<{ message: string; canContinue: boolean } | null>(null);
   useEffect(() => {
     // A mounted editor owns its own pending state; this surface never overwrites it.
     if (selection !== null) return undefined;
-    publishPending(id, owner, unresolved);
-    return () => publishPending(id, owner, false);
-  }, [publishPending, id, owner, unresolved, selection]);
+    publishPending(file.chatId, id, owner, unresolved);
+    return () => publishPending(file.chatId, id, owner, false);
+  }, [publishPending, file.chatId, id, owner, unresolved, selection]);
   /**
    * This surface never holds unsaved native input, so it never blocks workspace navigation.
    * The operation identity is durable: reopening the same file discovers it again.
    */
   useLayoutEffect(() => {
     if (selection) return undefined;
-    return register(id, {
+    return register(file.chatId, id, {
       owner,
       chatId: file.chatId,
       readOnly: true,
@@ -103,16 +109,15 @@ function OriginalAttempt({
     };
   }, [runtime, file, archived, resume, state]);
   if (selection) return <OfficeSurface chatId={file.chatId} id={id} selection={selection} />;
+  if (error === null)
+    return (
+      <section data-cx="office-opening" aria-label={file.name}>
+        <output>Opening…</output>
+      </section>
+    );
   return (
     <section data-cx="office-surface" aria-label={file.name}>
-      <p role={error ? "alert" : "status"}>
-        {error?.message ||
-          "Opening original in Univer as a draft. The saved original and Main stay unchanged…"}
-      </p>
-      <p>
-        Office operation: file_open_{file.id}
-        {error ? " · Reopen this file to check the same operation." : ""}
-      </p>
+      <p role="alert">{error.message}</p>
       {error && (
         <button type="button" onClick={() => retry(false)}>
           Check original operation

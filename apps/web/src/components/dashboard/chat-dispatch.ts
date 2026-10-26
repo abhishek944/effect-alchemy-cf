@@ -27,6 +27,7 @@ export async function dispatchSend(
       attachments: frozen.attachments,
       references: frozen.references ?? [],
       ...(frozen.officeTarget === undefined ? {} : { officeTarget: frozen.officeTarget }),
+      ...(frozen.referenceInputs?.length ? { referenceInputs: frozen.referenceInputs } : {}),
     });
     return receipt.accepted
       ? { ok: true }

@@ -9,6 +9,8 @@ import { officeTaskTransport, type OfficeTaskEnvironment } from "./chat-office-t
 import { officeTaskPort } from "./chat-office-client.ts";
 import { officeTaskUpload } from "./chat-office-upload.ts";
 import { readOfficeAcceptedFile } from "./chat-office-original.ts";
+import { readOfficeAttachments } from "./chat-office-attachments.ts";
+import { officeTaskFile } from "./office-task-file.ts";
 
 /** Installed in the real native registry; Root alone issues Task actors after actual private proof. */
 export function createOfficePiHost(
@@ -17,18 +19,31 @@ export function createOfficePiHost(
   broker: ChatOfficeTaskBroker,
 ): OfficePiHost {
   return {
+    attachments: (input) => readOfficeAttachments(env, access(), input),
     async resolve(resolution) {
       const proof = await broker.capture(resolution);
       const transport = await officeTaskTransport(env, proof, resolution.context.abortSignal);
       const client = officeTaskPort(transport);
       resolution.context.abortSignal?.throwIfAborted();
-      const original = transport.proof.association.originals.find(
-        (file) => file.fileId === resolution.intent.attachmentId,
-      );
-      if (!original) throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
+      const original = officeTaskFile(transport.proof.association, resolution.intent.attachmentId);
+      const reference = transport.proof.association.reference;
+      if (!original && reference?.kind !== "native")
+        throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
       const observeStaged = officeStageObserver(resolution, broker, proof.lease, transport.proof);
       return {
-        attachment: { id: original.fileId, name: original.name, mediaType: original.mediaType },
+        ...(original === undefined
+          ? {}
+          : {
+              attachment: {
+                id: original.fileId,
+                name: original.name,
+                mediaType: original.mediaType,
+              },
+            }),
+        ...(reference?.kind === "native" ? { reference } : {}),
+        ...(transport.referenceBasis === undefined
+          ? {}
+          : { referenceBasis: transport.referenceBasis }),
         attachmentReceipt: transport.attachmentReceipt,
         client,
         ...(observeStaged ? { observeStaged } : {}),

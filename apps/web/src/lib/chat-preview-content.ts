@@ -5,7 +5,11 @@ import { decodeTextFile } from "./chat-file-policy";
 
 export type AttachmentSource = LocalFile | SavedFile;
 export type PreviewSection = { title: string; text?: string; rows?: string[][] };
-export type AttachmentContent = { sections: PreviewSection[]; note: string | null };
+export type AttachmentContent = {
+  sections: PreviewSection[];
+  note: string | null;
+  originalText?: string;
+};
 export const isLocalAttachment = (source: AttachmentSource): source is LocalFile =>
   "file" in source;
 
@@ -98,6 +102,7 @@ export async function readAttachmentContent(
   if (!decoded.ok) throw new Error("This file could not be read as safe UTF-8 text.");
   const csv = source.name.toLowerCase().endsWith(".csv");
   return {
+    originalText: decoded.text,
     sections: [
       {
         title: source.name,

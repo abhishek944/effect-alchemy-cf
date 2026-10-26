@@ -7,14 +7,14 @@ import {
   type DraftTarget,
 } from "@starter/office-contract";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
+import type { OfficeToolSource } from "./parameters.ts";
 import type { OfficeIntentCommand, OfficeToolContext, OfficeToolIntent } from "./types.ts";
 
 const KEY = "office.intent.v1";
 const CLAIM = "office.dispatch.v1";
 const IntentMemo = Schema.Struct({ version: Schema.Literal(1), operationId: Id, digest: Digest });
 const DispatchMemo = Schema.Struct({ ...IntentMemo.fields, nonce: Id });
-export type OfficeStep = {
-  readonly attachmentId: string;
+export type OfficeStep = OfficeToolSource & {
   readonly step: string;
   readonly operationId?: string;
   readonly basis?: DraftTarget;
@@ -65,7 +65,11 @@ export const bindIntent = async (
         String(api.conversationId),
         api.callId,
         description,
-        ...(step ? [step.attachmentId, step.step, step.basis ?? null] : []),
+        ...(step
+          ? "referenceId" in step
+            ? ["office.reference", step.referenceId, step.step, step.basis ?? null]
+            : [step.attachmentId, step.step, step.basis ?? null]
+          : []),
       ]),
     ),
   );
@@ -83,7 +87,9 @@ export const bindIntent = async (
       command: await describe(bound),
       ...(step
         ? {
-            attachmentId: step.attachmentId,
+            ...("referenceId" in step
+              ? { referenceId: step.referenceId }
+              : { attachmentId: step.attachmentId }),
             step: step.step,
             ...(step.basis ? { basis: step.basis } : {}),
           }

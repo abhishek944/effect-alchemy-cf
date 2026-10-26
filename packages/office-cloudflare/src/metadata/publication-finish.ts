@@ -1,3 +1,4 @@
+import { operationRecordSql } from "./legacy-failure.ts";
 import { Receipt, decodeWireSync } from "@starter/office-contract";
 import type { WritePermit } from "@starter/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
@@ -60,7 +61,7 @@ export async function finishPublication(
   const refs = operationRefs(record),
     ready = completeRefs(db, permit.owner, refs);
   let guard = `${authority.sql} AND ${frozen.sql} AND ${ready.sql}
-    AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND record=? AND claim_worker IS NULL)
+    AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND ${operationRecordSql}=? AND claim_worker IS NULL)
     AND EXISTS(SELECT 1 FROM office_meta_barriers WHERE owner=? AND document=? AND record=?)`;
   const values: (string | number | null)[] = [
     ...authority.values,

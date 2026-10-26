@@ -48,13 +48,6 @@
   min-height: 0;
   border: 0;
 }
-[data-office="native-status"]:empty {
-  display: none;
-}
-[data-office="native-status"] {
-  padding: 8px 12px;
-  font-size: 12px;
-}
 [data-office="compact-changes"] {
   flex-shrink: 0;
   padding: 10px 12px;

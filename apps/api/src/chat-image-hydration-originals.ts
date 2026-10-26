@@ -1,13 +1,20 @@
 import type { ImageContent, TextContent, UserMessage } from "@earendil-works/pi-ai";
 import { MAX_EXCERPT_CHARS, MAX_QUOTED_TEXT_CHARS } from "./chat-attachment-schema.ts";
 import { chatFilesImageCompatibility } from "./chat-files-native.ts";
-import { attachmentBoundary, decodeTextFile, quotedAttachmentBlock } from "./chat-files-text.ts";
+import {
+  attachmentBoundary,
+  countTextChars,
+  decodeTextFile,
+  quotedAttachmentBlock,
+} from "./chat-files-text.ts";
 import { csvReferenceBlock, isCsvOriginal } from "./chat-image-hydration-csv.ts";
 import { createChatLibraryClient } from "./chat-library-client.ts";
 import type { SavedOriginalMetadata } from "./chat-library-original.ts";
 import { readAcceptedOriginal } from "./chat-image-original.ts";
 import { runImageIO } from "./chat-image-io.ts";
 import { encodeHydrationBase64 } from "./chat-image-hydration-codec.ts";
+import { referenceTextSlice } from "./chat-reference-input.ts";
+import { originalReferenceSlices } from "./chat-reference-hydration.ts";
 import type { HydrationOccurrence, ImageHydrationPlan } from "./chat-image-hydration-plan.ts";
 import {
   hydrationFailure,
@@ -86,16 +93,30 @@ export const loadHydrationOccurrence = async (
     return hydrationFailure("original_unavailable");
   const ownerScope = catalog.id.toString();
   const boundary = attachmentBoundary();
-  const textTotal = item.originals.filter(
-    (original) => original.file.kind === "text" && !isCsvOriginal(original.file),
+  const selections = new Map(
+    item.originals.map((original) => [
+      original.file.id,
+      originalReferenceSlices(item.occurrence.referenceInputs, original.file.id),
+    ]),
+  );
+  const textTotal = item.originals.reduce(
+    (total, original) =>
+      total +
+      (original.file.kind !== "text"
+        ? 0
+        : (selections.get(original.file.id)?.length ?? (isCsvOriginal(original.file) ? 0 : 1))),
+    0,
+  );
+  const csvTotal = item.originals.filter(
+    (original) => isCsvOriginal(original.file) && selections.get(original.file.id) === undefined,
   ).length;
-  const csvTotal = item.originals.filter((original) => isCsvOriginal(original.file)).length;
   let textIndex = 0;
   let csvIndex = 0;
   let quotedChars = 0;
   for (const original of item.originals) {
     hydrationSignal(input.signal);
-    if (isCsvOriginal(original.file)) {
+    const slices = selections.get(original.file.id);
+    if (isCsvOriginal(original.file) && slices === undefined) {
       content.push({
         type: "text",
         text: csvReferenceBlock(original.file, boundary, csvIndex, csvTotal, original.digest),
@@ -119,23 +140,34 @@ export const loadHydrationOccurrence = async (
       });
       continue;
     }
-    quotedChars += loaded.textCharacters;
-    if (quotedChars > MAX_QUOTED_TEXT_CHARS) hydrationFailure("quoted_text_too_large");
     const decoded = decodeTextFile(loaded.bytes, MAX_EXCERPT_CHARS);
     if (!decoded.ok || decoded.chars !== loaded.textCharacters)
       return hydrationFailure("original_integrity");
-    content.push({
-      type: "text",
-      text: quotedAttachmentBlock({
-        boundary,
-        index: textIndex++,
-        total: textTotal,
-        name: original.file.name,
-        mediaType: original.file.mediaType,
-        byteSize: original.file.byteSize,
-        text: decoded.text,
-      }),
-    });
+    let texts: string[];
+    try {
+      texts =
+        slices === undefined
+          ? [decoded.text]
+          : slices.map((span) => referenceTextSlice(decoded.text, span));
+    } catch {
+      return hydrationFailure("invalid_context");
+    }
+    for (const text of texts) {
+      quotedChars += countTextChars(text);
+      if (quotedChars > MAX_QUOTED_TEXT_CHARS) hydrationFailure("quoted_text_too_large");
+      content.push({
+        type: "text",
+        text: quotedAttachmentBlock({
+          boundary,
+          index: textIndex++,
+          total: textTotal,
+          name: original.file.name,
+          mediaType: original.file.mediaType,
+          byteSize: original.file.byteSize,
+          text,
+        }),
+      });
+    }
   }
   hydrationSignal(input.signal);
   return { ...item.message, content };

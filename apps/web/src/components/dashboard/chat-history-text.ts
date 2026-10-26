@@ -122,10 +122,7 @@ export function hasPrefixSentinel(chunks: Items, messageId: string): boolean {
   const chunk = chunks[messageId];
   return Boolean(chunk && chunk.back.some((ref) => ref.cursor === null));
 }
-/**
- * Keeps an already fetched continuation with its immutable prefix; growth
- * trims only contiguous overlap and later sections stay independent.
- */
+/** Retains immutable prefixes, trims only contiguous growth; later sections stay independent. */
 export function reconcileChunks(chunks: Items, rows: ChatMessage[]): Items {
   const byId = new Map(rows.map((row) => [row.id, row]));
   const kept: Items = {};
@@ -159,12 +156,14 @@ export function sameChunks(a: Items, b: Items): boolean {
   const keys = Object.keys(a);
   return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
 }
-/** Counts every supplied row prefix plus any continuation in the shared budget. */
+/** Counts retained captions, selection display strings and continuations in the shared budget. */
 export function textBytes(rows: ChatMessage[], chunks: Items): number {
   let units = 0;
   const counted = new Set<string>();
   for (const row of rows) {
     units += row.text.length;
+    for (const area of row.selectedAreas ?? [])
+      units += area.name.length + area.scope.length + (area.quote?.length ?? 0);
     const chunk = chunks[row.id];
     if (!chunk) continue;
     if (chunk.prefix && chunk.prefix !== row.text) units += chunk.prefix.length;

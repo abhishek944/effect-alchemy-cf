@@ -1,3 +1,4 @@
+import { operationRecordSql } from "./legacy-failure.ts";
 import { Count, Id, decodeWireSync } from "@starter/office-contract";
 import type { OfficeMetadata, OperationRecord, OwnerScope } from "@starter/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
@@ -111,7 +112,7 @@ export function createOperations(
           ...complete.values,
         ];
         if (initialDraftConflict(previous, record)) {
-          predicate += ` AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND phase='reserved' AND record=?)
+          predicate += ` AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND phase='reserved' AND ${operationRecordSql}=?)
             AND NOT EXISTS(SELECT 1 FROM office_meta_jobs WHERE owner=? AND operation=?)
             AND NOT EXISTS(SELECT 1 FROM office_meta_writes WHERE owner=? AND operation=?)`;
           values.push(owner, id, db.encode(OperationRow, previous), owner, id, owner, id);

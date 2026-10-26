@@ -28,7 +28,7 @@ export const prepareConversationFiles = async (
   scope: ChatSendScope,
   model: ChatCatalogModel,
 ): Promise<PreparedChatSend> => {
-  if (input.references?.length)
+  if (input.references?.length || input.referenceInputs?.length)
     throw new ChatInvalid({ message: "Saved references require the compact input path." });
   if (input.attachments.length === 0) return { content: input.text, files: [] };
   const { bucket, catalog } = filesFor(env, scope.ownerId);

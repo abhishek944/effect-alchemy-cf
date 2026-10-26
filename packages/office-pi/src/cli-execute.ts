@@ -6,6 +6,7 @@ import { outputResult } from "./results.ts";
 import { officeWorkflow } from "./workflow.ts";
 import type { UniverCliRequest } from "./parameters.ts";
 import type { OfficePiHost, OfficeToolContext } from "./types.ts";
+import { runReferenceCommand } from "./reference.ts";
 import type { OfficeOutput } from "./dispatch.ts";
 
 export async function executeUniverCli(
@@ -18,6 +19,19 @@ export async function executeUniverCli(
     throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
   });
   if (action.kind === "help") return { content: [{ type: "text", text: action.text }] };
+  if ("referenceId" in request) {
+    const output = await runReferenceCommand(
+      officeWorkflow(request, { referenceId: request.referenceId }, api, context, host),
+      action,
+    );
+    context.abortSignal?.throwIfAborted();
+    return outputResult(
+      action.kind,
+      output.kind === "receipt" ? output.value.operationId : null,
+      output,
+      action.kind === "operation",
+    );
+  }
   const workflow = officeWorkflow(request, request.attachmentId, api, context, host);
   let output: OfficeOutput;
   if (action.kind === "import") {

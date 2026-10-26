@@ -16,7 +16,6 @@ export function ChatConversationView({
   runError,
   actionError,
   chatId,
-  otherTitle,
   footer,
 }: {
   history: ReturnType<typeof useChatHistory>;
@@ -26,7 +25,6 @@ export function ChatConversationView({
   runError: string | null;
   actionError: string | null;
   chatId: string;
-  otherTitle: string | null;
   footer: ComponentProps<typeof ChatFooter>;
 }) {
   return (
@@ -68,7 +66,7 @@ export function ChatConversationView({
           {actionError}
         </p>
       )}
-      <ChatNotices chatId={chatId} otherTitle={otherTitle} />
+      <ChatNotices chatId={chatId} />
       <ChatFooter {...footer} />
     </ThreadPrimitive.Root>
   );

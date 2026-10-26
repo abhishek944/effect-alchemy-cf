@@ -8,18 +8,11 @@ import ChatSkillsRecovery from "./chat-skills-recovery";
  * explanations name the affected chat. Discard only forgets local state; it
  * never cancels accepted inference.
  */
-export default function ChatNotices({
-  chatId,
-  otherTitle,
-}: {
-  chatId: string;
-  otherTitle: string | null;
-}) {
-  const { pendingSend, stopping, retrySend, discardSend, select } = useChatStore();
+export default function ChatNotices({ chatId }: { chatId: string }) {
+  const { pendingSend, stopping, retrySend, discardSend } = useChatStore();
   const pending = pendingSend?.chatId === chatId ? pendingSend : null;
-  const otherPending = pendingSend && pendingSend.chatId !== chatId ? pendingSend : null;
   const failed = pending?.phase === "failed" ? pending : null;
-  const stoppingNote = stopping ? `Stopping the answer in "${stopping.title}" first.` : null;
+  const stoppingNote = stopping ? "Stopping this chat's answer first." : null;
 
   return (
     <>
@@ -64,28 +57,6 @@ export default function ChatNotices({
             Discard
           </button>
           <span data-cx="chat-retry-note">Stop is the action that cancels this run.</span>
-        </output>
-      )}
-      {otherPending && otherTitle && (
-        <output data-cx="chat-retry">
-          <span>{`Sending is paused: the send in "${otherTitle}" is not resolved.`}</span>
-          <button
-            type="button"
-            data-cx="chat-retry-action"
-            onClick={() => select(otherPending.chatId)}
-          >
-            {`Open "${otherTitle}"`}
-          </button>
-          <button
-            type="button"
-            data-cx="chat-retry-action"
-            aria-label="Forget this local pending send. It does not cancel accepted work."
-            onClick={() =>
-              discardSend({ chatId: otherPending.chatId, operationId: otherPending.operationId })
-            }
-          >
-            Discard
-          </button>
         </output>
       )}
     </>

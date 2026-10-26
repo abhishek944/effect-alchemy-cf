@@ -17,7 +17,8 @@ import { INFERENCE_FAILURE } from "./chat-model.ts";
 import { ChatSelection } from "./chat-capabilities.ts";
 import { decodeOption } from "./chat-internal.ts";
 import type { ChatSendRecords } from "./chat-send-records.ts";
-import { publicInputEntry } from "./chat-input-projection.ts";
+import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
+import { publicInputEntry, acceptedPublicInput } from "./chat-input-projection.ts";
 import type { PiContext } from "./chat-projection.ts";
 import { ChatStop } from "./chat-stop.ts";
 export const PI_BACKGROUND: PiContext = Object.freeze({
@@ -30,15 +31,21 @@ export class ChatRuntime {
   private readonly harness: PiHarness;
   private readonly ledger: ChatLedger;
   private readonly sends: ChatSendRecords;
+  private readonly acceptedInput: (entryId: number) => AcceptedInputRecord | null;
   private readonly operationCache = new Map<string, string>();
   private repaired = false;
   private readonly stops: ChatStop;
-  /** Safe composition-supplied labels; never request identity or authority. */
   diagnostic: Pick<FailureContext, "service" | "stage" | "release"> = {};
-  constructor(harness: PiHarness, ledger: ChatLedger, sends: ChatSendRecords) {
+  constructor(
+    harness: PiHarness,
+    ledger: ChatLedger,
+    sends: ChatSendRecords,
+    acceptedInput: (entryId: number) => AcceptedInputRecord | null,
+  ) {
     this.harness = harness;
     this.ledger = ledger;
     this.sends = sends;
+    this.acceptedInput = acceptedInput;
     this.stops = new ChatStop(this, ledger);
   }
   async pi(): Promise<Harness> {
@@ -51,7 +58,7 @@ export class ChatRuntime {
     return this.harness.storage();
   }
   async publicInput(entryId: number) {
-    return this.sends.forEntry(entryId);
+    return acceptedPublicInput(this.sends.forEntry(entryId), this.acceptedInput(entryId));
   }
   async selection() {
     const agent = await (await this.conversation()).agent(PI_BACKGROUND);
@@ -118,7 +125,6 @@ export class ChatRuntime {
       }
       this.repaired = true;
     } catch (error) {
-      // Best-effort initialization: report without claiming the root was repaired.
       reportFailure(error, {
         ...this.diagnostic,
         component: "chat-runtime",
@@ -145,7 +151,6 @@ export class ChatRuntime {
       }
       this.ledger.advance(page.at(-1)?.rowid ?? 0);
     } catch (error) {
-      // Ledger repair is best effort; a failed read must not look like a mapped page.
       reportFailure(error, {
         ...this.diagnostic,
         component: "chat-runtime",

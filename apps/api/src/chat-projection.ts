@@ -1,6 +1,7 @@
 import type { Conversation } from "@earendil-works/pi-durable";
 import type { PublicChatInput } from "./chat-send-records.ts";
 import { publicInputMessage } from "./chat-input-projection.ts";
+import { publicInputSelections } from "./chat-input-selections.ts";
 import { messageUsage } from "./chat-accounting.ts";
 import { storedMessageTime } from "./chat-time.ts";
 import { decodeOption } from "./chat-internal.ts";
@@ -20,8 +21,8 @@ import {
 import type { Chat, ChatMessage, Position } from "./chat-model.ts";
 import { isEntryId, publicRole, sliceText, textInfo } from "./chat-text.ts";
 import { ToolHistory, type LiveToolRound } from "./chat-tool-history.ts";
+import { committedRevision } from "./chat-text.ts";
 export type PiContext = Parameters<Conversation["configure"]>[1];
-/** Full native public log, not the compacted context view. Native limit 1 may hydrate lookahead. */
 export const buildWindow = async (
   conversation: Conversation,
   chat: Chat,
@@ -118,7 +119,6 @@ export const buildWindow = async (
         through = { entryId: entry.id, modelIndex: i };
         continue;
       }
-      // Reserve bounded message metadata/cursor before slicing any native text.
       const units = Math.min(TEXT_PREVIEW_UNITS, Math.floor((byteBudget - used - 1024) / 6));
       if (units < 2) {
         entryResume = entry.id;
@@ -142,11 +142,12 @@ export const buildWindow = async (
         createdAt: storedMessageTime(message.timestamp),
         operationId: input?.operationId ?? null,
         attachments: input?.files ?? [],
+        selectedAreas: publicInputSelections(source, input?.accepted ?? null),
         attemptOf,
         incomplete,
         hasGeneratedFiles: role === "assistant" && hasGeneratedFiles(entry.id, i),
         usage: message.role === "assistant" ? messageUsage(message) : null,
-        ...textInfo(chat.id, id, `e${entry.id}`, slice),
+        ...textInfo(chat.id, id, committedRevision(entry.id, role), slice),
         ...tools,
       };
       const size = encodedBytes(candidate) + 1;
@@ -165,7 +166,6 @@ export const buildWindow = async (
     entryResume = null;
     indexResume = null;
     through = { entryId: entry.id, modelIndex: 0 };
-    // Exact entry reads continue exclusively below the consumed entry.
     if (exact !== undefined) after = { after: entry.id, order: "descending" };
     else if (page.next === undefined) {
       exhausted = true;

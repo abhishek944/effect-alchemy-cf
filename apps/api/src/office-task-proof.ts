@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import {
   Count,
+  ChatReferenceInput,
   DraftTarget,
   ArtifactRef,
   Digest,
@@ -19,6 +20,7 @@ import { decodeChatOfficeSession } from "./chat-office-session.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 import type { OfficeTaskAssociation } from "./chat-office-task-association.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
+import { OfficeTaskFile, officeTaskFile } from "./office-task-file.ts";
 import type { ArtifactRef as ArtifactReference } from "@starter/office-contract";
 
 /** Private callback selectors only. Never credentials or a browser/model grant request. */
@@ -45,6 +47,7 @@ const Intent = Schema.Struct({
   digest: Digest,
   command: Schema.Unknown,
   attachmentId: Schema.optionalKey(Id),
+  referenceId: Schema.optionalKey(Id),
   step: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{0,63}$/))),
   basis: Schema.optionalKey(DraftTarget),
 });
@@ -60,6 +63,8 @@ const Reply = Schema.Struct({
     intent: Intent,
     target: Schema.NullOr(OfficeSendTarget),
     originals: Schema.Array(ImageOriginalBinding).check(Schema.isMaxLength(5)),
+    retained: Schema.NullOr(OfficeTaskFile),
+    reference: Schema.optionalKey(ChatReferenceInput),
   }),
 });
 const StagedCode = Schema.Struct({
@@ -118,7 +123,7 @@ export function officeTaskSourceFile(proof: OfficeTaskProof) {
   if (id === null) return undefined;
   const receipt = proof.stagedArtifacts.find((item) => item.artifact.id === id);
   if (receipt?.fileRef === undefined) return undefined; // Historical identity is unknown, never guessed.
-  const file = proof.association.originals.find((item) => item.fileId === receipt.fileRef);
+  const file = officeTaskFile(proof.association, receipt.fileRef);
   const upload = receipt.artifact;
   if (
     !file ||
@@ -143,6 +148,16 @@ export function decodeOfficeTaskProof(input: unknown): OfficeTaskProof {
   const association = decoded.association;
   const session = decodeChatOfficeSession(JSON.stringify(association.session) ?? null);
   if (session === null) throw officeDenied();
+  const reference = association.reference;
+  if (association.intent.referenceId !== undefined) {
+    if (
+      association.intent.attachmentId !== undefined ||
+      reference?.kind !== "native" ||
+      reference.id !== association.intent.referenceId ||
+      !officeSame(reference.target, association.target)
+    )
+      throw officeDenied();
+  } else if (reference !== undefined) throw officeDenied();
   return freezeImageRequestValue(
     {
       lease: decoded.lease,

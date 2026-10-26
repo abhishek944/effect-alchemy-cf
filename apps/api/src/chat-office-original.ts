@@ -12,6 +12,7 @@ import { openFileObject, statFileObject } from "./chat-file-io-objects.ts";
 import { createChatFilesCatalogClient } from "./chat-files-client.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";
 import { createChatLibraryClient } from "./chat-library-client.ts";
+import { readOfficeRetainedOriginal } from "./chat-office-retained.ts";
 import type { AcceptedInputAccess } from "./chat-accepted-input.ts";
 import { retainAcceptedOriginals } from "./chat-accepted-input-retention.ts";
 import { resolveOfficeCall } from "./chat-office-native-proof.ts";
@@ -44,13 +45,19 @@ export async function readOfficeAcceptedFile(
       return unavailable();
     const proof = await resolveOfficeCall(api, context, intent, access);
     signal.throwIfAborted();
-    const original = proof?.current.candidate.originals.find((file) => file.fileId === fileRef);
-    if (proof === null || !original || !officeImportOptions(original.mediaType, original.name))
-      return unavailable();
+    if (proof === null) return unavailable();
     if (env.ChatCatalog === undefined || env.CHAT_FILES === undefined) return unavailable();
-    // Repair only uploads already proved accepted by their actual native creator, never ready IDs.
-    await retainAcceptedOriginals(access, env, proof.current, context);
+    const fromSend = proof.current.candidate.originals.find((file) => file.fileId === fileRef);
+    // Earlier saved files are already accepted; only this Send's actual creator repairs uploads.
+    const original =
+      fromSend ?? (await readOfficeRetainedOriginal(env, access.ownerId, access.chatId, fileRef));
     signal.throwIfAborted();
+    if (original === null || !officeImportOptions(original.mediaType, original.name))
+      return unavailable();
+    if (fromSend !== undefined) {
+      await retainAcceptedOriginals(access, env, proof.current, context);
+      signal.throwIfAborted();
+    }
     phase = "accepted-catalog";
     const stub = env.ChatCatalog.getByName(`owner:${access.ownerId}`);
     const catalog = createChatFilesCatalogClient(stub);
@@ -96,12 +103,16 @@ export async function readOfficeAcceptedFile(
       phase = "accepted-revalidation";
       const current = await resolveOfficeCall(api, context, intent, access);
       signal.throwIfAborted();
-      const next = current?.current.candidate.originals.find((entry) => entry.fileId === fileRef);
+      const next =
+        current?.current.candidate.originals.find((entry) => entry.fileId === fileRef) ??
+        (current === null
+          ? null
+          : await readOfficeRetainedOriginal(env, access.ownerId, access.chatId, fileRef));
       if (
         current === null ||
         current.submissionId !== proof.submissionId ||
         current.generationTaskId !== proof.generationTaskId ||
-        next === undefined ||
+        next === null ||
         Object.entries(original).some(([name, value]) => Reflect.get(next, name) !== value)
       )
         return unavailable();

@@ -26,6 +26,7 @@ import { assertOfficeTaskReceipt } from "./office-task-command.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 import { initializeOfficeStorageSchema } from "./office-storage-schema.ts";
 import { readOfficeTaskAttachment } from "./office-task-attachment.ts";
+import { officeReferenceBasis } from "./office-task-reference.ts";
 
 export type OfficeTaskLive<A> = Effect.Effect<
   A,
@@ -98,6 +99,20 @@ export function prepareOfficeTask(
         catch: officeCaught,
       }),
     );
+    const describeReference =
+      proof.association.intent.referenceId !== undefined &&
+      proof.association.intent.step === "describe";
+    const operations = yield* !observeOnly || describeReference
+      ? step(
+          "operations-read",
+          readConfirmedTaskOperations(options, {
+            owner,
+            principalId: session.ownerId,
+            sessionEpoch: session.sessionEpoch,
+            acceptedInput: proof.association.acceptedInput,
+          }),
+        )
+      : Effect.succeed([]);
     const selected = yield* Effect.gen(function* () {
       if (observeOnly) {
         const command = proof.association.intent.command;
@@ -113,17 +128,16 @@ export function prepareOfficeTask(
             catch: officeCaught,
           }),
         );
-        return Object.freeze({ target: null, fork: null, readView: null });
+        const referenceBasis = describeReference
+          ? officeReferenceBasis(proof, operations)
+          : undefined;
+        return Object.freeze({
+          target: null,
+          fork: null,
+          readView: null,
+          ...(referenceBasis === undefined ? {} : { referenceBasis }),
+        });
       }
-      const operations = yield* step(
-        "operations-read",
-        readConfirmedTaskOperations(options, {
-          owner,
-          principalId: session.ownerId,
-          sessionEpoch: session.sessionEpoch,
-          acceptedInput: proof.association.acceptedInput,
-        }),
-      );
       return yield* step(
         "target-resolve",
         Effect.tryPromise({

@@ -7,6 +7,7 @@ export * from "./requests.ts";
 export * from "./attachment.ts";
 export * from "./import-into.ts";
 export * from "./send-target.ts";
+export * from "./reference-input.ts";
 export * from "./channel.ts";
 export * from "./sources.ts";
 export * from "./content.ts";

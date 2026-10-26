@@ -5,6 +5,7 @@ import { HostOfficeRequest } from "@starter/office-server/native-remote";
 import type { NativePrivateFile } from "../../office/src/native-private-wire.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
+import { officeTaskFile } from "./office-task-file.ts";
 
 function expected(command: OfficeIntentCommand): HostOfficeRequest | null {
   switch (command.command) {
@@ -99,9 +100,7 @@ export function assertOfficeTaskUpload(
     return;
   }
   if (command.command !== "stage-file") throw officeDenied();
-  const original = proof.association.originals.find(
-    (file) => file.fileId === command.input.fileRef,
-  );
+  const original = officeTaskFile(proof.association, command.input.fileRef);
   if (
     !original ||
     !officeImportOptions(original.mediaType, original.name) ||

@@ -33,13 +33,14 @@ function useFileActions(active: boolean) {
 
 function UploadedFile({ file, active }: { file: ChatFileDescriptor; active: boolean }) {
   const store = useChatStore();
-  const metadata = useChatLibraryFile(store.selectedId, file.id, active);
+  const metadata = useChatLibraryFile(store.selectedId, file.id);
   const { read, actions } = useFileActions(active);
   return (
     <>
       {metadata.file ? (
         <ChatLibraryResults
           files={[metadata.file]}
+          presentation="sent"
           archived={Boolean(store.snapshot?.chat.archived)}
           active={active}
           {...actions}
@@ -66,11 +67,16 @@ export function SentSavedFiles() {
   const files = attachmentsFor(messageId);
   if (!files.length) return null;
   return (
-    <div data-cx="chat-message-sent-files">
-      {files.map((file) => (
-        <UploadedFile key={file.id} file={file} active={active} />
-      ))}
-    </div>
+    <section data-cx="chat-message-sent-files" aria-label="Attachments">
+      <div data-cx="sent-evidence-label">Attachments · {files.length}</div>
+      <div data-cx="sent-file-grid">
+        {files.map((file) => (
+          <div data-cx="sent-file" key={file.id}>
+            <UploadedFile file={file} active={active} />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

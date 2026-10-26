@@ -39,7 +39,6 @@ export const uploadOfficeBytes = (
           code: "LIMIT_EXCEEDED",
           message: "Upload exceeds its byte limit.",
           operationId: input.operationId,
-          retry: "never",
         });
       let seen = 0;
       const reader = input.body.getReader();
@@ -120,7 +119,6 @@ export const uploadOfficeBytes = (
         : new OfficeUnavailable({
             code: "UNAVAILABLE",
             message: "The Office upload could not be confirmed.",
-            retry: "same-operation",
             operationId: input.operationId,
           }),
   });

@@ -1,3 +1,4 @@
+import type { ChatReferenceInputs } from "@starter/office-contract";
 import type { Message } from "@earendil-works/pi-ai";
 import type {
   ConversationId,
@@ -36,6 +37,7 @@ export type InputOccurrence = {
   readonly modelIndex: number;
   readonly originConversationId: ConversationId;
   readonly originals: readonly ImageOriginalBinding[];
+  readonly referenceInputs?: ChatReferenceInputs | undefined;
 };
 
 /** Ephemeral compact metadata only. Valid authority also requires bridge.verify(). */

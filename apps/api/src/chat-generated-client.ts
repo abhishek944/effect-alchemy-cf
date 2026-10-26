@@ -32,13 +32,15 @@ export type ChatGeneratedClient = {
   sink(key: ImageCallKey): ImageHost<SavedFile>["store"];
 };
 const query = (value: object): string =>
-  new URLSearchParams(Object.entries(value).map(([key, entry]) => [key, String(entry)])).toString();
+  new URLSearchParams(
+    Object.entries(value).map(([key, entry]): [string, string] => [key, String(entry)]),
+  ).toString();
 
 /** No transport retries: uncertain mutations can only be repaired through receipt reads. */
 export const generatedCatalogRequest = async <S extends Schema.ConstraintDecoder<unknown>>(
   stub: cf.DurableObjectStub,
   path: string,
-  init: RequestInit,
+  init: cf.RequestInit,
   schema: S,
   signal?: AbortSignal,
 ): Promise<S["Type"]> => {
@@ -58,7 +60,9 @@ export const generatedCatalogRequest = async <S extends Schema.ConstraintDecoder
     signal?.throwIfAborted();
     response = await stub.fetch(`https://chat.internal${path}`, {
       ...init,
-      ...(signal === undefined ? {} : { signal }),
+      // The Worker uses one native signal; infra also loads Node's incompatible ambient types.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion, typescript/no-unnecessary-type-assertion -- same native AbortSignal; needed only under infra's Node ambient types.
+      ...(signal === undefined ? {} : { signal: signal as unknown as cf.AbortSignal }),
     });
     if (signal?.aborted) {
       cancel();

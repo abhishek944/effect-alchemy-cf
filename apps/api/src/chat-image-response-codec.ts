@@ -1,5 +1,6 @@
 import { Option, Schema } from "effect";
 import { type ImageAcceptedBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
+import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 
 import {
   isBoundedImageResponseJson,
@@ -78,6 +79,29 @@ const candidateKeys = [
   "expectedRevision",
   "draftId",
   "generation",
+  // Optional Send context must survive encode/decode or the frozen opened-file/selection is lost.
+  "context",
+  "attachmentIds",
+  "sheet",
+  "sheetId",
+  "sheetName",
+  "ranges",
+  "startRow",
+  "startColumn",
+  "endRow",
+  "endColumn",
+  "a1",
+  // Append only: historical candidate key ordering remains byte-for-byte unchanged.
+  "referenceInputs",
+  "id",
+  "start",
+  "end",
+  "text",
+  "target",
+  "segmentId",
+  "segmentPage",
+  "startOffset",
+  "endOffset",
 ];
 export function encodeCandidate(input: ImageResponseCandidate): string {
   if (!isBoundedImageResponseJson(input)) throw new ImageResponseError("invalid_input");
@@ -101,7 +125,9 @@ export function decodeCandidate(json: string): ImageResponseCandidate {
     Object.freeze(value.originals);
     if (value.image.state === "ready") Object.freeze(value.image.preferences);
     Object.freeze(value.image);
-    if (value.officeTarget !== undefined) Object.freeze(value.officeTarget);
+    // Nested target fields (attachment identities, selection coordinates) must be immutable too.
+    if (value.officeTarget !== undefined) freezeImageRequestValue(value.officeTarget);
+    if (value.referenceInputs !== undefined) freezeImageRequestValue(value.referenceInputs);
     return Object.freeze(value);
   } catch {
     throw new ImageResponseError("corrupt");

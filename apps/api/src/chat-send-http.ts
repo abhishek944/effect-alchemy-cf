@@ -39,7 +39,8 @@ export const sendChat = (
     if (
       payload.text.length === 0 &&
       payload.attachments.length === 0 &&
-      (payload.references?.length ?? 0) === 0
+      (payload.references?.length ?? 0) === 0 &&
+      (payload.referenceInputs?.length ?? 0) === 0
     )
       return yield* Effect.fail(new ChatInvalid({ message: "Write a message or attach a file." }));
     const identity = sendIdentity(payload);

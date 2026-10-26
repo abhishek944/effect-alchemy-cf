@@ -18,18 +18,25 @@ import type { HttpServerResponse } from "effect/http/HttpServerResponse";
 import { officeApplicationBinding } from "./office-container.ts";
 import { OfficeHostRole } from "./office-host-role.ts";
 import { officeHostFetch } from "./office-host-fetch.ts";
-import type { OfficeError, Receipt } from "@starter/office-contract";
+import type { DraftTarget, OfficeError, Receipt } from "@starter/office-contract";
 import type { OwnerScope } from "@starter/office-server/ports";
 import { OfficeInvocationRegistry, type OfficeHumanPurpose } from "./office-invocations.ts";
 import { officeDeny, officeReportCause } from "./office-diagnostic-report.ts";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import type { OfficeTaskSelector } from "./office-task-proof.ts";
 import { officeCaught } from "./office-private-authority.ts";
+import type { ChatReferenceInputs } from "@starter/office-contract";
+import { validateOfficeReferenceTargets } from "./office-reference-validation.ts";
 
 export const officeHostName = (owner: OwnerScope): string =>
   JSON.stringify(["office-host", decodeWireSync(OwnerClaims)(owner)]);
 
 type OfficeHostShape = {
+  /** Private metadata admission only: no actor, grant, native read or command is issued. */
+  readonly validateReferences: (
+    session: OfficeSessionBinding,
+    inputs: ChatReferenceInputs,
+  ) => Effect.Effect<true, OfficeError, RuntimeContext | Cloudflare.WorkerEnvironment>;
   /** Actual binding callback proves original executing tool; no session/actor supplied by caller. */
   readonly registerTask: (
     selector: OfficeTaskSelector,
@@ -39,6 +46,7 @@ type OfficeHostShape = {
       readonly invocationId: string;
       readonly deadline: number;
       readonly attachmentReceipt: Receipt | null;
+      readonly referenceBasis?: DraftTarget;
     },
     OfficeError,
     RuntimeContext | Cloudflare.WorkerEnvironment
@@ -115,6 +123,11 @@ export default OfficeHost.make(
       const registry = new OfficeInvocationRegistry(owner);
       const runtime = officeHostFetch(state.raw, role, registry, imageRef);
       return {
+        validateReferences: (session: OfficeSessionBinding, inputs: ChatReferenceInputs) =>
+          validateOfficeReferenceTargets(role, session, inputs).pipe(
+            Effect.provideService(Auth, auth),
+            Effect.provideService(OfficeSessionEpochs, epochs),
+          ),
         fetch: runtime.fetch.pipe(
           Effect.provideService(Auth, auth),
           Effect.provideService(OfficeSessionEpochs, epochs),
@@ -125,6 +138,9 @@ export default OfficeHost.make(
               invocationId: actor.invocationId,
               deadline,
               attachmentReceipt: task.binding.attachment?.operation.receipt ?? null,
+              ...(task.binding.referenceBasis === undefined
+                ? {}
+                : { referenceBasis: task.binding.referenceBasis }),
             })),
             Effect.provideService(Auth, auth),
             Effect.provideService(OfficeSessionEpochs, epochs),

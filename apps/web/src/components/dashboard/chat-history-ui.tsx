@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { ChatUsageAmount } from "@/lib/chat-capability-usage-types";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
+import type { ChatInputSelection } from "@/lib/chat-selection-types";
 import type { HistoryGap } from "./chat-history";
 import type { HistoryTextState } from "./use-chat-history";
 import "./chat-history.css";
@@ -11,6 +12,7 @@ type HistoryUiValue = {
   textFor: (messageId: string) => HistoryTextState;
   /** Sent originals of one committed user message; empty when none were sent. */
   attachmentsFor: (messageId: string) => ChatFileDescriptor[];
+  selectionsFor: (messageId: string) => readonly ChatInputSelection[];
   generatedFor: (messageId: string) => boolean;
   active: boolean;
   /**
@@ -47,6 +49,7 @@ export function useHistoryText(): HistoryUiValue {
         revision: null,
       }),
       attachmentsFor: () => [],
+      selectionsFor: () => [],
       generatedFor: () => false,
       active: false,
       stampFor: () => "",

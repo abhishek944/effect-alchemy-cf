@@ -10,6 +10,7 @@ import {
 } from "@univerjs-pro/exchange-node";
 import { UniverInstanceType } from "@univerjs/core";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
+import { importPlainText, exportPlainText } from "./plain-text.ts";
 import type { IsolatedJob } from "../ports/jobs.ts";
 
 export async function importNative(
@@ -25,6 +26,8 @@ export async function importNative(
 function importSnapshot(job: Extract<IsolatedJob, { kind: "import" }>, bytes: Uint8Array) {
   const o = job.options;
   const common = { fileName: job.filename, unitId: job.binding.unitId };
+  if (o.kind === "doc" && o.format === "txt")
+    return importPlainText(bytes, common.unitId, common.fileName);
   if (o.kind === "doc")
     return importBufferToSnapshot(Buffer.from(bytes), {
       ...common,
@@ -81,6 +84,7 @@ function exportSnapshot(
   native: ISnapshotWithBlocks,
 ) {
   const o = job.options;
+  if (o.kind === "doc" && o.format === "txt") return exportPlainText(native);
   if (o.kind === "doc")
     return exportSnapshotToBuffer(native, {
       type: UniverInstanceType.UNIVER_DOC,

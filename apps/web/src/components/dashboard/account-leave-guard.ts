@@ -8,7 +8,12 @@
  * runs and the draft is never dropped silently.
  */
 export type LeaveIntent =
-  | { readonly kind: "route"; readonly path: string; readonly via: "link" | "history" }
+  | {
+      readonly kind: "route";
+      readonly path: string;
+      readonly via: "link" | "history";
+      readonly resetChat?: boolean;
+    }
   | { readonly kind: "signout" };
 
 export type DeferredLeave = { readonly intent: LeaveIntent; readonly action: () => void };

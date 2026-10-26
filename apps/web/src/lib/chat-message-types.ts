@@ -2,6 +2,7 @@ import type { ChatFileDescriptor } from "./chat-capability-file-types";
 import type { ChatUsageAmount } from "./chat-capability-usage-types";
 import type { TextInfo } from "./chat-history-types";
 import type { ChatTool } from "./chat-tool-types";
+import type { ChatInputSelection } from "./chat-selection-types";
 
 export type ChatMessage = {
   id: string;
@@ -13,6 +14,7 @@ export type ChatMessage = {
   operationId: string | null;
   /** Staged originals submitted with this user message; empty on replies. */
   attachments: ChatFileDescriptor[];
+  selectedAreas?: ChatInputSelection[];
   /** True only for actual saved receipts tied to this exact assistant entry/model slot. */
   hasGeneratedFiles: boolean;
   /** Logical operation a retry answer belongs to; null for an original send. */

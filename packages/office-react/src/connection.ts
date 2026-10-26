@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { View } from "@starter/office-contract";
+import { View, type OfficeSheetSelection } from "@starter/office-contract";
 import {
   FrameInit,
   HOST_MESSAGES,
@@ -8,27 +8,38 @@ import {
   NativeTheme,
   frameNonce,
   readFrameResponse,
-  readResultReason,
   type FramePhase,
   type FrameStatus,
   type FrameRequest,
 } from "./frame/messages.ts";
+import { freezeNativeCapture, type NativeSelectionCapture } from "./capture.ts";
+import { frameRequests } from "./frame-requests.ts";
 const sameView = Schema.toEquivalence(View);
 const readView = Schema.decodeUnknownSync(View, { onExcessProperty: "error" });
 const readTheme = Schema.decodeUnknownSync(NativeTheme);
-export type OfficeSave = { readonly viewId: string; readonly revision: number };
+export type OfficeSave = {
+  readonly viewId: string;
+  readonly revision: number;
+  /** Descriptive native selection captured by the same hold; absent on older frames. */
+  readonly selection?: OfficeSheetSelection;
+};
 export type OfficeEditorHandle = {
   hold(): Promise<OfficeSave>;
   flush(): Promise<OfficeSave>;
   prepareToLeave(): Promise<OfficeSave>;
   stopInput(): void;
   resume(): Promise<void>;
+  /** Returns a real ACK while held. Host checkpoints, validates, then conditionally resumes. */
+  prepareCapture(capture: NativeSelectionCapture): Promise<OfficeSave>;
+  validateCapture(capture: NativeSelectionCapture): Promise<void>;
+  revealCapture(capture: NativeSelectionCapture): Promise<void>;
 };
 export function connectOfficeFrame(
   frame: HTMLIFrameElement,
   url: string,
   input: FrameInit,
   onStatus: (status: FrameStatus, revision: number) => void,
+  onSelection?: (capture: NativeSelectionCapture) => void,
 ) {
   const address = new URL(url, location.href);
   if (
@@ -64,16 +75,16 @@ export function connectOfficeFrame(
   let disposed = false;
   let initialized = false;
   let inputStopped = false;
-  const awaiting = new Map<
-    string,
-    {
-      action: "hold" | "flush" | "resume";
-      resolve(value: OfficeSave): void;
-      reject(error: Error): void;
-      timer: ReturnType<typeof setTimeout>;
-    }
-  >();
   const send = (message: FrameRequest) => frame.contentWindow?.postMessage(message, address.origin);
+  const requests = frameRequests({
+    viewId: boundViewId,
+    nonce,
+    ready: () => !disposed && initialized,
+    send,
+    failure: frameFailure,
+    onTimeout: () => onStatus("error", 0),
+  });
+  const request = requests.request.bind(requests);
   const init = () => {
     if (!disposed) {
       send({ kind: "init", nonce, input: bootstrap, release: frameBuild() });
@@ -99,41 +110,25 @@ export function connectOfficeFrame(
       onStatus(response.status, response.revision);
       return;
     }
-    const waiting = awaiting.get(response.requestId);
-    if (!waiting) return;
-    awaiting.delete(response.requestId);
-    clearTimeout(waiting.timer);
-    if (response.ok) waiting.resolve({ viewId: boundViewId, revision: response.revision });
-    else
-      waiting.reject(
-        frameFailure(
-          waiting.action === "flush" ? "flush" : "input",
-          readResultReason(response.reason),
-          response.requestId,
-        ),
-      );
+    if (response.kind === "selection") {
+      const capture = freezeNativeCapture(response.capture);
+      if (capture.viewId === boundViewId && capture.unitId === bootstrap.view.nativeTarget.unitId)
+        onSelection?.(capture);
+      return;
+    }
+    requests.accept(response);
   };
-  const request = (action: "hold" | "flush" | "resume") =>
-    new Promise<OfficeSave>((resolve, reject) => {
-      if (disposed || !initialized) {
-        reject(
-          disposed ? new Error(HOST_MESSAGES.disposed) : frameFailure("init", "not-ready", null),
-        );
-        return;
-      }
-      const requestId = crypto.randomUUID();
-      const timer = setTimeout(() => {
-        awaiting.delete(requestId);
-        onStatus("error", 0);
-        reject(frameFailure(action === "flush" ? "flush" : "input", "timeout", requestId));
-      }, 90_000);
-      awaiting.set(requestId, { action, resolve, reject, timer });
-      send({ kind: "request", nonce, requestId, action });
-    });
   window.addEventListener("message", receive);
   frame.addEventListener("load", init);
   frame.src = address.href;
   const handle: OfficeEditorHandle = {
+    prepareCapture: (capture) => request("prepare-capture", freezeNativeCapture(capture)),
+    validateCapture: async (capture) => {
+      await request("validate-capture", freezeNativeCapture(capture));
+    },
+    revealCapture: async (capture) => {
+      await request("reveal-capture", freezeNativeCapture(capture));
+    },
     hold: () => request("hold"),
     flush: () => request("flush"),
     prepareToLeave: () => request("hold"),
@@ -180,11 +175,7 @@ export function connectOfficeFrame(
       disposed = true;
       window.removeEventListener("message", receive);
       frame.removeEventListener("load", init);
-      for (const pending of awaiting.values()) {
-        clearTimeout(pending.timer);
-        pending.reject(new Error("Office frame was disposed before confirmation."));
-      }
-      awaiting.clear();
+      requests.dispose();
     },
   };
 }

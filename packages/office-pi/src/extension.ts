@@ -6,8 +6,10 @@ import { Id, OfficeErrors, type Target, decodeWireSync } from "@starter/office-c
 import { OFFICE_GUIDANCE } from "./guidance.ts";
 import { OfficeStagingFailure, stagingFailureDetail } from "./staging-failure.ts";
 import { OfficePanelRequest, UniverCliRequest, officeToolParameters } from "./parameters.ts";
-import { failedResult, failureCode, OFFICE_TOOL_RESULT_BYTES } from "./results.ts";
+import { attachmentListTool } from "./attachment-tool.ts";
+import { failedResult, failureCode } from "./results.ts";
 import { executeUniverCli } from "./cli-execute.ts";
+import { referenceTarget } from "./reference.ts";
 import { attachmentDraft } from "./attachment.ts";
 import { officeWorkflow } from "./workflow.ts";
 import type { OfficePiHost } from "./types.ts";
@@ -15,7 +17,7 @@ import type { OfficePiHost } from "./types.ts";
 export const OFFICE_EXTENSION_NAME = "office";
 export const OFFICE_TOOL_NAME = "univer_cli";
 export const OFFICE_PANEL_TOOL_NAME = "open_in_panel";
-const panelSchema = Schema.toJsonSchemaDocument(OfficePanelRequest);
+const panelSchema = Schema.toJsonSchemaDocument(OfficePanelRequest, { onExcessProperty: "error" });
 const failure = (error: unknown, taskId: number, callId: string): ToolExecutionResult => {
   const operationId =
     error instanceof OfficeStagingFailure
@@ -64,16 +66,16 @@ export const makeOfficeExtension = (
   defineExtension({
     name: OFFICE_EXTENSION_NAME,
     tools: [
+      attachmentListTool(host),
       defineTool({
         name: OFFICE_TOOL_NAME,
         description:
-          "Run the Univer CLI on an accepted attachment's saved workbook/document/draft. " +
+          "Run the Univer CLI with attachmentId for saved originals or referenceId for a native reference in the current accepted input. " +
           "command is an argv array, not a shell string. Import once with ['import']; use ['--help'] for syntax. " +
           "The server resolves Unit/worktree IDs. No owner, path, credentials, approve or merge commands.",
         parameters: officeToolParameters,
         replay: "unsafe",
         executionMode: "sequential",
-        outputLimits: { maxBytes: OFFICE_TOOL_RESULT_BYTES, maxLines: 256, retain: "head" },
         execute: async (raw, api, context) => {
           let request: UniverCliRequest;
           try {
@@ -95,7 +97,8 @@ export const makeOfficeExtension = (
               name: OFFICE_PANEL_TOOL_NAME,
               description:
                 "Request the right-panel Univer editor for the same imported attachment. " +
-                "Use univer_cli import first. Unsupported previews leave the panel unchanged. This does not prove rendering.",
+                "Use attachmentId after import, or referenceId for a native reference in this accepted input. " +
+                "Unsupported previews leave the panel unchanged. This does not prove rendering.",
               parameters: { ...panelSchema.schema, $defs: panelSchema.definitions },
               replay: "unsafe",
               executionMode: "sequential",
@@ -107,17 +110,14 @@ export const makeOfficeExtension = (
                   return failedResult("INVALID_INPUT", null);
                 }
                 try {
-                  const workflow = officeWorkflow(
-                    request,
-                    request.attachmentId,
-                    api,
-                    context,
-                    host,
-                  );
-                  const resolved = await attachmentDraft(workflow);
+                  const workflow = officeWorkflow(request, request, api, context, host);
+                  const resolved =
+                    "referenceId" in request
+                      ? { target: await referenceTarget(workflow), receipt: null }
+                      : await attachmentDraft(workflow);
                   context.abortSignal?.throwIfAborted();
                   if (resolved.target === null)
-                    return failedResult("OUTCOME_UNKNOWN", resolved.receipt.operationId);
+                    return failedResult("OUTCOME_UNKNOWN", resolved.receipt?.operationId ?? null);
                   // Prove the exact target through the native host before emitting navigation.
                   const opened = await workflow.run(
                     { command: "open", input: resolved.target },
@@ -132,7 +132,7 @@ export const makeOfficeExtension = (
                         text: JSON.stringify({
                           ok: true,
                           requested: true,
-                          attachmentId: request.attachmentId,
+                          ...request,
                         }),
                       },
                     ],

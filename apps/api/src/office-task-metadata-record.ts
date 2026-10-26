@@ -7,6 +7,7 @@ import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { sameOfficeTaskInput } from "./office-task-lineage.ts";
 import { assertOfficeTaskObservedIntent } from "./office-task-command.ts";
 import { officeTaskStagedRef } from "./office-task-proof.ts";
+import { officeTaskFiles } from "./office-task-file.ts";
 
 export type OfficeTaskAcknowledged = (ref: ArtifactRef) => boolean;
 export function officeTaskOriginalRef(original: OfficeTaskInvocation, ref: ArtifactRef): boolean {
@@ -20,7 +21,7 @@ export function officeTaskOriginalRef(original: OfficeTaskInvocation, ref: Artif
   return (
     ref.kind === "upload" &&
     ref.id === id &&
-    original.task.proof.association.originals.some(
+    officeTaskFiles(original.task.proof.association).some(
       (file) =>
         officeImportOptions(file.mediaType, file.name) !== null &&
         file.digest === ref.digest &&

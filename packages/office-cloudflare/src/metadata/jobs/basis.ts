@@ -1,3 +1,4 @@
+import { operationRecordSql } from "../legacy-failure.ts";
 import type { ArtifactRef } from "@starter/office-contract";
 import type {
   IsolatedJob,
@@ -144,7 +145,7 @@ export async function jobBasis(db: MetadataStore, record: JobRecord): Promise<Pr
       );
     }
     clauses.push(
-      "EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND record=?)",
+      `EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND ${operationRecordSql}=?)`,
     );
     values.push(key, b.operationId, db.encode(OperationRow, op));
     if (op.intent.kind === "export" || op.intent.kind === "render") viewId = op.intent.input.viewId;

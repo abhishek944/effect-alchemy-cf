@@ -52,10 +52,7 @@ export const computeJobState = Effect.fn("Office.jobs.compute")(function* (
             : {
                 state: "failed" as const,
                 jobId: job.binding.jobId,
-                error: {
-                  ...safeFailure(error.code, job.binding.operationId),
-                  retry: "never" as const,
-                },
+                error: safeFailure(error.code, job.binding.operationId),
               },
         ),
       ),
@@ -128,14 +125,8 @@ export const runIsolatedJob = Effect.fn("Office.jobs.run")(function* (
             : "UNAVAILABLE";
     return yield* Effect.fail(
       failureCode === "INVALID_INPUT" || failureCode === "LIMIT_EXCEEDED"
-        ? new OfficeInvalid({
-            ...safeFailure(failureCode, job.binding.operationId),
-            retry: "never",
-          })
-        : new OfficeUnavailable({
-            ...safeFailure(failureCode, job.binding.operationId),
-            retry: "never",
-          }),
+        ? new OfficeInvalid(safeFailure(failureCode, job.binding.operationId))
+        : new OfficeUnavailable(safeFailure(failureCode, job.binding.operationId)),
     );
   }
   const output = yield* Effect.try({

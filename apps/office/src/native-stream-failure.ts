@@ -50,7 +50,6 @@ export function streamFailure(primary: unknown, cleanup: readonly unknown[]): un
         new Type({
           code: primary.code,
           message: primary.message,
-          retry: primary.retry,
           operationId: primary.operationId,
         }),
         cause,

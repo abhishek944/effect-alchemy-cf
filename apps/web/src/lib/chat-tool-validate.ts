@@ -17,8 +17,8 @@ export function parseChatTool(value: unknown): ChatTool | null {
     status !== "unknown"
   )
     return null;
-  if (!isSafeIndex(value.textOffset) || !bounded(value.input, 8192)) return null;
-  if (value.output !== null && !bounded(value.output, 8192)) return null;
+  if (!isSafeIndex(value.textOffset) || !bounded(value.input, 50 * 1024)) return null;
+  if (value.output !== null && !bounded(value.output, 50 * 1024)) return null;
   if (typeof value.inputTruncated !== "boolean" || typeof value.outputTruncated !== "boolean")
     return null;
   return {

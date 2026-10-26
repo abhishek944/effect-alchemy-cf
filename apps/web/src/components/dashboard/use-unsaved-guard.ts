@@ -1,20 +1,16 @@
 /**
- * Dirty-navigation guard for the Profile form.
- *
- * Anchor clicks, browser back/forward and sign-out funnel into one dialog instead of
- * discarding a dirty draft. Navigation interception lives in `profile-history-restore`
- * and keeps one outstanding native traversal until its expected entry acknowledges
- * it. This hook owns the resulting decision lifecycle: while a restoration is
- * outstanding the latest intent is retained instead of shown or executed, the visible
- * decision is promoted only after acknowledgement and only while the draft is dirty,
- * and closing without navigating restores focus without ever running a deferred
- * action. The StrictMode-safe mounted flag and the commit-synchronous dirty mirror are
- * preserved.
+ * One decision owner for workspace links, history and signout. The native observer
+ * retains one traversal until its expected ACK. Clean/cancelled Profile decisions
+ * never execute; a newer admitted route retires the former decision synchronously.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { currentHistoryIndex } from "@/lib/history-position";
 import { registerLeaveGuard, type DeferredLeave, type LeaveIntent } from "./account-leave-guard";
-import { observeNavigation, type OwnedTraversal } from "./profile-history-restore";
+import {
+  observeNavigation,
+  type OwnedTraversal,
+  type QueuedLeave,
+} from "./profile-history-restore";
 import { captureFocus, restoreFocus as focusIfPossible } from "./profile-focus";
 
 export function useUnsavedGuard(
@@ -22,6 +18,7 @@ export function useUnsavedGuard(
   restoreRootRef: RefObject<HTMLElement | null>,
   enabled = true,
   warn = dirty,
+  blocks: (intent: LeaveIntent) => boolean = () => true,
 ) {
   const [pending, setPending] = useState<DeferredLeave | null>(null);
   const [lastDirty, setLastDirty] = useState(dirty);
@@ -32,17 +29,19 @@ export function useUnsavedGuard(
   /** Mirrors the visible decision so the stable close callback can check ownership. */
   const pendingRef = useRef<DeferredLeave | null>(null);
   /** Latest intent retained while a restoration is outstanding. */
-  const queued = useRef<DeferredLeave | null>(null);
+  const queued = useRef<QueuedLeave | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const atIndex = useRef(currentHistoryIndex());
   const owned = useRef<OwnedTraversal | null>(null);
   const dirtyRef = useRef(dirty);
   const warnRef = useRef(warn);
+  const blocksRef = useRef(blocks);
   const mounted = useRef(true);
 
   useLayoutEffect(() => {
     warnRef.current = warn;
-  }, [warn]);
+    blocksRef.current = blocks;
+  }, [warn, blocks]);
 
   useEffect(() => {
     mounted.current = true;
@@ -76,14 +75,24 @@ export function useUnsavedGuard(
     setPending(next);
   }, []);
 
-  /**
-   * A decision is only visible once no guard-issued traversal is outstanding; while
-   * one is, the latest intent is retained instead of being shown or executed.
-   */
+  const retireDecision = useCallback(() => {
+    queued.current = null;
+    setDecision(null);
+  }, [setDecision]);
+  const isCurrent = useCallback(
+    (decision: DeferredLeave) =>
+      mounted.current &&
+      owned.current === null &&
+      queued.current === null &&
+      pendingRef.current === decision,
+    [],
+  );
+
+  /** Keep the latest admission distinct from an old blocked Profile request. */
   const defer = useCallback(
     (intent: LeaveIntent, action: () => void) => {
       rememberFocus();
-      const next = { intent, action };
+      const next = { intent, action, retained: !dirtyRef.current || !blocksRef.current(intent) };
       if (owned.current !== null) {
         queued.current = next;
         setDecision(null);
@@ -104,24 +113,42 @@ export function useUnsavedGuard(
       owned,
       atIndex,
       queued,
-      dirty: () => dirtyRef.current,
+      dirty: (intent) => dirtyRef.current && (intent === undefined || blocksRef.current(intent)),
       warn: () => warnRef.current,
       defer,
       setDecision,
+      retireDecision,
     });
-  }, [defer, setDecision, enabled]);
+  }, [defer, setDecision, retireDecision, enabled]);
 
   // Keep the gate alive through restoration, even if publication makes it clean.
   useEffect(
     () =>
       enabled
         ? registerLeaveGuard((leave) => {
-            if (!dirtyRef.current && owned.current === null) return true;
-            defer(leave.intent, leave.action);
+            if (owned.current === null && (!dirtyRef.current || !blocksRef.current(leave.intent))) {
+              retireDecision();
+              return true;
+            }
+            defer(leave.intent, () => {
+              if (leave.intent.kind !== "route") {
+                leave.action();
+                return;
+              }
+              if (owned.current !== null) return;
+              const from = currentHistoryIndex();
+              // Authorize only this synchronous programmatic push, not arbitrary later navigation.
+              owned.current = { from, to: from + 1 };
+              try {
+                leave.action();
+              } finally {
+                if (currentHistoryIndex() === from) owned.current = null;
+              }
+            });
             return false;
           })
         : undefined,
-    [defer, enabled],
+    [defer, retireDecision, enabled],
   );
 
   const keepEditing = () => {
@@ -160,5 +187,5 @@ export function useUnsavedGuard(
 
   // A clean draft owns no decision; the observer and any outstanding native command
   // are untouched by this derivation.
-  return { pending: dirty ? pending : null, keepEditing, discard, cancelPending };
+  return { pending: dirty ? pending : null, keepEditing, discard, cancelPending, isCurrent };
 }

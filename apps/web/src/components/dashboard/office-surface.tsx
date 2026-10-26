@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
-import type { Draft } from "@starter/office-contract";
-import {
-  OfficeDraftControls,
-  OfficeNativeEditor,
-  OfficeReview,
-  type FrameStatus,
-} from "@starter/office-react";
+import { OfficeNativeEditor, OfficeReview, type FrameStatus } from "@starter/office-react";
+import type { Document } from "@starter/office-contract";
 import { useDashboardTheme } from "./theme";
 import { useWorkspaceOffice } from "./workspace-office-context";
+import { useWorkspacePreview } from "./workspace-preview-context";
 import { useOfficeSurface } from "./use-office-surface";
+import { useNativeReferenceSource } from "./use-native-reference-source";
 import { OfficeReopen } from "./office-reopen";
 import type { OfficeSelection } from "./workspace-preview-model";
 import "@starter/office-react/styles.css";
 import "./workspace-office.css";
-
 export function OfficeSurface({
   chatId,
   id,
@@ -26,27 +22,56 @@ export function OfficeSurface({
   const {
     native,
     handle,
+    referenceState,
+    report,
     runtime,
     value: opened,
     error,
     busy,
-    receipt,
     reviewId,
-    holdAndDrain,
-    save,
-    resume,
     onOperation,
     pendingControl,
     admit,
     onReceipt,
-    onBusy,
   } = useOfficeSurface(chatId, id, selection);
+  const onSelection = useNativeReferenceSource({
+    chatId,
+    id,
+    selection,
+    opened,
+    handle,
+    runtime,
+    state: referenceState,
+    report,
+  });
   const office = useWorkspaceOffice();
   const { publishPending } = office;
+  const { resolveOffice } = useWorkspacePreview();
+  const [document, setDocument] = useState<Document | null>(null);
+  const documentId = selection.target.documentId;
+  const title =
+    selection.title === "Office document" && document?.id === documentId
+      ? document.title
+      : selection.title;
+  useEffect(() => {
+    if (runtime === null || selection.title !== "Office document") return undefined;
+    const active = new AbortController();
+    const signal = AbortSignal.any([active.signal, AbortSignal.timeout(30_000)]);
+    // Display metadata belongs to this mounted owner; it never gates or reopens an editor.
+    void runtime.run(runtime.client.office.document({ params: { documentId } }), { signal }).then(
+      (value) => {
+        if (!signal.aborted && value.id === documentId) setDocument(value);
+        return undefined;
+      },
+      () => undefined, // A missing title must not become a native save/recovery failure.
+    );
+    return () => active.abort();
+  }, [runtime, documentId, selection.title]);
+  useEffect(() => {
+    resolveOffice(id, chatId, { ...selection, title, reviewId });
+  }, [resolveOffice, id, chatId, selection, title, reviewId]);
   const { theme: hostTheme } = useDashboardTheme();
   const theme = hostTheme === "light" || hostTheme === "paper" ? "light" : "dark";
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [connected, setConnected] = useState<string | null>(null);
   const [status, setStatus] = useState<FrameStatus>("loading");
   const [publisher] = useState(() => ({}));
   // Native "held" is only the SDK ACK; a confirmed save also needs the server drain.
@@ -58,34 +83,15 @@ export function OfficeSurface({
   // Unresolved save/drain/lease failures stay pending until a successful retry clears them.
   const pending = busy || pendingControl !== null || error !== "" || (editable && !confirmed);
   useEffect(() => {
-    publishPending(id, publisher, pending);
-    return () => publishPending(id, publisher, false);
-  }, [publishPending, id, publisher, pending]);
-  useEffect(() => {
-    const active = new AbortController();
-    if (runtime !== null && selection.target.scope.kind === "draft") {
-      const target = selection.target;
-      const scope = selection.target.scope;
-      void runtime
-        .run(runtime.client.office.draft({ params: { draftId: scope.draftId } }), {
-          signal: active.signal,
-        })
-        .then((result) => {
-          if (
-            !active.signal.aborted &&
-            result.id === scope.draftId &&
-            result.documentId === target.documentId &&
-            result.generation === scope.generation
-          )
-            setDraft(result);
-          return undefined;
-        })
-        .catch(() => undefined); // No verified descriptor means Ready stays unavailable.
-    }
-    return () => {
-      active.abort();
-    };
-  }, [runtime, selection]);
+    publishPending(chatId, id, publisher, pending);
+    return () => publishPending(chatId, id, publisher, false);
+  }, [publishPending, chatId, id, publisher, pending]);
+  if (reviewId === null && opened === null && !error)
+    return (
+      <section data-cx="office-opening" aria-label={title}>
+        <output>Opening…</output>
+      </section>
+    );
   if (runtime !== null && reviewId !== null)
     return (
       <section data-cx="office-surface">
@@ -100,82 +106,38 @@ export function OfficeSurface({
           onOperation={(operationId) => onOperation(operationId, "review")}
           onReceipt={onReceipt}
           admit={() => admit("review")}
-          disabled={office.busy || (pendingControl !== null && pendingControl !== "review")}
+          disabled={
+            office.busyFor(chatId, id) || (pendingControl !== null && pendingControl !== "review")
+          }
         />
         <OfficeReopen
           key={reviewId}
+          chatId={chatId}
           runtime={runtime}
           selection={selection}
           onOperation={(operationId) => onOperation(operationId, "reopen")}
           onReceipt={onReceipt}
           admit={() => admit("reopen")}
-          disabled={office.busy || (pendingControl !== null && pendingControl !== "reopen")}
+          disabled={
+            office.busyFor(chatId, id) || (pendingControl !== null && pendingControl !== "reopen")
+          }
         />
       </section>
     );
   return (
-    <section data-cx="office-surface" aria-label={selection.title}>
-      <header data-cx="office-actions">
-        <strong>{selection.title}</strong>
-        <button
-          type="button"
-          disabled={opened === null || busy || office.busy}
-          onClick={() => void save()}
-        >
-          Save and pause
-        </button>
-        <button
-          type="button"
-          disabled={opened === null || busy || office.busy}
-          onClick={() => void resume()}
-        >
-          Resume saved editor
-        </button>
-      </header>
-      {error && (
-        <p role="alert" data-cx="office-notice">
-          {error}
-        </p>
-      )}
-      {opened === null ? (
-        <output data-cx="office-notice">
-          {error ? "No native editor is available." : "Opening authorized native document…"}
-        </output>
-      ) : (
-        <>
-          <OfficeNativeEditor
-            ref={native}
-            view={opened.view}
-            user={office.user}
-            theme={theme}
-            channelId={opened.channel.channelId}
-            frameUrl="/office/frame.html"
-            operation={receipt}
-            onStatus={(next) => {
-              setStatus(next);
-              if (next === "saved" || next === "held" || next === "read-only")
-                setConnected(opened.view.id);
-            }}
-          />
-          {runtime !== null &&
-            connected === opened.view.id &&
-            draft !== null &&
-            opened.editor !== null &&
-            handle !== null && (
-              <OfficeDraftControls
-                client={runtime.client}
-                run={runtime.run}
-                draft={draft}
-                editor={opened.editor}
-                holdAndDrain={holdAndDrain}
-                onOperation={(operationId) => onOperation(operationId, "ready")}
-                onReceipt={onReceipt}
-                onBusy={onBusy}
-                admit={() => admit("ready")}
-                disabled={office.busy || (pendingControl !== null && pendingControl !== "ready")}
-              />
-            )}
-        </>
+    <section data-cx="office-surface" aria-label={title}>
+      {opened === null && error && <p role="alert">{error}</p>}
+      {opened !== null && (
+        <OfficeNativeEditor
+          ref={native}
+          view={opened.view}
+          user={office.user}
+          theme={theme}
+          channelId={opened.channel.channelId}
+          frameUrl="/office/frame.html"
+          onStatus={setStatus}
+          onSelection={onSelection}
+        />
       )}
     </section>
   );

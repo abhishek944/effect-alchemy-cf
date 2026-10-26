@@ -16,8 +16,13 @@ type PrivateAccess = {
   readonly acceptedFile: OfficeTaskAccess["acceptedFile"];
 };
 type ProveAndBind = (input: OfficeResolution) => Promise<PrivateAccess>;
+type ListAttachments = OfficePiHost["attachments"];
 
-export const installOfficeForHost = (registry: Registry, proveAndBind: ProveAndBind): void => {
+export const installOfficeForHost = (
+  registry: Registry,
+  proveAndBind: ProveAndBind,
+  attachments: ListAttachments,
+): void => {
   const host: OfficePiHost = {
     resolve: async (input) => {
       // The host joins this exact tool lineage to its immutable accepted input and principal.
@@ -29,6 +34,8 @@ export const installOfficeForHost = (registry: Registry, proveAndBind: ProveAndB
         upload: (upload) => uploadOfficeBytes(verified.origin, upload, verified.request),
       };
     },
+    // The real host proves its own get_attachments lineage and lists only the bound chat.
+    attachments,
   };
   registry.install(makeOfficeExtension(host));
 };

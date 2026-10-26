@@ -23,6 +23,7 @@ const extensions: Readonly<Record<string, string>> = {
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "text/plain": "txt",
   "text/csv": "csv",
   "text/tab-separated-values": "tsv",
 };

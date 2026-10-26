@@ -1,3 +1,4 @@
+import { operationRecordSql } from "../legacy-failure.ts";
 import type { NativeTarget, SerialAdmission } from "@starter/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
@@ -36,7 +37,7 @@ export async function validatePurpose(
   )
     throw conflict("FORBIDDEN");
   const predicate: PredicateSQL = {
-    sql: "EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND record=?)",
+    sql: `EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND ${operationRecordSql}=?)`,
     values: [owner, request.operationId, db.encode(OperationRow, operation)],
   };
   const base: PurposePlan = { nativePlan: null, authUntil: context.notAfter, predicate };

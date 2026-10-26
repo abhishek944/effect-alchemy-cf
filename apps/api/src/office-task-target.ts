@@ -16,6 +16,8 @@ export type OfficeTaskTarget = {
   readonly review?: OfficeTaskReview;
   readonly discovery?: OfficeTaskDiscovery;
   readonly attachment?: OfficeTaskAttachment | null;
+  /** Descriptor only for a branch confirmed by this accepted input; never an actor target grant. */
+  readonly referenceBasis?: DraftTarget;
 };
 const empty: OfficeTaskTarget = Object.freeze({ target: null, fork: null, readView: null });
 

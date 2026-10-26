@@ -13,6 +13,7 @@ import type { ChatImageResponseStore } from "./chat-image-response-store.ts";
 import type { ChatImageLegacyEra } from "./chat-image-legacy-era.ts";
 import { createImageExtension } from "@abhishek944/pi-image-gen/durable";
 import type { CloudflareRun } from "@abhishek944/pi-image-gen/core";
+import type { OfficeTaskEnvironment } from "./chat-office-transport.ts";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";
 import type { ImageGenerationTransport } from "./chat-image-binding.ts";
 import type { ChatImageCallStore } from "./chat-image-call-store.ts";
@@ -24,7 +25,11 @@ import { repairImageRequestOriginals } from "./chat-image-retention.ts";
 import type { SkillRequestGuard } from "./chat-skills-guard.ts";
 import type { ConversationSkills } from "./chat-skills-runtime.ts";
 
-export type ConversationImageEnv = ConversationFileEnv & { AI?: cf.Ai; CHAT_GATEWAY_ID?: string };
+export type ConversationImageEnv = ConversationFileEnv &
+  OfficeTaskEnvironment & {
+    AI?: cf.Ai;
+    CHAT_GATEWAY_ID?: string;
+  };
 
 /** Derive immutable proof scope from the actual server-assigned actor and owner binding. */
 export const createConversationImageAccess = (input: {

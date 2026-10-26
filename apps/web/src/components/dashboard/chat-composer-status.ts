@@ -24,17 +24,15 @@ export function composerStatus(input: {
 
 export function composerSendLabel(input: {
   canSend: boolean;
-  stoppingTitle: string | null;
-  otherTitle: string | null;
+  stoppingHere: boolean;
   pendingHere: boolean;
   running: boolean;
   archived: boolean;
 }): string {
   if (input.canSend) return "Send message";
-  if (input.stoppingTitle) return `Stopping the answer in "${input.stoppingTitle}" first`;
-  if (input.otherTitle) return `Resolve the send in "${input.otherTitle}" first`;
-  if (input.pendingHere) return "Finish or discard the current send first";
-  if (input.running) return "Wait for the current answer to finish";
+  if (input.stoppingHere) return "Stopping this chat's answer first";
+  if (input.pendingHere) return "Finish or discard this chat's send first";
+  if (input.running) return "Wait for this chat's answer to finish";
   if (input.archived) return "Unarchive this chat to send";
   return "Sending is unavailable until this chat is connected";
 }

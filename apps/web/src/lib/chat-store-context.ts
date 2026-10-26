@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
 import type { CapabilityLoadState } from "@/lib/chat-capability-api";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import type {
@@ -20,9 +20,10 @@ export type ListState = "loading" | "ready" | "error";
 /** The immutable tuple and attachment ids a send was dispatched with. */
 export type SendSnapshot = {
   selection: ChatSelection;
-  attachments: string[];
-  references: string[];
+  attachments: readonly string[];
+  references: readonly string[];
   officeTarget?: OfficeSendTarget;
+  referenceInputs?: ChatReferenceInputs;
 };
 
 export type PendingSend = {
@@ -85,6 +86,9 @@ export type ChatUsageControls = {
 
 export type ChatActionError = { title: string; message: string; dismissLabel: string };
 
+/** A fresh native-panel request published by one chat's snapshot (30s server expiry). */
+export type ChatPanelRequest = NonNullable<ChatSnapshot["panelRequest"]>;
+
 export type ChatStoreValue = {
   chats: Chat[];
   listState: ListState;
@@ -105,17 +109,28 @@ export type ChatStoreValue = {
   stagedFiles: ChatFilesControls;
   references: ChatReferences;
   usage: ChatUsageControls;
+  /** Chats whose own retained owner is running, including hidden ones. */
+  runningChatIds: ReadonlySet<string>;
+  /** Unclaimed, unexpired requests from every retained chat. */
+  panelRequests: readonly { chatId: string; request: ChatPanelRequest }[];
+  claimPanelRequest: (chatId: string, requestId: string) => void;
   select: (id: string | null) => void;
   startNewChat: () => Promise<void>;
   renameChat: (id: string, title: string) => Promise<void>;
   setArchived: (id: string, archived: boolean) => Promise<void>;
-  send: (text: string, originChatId: string) => Promise<SendOutcome>;
+  send: (
+    text: string,
+    originChatId: string,
+    referenceInputs?: ChatReferenceInputs,
+  ) => Promise<SendOutcome>;
   retrySend: (expected: OperationRef) => Promise<SendOutcome>;
   discardSend: (expected: OperationRef) => void;
   stop: (target: StopTarget) => Promise<void>;
   /** Exact loaded-row acknowledgment from a source chat; clears only a matching pending. */
   acknowledgeOperations: (chatId: string, operationIds: string[]) => void;
   reportError: (message: string | null) => void;
+  /** Reports a late failure against its captured origin chat, never the visible one. */
+  reportChatError: (chatId: string | null, message: string | null) => void;
   reload: () => void;
   reloadList: () => void;
 };
@@ -125,7 +140,9 @@ export type ChatStoreValue = {
  * caller can throw MessageNotSentError and the runtime restores the draft it
  * cleared at dispatch time.
  */
-export type SendOutcome = { status: "dispatched" } | { status: "blocked"; message: string };
+export type SendOutcome =
+  | { status: "dispatched"; operationId: string }
+  | { status: "blocked"; message: string };
 
 /** The public descriptor list a sent user message carries, for the transcript. */
 export type SentAttachments = ChatFileDescriptor[];

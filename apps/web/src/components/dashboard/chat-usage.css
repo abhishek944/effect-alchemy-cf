@@ -17,6 +17,9 @@
   font-size: 12px;
   line-height: 1.4;
 }
+[data-dashboard][data-theme="midnight-black"] [data-cx="usage-tray"] {
+  background: #000000;
+}
 /* Release the open host's stacking context so its fixed ledger outranks the
    composer without lifting the tray's negative-margin strip over the input.
    The closed tray keeps its original z-index 0 tuck. */

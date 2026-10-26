@@ -8,6 +8,7 @@ import { useChatSubmit } from "./use-chat-submit";
 import ChatSkillsReadinessNotice from "./chat-skills-readiness-notice";
 import VoiceRecorder from "./voice-recorder";
 import { ChatReferenceInput } from "./chat-reference-input";
+import { ReferenceTray } from "./reference-tray";
 import "./chat-composer.css";
 
 type Props = {
@@ -65,6 +66,7 @@ export default function ChatComposer({ chatId, running, stopping, ...actions }: 
         checking={skillsChecking}
         onRetry={() => void recheckSkills()}
       />
+      <ReferenceTray chatId={chatId} />
       <div
         data-cx="composer-shell"
         data-dragging={dragging ? "true" : undefined}

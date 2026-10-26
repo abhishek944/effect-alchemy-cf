@@ -13,8 +13,12 @@ import type { ArtifactRef } from "@starter/office-contract";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
 import { readOfficeStageReceipts, recordOfficeStageReceipt } from "./chat-office-stage-receipts.ts";
 import { requireAcceptedInputAccess, type AcceptedInputAccess } from "./chat-accepted-input.ts";
+import type { ConversationFileEnv } from "./chat-conversation-files.ts";
 import { sameAcceptedInputValue } from "./chat-accepted-input-values.ts";
-import { resolveOfficeTaskAssociation } from "./chat-office-task-association.ts";
+import {
+  resolveOfficeTaskAssociation,
+  type OfficeTaskAssociation,
+} from "./chat-office-task-association.ts";
 import type { ChatSendRecords } from "./chat-send-records.ts";
 
 const KEY = "office.host-scope.v1";
@@ -40,10 +44,16 @@ const denied = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
 export class ChatOfficeTaskBroker {
   readonly #entries = new Map<string, Entry>();
   readonly #access: () => AcceptedInputAccess;
-  readonly #records: ChatSendRecords;
-  constructor(access: () => AcceptedInputAccess, records: ChatSendRecords) {
+  /** Bound owner/chat association, including the retained earlier-Send attachment when used. */
+  readonly #association: (resolution: OfficeResolution) => Promise<OfficeTaskAssociation | null>;
+  constructor(
+    env: ConversationFileEnv,
+    access: () => AcceptedInputAccess,
+    records: ChatSendRecords,
+  ) {
     this.#access = access;
-    this.#records = records;
+    this.#association = (resolution) =>
+      resolveOfficeTaskAssociation(resolution, access(), records, env);
   }
 
   #revoke(entry: Entry): void {
@@ -65,11 +75,7 @@ export class ChatOfficeTaskBroker {
 
   async capture(resolution: OfficeResolution): Promise<OfficeTaskProof> {
     const started = Date.now();
-    const association = await resolveOfficeTaskAssociation(
-      resolution,
-      this.#access(),
-      this.#records,
-    );
+    const association = await this.#association(resolution);
     if (association === null) throw denied();
     const candidate = {
       version: 1,
@@ -143,11 +149,7 @@ export class ChatOfficeTaskBroker {
       if (entry !== undefined) this.#revoke(entry);
       return null;
     }
-    const current = await resolveOfficeTaskAssociation(
-      entry.resolution,
-      this.#access(),
-      this.#records,
-    );
+    const current = await this.#association(entry.resolution);
     if (
       current === null ||
       !sameAcceptedInputValue(current, entry.proof.association) ||

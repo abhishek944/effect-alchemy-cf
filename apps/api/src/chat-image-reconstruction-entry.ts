@@ -3,6 +3,7 @@ import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   MAX_MESSAGE_ATTACHMENT_BYTES,
 } from "./chat-attachment-schema.ts";
+import { matchingCompactReferenceInput } from "./chat-reference-integrity.ts";
 import { digestCompactImageInput } from "./chat-image-response-digest.ts";
 import type { ImageAcceptedBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
 import { requireImageInputOwner } from "./chat-image-input-content.ts";
@@ -81,6 +82,7 @@ export async function inspectImageCandidate(
     message?.role !== "user" ||
     !Number.isFinite(message.timestamp) ||
     message.timestamp < 0 ||
+    !matchingCompactReferenceInput(message.content, candidate) ||
     (await digestCompactImageInput(message.content)) !== candidate.inputDigest
   )
     throw new ImageInputError("corrupt");

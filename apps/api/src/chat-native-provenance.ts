@@ -21,7 +21,7 @@ const Round = Schema.Struct({
 });
 const Execute = Schema.Struct({
   phase: Schema.Literal("execute"),
-  replay: Schema.Literal("unsafe"),
+  replay: Schema.Literals(["safe", "unsafe"]),
   arguments: Schema.Unknown,
 });
 type ToolInput = { readonly assistant: EntryId; readonly callId: string };

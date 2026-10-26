@@ -1,0 +1,109 @@
+[data-dashboard] [data-cx="chat-message"][data-role="user"]:has([data-cx="sent-evidence-label"]) {
+  width: 464px;
+  max-width: min(464px, 100%);
+  white-space: normal;
+}
+[data-dashboard] [data-cx="chat-message"][data-role="user"] > p {
+  white-space: pre-wrap;
+}
+[data-cx="sent-selections"] {
+  margin-top: 16px;
+}
+[data-cx="sent-selections"]:first-child {
+  margin-top: 0;
+}
+[data-cx="sent-evidence-label"] {
+  font-size: 11px;
+  color: var(--cx-muted);
+  margin-bottom: 7px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+[data-cx="sent-selection-row"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--cx-line);
+  border-radius: 10px;
+  background: var(--cx-card);
+}
+[data-cx="sent-selection-row"] + [data-cx="sent-selection-row"] {
+  margin-top: 6px;
+}
+details[data-cx="sent-selection-row"] {
+  display: block;
+}
+[data-cx="sent-selection-row"] summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+[data-cx="sent-selection-row"] summary::-webkit-details-marker {
+  display: none;
+}
+[data-cx="sent-selection-row"] summary::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+[data-cx="sent-selection-row"][open] summary::before {
+  transform: rotate(135deg);
+}
+[data-cx="sent-selection-row"] summary:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 3px;
+}
+[data-cx="sent-selection-icon"] {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 26px;
+  background: var(--cx-selected);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+[data-cx="sent-selection-icon"] svg {
+  width: 18px;
+  height: 18px;
+}
+[data-cx="sent-selection-copy"] {
+  min-width: 0;
+  flex: 1;
+}
+[data-cx="sent-selection-name"] {
+  display: block;
+  font-size: 12px;
+  line-height: 22.4px;
+  overflow-wrap: anywhere;
+}
+[data-cx="sent-selection-scope"] {
+  display: block;
+  font-size: 11px;
+  line-height: 22.4px;
+  color: var(--cx-muted);
+  overflow-wrap: anywhere;
+}
+[data-cx="sent-selection-reveal"] {
+  margin: 10px 0 0 29px;
+}
+[data-cx="sent-selection-reveal"] blockquote {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--cx-resizer);
+  font-size: 12px;
+  color: var(--cx-text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+[data-cx="sent-selection-unavailable"] {
+  color: var(--cx-muted);
+  font-size: 11px;
+}

@@ -1,36 +1,30 @@
 # Office workflows — source and operational boundaries
 
-The Office source implementation has passed its bounded independent source reviews.
-The application image builds and runs locally. Genuine authenticated creation, native
-loading, worksheet insertion and worksheet-name typing have reached revision ACK,
-server drain and fresh-view persistence through Worker/Node/D1/R2. A real draft edit
-also reached confirmed Ready, exact pinned snapshot HTTP200 and a real read-only
-revision-2 result showing the edited worksheet name while Main stayed at revision1.
-Two exact frozen-read boundary corrections resolved the earlier snapshot failure;
-approval initially stayed disabled. A bounded merge-preview check then loaded both
-exact read-only views and enabled approval, without approving or publishing anything.
-Human Ready-only reopen reached exactly the next generation; a new editable View
-accepted another worksheet-name edit, ACK, server drain and fresh-view persistence.
-These are bounded cases, not full workflow acceptance.
-**Cell typing, historical review readability, conversion/merge fidelity and AI
-workflows remain unverified.** A CSV import returned an uncertain failure;
-no replay or authority workaround is authorized. No approval, merge or AI inference
-was performed.
-Earlier test observers excluded redirected frame URLs or could trigger themselves;
-those observations are qualified rather than attributed to an SDK defect. Corrected
-input and bounded foreground checks still do not establish cell typing. Existing
-testing authorization carries forward; no renewed generic permission is required.
-Static checks and these cases do not prove all physical/concurrent schedules.
+Earlier bounded runs verified native editing, revision ACK, server drain and fresh
+reopening through Worker/Node/D1/R2, plus exact review and Ready-only reopen cases.
+Those historical results do not certify later changes or all concurrent schedules.
+Chat-scoped attachment access and selected-cell context require fresh user acceptance.
+Never replay an uncertain import/write to test a fix. Static checks and HTTP200 alone
+do not establish native save, conversion/merge fidelity or clean lifecycle behavior.
 
 ## Originals, AI and document history
 
-1. Select CSV, XLSX, DOCX or PPTX originals and write a message. Nothing uploads until
+1. Select TXT, CSV, XLSX, DOCX or PPTX originals and write a message. Nothing uploads until
    Send, and selecting/uploading never automatically creates an Office document.
 2. Send freezes the original model/files/references and displayed editable target
-   before native hold/drain and uploads. Retry retains that original tuple; it
-   does not select a newer tab, head or generation.
-3. AI uses `univer_cli({attachmentId,command:[...argv]})` and one bundled Univer
-   Skill. The legacy `office` tool is disabled. This application CLI uses the
+   before native checkpointing and uploads. Retry retains that original tuple; it
+   does not select a newer tab, head or generation. Opened attachment identities and
+   selected worksheet/cell ranges are descriptive context, not read/write permission.
+   Cells are identified by coordinates, not copied wholesale into the prompt.
+   Explicit inline references suppress automatic displayed context; tray observations
+   are never sent implicitly. Native Docs capture raw selected UTF-16 text. See
+   [inline references](chat-files.md#inline-references-and-selections) for limits.
+3. AI discovers saved chat files with paginated `get_attachments`, then uses
+   `univer_cli({attachmentId,command:[...argv]})` and one bundled Univer Skill.
+   Native inline sources use exclusive `referenceId` from the proven accepted input.
+   A file need not be attached again to each message: the server resolves the retained
+   original under the actual user/chat, never by trusting a model-supplied owner.
+   The legacy `office` tool is disabled. This application CLI uses the
    shared native server, not a second local `.univer` database. `import` resolves
    an accepted original and imports once; later commands reuse that saved draft.
    Workbook/Unit and worktree IDs are server-resolved, not model-supplied.
@@ -47,6 +41,13 @@ Static checks and these cases do not prove all physical/concurrent schedules.
    all semantic AI/code derivations or account documents belonging to the open chat.
    Unknown/failed operations and older missing identity do not fabricate links.
 
+TXT opens in native Docs through an application-owned UTF-8 import (optional BOM).
+Line endings normalize to LF; native structural control characters are rejected.
+Docs can export DOCX or TXT through the same authorized artifact pipeline. TXT is
+main-body plain text: no rich formatting, images, headers/footers or notes. The SDK
+handles text extraction, including its table text representation, not layout preservation.
+TXT retains the existing 1MiB upload limit and its unchanged original download.
+
 Office inputs share five files/20MiB per message and 1GiB owner accounting, with
 10MiB per modern Office original. Accepted originals remain permanent under their
 existing retention owner. Legacy XLS/DOC/PPT is not accepted in this attachment lane.
@@ -62,8 +63,10 @@ AI import and manual opening share `file_open_<attachmentId>` and the same saved
 working document; reopening never reimports the original or overwrites edits.
 Repeated attachment clicks reuse its tab; resolved document/draft/generation opens
 converge on that same mounted editor. Frozen review tabs keep separate identities.
-Ordinary tab selection leaves retained editors running. Close saves only the affected
-tab; whole-workspace navigation still awaits all retained native input/saves.
+Tab selection, Settings, pane visibility and switching chats leave retained editors
+running in their own chat's workspace. Each open file admits only its own save/capture;
+close saves its tab, and sign-out/account teardown awaits all retained saves.
+Refresh restores descriptors through fresh authorization, never editor capabilities.
 Unconfirmed imports expose an original-operation check. Known pre-write phases
 also offer an explicit Continue original import using the same frozen input and
 operation ID; uncertain native-write phases remain observation-only. Conversion
@@ -100,7 +103,10 @@ exactly the next generation and acquires a NEW View; old reviews remain immutabl
 Native revisions remain authoritative. Isolated AI jobs retain their exact input
 revision; native OT does not prove a computation based on older values is still valid.
 Human approval remains bound to the exact reviewed result, not a moving live head.
-Send takes a fresh native ACK. If it advanced beyond the opening View, the existing
+Send briefly holds input for a fresh native ACK and captures the exact checkpoint,
+then releases the local hold without draining the server Editor or replacing its
+channel. The same active editor and authorization renewal continue. An explicitly
+paused editor stays paused. If the ACK advanced beyond the opening View, the existing
 open API captures a same-target checkpoint whose revision must equal that ACK;
 a racing newer head refuses capture rather than changing the frozen AI input.
 
@@ -169,7 +175,10 @@ unknown; and whether physical cleanup completed. `office.admission` uses fixed
 branch reasons with existing operation/task/call IDs, not document names or bodies.
 Unexpected proof/callback failures propagate instead of becoming a denied null.
 Office adapters keep legitimate error instances and native causes in memory;
-public HTTP/tool/native-client replies still encode safe failure fields only.
+public HTTP/tool/native-client replies encode code, message and operation ID, without retry directives.
+Old denials do not permanently block fresh requested reads; current authorization still applies.
+Legacy stored retry hints are ignored on read without rewriting history. New metadata omits them.
+Rebuild/restart Worker and native image together; mixed old/new failure contracts are unsupported.
 
 Fixed jobs emit bounded structured failures at their origin. Their existing stderr
 stream is schema-validated, matched to the claimed job and relayed by its physical

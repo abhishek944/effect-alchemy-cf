@@ -7,6 +7,7 @@ import { useChatLibraryOriginal } from "./use-chat-library-original";
 import { useChatLibrarySources } from "./use-chat-library-sources";
 import { Icon } from "./icon";
 import { AttachmentContent } from "./attachment-content";
+import { ReferenceTextPreview } from "./reference-text-preview";
 import "./chat-library-preview.css";
 import "./chat-library-image.css";
 
@@ -16,6 +17,7 @@ export type ChatLibraryPreviewProps = {
   archived: boolean;
   onOpenSource: (fileId: string) => void;
   sourceNames?: Readonly<Record<string, string>>;
+  textReferenceReveal?: (() => void) | undefined;
 };
 
 /** Saved original first, with private read-only text content or image viewing. */
@@ -25,6 +27,7 @@ export function ChatLibraryPreview({
   archived,
   onOpenSource,
   sourceNames,
+  textReferenceReveal,
 }: ChatLibraryPreviewProps) {
   const original = useChatLibraryOriginal(file, active);
   const saved = original.file;
@@ -89,6 +92,8 @@ export function ChatLibraryPreview({
               </button>
             )}
           </>
+        ) : saved.kind === "text" && textReferenceReveal ? (
+          <ReferenceTextPreview file={saved} active={active} onReveal={textReferenceReveal} />
         ) : (
           <AttachmentContent source={saved} active={active} />
         )}

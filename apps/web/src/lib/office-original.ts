@@ -4,7 +4,12 @@ import { officeAttachmentIds, officeImportOptions, OfficeNotFound } from "@start
 import type { OfficeRuntime } from "@starter/office-react";
 import type { SavedFile } from "./chat-library-types";
 
-export type OriginalOffice = { title: string; target: Target; reviewId: string | null };
+export type OriginalOffice = {
+  title: string;
+  target: Target;
+  reviewId: string | null;
+  attachments: readonly string[];
+};
 export class OfficeOriginalPending extends Error {
   readonly canContinue: boolean;
   constructor(canContinue: boolean) {
@@ -20,6 +25,35 @@ const canContinue = (receipt: Receipt) =>
 /** CSV and modern Office originals open into the same native draft the AI may edit. */
 export const isNativeOpenFile = (file: { name: string; mediaType: string }): boolean =>
   officeImportOptions(file.mediaType, file.name) !== null;
+
+/** Read-only recovery for refresh placeholders; never stages, imports or continues. */
+export async function observeOfficeOriginal(
+  runtime: OfficeRuntime,
+  file: SavedFile,
+  signal: AbortSignal,
+) {
+  const target = await runtime.run(
+    runtime.client.office.original({
+      params: { fileRef: file.id },
+      query: { chatId: file.chatId },
+    }),
+    { signal },
+  );
+  const { operationId } = officeAttachmentIds(file.id);
+  const receipt = await runtime.run(
+    runtime.client.office
+      .receipt({ params: { operationId } })
+      .pipe(
+        Effect.catchTag("OfficeNotFound", (error) =>
+          error instanceof OfficeNotFound && error.code === "NOT_FOUND"
+            ? Effect.succeed(null)
+            : Effect.fail(error),
+        ),
+      ),
+    { signal },
+  );
+  return { target, receipt };
+}
 
 /** Explicit original opens create only a draft; continuation reuses its exact immutable input. */
 export async function openOfficeOriginal(
@@ -66,6 +100,7 @@ export async function openOfficeOriginal(
       title: file.name,
       target: existing,
       reviewId: draft.status === "ready" ? draft.reviewId : null,
+      attachments: [file.id],
     };
   }
   const original = await run(
@@ -147,6 +182,7 @@ export async function openOfficeOriginal(
         scope: { kind: "draft", draftId: draft.id, generation: draft.generation },
       },
       reviewId: draft.status === "ready" ? draft.reviewId : null,
+      attachments: [file.id],
     };
   } catch (error) {
     if (error instanceof OfficeOriginalPending) throw error;

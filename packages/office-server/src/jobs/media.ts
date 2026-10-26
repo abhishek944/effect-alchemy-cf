@@ -8,6 +8,8 @@ export function exportMediaType(options: ExportOptions): string {
       return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     case "pptx":
       return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    case "txt":
+      return "text/plain";
     case "csv":
       return "text/csv";
     case "tsv":

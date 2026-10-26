@@ -17,7 +17,7 @@ export const ImportOptions = Schema.Union([
   }),
   Schema.Struct({
     kind: Schema.Literal("doc"),
-    format: Schema.Literals(["doc", "docx"]),
+    format: Schema.Literals(["doc", "docx", "txt"]),
     compatibility: Schema.Literals(["traditional", "modern"]),
   }),
   Schema.Struct({ kind: Schema.Literal("slide"), format: Schema.Literals(["ppt", "pptx"]) }),
@@ -52,7 +52,7 @@ export const ExportOptions = Schema.Union([
     format: Schema.Literals(["csv", "tsv"]),
     worksheetId: NativeId,
   }),
-  Schema.Struct({ kind: Schema.Literal("doc"), format: Schema.Literal("docx") }),
+  Schema.Struct({ kind: Schema.Literal("doc"), format: Schema.Literals(["docx", "txt"]) }),
   Schema.Struct({ kind: Schema.Literal("slide"), format: Schema.Literal("pptx") }),
 ]);
 export type ExportOptions = typeof ExportOptions.Type;

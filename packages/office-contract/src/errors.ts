@@ -24,14 +24,12 @@ export type ErrorCode = typeof ErrorCode.Type;
 export const Failure = Schema.Struct({
   code: ErrorCode,
   message: Schema.String.check(Schema.isMaxLength(512)),
-  retry: Schema.Literals(["never", "same-operation", "observe"]),
   operationId: Schema.NullOr(Id),
 });
 export type Failure = typeof Failure.Type;
 const fields = {
   code: ErrorCode,
   message: Schema.String.check(Schema.isMaxLength(512)),
-  retry: Schema.Literals(["never", "same-operation", "observe"]),
   operationId: Schema.NullOr(Id),
 };
 export class OfficeInvalid extends Schema.TaggedError<OfficeInvalid>()("OfficeInvalid", fields, {
@@ -76,15 +74,9 @@ export const safeFailure = (code: ErrorCode, operationId: string | null = null):
   code,
   operationId,
   message:
-    code === "OUTCOME_UNKNOWN"
-      ? "Observe the original operation before retrying."
+    code === "OUTCOME_UNKNOWN" || code === "HISTORY_INCOMPLETE"
+      ? "The original outcome is unconfirmed. Check its operation status; do not repeat the write."
       : code === "STALE_BASIS"
         ? "The draft changed; the staged proposal was not applied."
         : "The Office request could not be completed.",
-  retry:
-    code === "OUTCOME_UNKNOWN" || code === "HISTORY_INCOMPLETE"
-      ? "observe"
-      : code === "UNAVAILABLE" || code === "BUSY"
-        ? "same-operation"
-        : "never",
 });

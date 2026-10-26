@@ -10,6 +10,7 @@ import type {
 import { parseChatFileDescriptor } from "@/lib/chat-capability-file-validate";
 import { parseChatUsageAmount } from "@/lib/chat-capability-usage-validate";
 import { parseChatTools } from "@/lib/chat-tool-validate";
+import { parseInputSelections } from "@/lib/chat-selection-types";
 import { isIsoDate, isRecord, isSafeIndex, isText, isUuid } from "@/lib/chat-validate-base";
 
 export function parsePosition(value: unknown): Position | null {
@@ -64,6 +65,8 @@ export function parseMessage(value: unknown): ChatMessage | null {
   const tools = parseChatTools(value.tools);
   if (tools === null || (value.role !== "assistant" && tools.length > 0)) return null;
   if (value.toolsTruncated !== undefined && typeof value.toolsTruncated !== "boolean") return null;
+  const selectedAreas = parseInputSelections(value.selectedAreas);
+  if (selectedAreas === null || (value.role !== "user" && selectedAreas.length > 0)) return null;
   const attachments = [];
   for (const item of value.attachments) {
     const file = parseChatFileDescriptor(item);
@@ -83,6 +86,7 @@ export function parseMessage(value: unknown): ChatMessage | null {
     createdAt: value.createdAt,
     operationId: value.operationId,
     attachments,
+    selectedAreas,
     hasGeneratedFiles,
     tools,
     toolsTruncated: value.toolsTruncated === true,

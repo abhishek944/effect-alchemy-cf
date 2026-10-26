@@ -1,46 +1,79 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
+import { useChatStore } from "@/lib/chat-store-context";
+import { useWorkspaceOffice } from "./workspace-office-context";
+import { readLayout, storePanes } from "./workspace-session";
 
-export function usePanes(
-  chatWorkspace = false,
-  prepare?: (action: () => void) => Promise<boolean>,
-) {
-  const change = useCallback(
-    (action: () => void) => {
-      if (chatWorkspace && prepare !== undefined) void prepare(action);
-      else action();
+export function usePanes(chatWorkspace = false) {
+  // Visibility never ends a retained native editor's lifetime.
+  const { accountId } = useWorkspaceOffice();
+  const { selectedId } = useChatStore();
+  const initial = () => ({
+    chatId: selectedId,
+    panes: readLayout(accountId, selectedId)?.panes ?? {
+      sidebar: window.matchMedia("(min-width: 601px)").matches,
+      right: window.matchMedia("(min-width: 761px)").matches,
+      full: false,
+      restoreRight: window.matchMedia("(min-width: 761px)").matches,
     },
-    [chatWorkspace, prepare],
+  });
+  const [chatLayout, setChatLayout] = useState(initial);
+  if (chatLayout.chatId !== selectedId) setChatLayout(initial());
+  useEffect(() => {
+    storePanes(accountId, chatLayout.chatId, chatLayout.panes);
+  }, [accountId, chatLayout]);
+  const field = useCallback(
+    (key: "sidebar" | "right" | "full" | "restoreRight", value: SetStateAction<boolean>) => {
+      setChatLayout((current) => ({
+        ...current,
+        panes: {
+          ...current.panes,
+          [key]: typeof value === "function" ? value(current.panes[key]) : value,
+        },
+      }));
+    },
+    [],
   );
-  const [sidebarOpen, setSidebarOpen] = useState(
+  const setChatSidebarOpen = useCallback(
+    (value: SetStateAction<boolean>) => field("sidebar", value),
+    [field],
+  );
+  const setChatRightOpen = useCallback(
+    (value: SetStateAction<boolean>) => field("right", value),
+    [field],
+  );
+  const setChatFullView = useCallback(
+    (value: SetStateAction<boolean>) => field("full", value),
+    [field],
+  );
+  const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(
     () => window.matchMedia("(min-width: 601px)").matches,
   );
-  const [chatRightOpen, setChatRightOpen] = useState(
-    () => window.matchMedia("(min-width: 761px)").matches,
-  );
+  const sidebarOpen = chatWorkspace ? chatLayout.panes.sidebar : settingsSidebarOpen;
+  const setSidebarOpen = chatWorkspace ? setChatSidebarOpen : setSettingsSidebarOpen;
+  const chatRightOpen = chatLayout.panes.right;
+  const chatFullView = chatLayout.panes.full;
   const [settingsRightOpen, setSettingsRightOpen] = useState(false);
-  const [chatFullView, setChatFullView] = useState(false);
   const [settingsFullView, setSettingsFullView] = useState(false);
   const rightOpen = chatWorkspace ? chatRightOpen : settingsRightOpen;
   const setRightOpen = chatWorkspace ? setChatRightOpen : setSettingsRightOpen;
   const openRight = useCallback(() => setRightOpen(true), [setRightOpen]);
   const fullView = chatWorkspace ? chatFullView : settingsFullView;
   const setFullView = chatWorkspace ? setChatFullView : setSettingsFullView;
-  const workspace = chatWorkspace ? "chat" : "settings";
   const rightRef = useRef<HTMLElement>(null);
-  const previousRight = useRef({ chat: false, settings: false });
+  const [settingsRestoreRight, setSettingsRestoreRight] = useState(false);
+  const restoreRight = chatWorkspace ? chatLayout.panes.restoreRight : settingsRestoreRight;
   const previousFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!fullView) return undefined;
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape")
-        change(() => {
-          setFullView(false);
-          setRightOpen(previousRight.current[workspace]);
-        });
+      if (event.key === "Escape") {
+        setFullView(false);
+        setRightOpen(restoreRight);
+      }
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [fullView, setFullView, setRightOpen, workspace, change]);
+  }, [fullView, setFullView, setRightOpen, restoreRight]);
   useEffect(() => {
     if (fullView) {
       previousFocus.current =
@@ -58,27 +91,25 @@ export function usePanes(
     fullView,
     rightRef,
     openRight,
-    toggleSidebar: () =>
-      change(() => {
+    toggleSidebar: () => {
+      setFullView(false);
+      if (fullView) setRightOpen(restoreRight);
+      setSidebarOpen((open) => fullView || !open);
+    },
+    toggleRight: () => {
+      setFullView(false);
+      setRightOpen((open) => !open);
+    },
+    toggleFullView: () => {
+      if (fullView) {
         setFullView(false);
-        if (fullView) setRightOpen(previousRight.current[workspace]);
-        setSidebarOpen((open) => fullView || !open);
-      }),
-    toggleRight: () =>
-      change(() => {
-        setFullView(false);
-        setRightOpen((open) => !open);
-      }),
-    toggleFullView: () =>
-      change(() => {
-        if (fullView) {
-          setFullView(false);
-          setRightOpen(previousRight.current[workspace]);
-        } else {
-          previousRight.current[workspace] = rightOpen;
-          setRightOpen(true);
-          setFullView(true);
-        }
-      }),
+        setRightOpen(restoreRight);
+      } else {
+        if (chatWorkspace) field("restoreRight", rightOpen);
+        else setSettingsRestoreRight(rightOpen);
+        setRightOpen(true);
+        setFullView(true);
+      }
+    },
   };
 }

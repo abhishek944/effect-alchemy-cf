@@ -10,7 +10,6 @@ export const readDraftExecutionBasis = (client: OfficeTaskPort, draftId: string)
       return yield* new OfficeInvalid({
         code: "NOT_EDITABLE",
         operationId: null,
-        retry: "never",
         message: "Read the current editable draft before opening its execution basis.",
       });
     const view = decodeWireSync(View)(
@@ -29,7 +28,6 @@ export const readDraftExecutionBasis = (client: OfficeTaskPort, draftId: string)
       return yield* new OfficeInvalid({
         code: "STALE_BASIS",
         operationId: null,
-        retry: "never",
         message: "The draft view no longer matches the read generation.",
       });
     return {

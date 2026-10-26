@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import type { OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
 import {
   FileMediaType,
   FileName,
@@ -113,6 +113,7 @@ export type AcceptedInputRecord = {
   readonly inputDigest: AcceptedInputDigest;
   readonly originals: readonly AcceptedOriginalBinding[];
   readonly officeTarget?: OfficeSendTarget | undefined;
+  readonly referenceInputs?: ChatReferenceInputs | undefined;
 };
 
 export type BoundAcceptedInput<Record extends AcceptedInputRecord = AcceptedInputRecord> = {

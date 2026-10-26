@@ -1,4 +1,4 @@
-import { freezeOfficeSendTarget } from "@starter/office-contract";
+import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@starter/office-contract";
 import { createChatFilesCatalogClient } from "./chat-files-client.ts";
 import { digestCompactImageInput } from "./chat-image-response-digest.ts";
 import { ImageResponseError, responseValue } from "./chat-image-response-codec.ts";
@@ -11,6 +11,7 @@ import {
 } from "./chat-image-input-content.ts";
 import { prepareImageInputFiles } from "./chat-image-input-files.ts";
 import { freezeImageInputCapability } from "./chat-image-input-preferences.ts";
+import { validateOriginalReferenceSlices } from "./chat-reference-original-admission.ts";
 import {
   ImageInputError,
   type ImageInputPreparationAccess,
@@ -32,6 +33,9 @@ export async function prepareCompactImageInput(
     ...(request.officeTarget === undefined
       ? {}
       : { officeTarget: freezeOfficeSendTarget(request.officeTarget) }),
+    ...(request.referenceInputs === undefined
+      ? {}
+      : { referenceInputs: freezeChatReferenceInputs(request.referenceInputs) }),
     sources: request.sources.map((source) => ({ ...source })),
   };
   requireImageInputRequest(input);
@@ -68,11 +72,20 @@ export async function prepareCompactImageInput(
       known?.originals,
       signal,
     );
+    await validateOriginalReferenceSlices(
+      access.referenceFiles,
+      stub,
+      input.chatId,
+      input.referenceInputs ?? [],
+      files.files,
+      signal,
+    );
     requireImageInputOwner(access, input.ownerId, input.chatId, chatScope);
     const content = compactImageInput(
       input.text,
       known?.originals ?? files.originals,
       input.officeTarget,
+      input.referenceInputs,
     );
     const inputDigest = await digestCompactImageInput(content);
     signal?.throwIfAborted();
@@ -105,6 +118,9 @@ export async function prepareCompactImageInput(
           inputDigest,
           originals: files.originals,
           ...(input.officeTarget === undefined ? {} : { officeTarget: input.officeTarget }),
+          ...(input.referenceInputs === undefined
+            ? {}
+            : { referenceInputs: input.referenceInputs }),
         }),
       );
     persisted = true;

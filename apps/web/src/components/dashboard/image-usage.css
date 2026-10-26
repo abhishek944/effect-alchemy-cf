@@ -15,7 +15,6 @@
   border-top: 1px solid var(--cx-line);
   color: var(--cx-text);
   overflow-wrap: anywhere;
-  scrollbar-width: thin;
 }
 /* Empty/loading/error states stay compact while expanded evidence remains scroll-bounded. */
 [data-dashboard] [data-cx="image-usage"][data-bounded="true"] {

@@ -81,10 +81,8 @@ export async function validateJob(db: MetadataStore, record: JobRecord): Promise
     if (
       state.error.operationId !== b.operationId ||
       (state.state === "execution-unknown"
-        ? dispatch === null ||
-          state.error.code !== "OUTCOME_UNKNOWN" ||
-          state.error.retry !== "observe"
-        : state.error.retry !== "never" || state.error.code === "OUTCOME_UNKNOWN")
+        ? dispatch === null || state.error.code !== "OUTCOME_UNKNOWN"
+        : state.error.code === "OUTCOME_UNKNOWN")
     )
       throw invalid();
   }

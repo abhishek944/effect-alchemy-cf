@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { errorMessage } from "@/lib/chat-api";
+import { errorMessage, type ChatMessage } from "@/lib/chat-api";
 import { getHistory } from "@/lib/chat-history-api";
 import type { Position } from "@/lib/chat-history-types";
-import { applyPage, emptyPageState, type PageState } from "./chat-history";
+import { applyPage, emptyPageState, retainPage, type PageState } from "./chat-history";
 
 const PAGE_SIZE = 40;
 
@@ -26,10 +26,13 @@ type Ack = { chatId: string; generation: number; version: number; ids: string[] 
 export function useChatPager(
   selectedId: string | null,
   attachment: string,
-  onOperations?: (chatId: string, ids: string[]) => void,
+  onOperations: ((chatId: string, ids: string[]) => void) | undefined,
+  snapshotRows: ChatMessage[],
 ) {
   const scope = `${selectedId ?? ""}:${attachment}`;
   const [state, setState] = useState<PageState>(() => emptyPageState(selectedId ?? "", attachment));
+  const retained = retainPage(state, snapshotRows);
+  if (retained !== state) setState(retained);
   const [loadingState, setLoadingState] = useState<LoadingState | null>(null);
   const [failure, setFailure] = useState<ScopedError | null>(null);
   const [ackVersion, setAckVersion] = useState(0);
@@ -43,11 +46,13 @@ export function useChatPager(
     controllers: new Set(),
   });
   const scopeRef = useRef(scope);
-  const stateRef = useRef(state);
+  const stateRef = useRef(retained);
+  const snapshotRowsRef = useRef(snapshotRows);
 
   useLayoutEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+    stateRef.current = retained;
+    snapshotRowsRef.current = snapshotRows;
+  }, [retained, snapshotRows]);
 
   useLayoutEffect(() => {
     const guard = guardRef.current;
@@ -118,13 +123,27 @@ export function useChatPager(
           chainCeiling === null ||
           base.ceilingEntryId === chainCeiling;
         if (base.started && sameChain && base.cursor !== cursor) return;
-        if (applyPage(base, page, chainCeiling ?? base.ceilingEntryId, bridgeTarget) === base) {
+        if (
+          applyPage(
+            base,
+            page,
+            chainCeiling ?? base.ceilingEntryId,
+            bridgeTarget,
+            snapshotRowsRef.current,
+          ) === base
+        ) {
           return;
         }
         setState((previous) => {
           if (!current()) return previous;
           const source = scopedState(previous);
-          return applyPage(source, page, chainCeiling ?? source.ceilingEntryId, bridgeTarget);
+          return applyPage(
+            source,
+            page,
+            chainCeiling ?? source.ceilingEntryId,
+            bridgeTarget,
+            snapshotRowsRef.current,
+          );
         });
         const version = ++ackVersionRef.current;
         ackRef.current = {
@@ -170,5 +189,5 @@ export function useChatPager(
       ? failure.message
       : null;
 
-  return { state, loading, error, load, returnToLatest };
+  return { state: retained, loading, error, load, returnToLatest };
 }

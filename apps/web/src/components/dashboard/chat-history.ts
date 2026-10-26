@@ -21,6 +21,25 @@ import {
 export { emptyPageState } from "./chat-history-view";
 export type { HistoryGap, HistoryView, PageState } from "./chat-history-view";
 
+/** Include hidden snapshot/page versions, but count exact shared row objects only once. */
+export const historyBudgetRows = (
+  pages: ChatMessage[],
+  snapshot: ChatMessage[],
+  visible: ChatMessage[],
+) => [...new Set([...pages, ...snapshot, ...visible])];
+
+/** Page state itself must fit before persistence, even without any continuation chunks. */
+export function retainPage(page: PageState, snapshot: ChatMessage[] = []): PageState {
+  const capped = capRows(page.rows, page, "oldest", PAGE_ROW_LIMIT, (rows) =>
+    historyBudgetRows(
+      rows,
+      snapshot,
+      page.newerUnloaded ? rows : mergeRows(rows, snapshot.filter(isCommitted)),
+    ),
+  );
+  return capped.rows === page.rows ? page : { ...page, ...capped };
+}
+
 function deepestBelow(frontier: Position, rows: ChatMessage[]): Position | null {
   let target: Position | null = null;
   for (const row of rows) {
@@ -118,6 +137,7 @@ export function applyPage(
   response: HistoryPage,
   chainCeiling: number | null,
   bridgeTarget: Position | null = null,
+  snapshot: ChatMessage[] = [],
 ): PageState {
   const sameChain =
     chainCeiling === null ||
@@ -128,26 +148,21 @@ export function applyPage(
     page.ceilingEntryId !== null &&
     response.history.ceilingEntryId !== null &&
     page.ceilingEntryId !== response.history.ceilingEntryId;
-  const capped = capRows(
-    mergeRows(page.rows, response.messages.filter(isCommitted)),
-    { olderUnloaded: page.olderUnloaded, newerUnloaded: page.newerUnloaded },
-    "oldest",
-    PAGE_ROW_LIMIT,
+  return retainPage(
+    {
+      ...page,
+      rows: mergeRows(page.rows, response.messages.filter(isCommitted)),
+      started: true,
+      cursor: response.history.historyCursor,
+      exhausted: response.history.historyCursor === null,
+      ceilingEntryId: response.history.ceilingEntryId ?? page.ceilingEntryId,
+      pageThrough: chainChanged
+        ? response.history.through
+        : lowerPosition(page.pageThrough, response.history.through),
+      bridgeTarget: bridgeTarget ?? page.bridgeTarget,
+    },
+    snapshot,
   );
-  return {
-    ...page,
-    rows: capped.rows,
-    started: true,
-    cursor: response.history.historyCursor,
-    exhausted: response.history.historyCursor === null,
-    ceilingEntryId: response.history.ceilingEntryId ?? page.ceilingEntryId,
-    pageThrough: chainChanged
-      ? response.history.through
-      : lowerPosition(page.pageThrough, response.history.through),
-    bridgeTarget: bridgeTarget ?? page.bridgeTarget,
-    olderUnloaded: capped.olderUnloaded,
-    newerUnloaded: capped.newerUnloaded,
-  };
 }
 
 /** Attaches bounded chunks and accounts their bytes against every supplied row. */

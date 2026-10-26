@@ -46,7 +46,11 @@ Paid submissions are bounded per user across chats: ten per minute, plus six
 expiring reservations over five minutes. Reservations are approximate, not an
 exact count of active runs; completed runs may still occupy capacity until expiry.
 Retries bind the operation ID to the original chat, text, model, effort and ordered
-upload/reference UUIDs. Saved references remain separate from staged uploads. One active response is allowed; busy sends are rejected, not queued.
+upload/reference UUIDs. Saved references remain separate from staged uploads. Each
+chat has at most one active response; busy sends in that chat are rejected, not
+queued, while another chat's run never blocks its Send or Stop. Switching chats changes
+visibility only: an accepted run, pending Send and its uploads keep their own chat's
+owner, and a settled chat re-reads authoritative history when shown again.
 Exact native acceptance
 is checked before quota, so a lost catalog acknowledgment can be repaired without
 another submission. Rejection releases only its owned tentative reservation.

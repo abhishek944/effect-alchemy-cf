@@ -1,3 +1,11 @@
+[data-dashboard] [data-cx="office-opening"] {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  color: var(--cx-muted);
+}
 [data-dashboard] [data-cx="office-surface"] {
   display: flex;
   flex: 1;
@@ -30,6 +38,24 @@
   color: var(--cx-muted);
   overflow-wrap: anywhere;
 }
+[data-dashboard] [data-cx="office-export"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--cx-line);
+  color: var(--cx-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="office-export"] output {
+  flex-basis: 100%;
+}
+[data-dashboard] [data-cx="office-export"] a {
+  color: var(--cx-text);
+  text-underline-offset: 3px;
+}
 [data-dashboard] [data-cx="office-files"] {
   flex: 0 1 auto;
   max-height: 45%;
@@ -42,7 +68,8 @@
   padding: 0;
 }
 [data-dashboard] [data-cx="office-files"] button,
-[data-dashboard] [data-cx="office-actions"] button {
+[data-dashboard] [data-cx="office-actions"] button,
+[data-dashboard] [data-cx="office-export"] button {
   border: 1px solid var(--cx-line);
   border-radius: var(--cx-radius-button);
   background: var(--cx-card);
@@ -53,12 +80,14 @@
   overflow-wrap: anywhere;
 }
 [data-dashboard] [data-cx="office-files"] button:focus-visible,
-[data-dashboard] [data-cx="office-actions"] button:focus-visible {
+[data-dashboard] [data-cx="office-actions"] button:focus-visible,
+[data-dashboard] [data-cx="office-export"] :is(button, a):focus-visible {
   outline: 2px solid var(--cx-focus);
   outline-offset: 2px;
 }
 [data-dashboard] [data-cx="office-files"] button:disabled,
-[data-dashboard] [data-cx="office-actions"] button:disabled {
+[data-dashboard] [data-cx="office-actions"] button:disabled,
+[data-dashboard] [data-cx="office-export"] button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

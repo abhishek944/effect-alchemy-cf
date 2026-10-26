@@ -1,3 +1,4 @@
+import { operationRecordSql } from "./legacy-failure.ts";
 import { Digest, Id, decodeWireSync } from "@starter/office-contract";
 import type {
   ApprovalRecord,
@@ -152,8 +153,7 @@ export async function admitPublication(
   }
   const statements: Statement[] = [];
   if (previous) {
-    guard +=
-      " AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND record=? AND claim_worker IS NULL)";
+    guard += ` AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND ${operationRecordSql}=? AND claim_worker IS NULL)`;
     values.push(owner, id, db.encode(OperationRow, previous));
     statements.push([
       "UPDATE office_meta_operations SET version=?,phase=?,record=? WHERE owner=? AND id=?",

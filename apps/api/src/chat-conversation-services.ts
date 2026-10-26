@@ -120,7 +120,7 @@ export const createChatConversationServices = (
     validateContext: (model, readEvidence) =>
       validateChatImageContext(runtime, model, readEvidence),
   });
-  const officeTasks = new ChatOfficeTaskBroker(() => images.nativeAccess(), records);
+  const officeTasks = new ChatOfficeTaskBroker(env, () => images.nativeAccess(), records);
   harness = new PiHarness({
     harness: conversationHarnessFactory({
       setProvider: (models) => {
@@ -142,7 +142,7 @@ export const createChatConversationServices = (
     }),
     defaults: { model: CHAT_MODEL, thinkingLevel: "high" },
   });
-  runtime = new ChatRuntime(harness, ledger, records);
+  runtime = new ChatRuntime(harness, ledger, records, (entry) => images.acceptedInput(entry));
   const submission = new ChatSubmission({
     harness,
     runtime,

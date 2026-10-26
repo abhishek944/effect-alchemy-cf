@@ -1,0 +1,159 @@
+[data-dashboard] [data-cx="reference-original-text"] {
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 100%;
+  padding: 16px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  user-select: text;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 220px;
+  resize: none;
+  border: 0;
+  background: transparent;
+  color: var(--cx-text);
+}
+[data-dashboard]
+  [data-cx="chat-composer"]:has([data-cx="composer-files"])
+  [data-cx="chat-input"][contenteditable] {
+  min-height: 52px;
+}
+[data-dashboard] [data-cx="chat-input"][contenteditable] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  max-height: 200px;
+}
+[data-dashboard] [data-cx="chat-input"][contenteditable] p {
+  margin: 0;
+}
+[data-dashboard] [data-cx="chat-input"][contenteditable]:empty::before,
+[data-dashboard]
+  [data-cx="chat-input"][contenteditable]:has(> p:only-child > br:only-child)::before {
+  content: "Message your assistant";
+  color: var(--cx-muted);
+  pointer-events: none;
+  position: absolute;
+}
+[data-dashboard] [data-cx="inline-reference"] {
+  background: #26364c;
+  color: #d7e4fa;
+  border-radius: 3px;
+  padding: 1px 3px;
+  box-decoration-break: clone;
+}
+[data-dashboard][data-theme="light"] [data-cx="inline-reference"] {
+  background: #dce8fb;
+  color: #24436b;
+}
+[data-dashboard][data-theme="midnight-black"] [data-cx="inline-reference"] {
+  background: #192338;
+  color: #cbd9f5;
+}
+[data-dashboard][data-theme="dusk"] [data-cx="inline-reference"] {
+  background: #283344;
+  color: #d7e4fa;
+}
+[data-dashboard][data-theme="paper"] [data-cx="inline-reference"] {
+  background: #dce2ed;
+  color: #284360;
+}
+[data-dashboard] [data-cx="reference-tray"] {
+  position: relative;
+  margin: 0 16px -8px;
+  padding: 5px 10px 12px;
+  border: 1px solid var(--cx-line);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--cx-card);
+  color: var(--cx-muted);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: auto;
+  white-space: nowrap;
+}
+[data-dashboard][data-theme="midnight-black"] [data-cx="reference-tray"] {
+  background: #000;
+}
+[data-dashboard] [data-cx="reference-tray-entry"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+[data-dashboard] [data-cx="reference-tray-entry"] + [data-cx="reference-tray-entry"] {
+  border-left: 1px solid var(--cx-line);
+  padding-left: 8px;
+}
+[data-dashboard] [data-cx="reference-tray"] button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--cx-text);
+  padding: 4px 2px;
+  min-height: 24px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 16px;
+}
+[data-dashboard] [data-cx="reference-kind"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex: 0 0 14px;
+  height: 16px;
+}
+[data-dashboard] [data-cx="reference-kind"] svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+[data-dashboard] [data-cx="selection-label"] {
+  display: block;
+  line-height: 16px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="reference-tray"] [data-cx="reference-close"] {
+  color: var(--cx-muted);
+  padding: 0 4px;
+}
+[data-dashboard] [data-cx="reference-selection-menu"] {
+  position: fixed;
+  z-index: 80;
+  min-width: 140px;
+  max-width: min(420px, calc(100vw - 16px));
+  border: 1px solid var(--cx-line);
+  background: var(--cx-sidebar);
+  box-shadow: 0 8px 24px #0005;
+  border-radius: 8px;
+  padding: 4px;
+}
+[data-dashboard] [data-cx="reference-selection-menu"] button {
+  display: block;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--cx-text);
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  width: 100%;
+  text-align: left;
+}
+[data-dashboard] [data-cx="reference-selection-menu"] button:hover {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="reference-tray"] button:focus-visible,
+[data-dashboard] [data-cx="reference-selection-menu"] button:focus-visible {
+  outline: 1px solid var(--cx-focus);
+  outline-offset: 1px;
+}

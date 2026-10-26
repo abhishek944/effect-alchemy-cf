@@ -6,6 +6,7 @@ import { readOfficeStageReceipts } from "./chat-office-stage-receipts.ts";
 import type { ChatOfficeTaskBroker, OfficeTaskLease } from "./chat-office-task-broker.ts";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
 import { officeDenied } from "./office-private-authority.ts";
+import { officeTaskFile } from "./office-task-file.ts";
 
 /** The native ACK ledger owns upload observation. Missing ACK never permits replay. */
 export function officeStageObserver(
@@ -21,9 +22,7 @@ export function officeStageObserver(
     : command.command === "operation"
       ? command.operationId
       : null;
-  const original = proof.association.originals.find(
-    (file) => file.fileId === resolution.intent.attachmentId,
-  );
+  const original = officeTaskFile(proof.association, resolution.intent.attachmentId);
   const attachmentUpload = original ? officeAttachmentIds(original.fileId).uploadId : null;
   if (
     id === null ||

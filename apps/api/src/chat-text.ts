@@ -17,6 +17,9 @@ import {
 export const isEntryId = (n: number): n is EntryId => Number.isSafeInteger(n) && n > 0;
 export const publicRole = (entry: EntryRecord): "user" | "assistant" | null =>
   entry.kind === UserEntry.kind ? "user" : entry.kind === AssistantEntry.kind ? "assistant" : null;
+/** Caption projection changes must invalidate cached pre-projection text, including continuations. */
+export const committedRevision = (entry: number, role: "user" | "assistant"): string =>
+  `${role === "user" ? "caption2:" : ""}e${entry}`;
 type Source = { readonly content?: unknown };
 export type Slice = {
   text: string;
@@ -161,7 +164,7 @@ export const committedText = async (
   const role = publicRole(entry);
   const message = entry.model?.[position.index];
   if (role === null || message === undefined || message.role !== role) return null;
-  const page = textPage(chat, messageId, `e${entry.id}`, message, cursor);
+  const page = textPage(chat, messageId, committedRevision(entry.id, role), message, cursor);
   if (page === null) throw new InvalidCursor();
   return page;
 };

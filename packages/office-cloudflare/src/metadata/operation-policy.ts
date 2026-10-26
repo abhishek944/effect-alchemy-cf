@@ -102,7 +102,6 @@ export function initialDraftConflict(previous: OperationRecord, next: OperationR
   if (
     !error ||
     (error.code !== "STALE_BASIS" && error.code !== "NOT_EDITABLE") ||
-    error.retry !== "never" ||
     error.operationId !== next.receipt.operationId
   )
     return false;
@@ -115,8 +114,7 @@ export function initialDraftConflict(previous: OperationRecord, next: OperationR
       record.receipt.draftId === draftId &&
       record.receipt.acceptedRevision === null &&
       record.receipt.reviewId === null &&
-      record.receipt.artifact === null &&
-      record.receipt.retryAfterMs === null,
+      record.receipt.artifact === null,
   );
 }
 export function validateAdvance(

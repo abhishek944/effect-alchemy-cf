@@ -118,6 +118,7 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
                   title: `${document.title} · Main`,
                   target: { documentId: document.id, scope: { kind: "main" } },
                   reviewId: null,
+                  attachments: [],
                 })
               }
             >
@@ -141,6 +142,7 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
                     scope: { kind: "draft", draftId: draft.id, generation: draft.generation },
                   },
                   reviewId: draft.status === "ready" ? draft.reviewId : null,
+                  attachments: [],
                 })
               }
             >

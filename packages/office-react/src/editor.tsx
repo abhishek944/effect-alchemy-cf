@@ -7,7 +7,8 @@ import {
   useState,
   type Ref,
 } from "react";
-import type { View, Receipt } from "@starter/office-contract";
+import type { View } from "@starter/office-contract";
+import type { NativeSelectionCapture } from "./capture.ts";
 import {
   FrameInit,
   type FrameStatus,
@@ -23,9 +24,9 @@ export type OfficeNativeEditorProps = {
   readonly theme: NativeTheme;
   readonly channelId: string;
   readonly frameUrl: string;
-  readonly operation?: Receipt | null;
   readonly ref?: Ref<OfficeEditorHandle>;
   readonly onStatus?: (status: FrameStatus, revision: number) => void;
+  readonly onSelection?: (capture: NativeSelectionCapture) => void;
 };
 function NativeFrame(props: OfficeNativeEditorProps) {
   const frame = useRef<HTMLIFrameElement>(null);
@@ -40,13 +41,13 @@ function NativeFrame(props: OfficeNativeEditorProps) {
     }),
   );
   const [status, setStatus] = useState<FrameStatus>("loading");
-  const [confirmed, setConfirmed] = useState(input.view.revision);
   const publish = useEffectEvent((value: FrameStatus, revision: number) => {
     setStatus(value);
-    if ((value === "saved" || value === "held" || value === "read-only") && revision >= 1)
-      setConfirmed(revision);
     props.onStatus?.(value, revision);
   });
+  const selection = useEffectEvent((capture: NativeSelectionCapture) =>
+    props.onSelection?.(capture),
+  );
   const syncBootstrapHints = useEffectEvent(() => {
     try {
       connection.current?.renew(props.view);
@@ -60,7 +61,7 @@ function NativeFrame(props: OfficeNativeEditorProps) {
   }, [props.view, props.view.expiresAt, props.theme]);
   useEffect(() => {
     if (frame.current === null) return undefined;
-    const active = connectOfficeFrame(frame.current, props.frameUrl, input, publish);
+    const active = connectOfficeFrame(frame.current, props.frameUrl, input, publish, selection);
     connection.current = active;
     syncBootstrapHints();
     return () => {
@@ -76,6 +77,9 @@ function NativeFrame(props: OfficeNativeEditorProps) {
         return connection.current.handle;
       };
       return {
+        prepareCapture: (capture) => handle().prepareCapture(capture),
+        validateCapture: (capture) => handle().validateCapture(capture),
+        revealCapture: (capture) => handle().revealCapture(capture),
         hold: () => handle().hold(),
         flush: () => handle().flush(),
         prepareToLeave: () => handle().prepareToLeave(),
@@ -87,55 +91,11 @@ function NativeFrame(props: OfficeNativeEditorProps) {
   );
   return (
     <div data-office="native" data-office-theme={props.theme} data-save-state={status}>
-      {input.view.nativeTarget.kind !== "pinned-snapshot" && (
-        <div data-office="scope">
-          <strong>
-            {input.view.nativeTarget.kind === "draft"
-              ? "Draft · Live human + AI edits"
-              : "Main · Live"}
-          </strong>
-          <span>
-            {input.view.nativeTarget.kind === "draft" ? "Main unchanged · " : ""}Confirmed r
-            {confirmed}
-          </span>
-        </div>
-      )}
-      {props.operation?.documentId === input.view.documentId && (
-        <output data-office="notice" aria-live="polite">
-          Office {props.operation.kind}: {props.operation.phase}
-          {props.operation.error ? ` · ${props.operation.error.message}` : ""}
-        </output>
-      )}
       <iframe
         ref={frame}
         title={`${input.view.kind === "sheet" ? "Spreadsheet" : input.view.kind === "doc" ? "Document" : "Presentation"} native ${input.view.mode === "edit" ? "editor" : "read-only result"}`}
         aria-busy={status === "loading"}
       />
-      <output data-office="native-status" aria-live="polite">
-        {status === "loading"
-          ? "Loading native document…"
-          : status === "error"
-            ? "Native input or saves are unconfirmed. Keep this editor open."
-            : status === "offline"
-              ? input.view.mode === "read-only"
-                ? "Offline. This view may be out of date."
-                : "Offline. Edits are not confirmed saved."
-              : status === "conflict"
-                ? "Native synchronization needs attention."
-                : status === "saving"
-                  ? input.view.mode === "read-only"
-                    ? "Synchronizing live view…"
-                    : "Saving…"
-                  : status === "holding"
-                    ? "Finishing native input and saving…"
-                    : status === "held"
-                      ? "Saved · Editing held"
-                      : status === "saved"
-                        ? "Saved"
-                        : input.view.nativeTarget.kind === "pinned-snapshot"
-                          ? "Read-only exact result"
-                          : "Read-only · Live updates"}
-      </output>
     </div>
   );
 }

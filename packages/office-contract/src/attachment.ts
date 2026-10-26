@@ -10,6 +10,8 @@ export function officeImportOptions(mediaType: string, filename: string): Import
     return { kind: "slide", format: "pptx" };
   if (/\.csv$/i.test(filename) && ["text/csv", "application/csv", "text/plain"].includes(mediaType))
     return { kind: "sheet", format: "csv", delimiter: "auto", inferTypes: "safe" };
+  if (/\.txt$/i.test(filename) && mediaType === "text/plain")
+    return { kind: "doc", format: "txt", compatibility: "modern" };
   return null;
 }
 

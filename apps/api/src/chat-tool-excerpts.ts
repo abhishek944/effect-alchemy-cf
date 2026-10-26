@@ -1,10 +1,13 @@
 import { Predicate } from "effect";
+import { TOOL_OUTPUT_BYTES, TOOL_OUTPUT_LINES } from "./chat-tool-schema.ts";
 
 export type ToolExcerpt = { text: string; truncated: boolean };
 /** Inspect only a bounded prefix; never serialize native values, details or diagnostics. */
 export const safeToolText = (value: string, limit: number): ToolExcerpt => {
-  const units = Math.max(0, Math.min(4096, limit));
-  const prefix = value.slice(0, units);
+  const units = Math.max(0, Math.min(TOOL_OUTPUT_BYTES, limit));
+  let prefix = value.slice(0, units);
+  if (prefix.length < value.length && /[\uD800-\uDBFF]/.test(prefix.at(-1) ?? ""))
+    prefix = prefix.slice(0, -1);
   const text = prefix
     .replace(/<harness>[\s\S]*/gi, "[internal details withheld]")
     .replace(/-----BEGIN[^\r\n]*PRIVATE KEY-----[\s\S]*/g, "[credential withheld]")
@@ -24,14 +27,20 @@ export const safeToolText = (value: string, limit: number): ToolExcerpt => {
     .replace(/(https?:\/\/[^\s?#]+)[?#][^\s]*/gi, "$1[query withheld]")
     // oxlint-disable-next-line no-control-regex -- Strip non-printing control bytes from public text.
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
-  let end = Math.min(units, text.length);
-  if (/[\uD800-\uDBFF]/.test(text[end - 1] ?? "")) end -= 1;
+  const lines = text.split("\n").slice(0, TOOL_OUTPUT_LINES).join("\n");
+  const bytes = new TextEncoder().encode(lines);
+  let end = Math.min(units, bytes.length);
+  // Drop a split UTF-8 code point rather than add a replacement character beyond the byte cap.
+  while (end > 0 && end < bytes.length && ((bytes[end] ?? 0) & 0xc0) === 0x80) end -= 1;
+  const bounded = new TextDecoder().decode(bytes.subarray(0, end));
   return {
-    text: text.slice(0, end),
-    truncated: prefix !== value || text !== prefix || end < text.length,
+    text: bounded,
+    truncated: prefix !== value || text !== prefix || bounded !== text,
   };
 };
 const INPUT_KEYS = [
+  "attachmentId",
+  "cursor",
   "argv",
   "command",
   "action",
@@ -87,5 +96,6 @@ export const toolInputExcerpt = (args: unknown, limit: number): ToolExcerpt => {
       break;
     }
   }
-  return { text, truncated };
+  const bounded = safeToolText(text, limit);
+  return { text: bounded.text, truncated: truncated || bounded.truncated };
 };

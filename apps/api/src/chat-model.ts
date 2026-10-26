@@ -1,14 +1,12 @@
 import { Schema } from "effect";
-import { OfficeSendTarget, Target } from "@starter/office-contract";
+import { ChatReferenceInputs, OfficeSendTarget, Target } from "@starter/office-contract";
 import { ChatSelection } from "./chat-capabilities.ts";
-import {
-  AttachmentReferences,
-  FileDescriptor,
-  MAX_ATTACHMENTS_PER_MESSAGE,
-} from "./chat-attachment-schema.ts";
+import { AttachmentReferences, FileDescriptor } from "./chat-attachment-schema.ts";
+import { validReferenceSend } from "./chat-reference-input.ts";
 import { UsageAmount } from "./chat-usage-schema.ts";
 import { SkillRecovery } from "./skills-model.ts";
 import { ChatTools } from "./chat-tool-schema.ts";
+import { InputSelections } from "./chat-input-selections.ts";
 
 const Uuid = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
@@ -53,6 +51,7 @@ export const ChatMessage = Schema.Struct({
   createdAt: Schema.String,
   operationId: Schema.NullOr(OperationId),
   attachments: Schema.Array(FileDescriptor).check(Schema.isMaxLength(5)),
+  selectedAreas: Schema.optionalKey(InputSelections),
   hasGeneratedFiles: Schema.optionalKey(Schema.Boolean),
   tools: Schema.optionalKey(ChatTools),
   toolsTruncated: Schema.optionalKey(Schema.Boolean),
@@ -108,12 +107,8 @@ export const SendMessage = Schema.Struct({
   attachments: AttachmentReferences,
   references: Schema.optionalKey(AttachmentReferences),
   officeTarget: Schema.optionalKey(OfficeSendTarget),
-}).check(
-  Schema.makeFilter((input) => {
-    const ids = [...input.attachments, ...(input.references ?? [])];
-    return ids.length <= MAX_ATTACHMENTS_PER_MESSAGE && new Set(ids).size === ids.length;
-  }),
-);
+  referenceInputs: Schema.optionalKey(ChatReferenceInputs),
+}).check(Schema.makeFilter(validReferenceSend));
 
 export const StopChat = Schema.Struct({ operationId: OperationId });
 

@@ -12,17 +12,25 @@ import { useWorkspacePreview, type WorkspacePreviewTab } from "./workspace-previ
 import { useWorkspaceTabBounds } from "./use-workspace-tab-bounds";
 import Tooltip from "./tooltip";
 import "./workspace-preview-tabs.css";
+import { useReferenceWorkspace } from "./reference-workspace";
+import { workspaceReferenceSource } from "./workspace-reference-source";
+import { writeReferenceDrag } from "./reference-drag";
 
-export const workspacePanelId = (id: string) => `workspace-preview-panel-${id}`;
-export const workspaceTabId = (id: string) => `workspace-preview-tab-${id}`;
-const labelOf = (tab: WorkspacePreviewTab) =>
-  tab.kind === "image" || tab.kind === "text" || tab.kind === "office-file"
-    ? tab.file.name
-    : tab.kind === "office"
-      ? tab.selection.title
-      : tab.kind === "files"
-        ? "Files"
-        : "New tab";
+export const workspacePanelId = (chatId: string, id: string) =>
+  `workspace-preview-panel-${chatId}-${id}`;
+export const workspaceTabId = (chatId: string, id: string) =>
+  `workspace-preview-tab-${chatId}-${id}`;
+/** Accessible name shared by the tab button and its panel, including hidden retained views. */
+export const workspaceTabLabel = (tab: WorkspacePreviewTab) =>
+  tab.kind === "restoring"
+    ? `Saved ${tab.descriptor.kind === "office-file" ? "original" : tab.descriptor.kind} tab`
+    : tab.kind === "image" || tab.kind === "text" || tab.kind === "office-file"
+      ? tab.file.name
+      : tab.kind === "office"
+        ? tab.selection.title
+        : tab.kind === "files"
+          ? "Files"
+          : "New tab";
 /** The single top-toolbar tab strip; it never loads an original by itself. */
 export function WorkspacePreviewTabs({
   rightRef,
@@ -34,19 +42,28 @@ export function WorkspacePreviewTabs({
   active: boolean;
 }) {
   const preview = useWorkspacePreview();
+  const tabChatId = preview.chatId ?? "";
+  const references = useReferenceWorkspace();
+  const sources = preview.chatId === null ? [] : references.sources(preview.chatId);
   const anchor = useRef<HTMLDivElement>(null);
   const buttons = useRef(new Map<string, HTMLButtonElement>());
-  const focused = useRef(0);
+  // Chat switches only scroll: a retained view's older focus request never steals the new one.
+  const focused = useRef<{ chatId: string; sequence: number }>({ chatId: "", sequence: 0 });
   const bounds = useWorkspaceTabBounds(anchor, rightRef);
   useLayoutEffect(() => {
     if (!bounds) return;
     const button = buttons.current.get(preview.activeId);
     button?.parentElement?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    if (preview.focus.sequence > focused.current) {
-      focused.current = preview.focus.sequence;
+    const chatId = preview.chatId ?? "";
+    if (focused.current.chatId !== chatId) {
+      focused.current = { chatId, sequence: preview.focus.sequence };
+      return;
+    }
+    if (preview.focus.sequence > focused.current.sequence) {
+      focused.current.sequence = preview.focus.sequence;
       if (preview.focus.target === "tab") button?.focus();
     }
-  }, [preview.activeId, preview.focus.sequence, preview.focus.target, bounds]);
+  }, [preview.activeId, preview.chatId, preview.focus.sequence, preview.focus.target, bounds]);
   const navigate = (key: string, id: string) => {
     const index = preview.tabs.findIndex((tab) => tab.id === id);
     if (key === "Delete") {
@@ -82,7 +99,8 @@ export function WorkspacePreviewTabs({
       >
         {preview.tabs.map((tab) => {
           const active = tab.id === preview.activeId;
-          const label = labelOf(tab);
+          const label = workspaceTabLabel(tab);
+          const source = workspaceReferenceSource(tab, sources);
           const accessible =
             tab.kind === "image"
               ? `${label}, ${
@@ -104,11 +122,22 @@ export function WorkspacePreviewTabs({
                 }}
                 type="button"
                 role="tab"
-                id={workspaceTabId(tab.id)}
-                aria-controls={workspacePanelId(tab.id)}
+                id={workspaceTabId(tabChatId, tab.id)}
+                aria-controls={workspacePanelId(tabChatId, tab.id)}
                 aria-selected={active}
                 aria-label={accessible}
                 title={accessible}
+                draggable={source !== null}
+                onDragStart={(event) => {
+                  if (!source) {
+                    event.preventDefault();
+                    return;
+                  }
+                  writeReferenceDrag(event.dataTransfer, {
+                    chatId: source.chatId,
+                    key: source.key,
+                  });
+                }}
                 tabIndex={active ? 0 : -1}
                 onClick={() => preview.select(tab.id)}
                 onKeyDown={(event) => {
@@ -162,20 +191,4 @@ export function WorkspacePreviewTabs({
   );
 }
 
-/** Plus and last-close land here without touching drafts, work or stored bytes. */
-export function WorkspaceToolsLauncher() {
-  const preview = useWorkspacePreview();
-  const launcher = useRef<HTMLButtonElement>(null);
-  useLayoutEffect(() => {
-    if (preview.focus.target === "tools" && preview.focus.sequence > 0) launcher.current?.focus();
-  }, [preview.focus.target, preview.focus.sequence]);
-  return (
-    <section data-cx="workspace-tools" aria-label="Tools">
-      <h2>Tools</h2>
-      <button ref={launcher} type="button" onClick={preview.showFiles}>
-        <Icon name="folder-closed" />
-        <span>Files</span>
-      </button>
-    </section>
-  );
-}
+export { WorkspaceToolsLauncher } from "./workspace-tools-launcher";

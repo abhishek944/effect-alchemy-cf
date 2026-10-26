@@ -99,7 +99,6 @@
   margin-top: 4px;
   max-height: 384px;
   overflow-y: auto;
-  overscroll-behavior: contain;
 }
 [data-dashboard] [data-cx="tool-details"] {
   margin-top: 2px;

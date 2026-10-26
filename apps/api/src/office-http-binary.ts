@@ -46,7 +46,6 @@ export const upload = (
         ? officeFailure({
             code: "LIMIT_EXCEEDED",
             message: "Upload exceeds its byte limit.",
-            retry: "never",
             operationId: null,
           })
         : officeInvalid();

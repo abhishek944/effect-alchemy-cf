@@ -19,27 +19,25 @@ export function textTooLong(text: string): string | null {
  * rather than queued, and a missing authoritative selection fails closed.
  */
 export function sendBlockReason(input: {
-  selectionMatches: boolean;
   pending: PendingSend | null;
   inFlight: boolean;
   stopping: StopTarget | null;
   snapshot: ChatSnapshot | null;
   chatId: string;
+  archived: boolean;
   connection: string;
   selectionReady: boolean;
   files: ChatFilesControls;
   references: ChatReferences;
   text: string;
 }): string | null {
-  if (!input.selectionMatches) return "This chat is no longer selected. Your draft is kept.";
   if (input.pending || input.inFlight) return BUSY;
   if (input.stopping) return STOPPING;
   if (!input.snapshot || input.snapshot.chat.id !== input.chatId)
     return "This chat is not ready yet. Wait for it to connect.";
   if (input.connection !== "live")
     return "This chat is reconnecting. Your draft is kept until it is ready.";
-  if (input.snapshot.chat.archived)
-    return "This chat is archived. Unarchive it to send new messages.";
+  if (input.archived) return "This chat is archived. Unarchive it to send new messages.";
   if (!input.selectionReady) return NO_SETTINGS;
   if (input.files.blockedReason) return input.files.blockedReason;
   if (input.references.blockedReason) return input.references.blockedReason;

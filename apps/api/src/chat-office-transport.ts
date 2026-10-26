@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import { toRpcAsync } from "alchemy/Cloudflare/Bridge";
 import { Schema } from "effect";
-import { Count, Id, Receipt, decodeWireSync } from "@starter/office-contract";
+import { Count, DraftTarget, Id, Receipt, decodeWireSync } from "@starter/office-contract";
 import type { OfficeHost } from "./office-host-object.ts";
 import { officeHostName } from "./office-host-object.ts";
 import { officeDenied } from "./office-private-authority.ts";
@@ -13,10 +13,12 @@ const Issued = Schema.Struct({
   invocationId: Id,
   deadline: Count,
   attachmentReceipt: Schema.NullOr(Receipt),
+  referenceBasis: Schema.optionalKey(DraftTarget),
 });
 export type OfficeTaskTransport = {
   readonly proof: OfficeTaskProof;
   readonly attachmentReceipt: Receipt | null;
+  readonly referenceBasis?: DraftTarget;
   readonly request: <A>(
     mode: "core" | "upload",
     init: RequestInit,
@@ -58,6 +60,7 @@ export async function officeTaskTransport(
     await rpc.registerTask(selector, initialObserve),
   );
   const attachmentReceipt = prepared.attachmentReceipt;
+  const referenceBasis = prepared.referenceBasis;
   parent?.throwIfAborted();
   if (
     prepared !== null &&
@@ -67,6 +70,7 @@ export async function officeTaskTransport(
   return {
     proof,
     attachmentReceipt,
+    ...(referenceBasis === undefined ? {} : { referenceBasis }),
     async request<A>(
       mode: "core" | "upload",
       init: RequestInit,

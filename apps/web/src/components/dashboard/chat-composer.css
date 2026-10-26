@@ -62,6 +62,18 @@
   color: var(--cx-negative);
 }
 
+/* Composer uploads use the approved compact card, not the larger message-preview trigger. */
+[data-dashboard] [data-cx="composer-files"] [data-cx="attachment-trigger"] {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="composer-files"] [data-cx="attachment-content"][data-compact="true"] {
+  padding: 0;
+  background: transparent;
+}
+
 /* At the 320px pane the composer is 280px: keep effort, mic and Send fixed. */
 [data-dashboard] [data-cx="chat-footer"] {
   container-type: inline-size;

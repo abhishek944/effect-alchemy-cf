@@ -8,7 +8,6 @@ import { CollaborationController, CollaborationStatus } from "@univerjs-pro/coll
 import type { FrameInit, FrameStatus } from "./messages.ts";
 import type { NativeApplication } from "./native.ts";
 import { finishNativeInput } from "./editing.ts";
-
 export type NativePhase = "input" | "flush";
 const NATIVE_REASONS = [
   "disposed",
@@ -16,6 +15,9 @@ const NATIVE_REASONS = [
   "unacknowledged",
   "revision-unavailable",
   "native",
+  "capture-changed",
+  "capture-unavailable",
+  "capture-unsupported",
 ];
 /** Tag a lifecycle failure with a fixed phase/reason; the cause chain stays in memory. */
 export function nativeFailure(
@@ -41,7 +43,6 @@ export function readNativeReason(error: unknown): { phase: NativePhase; reason: 
     return { phase, reason };
   return null;
 }
-
 export function nativeLifecycle(
   native: NativeApplication,
   input: FrameInit,
@@ -102,7 +103,7 @@ export function nativeLifecycle(
     view.nativeTarget.kind === "pinned-snapshot"
       ? null
       : native.injector.get(CollaborationController).getCollabEntity(unitId);
-  const subscription = entity?.status$.subscribe((status) => {
+  const publishStatus = (status: CollaborationStatus) => {
     if (inputHeld) return;
     emit(
       status === CollaborationStatus.SYNCED
@@ -115,7 +116,8 @@ export function nativeLifecycle(
             ? "conflict"
             : "saving",
     );
-  });
+  };
+  const subscription = entity?.status$.subscribe(publishStatus);
   const flush = async () => {
     if (disposed) throw nativeFailure("flush", "disposed", "Office editor disposed.");
     if (collaboration === null) return view.revision;
@@ -182,7 +184,9 @@ export function nativeLifecycle(
       if (!readOnly && !disposed) {
         native.activity.unseal();
         inputHeld = false;
-        emit("saving");
+        publishStatus(
+          collaboration?.getCollaborationStatus(unitId) ?? CollaborationStatus.NOT_COLLAB,
+        );
       }
     },
     dispose() {

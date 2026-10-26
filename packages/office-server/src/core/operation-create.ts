@@ -33,7 +33,6 @@ export const createOperationRecord = Effect.fn("Office.createOperationRecord")(f
     reviewId: null,
     artifact: null,
     acceptedRevision: null,
-    retryAfterMs: null,
     error: null,
   }).pipe(Effect.mapError(() => officeFailure("INVALID_INPUT")));
   const record: OperationRecord = {

@@ -26,14 +26,21 @@ export async function officeIntentMatches(
   toolName: string,
   memo: unknown,
 ): Promise<boolean> {
-  if (!intent.step || !intent.attachmentId) return false;
+  if (!intent.step || (intent.attachmentId === undefined) === (intent.referenceId === undefined))
+    return false;
   const request =
     toolName === OFFICE_PANEL_TOOL_NAME
       ? decodeWireSync(OfficePanelRequest)(raw)
       : toolName === OFFICE_TOOL_NAME
         ? decodeWireSync(UniverCliRequest)(raw)
         : null;
-  if (request === null || request.attachmentId !== intent.attachmentId) return false;
+  if (
+    request === null ||
+    ("referenceId" in request
+      ? request.referenceId !== intent.referenceId || intent.attachmentId !== undefined
+      : request.attachmentId !== intent.attachmentId || intent.referenceId !== undefined)
+  )
+    return false;
   const saved = decodeWireSync(StepMemo)(memo);
   if (saved.requestDigest !== (await digest(request)) || saved.intentDigest !== intent.digest)
     return false;
@@ -50,9 +57,9 @@ export async function officeIntentMatches(
       String(api.conversationId),
       api.callId,
       unbound,
-      intent.attachmentId,
-      intent.step,
-      intent.basis ?? null,
+      ...(intent.referenceId === undefined
+        ? [intent.attachmentId, intent.step, intent.basis ?? null]
+        : ["office.reference", intent.referenceId, intent.step, intent.basis ?? null]),
     ]))
   );
 }

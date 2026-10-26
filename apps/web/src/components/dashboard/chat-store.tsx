@@ -1,22 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Chat, ChatSnapshot } from "@/lib/chat-api";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { ChatSnapshot } from "@/lib/chat-api";
 import { chatPath, chatIdFromPath, isChatLanding } from "@/lib/chat-route";
 import { navigate } from "@/lib/router";
 import { useChatSelection } from "./use-chat-selection";
-import { ChatStoreContext, type ChatStoreValue, type PendingSend } from "@/lib/chat-store-context";
-import type { ChatActionError } from "@/lib/chat-store-context";
+import {
+  ChatStoreContext,
+  type ChatActionError,
+  type ChatStoreValue,
+} from "@/lib/chat-store-context";
 import { useChatCatalog } from "./use-chat-catalog";
 import { useChatFiles } from "./use-chat-files";
 import { useChatPreferences } from "./use-chat-preferences";
-import { useChatSend } from "./use-chat-send";
-import { useChatStop } from "./use-chat-stop";
-import { useChatStream } from "./use-chat-stream";
 import { useChatStoreUsage } from "./use-chat-store-usage";
 import { useChatReferenceDrafts } from "./use-chat-reference-drafts";
-import { useOperationReceipt } from "./use-operation-receipt";
-import { useChatMetadataRefresh } from "./use-chat-metadata-refresh";
-import { useSendAcceptance } from "./use-send-acceptance";
-const atLeastAsNew = (a: Chat, b: Chat) => Date.parse(a.updatedAt) >= Date.parse(b.updatedAt);
+import { ChatSessionOwner } from "./chat-session-owner";
+import { useChatSessionRegistry } from "./use-chat-session-registry";
+import { newestChat } from "./chat-session-types";
+const HIDDEN = { selection: null, selectionReady: false, referencesBlocked: null };
+
+/**
+ * Selected-view facade over retained per-chat owners. Catalog, staged files, references, model
+ * preferences and usage stay single account-scoped owners; the work that must outlive visibility
+ * (stream, pending Send, Stop, receipts, uploads) lives in one owner per chat.
+ */
 export default function ChatStoreProvider({
   children,
   pathname,
@@ -24,16 +30,12 @@ export default function ChatStoreProvider({
   children: ReactNode;
   pathname: string;
 }) {
-  const { selectedId, generation, selectionRef, select: selectRoute } = useChatSelection(pathname);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const { selectedId, select: selectRoute } = useChatSelection(pathname);
   const [catalogActionError, reportCatalogError] = useState<ChatActionError | null>(null);
-  const [pendingSend, setPendingSend] = useState<PendingSend | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const snapshotRef = useRef<ChatSnapshot | null>(null);
+  const sessions = useChatSessionRegistry(selectedId);
   const select = useCallback(
     (id: string | null) => {
       selectRoute(id);
-      setActionError(null);
       reportCatalogError(null);
     },
     [selectRoute],
@@ -46,79 +48,37 @@ export default function ChatStoreProvider({
     const id = selectedId ?? chats[0]?.id;
     if (id) navigate(chatPath(id), { replace: true });
   }, [chats, creating, pathname, selectedId]);
-
+  const staged = useChatFiles(selectedId);
   const preferences = useChatPreferences(selectedId);
-  const stagedFiles = useChatFiles(selectedId);
-  const referenceDrafts = useChatReferenceDrafts({
+  const selected = sessions.selected;
+  const pendingSend = selected?.state.pendingSend ?? null;
+  const attachment = selected?.state.attachment ?? `${selectedId ?? "none"}:0`;
+  const override = selectedId === null ? undefined : overrides[selectedId];
+  const snapshot = useMemo<ChatSnapshot | null>(() => {
+    const live = selected?.state.snapshot ?? null;
+    if (!live) return null;
+    const chat = newestChat(live.chat, override);
+    return chat === null || chat === live.chat ? live : { ...live, chat };
+  }, [override, selected]);
+  // This address remains valid even after its stream owner has been released.
+  const reportChatError = sessions.reportError;
+  const selectedIdAtRender = selectedId;
+  const draftReferences = useChatReferenceDrafts({
     chatId: selectedId,
-    scope: `${generation}:${reloadKey}`,
+    scope: attachment,
     active:
       selectedId !== null && (chatIdFromPath(pathname) === selectedId || isChatLanding(pathname)),
     archived: chats.find((chat) => chat.id === selectedId)?.archived ?? true,
     lockedIds:
-      pendingSend?.chatId === selectedId && pendingSend.phase !== "accepted"
+      pendingSend !== null && pendingSend.phase !== "accepted"
         ? (pendingSend.frozen?.references ?? [])
         : [],
-    staged: stagedFiles.files,
+    staged: staged.files,
     model: preferences.entry,
-    reportError: setActionError,
+    reportError: (message) => reportChatError(selectedIdAtRender, message),
   });
-  const references = referenceDrafts.references;
-  const { acceptFiles, onAccepted, settle, acknowledgeOperations } = useSendAcceptance(
-    pendingSend,
-    stagedFiles.commit,
-    referenceDrafts.commit,
-    setPendingSend,
-  );
-  const attachment = `${generation}:${reloadKey}`;
-  const {
-    snapshot: liveSnapshot,
-    connection,
-    connectionError,
-  } = useChatStream(selectedId, attachment, settle);
-  useChatMetadataRefresh(liveSnapshot, refreshList);
-  const usage = useChatStoreUsage(selectedId, liveSnapshot, attachment, preferences);
-
-  /** Latest catalog rename/archive/title wins until a newer event carries metadata. */
-  const snapshot = useMemo<ChatSnapshot | null>(() => {
-    if (!liveSnapshot) return null;
-    const override = overrides[liveSnapshot.chat.id];
-    if (!override || !atLeastAsNew(override, liveSnapshot.chat)) return liveSnapshot;
-    return { ...liveSnapshot, chat: override };
-  }, [liveSnapshot, overrides]);
-
-  useEffect(() => {
-    snapshotRef.current = snapshot;
-  }, [snapshot]);
-
-  useOperationReceipt({
-    pendingSend,
-    snapshot,
-    selectedId,
-    attachment,
-    chatTitle: snapshot?.chat.title ?? "this chat",
-    setPendingSend,
-    setActionError,
-    onAccepted,
-  });
-
-  const { stop, stopping, stoppingRef } = useChatStop(setActionError);
-  const { send, retrySend, discardSend } = useChatSend({
-    pendingSend,
-    connection,
-    selectionRef,
-    snapshotRef,
-    stoppingRef,
-    selection: preferences.selection,
-    selectionReady: preferences.selectionReady,
-    stagedFiles,
-    references,
-    acceptFiles,
-    refreshList,
-    setActionError,
-    setPendingSend,
-  });
-
+  const references = draftReferences.references;
+  const usage = useChatStoreUsage(selectedId, snapshot, attachment, preferences);
   const renameChat = useCallback(
     (id: string, title: string) => patchChat(id, { title }),
     [patchChat],
@@ -127,73 +87,67 @@ export default function ChatStoreProvider({
     (id: string, archived: boolean) => patchChat(id, { archived }),
     [patchChat],
   );
-  const reload = useCallback(() => setReloadKey((value) => value + 1), []);
-
-  const value = useMemo<ChatStoreValue>(
-    () => ({
-      chats,
-      listState,
-      listError,
-      selectedId,
-      snapshot,
-      connection,
-      connectionError,
-      actionError,
-      pendingSend,
-      stopping,
-      attachment,
-      creating,
-      preferences,
-      stagedFiles,
-      references,
-      usage,
-      select,
-      startNewChat,
-      renameChat,
-      setArchived,
-      send,
-      retrySend,
-      discardSend,
-      stop,
-      acknowledgeOperations,
-      reportError: setActionError,
-      catalogActionError,
-      reportCatalogError,
-      reload,
-      reloadList: refreshList,
-    }),
-    [
-      chats,
-      listState,
-      listError,
-      selectedId,
-      snapshot,
-      connection,
-      connectionError,
-      actionError,
-      pendingSend,
-      stopping,
-      attachment,
-      creating,
-      preferences,
-      stagedFiles,
-      references,
-      usage,
-      select,
-      startNewChat,
-      renameChat,
-      setArchived,
-      send,
-      retrySend,
-      discardSend,
-      stop,
-      acknowledgeOperations,
-      setActionError,
-      catalogActionError,
-      reload,
-      refreshList,
-    ],
+  const value: ChatStoreValue = {
+    chats,
+    listState,
+    listError,
+    selectedId,
+    snapshot,
+    connection: selected?.state.connection ?? (selectedId ? "connecting" : "idle"),
+    connectionError: selected?.state.connectionError ?? null,
+    actionError: sessions.error(selectedId),
+    pendingSend,
+    stopping: selected?.state.stopping ?? null,
+    attachment,
+    creating,
+    preferences,
+    stagedFiles: staged,
+    references,
+    usage,
+    runningChatIds: sessions.runningChatIds,
+    panelRequests: sessions.panelRequests,
+    claimPanelRequest: sessions.claimPanelRequest,
+    select,
+    startNewChat,
+    renameChat,
+    setArchived,
+    send: sessions.send,
+    retrySend: sessions.retrySend,
+    discardSend: sessions.discardSend,
+    stop: sessions.stop,
+    acknowledgeOperations: sessions.acknowledgeOperations,
+    reportError: (message) => reportChatError(selectedId, message),
+    reportChatError,
+    catalogActionError,
+    reportCatalogError,
+    reload: sessions.reload,
+    reloadList: refreshList,
+  };
+  return (
+    <ChatStoreContext.Provider value={value}>
+      {sessions.ownerIds.map((chatId) => (
+        <ChatSessionOwner
+          key={`${chatId}:${sessions.epoch(chatId)}`}
+          chatId={chatId}
+          active={chatId === selectedId}
+          override={overrides[chatId]}
+          controlsFor={staged.controlsFor}
+          admission={
+            chatId === selectedId
+              ? {
+                  selection: preferences.selection,
+                  selectionReady: preferences.selectionReady,
+                  referencesBlocked: references.blockedReason,
+                }
+              : HIDDEN
+          }
+          refreshList={refreshList}
+          reportError={reportChatError}
+          publish={sessions.publish}
+          remove={sessions.remove}
+        />
+      ))}
+      {children}
+    </ChatStoreContext.Provider>
   );
-
-  return <ChatStoreContext.Provider value={value}>{children}</ChatStoreContext.Provider>;
 }

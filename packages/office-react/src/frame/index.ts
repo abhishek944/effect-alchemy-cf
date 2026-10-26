@@ -1,16 +1,17 @@
 import { createNativeApplication, loadNativeView } from "./native.ts";
 import { nativeLifecycle, readNativeReason } from "./lifecycle.ts";
+import { nativeCaptures } from "./captures.ts";
+import { performFrameOperation } from "./operation.ts";
 import {
   readFrameRequest,
   reportFrameEvent,
-  reportHostFailure,
   wireResultReason,
   type FramePhase,
   type FrameResponse,
 } from "./messages.ts";
 import { confirmNativeRendering } from "./rendering.ts";
 import { frameOwnership } from "./ownership.ts";
-
+import { bindFrameErrors } from "./diagnostics.ts";
 /** CSS/runtime isolation only. All native HTTP/WebSocket endpoints still require host authentication. */
 export function mountOfficeFrame(container: HTMLElement) {
   const nonce = new URLSearchParams(location.hash.slice(1)).get("officeFrame");
@@ -22,6 +23,7 @@ export function mountOfficeFrame(container: HTMLElement) {
   let failed = false;
   let native: ReturnType<typeof createNativeApplication> | null = null;
   let lifecycle: ReturnType<typeof nativeLifecycle> | null = null;
+  let captures: ReturnType<typeof nativeCaptures> | null = null;
   let revision = 0;
   let release: string | undefined;
   let serial = Promise.resolve();
@@ -35,6 +37,7 @@ export function mountOfficeFrame(container: HTMLElement) {
     if (disposed) return;
     failed = true;
     container.inert = true;
+    captures?.dispose();
     lifecycle?.fail();
     status("error");
   };
@@ -60,6 +63,7 @@ export function mountOfficeFrame(container: HTMLElement) {
       initialized = true;
       release = message.release;
       const input = message.input;
+      const { view, theme, user } = input;
       if (input.view.expiresAt <= Date.now()) {
         reportFrameEvent({
           service: "office-frame",
@@ -79,25 +83,18 @@ export function mountOfficeFrame(container: HTMLElement) {
         if (input.view.nativeTarget.kind !== "pinned-snapshot")
           await import("@univerjs-pro/collaboration-client/facade");
         if (input.view.kind === "slide") await import("@univerjs-pro/slides/facade");
-        native = createNativeApplication(
-          container,
-          input.view.kind,
-          input.theme,
-          input.user,
-          input,
-        );
+        native = createNativeApplication(container, view.kind, theme, user, input);
         phase = "snapshot";
         await loadNativeView(native, input);
         phase = "render";
-        await confirmNativeRendering(
-          native.injector,
-          input.view.kind,
-          input.view.nativeTarget.unitId,
-        );
+        await confirmNativeRendering(native.injector, view.kind, view.nativeTarget.unitId);
         if (disposed || failed) return;
         lifecycle = nativeLifecycle(native, input, (state, confirmed) => {
           revision = confirmed;
           send({ kind: "status", nonce, status: state, revision });
+        });
+        captures = nativeCaptures(native, input, container, (capture) => {
+          if (!failed) send({ kind: "selection", nonce, capture });
         });
         container.inert = false;
       })().catch((cause) => {
@@ -142,11 +139,18 @@ export function mountOfficeFrame(container: HTMLElement) {
     const request = message;
     serial = serial.then(async () => {
       try {
-        if (disposed || failed || lifecycle === null) throw new Error("Office frame is not ready.");
-        if (request.action === "resume") lifecycle.resume();
-        else revision = await lifecycle[request.action]();
+        if (disposed || failed || lifecycle === null || native === null || captures === null)
+          throw new Error("Office frame is not ready.");
+        const { revision: confirmed, ...extra } = await performFrameOperation(
+          request,
+          native,
+          lifecycle,
+          captures,
+          revision,
+        );
+        revision = confirmed;
         if (disposed || failed) throw new Error("Office frame failed during native work.");
-        send({ kind: "result", nonce, requestId: request.requestId, ok: true, revision });
+        send({ kind: "result", nonce, requestId: request.requestId, ok: true, revision, ...extra });
       } catch (cause) {
         if (disposed) return;
         const tagged = readNativeReason(cause);
@@ -159,7 +163,7 @@ export function mountOfficeFrame(container: HTMLElement) {
           release,
           associationId: request.requestId,
         });
-        status("error");
+        if (!reason.startsWith("capture-")) status("error");
         send({
           kind: "result",
           nonce,
@@ -177,22 +181,14 @@ export function mountOfficeFrame(container: HTMLElement) {
     if (disposed) return;
     disposed = true;
     window.removeEventListener("message", receive);
-    window.removeEventListener("error", onWindowError);
-    window.removeEventListener("unhandledrejection", onWindowRejection);
+    clearFrameErrors();
     window.removeEventListener("pagehide", dispose);
+    captures?.dispose();
     lifecycle?.dispose();
     native?.univer.dispose();
   };
   window.addEventListener("message", receive);
-  // An unattributable global failure is reported, not treated as proof that this document
-  // is unusable. Load, input and save failures keep their own terminal, request-scoped paths.
-  const onWindowError = () => reportHostFailure(release, "window-error");
-  const onWindowRejection = (event: PromiseRejectionEvent) => {
-    if (event.reason instanceof DOMException && event.reason.name === "AbortError") return;
-    reportHostFailure(release, "unhandled-rejection");
-  };
-  window.addEventListener("error", onWindowError);
-  window.addEventListener("unhandledrejection", onWindowRejection);
+  const clearFrameErrors = bindFrameErrors(() => release);
   window.addEventListener("pagehide", dispose);
   send({ kind: "boot", nonce });
   return dispose;

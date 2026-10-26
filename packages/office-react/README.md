@@ -7,7 +7,10 @@ router guard or generated-code execution runtime is included.
 ## Public exports
 
 - `OfficeNativeEditor`: real SDK editor in a same-origin isolated frame.
-- `OfficeEditorHandle`: `hold`, `flush`, `prepareToLeave`, `resume`.
+- `OfficeEditorHandle`: `hold`, `flush`, `prepareToLeave`, `stopInput`, `resume`,
+  `prepareCapture`, `validateCapture`, `revealCapture`.
+- `NativeSelectionCapture`: immutable frame-local source, scope and content epoch;
+  optional `OfficeNativeEditor.onSelection` reports completed native selections.
 - `OfficeReview`: actual frozen result first; compact changes below, complete
   exact-changes and distinct merge-preview views; direct human approval.
 - `OfficeDraftControls`: native hold → acknowledged editor drain → Ready.
@@ -121,6 +124,34 @@ retarget an accepted operation. The host owns beforeunload/router decisions.
 its descriptor, calls native hold, publishes the real drained revision, then
 submits Ready once. Host must supply the matched target acquired from its actual
 selection. Server remains authoritative for all write/drain/Ready predicates.
+
+## Native reference capture
+
+`onSelection(capture)` observes completed user Sheet ranges or one native Docs
+text range. It never saves, attaches or sends context. Capture includes exact
+`viewId`, `unitId`, local `contentEpoch` and raw scope; epoch is not a revision.
+The host maps this to its authenticated attachment and retains its own tray.
+
+For explicit Add reference, freeze that capture before awaiting:
+`const ack = await handle.prepareCapture(capture)`. This checks the original
+scope/epoch, performs the existing input-finish/hold/flush, rechecks, and leaves
+input held. The host must checkpoint that exact source at `ack.revision`, then
+`await handle.validateCapture(capture)` after checkpoint, before inserting its
+immutable reference token. Resume in the host's existing guarded `finally` only
+when its lease/uncertain-write rules allow it. Never stamp a View revision onto
+local capture or replace it with a newer selection. Whole-native references use
+`hold`, not a fabricated selection.
+
+`revealCapture(capture)` requires the same live frame and unchanged content.
+Show its pane first. It verifies exact SDK readback; hidden/deleted sheets are
+not unhidden. Hidden/unlaid-out/offscreen unresolved targets fail explicitly.
+Docs reject rectangular/disjoint/structural ranges, split surrogate pairs and
+text over 4096 UTF-16 units. Sheets retain all 1–8 inclusive-coordinate ranges.
+Programmatic reveal never creates a fresh tray observation. Local and remote
+mutations invalidate captures; only the latest 64 observations of an unchanged
+epoch remain frame-verifiable. Frame replacement/disposal also invalidates them.
+No authenticated ACK/checkpoint or all offscreen/segment acceptance follows
+from the isolated SDK diagnostics; the host owns those integration checks.
 
 ## Exact review and human publication
 

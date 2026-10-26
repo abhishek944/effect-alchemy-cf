@@ -1,3 +1,4 @@
+import { jobRecordSql } from "../legacy-failure.ts";
 import { Count, Id, decodeWireSync } from "@starter/office-contract";
 import type { JobRecord, OfficeMetadata, OwnerScope } from "@starter/office-server/ports";
 import type { MetadataStore } from "../store.ts";
@@ -109,7 +110,7 @@ export function createJobMetadata(
         validateAdvance(previous, record, expected);
         const refs = jobRefs(record),
           ready = completeRefs(db, record.owner, refs);
-        let sql = `EXISTS(SELECT 1 FROM office_meta_jobs WHERE owner=? AND id=? AND version=? AND record=?)
+        let sql = `EXISTS(SELECT 1 FROM office_meta_jobs WHERE owner=? AND id=? AND version=? AND ${jobRecordSql}=?)
         AND (${ready.sql}) AND ?<=${sqlNow}`;
         const values: (string | number | null)[] = [
           key,

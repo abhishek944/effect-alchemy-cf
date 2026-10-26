@@ -1,3 +1,4 @@
+import { operationRecordSql } from "./legacy-failure.ts";
 import type { OfficeMetadata, FrozenReview } from "@starter/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { canonical, conflict, invalid, missing, sqlNow, storeEffect } from "./store.ts";
@@ -162,7 +163,7 @@ export function createReviews(
         await db.write(
           `${native.sql} AND ${barrier.sql} AND ?>${sqlNow}
         AND NOT EXISTS(SELECT 1 FROM office_meta_approvals WHERE owner=? AND id=?)
-        AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND record=? AND phase IN ('reserved','admitted'))`,
+        AND EXISTS(SELECT 1 FROM office_meta_operations WHERE owner=? AND id=? AND ${operationRecordSql}=? AND phase IN ('reserved','admitted'))`,
           [
             ...native.values,
             ...barrier.values,

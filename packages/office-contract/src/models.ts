@@ -80,7 +80,6 @@ export const Receipt = Schema.Struct({
   reviewId: Schema.NullOr(Id),
   artifact: Schema.NullOr(ArtifactRef),
   acceptedRevision: Schema.NullOr(Revision),
-  retryAfterMs: Schema.NullOr(Count),
   error: Schema.NullOr(Failure),
 });
 export type Receipt = typeof Receipt.Type;

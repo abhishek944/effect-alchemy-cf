@@ -16,17 +16,20 @@ import type { DeferredLeave, LeaveIntent } from "./account-leave-guard";
 
 /** A traversal the guard issued; only the matching destination index may consume it. */
 export type OwnedTraversal = { readonly from: number; readonly to: number };
+/** Admission when queued, not permission to replay a formerly blocked Profile decision. */
+export type QueuedLeave = DeferredLeave & { readonly retained: boolean };
 
 export type NavigationGuardPorts = {
   readonly owned: MutableRefObject<OwnedTraversal | null>;
   readonly atIndex: MutableRefObject<number>;
   /** Latest intent retained while a restoration is outstanding. */
-  readonly queued: MutableRefObject<DeferredLeave | null>;
-  readonly dirty: () => boolean;
+  readonly queued: MutableRefObject<QueuedLeave | null>;
+  readonly dirty: (intent?: LeaveIntent) => boolean;
   /** Synchronous unload warning; route barriers deliberately use `dirty` instead. */
   readonly warn: () => boolean;
   readonly defer: (intent: LeaveIntent, action: () => void) => void;
   readonly setDecision: (next: DeferredLeave | null) => void;
+  readonly retireDecision: () => void;
 };
 
 /** Installs the interception listeners and returns their cleanup. */
@@ -36,11 +39,14 @@ export const observeNavigation = (ports: NavigationGuardPorts): (() => void) => 
   const promote = () => {
     const next = queued.current;
     queued.current = null;
-    if (next === null || !ports.dirty()) {
-      setDecision(null);
+    if (next !== null && ports.dirty(next.intent)) {
+      setDecision(next);
       return;
     }
-    setDecision(next);
+    ports.retireDecision();
+    // Only the latest already-admitted request can run after this expected ACK.
+    // Becoming clean never grants replay to a formerly blocked Profile action.
+    if (next?.retained) next.action();
   };
 
   const deferHistory = (index: number, path: string) => {
@@ -69,7 +75,8 @@ export const observeNavigation = (ports: NavigationGuardPorts): (() => void) => 
       deferHistory(index, path);
       return false;
     }
-    if (!ports.dirty()) {
+    if (!ports.dirty({ kind: "route", path, via: "history" })) {
+      ports.retireDecision();
       atIndex.current = index;
       return true;
     }
@@ -100,6 +107,10 @@ export const observeNavigation = (ports: NavigationGuardPorts): (() => void) => 
     if (!href.startsWith("/") || href.startsWith("//")) return;
     if (anchor.target && anchor.target !== "_self") return;
     if (href === `${window.location.pathname}${window.location.search}`) return;
+    if (owned.current === null && !ports.dirty({ kind: "route", path: href, via: "link" })) {
+      ports.retireDecision();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     ports.defer({ kind: "route", path: href, via: "link" }, () => {

@@ -67,7 +67,7 @@ export function jobObservers(metadata: JobMetadata, active: ReadonlyMap<string, 
     const state: JobState = {
       state: "failed",
       jobId: id,
-      error: { ...safeFailure("INVALID_INPUT", record.job.binding.operationId), retry: "never" },
+      error: safeFailure("INVALID_INPUT", record.job.binding.operationId),
     };
     return yield* transition(owner, record, state, yield* Clock.currentTimeMillis);
   });

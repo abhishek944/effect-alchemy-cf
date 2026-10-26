@@ -28,6 +28,14 @@ export function useChatFacts(rows: ChatMessage[], live: ChatMessage[], running: 
     [rows, live],
   );
 
+  const selectionsFor = useCallback(
+    (messageId: string) => {
+      const row = [...rows, ...live].find((item) => item.id === messageId);
+      return row?.role === "user" ? (row.selectedAreas ?? []) : [];
+    },
+    [rows, live],
+  );
+
   const generatedFor = useCallback(
     (messageId: string): boolean =>
       [...rows, ...live].some(
@@ -55,5 +63,5 @@ export function useChatFacts(rows: ChatMessage[], live: ChatMessage[], running: 
     [rows, live, lastAssistantId, running],
   );
 
-  return { attachmentsFor, generatedFor, factsFor, stampFor };
+  return { attachmentsFor, selectionsFor, generatedFor, factsFor, stampFor };
 }

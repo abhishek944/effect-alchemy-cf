@@ -87,6 +87,7 @@ export const mapImageInputOccurrences = async (
           original.fileId.length +
           (original.originOperationId?.length ?? 0);
       }
+      metadataCharacters += JSON.stringify(bound.candidate.referenceInputs ?? []).length;
       if (metadataCharacters > MAX_IMAGE_PROOF_CHARACTERS || claimed.has(requestIndex))
         imageProofFailure();
       claimed.add(requestIndex);
@@ -96,6 +97,9 @@ export const mapImageInputOccurrences = async (
         modelIndex: bound.binding.modelIndex,
         originConversationId: entry.conversationId,
         originals: bound.candidate.originals,
+        ...(bound.candidate.referenceInputs === undefined
+          ? {}
+          : { referenceInputs: bound.candidate.referenceInputs }),
       });
     }
   }

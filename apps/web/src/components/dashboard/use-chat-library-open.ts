@@ -1,107 +1,40 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
-import { getSavedFile, libraryReadMessage } from "@/lib/chat-library-api";
 import { useWorkspacePreview } from "./workspace-preview-context";
 
-type Read = {
-  scope: string;
-  fileId: string;
-  state: "idle" | "loading" | "ready" | "error";
-  error: string | null;
-};
-type Pending = { controller: AbortController; scope: string; sequence: number };
-// Multiple inline rows share one document's explicit viewing intent, not paid work.
-let latestOpen: AbortController | null = null;
-
-/** Explicit user opens only; stale chat/tab/background completions never navigate. */
-export function useChatLibraryOpen({ active = true }: { active?: boolean } = {}) {
-  const { selectedId, attachment } = useChatStore();
+/**
+ * Explicit saved-file open status for one origin chat. The request itself is owned by the preview
+ * provider, so unmounting a message row or conversation does not cancel it; this hook only starts
+ * a visible intent and projects that chat's latest read state.
+ */
+export function useChatLibraryOpen({
+  active = true,
+  chatId,
+}: {
+  active?: boolean;
+  /** Omit to use the chat currently shown by the facade. */
+  chatId?: string | null;
+} = {}) {
+  const { selectedId } = useChatStore();
   const preview = useWorkspacePreview();
-  const scope = JSON.stringify([selectedId, attachment]);
-  const sequence = preview.focus.sequence;
-  const latest = useRef<{
-    scope: string;
-    active: boolean;
-    chatId: string | null;
-    sequence: number;
-    openImage: typeof preview.openImage;
-  } | null>(null);
-  const pending = useRef<Pending | null>(null);
-  const [read, setRead] = useState<Read | null>(null);
-  useLayoutEffect(() => {
-    latest.current = { scope, active, chatId: selectedId, sequence, openImage: preview.openImage };
-    return () => {
-      latest.current = null;
-    };
-  }, [scope, active, selectedId, sequence, preview.openImage]);
-  useEffect(() => {
-    if (!active) pending.current?.controller.abort();
-    return () => {
-      const request = pending.current;
-      if (request?.scope === scope && request.sequence === sequence) request.controller.abort();
-    };
-  }, [scope, active, sequence]);
-
-  const open = useCallback(async (fileId: string): Promise<void> => {
-    const origin = latest.current;
-    if (!origin?.active || !origin.chatId) return;
-    pending.current?.controller.abort();
-    latestOpen?.abort();
-    const request: Pending = {
-      controller: new AbortController(),
-      scope: origin.scope,
-      sequence: origin.sequence,
-    };
-    pending.current = request;
-    latestOpen = request.controller;
-    const signal = AbortSignal.any([request.controller.signal, AbortSignal.timeout(15_000)]);
-    const current = () =>
-      pending.current === request &&
-      latestOpen === request.controller &&
-      !signal.aborted &&
-      latest.current?.active &&
-      latest.current.scope === origin.scope &&
-      latest.current.sequence === origin.sequence;
-    setRead({ scope: origin.scope, fileId, state: "loading", error: null });
-    let settled = false;
-    try {
-      const file = await getSavedFile(origin.chatId, fileId, signal);
-      if (!current()) return;
-      latest.current?.openImage(file);
-      settled = true;
-      setRead({ scope: origin.scope, fileId, state: "ready", error: null });
-    } catch (error) {
-      if (
-        pending.current === request &&
-        latestOpen === request.controller &&
-        !request.controller.signal.aborted &&
-        latest.current?.scope === origin.scope &&
-        latest.current.active &&
-        latest.current.sequence === origin.sequence
-      ) {
-        settled = true;
-        setRead({ scope: origin.scope, fileId, state: "error", error: libraryReadMessage(error) });
-      }
-    } finally {
-      if (latestOpen === request.controller) latestOpen = null;
-      if (pending.current === request) {
-        pending.current = null;
-        if (!settled && latest.current?.scope === origin.scope)
-          setRead({ scope: origin.scope, fileId, state: "idle", error: null });
-      }
-    }
-  }, []);
-  const currentRead = read?.scope === scope ? read : null;
+  const origin = chatId === undefined ? selectedId : chatId;
+  const read = origin === null ? null : preview.openRead(origin);
+  const open = useCallback(
+    async (fileId: string): Promise<void> => {
+      if (!active || origin === null) return;
+      // The completion publishes into the captured origin, never the chat visible later.
+      preview.openSavedFile(origin, fileId, true);
+    },
+    [active, origin, preview],
+  );
   return {
     open,
-    state: currentRead?.state ?? "idle",
-    error: currentRead?.error ?? null,
-    fileId: currentRead?.fileId ?? null,
-    retry: () => (currentRead ? open(currentRead.fileId) : Promise.resolve()),
+    state: read?.state ?? "idle",
+    error: read?.error ?? null,
+    fileId: read?.fileId ?? null,
+    retry: () => (read === null ? Promise.resolve() : open(read.fileId)),
     dismiss: () => {
-      pending.current?.controller.abort();
-      pending.current = null;
-      setRead(null);
+      if (origin !== null && read !== null) preview.dismissOpen(origin, read);
     },
   };
 }

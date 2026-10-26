@@ -1,4 +1,4 @@
-import type { OfficeSendTarget, Target } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget, Target } from "@starter/office-contract";
 import type { ChatSelection } from "@/lib/chat-capability-types";
 import type { ChatMessage } from "@/lib/chat-message-types";
 export type { ChatMessage } from "@/lib/chat-message-types";
@@ -152,7 +152,6 @@ export async function requestDecoded<T>(
 export async function createChat(id: string): Promise<Chat> {
   return requestDecoded("/api/chats", "chat.create", parseChat, json({ id }));
 }
-
 type ChatPatch = { title?: string; archived?: boolean };
 export async function updateChat(id: string, patch: ChatPatch): Promise<Chat> {
   return requestDecoded(`/api/chats/${encodeURIComponent(id)}`, "chat.update", parseChat, {
@@ -172,9 +171,10 @@ export async function sendMessage(
     operationId: string;
     text: string;
     selection: ChatSelection;
-    attachments: string[];
-    references: string[];
+    attachments: readonly string[];
+    references: readonly string[];
     officeTarget?: OfficeSendTarget;
+    referenceInputs?: ChatReferenceInputs;
   },
 ): Promise<{ accepted: boolean }> {
   return requestDecoded(

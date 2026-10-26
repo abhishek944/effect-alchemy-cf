@@ -14,6 +14,7 @@ import { DashboardThemeProvider } from "./theme";
 import { WorkspacePreviewProvider } from "./workspace-preview-context";
 import { WorkspaceOfficeProvider } from "./workspace-office-context";
 import { OfficePanelRequests } from "./use-office-panel-request";
+import { ReferenceWorkspaceProvider } from "./reference-workspace";
 
 export default function Workspace({ user, pathname }: { user: DashboardUser; pathname: string }) {
   const section = settingsSectionFromPath(pathname);
@@ -21,35 +22,37 @@ export default function Workspace({ user, pathname }: { user: DashboardUser; pat
   return (
     <DashboardThemeProvider key={user.id} userId={user.id}>
       <AccountProfileProvider key={user.id} user={user}>
-        <WorkspaceOfficeProvider key={user.id} user={user} active={dashboard}>
-          <ChatStoreProvider key={user.id} pathname={pathname}>
-            <WorkspacePreviewProvider active={dashboard}>
-              <OfficePanelRequests active={dashboard} />
-              <DashboardShell
-                section={section}
-                homeHref={chatIdFromPath(pathname) ? pathname : "/dashboard"}
-                account={<AccountMenu user={user} />}
-                sidebar={dashboard ? <ChatSidebar /> : undefined}
-                chatTitle={dashboard ? <ChatToolbarTitle /> : undefined}
-                notFound={!section && !dashboard}
-              >
-                <div data-cx="chat-page" hidden={!dashboard}>
-                  <ChatPanel active={dashboard} />
-                </div>
-                {section ? (
-                  <SettingsPanel user={user} section={section} />
-                ) : !dashboard ? (
-                  <section className="mx-auto max-w-xl px-8 py-16">
-                    <h1 className="text-2xl font-semibold">Page not found</h1>
-                    <p className="mt-3">This page has not been added to the workspace.</p>
-                    <RouteLink href="/dashboard" className="mt-6 inline-block underline">
-                      Back to dashboard
-                    </RouteLink>
-                  </section>
-                ) : null}
-              </DashboardShell>
-            </WorkspacePreviewProvider>
-          </ChatStoreProvider>
+        <WorkspaceOfficeProvider key={user.id} user={user}>
+          <ReferenceWorkspaceProvider>
+            <ChatStoreProvider key={user.id} pathname={pathname}>
+              <WorkspacePreviewProvider active={dashboard}>
+                <OfficePanelRequests active={dashboard} />
+                <DashboardShell
+                  section={section}
+                  homeHref={chatIdFromPath(pathname) ? pathname : "/dashboard"}
+                  account={<AccountMenu user={user} />}
+                  sidebar={dashboard ? <ChatSidebar /> : undefined}
+                  chatTitle={dashboard ? <ChatToolbarTitle /> : undefined}
+                  notFound={!section && !dashboard}
+                >
+                  <div data-cx="chat-page" hidden={!dashboard}>
+                    <ChatPanel active={dashboard} />
+                  </div>
+                  {section ? (
+                    <SettingsPanel user={user} section={section} />
+                  ) : !dashboard ? (
+                    <section className="mx-auto max-w-xl px-8 py-16">
+                      <h1 className="text-2xl font-semibold">Page not found</h1>
+                      <p className="mt-3">This page has not been added to the workspace.</p>
+                      <RouteLink href="/dashboard" className="mt-6 inline-block underline">
+                        Back to dashboard
+                      </RouteLink>
+                    </section>
+                  ) : null}
+                </DashboardShell>
+              </WorkspacePreviewProvider>
+            </ChatStoreProvider>
+          </ReferenceWorkspaceProvider>
         </WorkspaceOfficeProvider>
       </AccountProfileProvider>
     </DashboardThemeProvider>

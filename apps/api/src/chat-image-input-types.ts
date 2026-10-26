@@ -1,10 +1,12 @@
 import type { ConversationId, Storage, UserInput } from "@earendil-works/pi-durable";
+import type { ConversationFileEnv } from "./chat-conversation-files.ts";
+import type { OfficeTaskEnvironment } from "./chat-office-transport.ts";
 import type { AccountPreparationDeps } from "./chat-account-preparation.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ImageOriginalBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
 import type { ChatImageResponseStore } from "./chat-image-response-store.ts";
-import type { OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
 
 export class ImageInputError extends Error {
   readonly code:
@@ -46,12 +48,14 @@ export type ImageInputRequest = {
   readonly applicationOrigin: string;
   readonly text: string;
   readonly officeTarget?: OfficeSendTarget;
+  readonly referenceInputs?: ChatReferenceInputs | undefined;
   readonly sources: readonly ImageInputSource[];
   readonly model: ChatCatalogModel;
 };
 
 export type ImageInputPreparationAccess = ImageInputAccess & {
   readonly nativeContext: Parameters<Storage["submissionByRequest"]>[2];
+  readonly referenceFiles: ConversationFileEnv & OfficeTaskEnvironment;
   /** Null unless the actual trusted image binding/stage route is configured. */
   readonly imageGatewayId: () => string | null;
 };

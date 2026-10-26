@@ -7,10 +7,12 @@
  * and selection admission; this hook only decides what the user is told when a
  * draft is refused, and it clears the input only after a local dispatch.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAui, useAuiState } from "@assistant-ui/react";
-import { useChatStore, type ChatSelectionControls } from "@/lib/chat-store-context";
+import { hasOperation, useChatStore, type ChatSelectionControls } from "@/lib/chat-store-context";
 import { useChatSkillsReadiness } from "./use-chat-skills-readiness";
+import { useReferenceWorkspace } from "./reference-workspace";
+import { inputFilesReason } from "./chat-input-files-policy";
 
 const DICTATION_REASON = "Stop or cancel dictation before sending.";
 
@@ -46,8 +48,33 @@ export function useChatSubmit({
   stopping: boolean;
 }) {
   const store = useChatStore();
+  const references = useReferenceWorkspace();
   const aui = useAui();
   const text = useAuiState((state) => state.composer.text);
+  const session = references.session(chatId);
+  useEffect(() => {
+    const sent = session.submitted;
+    if (!sent) return;
+    const pending = store.pendingSend;
+    const accepted =
+      (pending?.chatId === chatId &&
+        pending.operationId === sent.operationId &&
+        pending.phase === "accepted") ||
+      (store.snapshot?.chat.id === chatId && hasOperation(store.snapshot, sent.operationId));
+    if (!accepted) return;
+    const current = references.editor(chatId)?.read();
+    const composer = aui.composer.getState();
+    // On remount the parent restores assistant-ui's raw draft after child effects.
+    if (!current || current.text !== composer.text || composer.text !== text) return;
+    references.recordSend(chatId, null);
+    if (
+      current?.text === sent.text &&
+      composer.text === sent.text &&
+      !composer.dictation &&
+      JSON.stringify(current.inputs) === JSON.stringify(sent.inputs)
+    )
+      aui.composer.setText("");
+  }, [aui, chatId, references, session, store.pendingSend, store.snapshot, text]);
   const dictation = useAuiState((state) => state.composer.dictation);
   const connected = Boolean(store.snapshot) && store.connection === "live";
   const archived = Boolean(store.snapshot?.chat.archived);
@@ -63,6 +90,10 @@ export function useChatSubmit({
   // Transient readiness never occupies or clears the persistent operation-error slot.
   const readinessFeedback =
     readiness === attemptedReadiness && readiness !== store.preferences.error ? readiness : null;
+  const inlineReason = inputFilesReason(
+    [...store.stagedFiles.files, ...(references.editor(chatId)?.read().files ?? [])],
+    store.preferences.entry,
+  );
   const canSend =
     connected &&
     !archived &&
@@ -74,10 +105,14 @@ export function useChatSubmit({
       store.references.ids.length > 0) &&
     !store.stagedFiles.blockedReason &&
     !store.references.blockedReason &&
+    !inlineReason &&
     skills.blockedReason === null;
   const blockedReason = dictation
     ? DICTATION_REASON
-    : (readiness ?? store.references.blockedReason ?? store.stagedFiles.blockedReason);
+    : (readiness ??
+      inlineReason ??
+      store.references.blockedReason ??
+      store.stagedFiles.blockedReason);
 
   /** Shared by the form and the button; never clears the draft unless dispatched. */
   const submit = async (): Promise<void> => {
@@ -86,7 +121,7 @@ export function useChatSubmit({
     if (!draft.trim() && store.stagedFiles.files.length === 0 && store.references.ids.length === 0)
       return;
     if (composer.dictation) {
-      store.reportError(DICTATION_REASON);
+      store.reportChatError(chatId, DICTATION_REASON);
       return;
     }
     // A send already in flight is named by the footer status; never duplicate it.
@@ -100,13 +135,33 @@ export function useChatSubmit({
       if (skills.status === "unavailable") void skills.recheck();
       return;
     }
-    const outcome = await store.send(draft, chatId);
-    if (outcome.status === "blocked") {
-      store.reportError(outcome.message);
+    const frozen = references.editor(chatId)?.read();
+    if (!frozen || frozen.text !== draft) {
+      store.reportChatError(
+        chatId,
+        "The editor is still synchronizing. Your draft is kept; try Send again.",
+      );
       return;
     }
-    const latest = aui.composer.getState();
-    if (latest.text === draft && !latest.dictation) aui.composer.setText("");
+    const invalidFiles = inputFilesReason(
+      [...store.stagedFiles.files, ...frozen.files],
+      store.preferences.entry,
+    );
+    if (invalidFiles) {
+      store.reportChatError(chatId, invalidFiles);
+      return;
+    }
+    const outcome = await store.send(draft, chatId, frozen.inputs);
+    if (outcome.status === "blocked") {
+      store.reportChatError(chatId, outcome.message);
+      return;
+    }
+    // Keep uncertain/failed drafts and atomic occurrences until actual acceptance.
+    references.recordSend(chatId, {
+      operationId: outcome.operationId,
+      text: draft,
+      inputs: frozen.inputs,
+    });
   };
 
   return {

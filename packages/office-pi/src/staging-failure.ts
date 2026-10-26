@@ -68,8 +68,6 @@ export function stagingFailureDetail(error: OfficeStagingFailure) {
     causeCode: error.causeCode,
     errorKind: error.errorKind,
     submission: error.submitted ? "unknown" : "not-submitted",
-    // A dispatch claim is retained even on pre-submit failure. Do not suggest an unsafe replay.
-    retry: error.submitted ? "observe" : "never",
     message: error.submitted
       ? "Staging may have submitted bytes. Observe the original upload; do not replay it."
       : "Staging failed before upload submission.",

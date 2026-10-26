@@ -1,5 +1,6 @@
 import type { ChatMessage } from "@/lib/chat-api";
 import type { Position } from "@/lib/chat-history-types";
+import { textBytes, TEXT_BYTES_LIMIT } from "./chat-history-text";
 
 export const ROW_LIMIT = 400;
 /** Page rows reserve the snapshot window (80) plus one live row inside 400. */
@@ -59,27 +60,29 @@ export function mergeRows(current: ChatMessage[], incoming: ChatMessage[]): Chat
   return [...byId.values()].toSorted(compareRows);
 }
 
-/** Bounded retained range; `oldest` keeps read progress while paging older. */
+/** Evicts whole rows, never quotes; `oldest` keeps paging progress. Count all retained versions. */
 export function capRows(
   rows: ChatMessage[],
   state: { olderUnloaded: boolean; newerUnloaded: boolean },
   direction: "newest" | "oldest",
   limit = ROW_LIMIT,
+  budgetRows: (kept: ChatMessage[]) => ChatMessage[] = (kept) => kept,
 ) {
-  if (rows.length <= limit) {
-    return { rows, olderUnloaded: state.olderUnloaded, newerUnloaded: state.newerUnloaded };
-  }
-  if (direction === "oldest") {
-    return {
-      rows: rows.slice(0, limit),
-      olderUnloaded: state.olderUnloaded,
-      newerUnloaded: true,
-    };
+  let start = 0;
+  let end = rows.length;
+  let kept = rows;
+  while (
+    kept.length &&
+    (kept.length > limit || textBytes(budgetRows(kept), {}) > TEXT_BYTES_LIMIT)
+  ) {
+    if (direction === "oldest") end -= 1;
+    else start += 1;
+    kept = rows.slice(start, end);
   }
   return {
-    rows: rows.slice(rows.length - limit),
-    olderUnloaded: true,
-    newerUnloaded: state.newerUnloaded,
+    rows: kept,
+    olderUnloaded: state.olderUnloaded || start > 0,
+    newerUnloaded: state.newerUnloaded || end < rows.length,
   };
 }
 

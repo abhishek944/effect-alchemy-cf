@@ -1,11 +1,45 @@
-[data-dashboard]
-  [data-cx="chat-message"][data-role="user"]:has(> [data-cx="chat-message-sent-files"]) {
-  padding-bottom: 8px;
-}
 [data-cx="chat-message-sent-files"] {
+  margin-top: 16px;
+}
+[data-cx="sent-file-grid"] {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 8px;
+}
+[data-cx="sent-file"] {
+  min-width: 0;
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-card"] {
+  height: auto;
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 12px;
+  background: var(--cx-card);
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-card"] > :first-child {
+  width: 100%;
+  height: 70px;
+  flex-shrink: 0;
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-copy"] {
+  padding: 7px 9px;
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-copy"] strong {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-copy"] small {
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 0;
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-actions"] {
+  height: 30px;
+}
+[data-cx="sent-file"] [data-cx="chat-library-result-actions"] :is(button, a) {
+  width: 30px;
+  height: 30px;
 }
 [data-cx="chat-message-sent-files"]:first-child {
   margin-top: 0;

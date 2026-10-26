@@ -2,6 +2,7 @@ import type { Effect } from "effect";
 import type { OfficeStagingFailure } from "./staging-failure.ts";
 import type {
   ArtifactRef,
+  ChatReferenceInput,
   CreateDocument,
   CreateDraft,
   Cursor,
@@ -59,7 +60,22 @@ export type OfficeAttachment = {
   readonly name: string;
   readonly mediaType: string;
 };
+/** Safe saved-attachment metadata for this chat. Never bytes, owners or a capability. */
+export type OfficeAttachmentSummary = {
+  readonly id: string;
+  readonly name: string;
+  readonly kind: "image" | "text" | "office";
+  readonly mediaType: string;
+  readonly byteSize: number;
+};
+export type OfficeAttachmentPage = {
+  readonly files: readonly OfficeAttachmentSummary[];
+  readonly nextCursor: string | null;
+};
 export type OfficeTaskAccess = {
+  readonly reference?: Extract<ChatReferenceInput, { readonly kind: "native" }>;
+  /** Root-proven same-input branch descriptor, not a grant or current-head guess. */
+  readonly referenceBasis?: DraftTarget;
   readonly attachment?: OfficeAttachment;
   readonly attachmentReceipt?: Receipt | null;
   /** Captures the verified private actor; host bounds HTTP response bytes before parsing. */
@@ -91,6 +107,7 @@ export type OfficeToolIntent = {
   readonly command: OfficeIntentCommand;
   /** Private server-derived workflow step; never accepted as model authority. */
   readonly attachmentId?: string;
+  readonly referenceId?: string;
   readonly step?: string;
   readonly basis?: DraftTarget;
 };
@@ -99,6 +116,12 @@ export type OfficeResolution = {
   readonly context: OfficeToolContext;
   readonly intent: OfficeToolIntent;
 };
+export type OfficeAttachmentsRequest = {
+  readonly api: ToolExecutionApi;
+  readonly context: OfficeToolContext;
+  /** Opaque continuation from the previous page; never an owner, chat or file selector. */
+  readonly cursor?: string;
+};
 export type OfficePiHost = {
   /**
    * Prove this tool's accepted native input, private principal and exact command/target.
@@ -106,4 +129,9 @@ export type OfficePiHost = {
    * Returned capabilities must capture real host authority, not client-supplied claims.
    */
   readonly resolve: (input: OfficeResolution) => Promise<OfficeTaskAccess>;
+  /**
+   * Prove this `get_attachments` call's own accepted input and list saved files of its bound
+   * owner/chat only. The cursor is opaque; no caller-selected chat or owner is accepted.
+   */
+  readonly attachments: (input: OfficeAttachmentsRequest) => Promise<OfficeAttachmentPage>;
 };

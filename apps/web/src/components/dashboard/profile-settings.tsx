@@ -16,7 +16,7 @@ import ProfileFields from "./profile-fields";
 import ProfilePhoto from "./profile-photo";
 import { initialsOf } from "./profile-context";
 import UnsavedChangesDialog from "./profile-leave-dialog";
-import { useUnsavedGuard } from "./use-unsaved-guard";
+import { useWorkspaceProfileGuard } from "./workspace-navigation";
 import { useProfileForm, type ProfileFormState } from "./use-profile-form";
 import "./profile.css";
 import "./profile-form.css";
@@ -45,7 +45,7 @@ function ProfileForm({
 }) {
   const { base, draft } = state;
   const formRef = useRef<HTMLDivElement>(null);
-  const guard = useUnsavedGuard(state.dirty, formRef);
+  const guard = useWorkspaceProfileGuard(state.dirty, formRef, state.draft, state.saving);
   const cancelPending = guard.cancelPending;
   const wasSaving = useRef(false);
 

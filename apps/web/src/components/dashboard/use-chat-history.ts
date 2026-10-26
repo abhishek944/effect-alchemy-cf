@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type { ChatMessage, ChatSnapshot } from "@/lib/chat-api";
-import { applySnapshot, applyWindow, withChunks } from "./chat-history";
+import { applySnapshot, applyWindow, historyBudgetRows, withChunks } from "./chat-history";
 import { chunkFor, effectiveText, type Items } from "./chat-history-text";
 import { isCommitted } from "./chat-history-rows";
 import { useChatPager } from "./use-chat-pager";
@@ -23,6 +23,7 @@ const NO_TEXT: HistoryTextState = {
   revision: null,
 };
 const NO_CHUNKS: Items = {};
+const NO_ROWS: ChatMessage[] = [];
 
 /**
  * Composes the bounded history pager and per-message text sections for one
@@ -36,7 +37,8 @@ export function useChatHistory(
   snapshot: ChatSnapshot | null,
   onOperations?: (chatId: string, ids: string[]) => void,
 ) {
-  const pager = useChatPager(selectedId, attachment, onOperations);
+  const snapshotRows = snapshot?.chat.id === selectedId ? snapshot.messages : NO_ROWS;
+  const pager = useChatPager(selectedId, attachment, onOperations, snapshotRows);
   const baseView = useMemo(() => {
     if (snapshot && selectedId && snapshot.chat.id === selectedId) {
       return applySnapshot(pager.state, snapshot, NO_CHUNKS);
@@ -49,13 +51,10 @@ export function useChatHistory(
   );
   // Every retained prefix version counts, even for the same id (H3); exact
   // duplicate objects are dropped and continuations are counted once.
-  const budgetRows = useMemo(() => {
-    const unique = new Set<ChatMessage>();
-    for (const row of pager.state.rows) unique.add(row);
-    for (const row of snapshot?.messages ?? []) unique.add(row);
-    for (const row of readerRows) unique.add(row);
-    return [...unique];
-  }, [pager.state.rows, readerRows, snapshot]);
+  const budgetRows = useMemo(
+    () => historyBudgetRows(pager.state.rows, snapshotRows, readerRows),
+    [pager.state.rows, readerRows, snapshotRows],
+  );
   const text = useChatText(selectedId, attachment, readerRows, budgetRows);
   const view = useMemo(
     () => withChunks(baseView, text.chunks, budgetRows),

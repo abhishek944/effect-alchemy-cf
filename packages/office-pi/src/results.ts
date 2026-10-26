@@ -1,9 +1,10 @@
-import { ErrorCode, OFFICE_LIMITS, safeFailure } from "@starter/office-contract";
+import { ErrorCode, safeFailure } from "@starter/office-contract";
 import { Option, Schema } from "effect";
 import type { ToolExecutionResult } from "@earendil-works/pi-durable";
 import type { OfficeOutput } from "./dispatch.ts";
 
-export const OFFICE_TOOL_RESULT_BYTES = OFFICE_LIMITS.metadataBytes;
+/** Matches pi-durable 1.1.0 default output budget; its constants are not public exports. */
+export const OFFICE_TOOL_RESULT_BYTES = 50 * 1024;
 
 export const failureCode = (error: unknown): ErrorCode => {
   const code: unknown =

@@ -4,6 +4,7 @@ import PaneResizer from "./pane-resizer";
 import SettingsNavigation from "./settings-navigation";
 import "./pane-resizer.css";
 import { usePanes } from "./use-panes";
+import { useChatStore } from "@/lib/chat-store-context";
 import { useWorkspaceOffice } from "./workspace-office-context";
 import { useFocusModality } from "./use-focus-modality";
 import { Icon } from "./icon";
@@ -41,7 +42,8 @@ export default function DashboardShell({
   homeHref = "/dashboard",
 }: Props) {
   const chatWorkspace = section === null && !notFound;
-  const { transition, setRoot, visibility } = useWorkspaceOffice();
+  const { selectedId } = useChatStore();
+  const { setRoot, visibility } = useWorkspaceOffice();
   const {
     sidebarOpen,
     rightOpen,
@@ -51,11 +53,11 @@ export default function DashboardShell({
     toggleSidebar,
     toggleRight,
     toggleFullView,
-  } = usePanes(chatWorkspace, transition);
+  } = usePanes(chatWorkspace);
   useLayoutEffect(() => {
     setRoot(rightRef.current);
-    visibility(chatWorkspace && rightOpen);
-  }, [setRoot, visibility, rightRef, chatWorkspace, rightOpen]);
+    visibility(chatWorkspace ? selectedId : null, chatWorkspace && rightOpen);
+  }, [setRoot, visibility, rightRef, chatWorkspace, rightOpen, selectedId]);
   const { registerReveal } = useWorkspacePreview();
   useEffect(() => registerReveal(openRight), [registerReveal, openRight]);
   const { theme } = useDashboardTheme();

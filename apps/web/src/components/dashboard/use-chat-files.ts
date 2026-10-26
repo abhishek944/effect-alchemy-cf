@@ -2,7 +2,8 @@
  * Public staged-file owner. Upload, acceptance and discard are scoped to the
  * exact frozen IDs, so a later draft can neither be uploaded nor cleared by an
  * older operation. Aggregate byte budgets and preview reservations live in the
- * staging hook.
+ * staging hook, which stays one account-wide map: a retained chat reuses its
+ * rows instead of getting a second budget.
  */
 import { useCallback, useRef } from "react";
 import { deleteChatAttachment } from "@/lib/chat-capability-api";
@@ -27,6 +28,10 @@ export function useChatFiles(chatId: string | null): Omit<
   ChatFilesControls,
   "ensureUploaded" | "commit" | "discard"
 > & {
+  /** Stable row identity for one chat, so a session's controls only change with its rows. */
+  rowsFor: (chatId: string) => readonly LocalFile[];
+  /** This chat's frozen-ID operations; the returned value is stable while its rows are. */
+  controlsFor: (chatId: string) => ChatFilesControls;
   ensureUploaded: (targetChatId: string, ids: readonly string[]) => Promise<UploadOutcome>;
   commit: (targetChatId: string, ids: readonly string[]) => void;
   discard: (targetChatId: string, ids: readonly string[]) => void;
@@ -90,6 +95,23 @@ export function useChatFiles(chatId: string | null): Omit<
     [commit, rowsRef],
   );
 
+  const rowsFor = (targetChatId: string) => rowsRef.current[targetChatId] ?? [];
+  const controlsFor = (targetChatId: string): ChatFilesControls => {
+    const rows = rowsFor(targetChatId);
+    return {
+      files: rows,
+      notice: null,
+      blockedReason: rowReason(rows),
+      add: staging.add,
+      remove: staging.remove,
+      retry: staging.retry,
+      clearNotice: staging.clearNotice,
+      ensureUploaded,
+      commit,
+      discard,
+    };
+  };
+
   return {
     files: staging.files,
     notice: staging.notice,
@@ -98,6 +120,8 @@ export function useChatFiles(chatId: string | null): Omit<
     remove: staging.remove,
     retry: staging.retry,
     clearNotice: staging.clearNotice,
+    rowsFor,
+    controlsFor,
     ensureUploaded,
     commit,
     discard,

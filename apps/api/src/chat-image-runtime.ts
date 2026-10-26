@@ -1,5 +1,6 @@
 import { createAI } from "agents/models/pi-ai";
 import type { ContextView, Harness, Registry, Storage } from "@earendil-works/pi-durable";
+import { ROOT_CONVERSATION_ID as ROOT } from "@earendil-works/pi-durable";
 import { readImageContextEvidence } from "./chat-image-context.ts";
 import { ChatImageLegacyEra } from "./chat-image-legacy-era.ts";
 import type { ConversationImageOptions as Options } from "./chat-image-runtime-options.ts";
@@ -27,12 +28,10 @@ import type { SkillRequestGuard } from "./chat-skills-guard.ts";
 import type { ConversationSkills } from "./chat-skills-runtime.ts";
 import type { SkillRecoveryImageInput } from "./chat-skills-recovery-image-input.ts";
 import type { ChatSendScope, PreparedChatSend } from "./chat-submission.ts";
-
-/** Conversation-local lifecycle. No provider serializers, independent pool or native wrapper runtime. */
 export class ConversationImages {
   readonly modelProvider: ReturnType<typeof createAI>["provider"] | null;
-  private readonly options: Options;
   private readonly responses: ChatImageResponseStore;
+  private readonly options: Options;
   private readonly legacyEra: ChatImageLegacyEra;
   private readonly transport: ImageGenerationTransport | null;
   private request: ImageRequestAccess | null = null;
@@ -90,6 +89,7 @@ export class ConversationImages {
   nativeAccess() {
     return this.access();
   }
+  acceptedInput = (id: number) => this.responses.forEntry(String(ROOT), id, 0)?.candidate ?? null;
   contextEvidence(view: ContextView) {
     return readImageContextEvidence(this.access(), view, PI_BACKGROUND);
   }
@@ -158,6 +158,7 @@ export class ConversationImages {
       responses: this.responses,
       conversationId: this.access().conversationId,
       nativeContext: PI_BACKGROUND,
+      referenceFiles: this.options.env,
       imageGatewayId: () =>
         this.options.env.AI !== undefined && this.options.env.CHAT_FILES !== undefined
           ? (this.options.env.CHAT_GATEWAY_ID ?? null)
@@ -189,7 +190,6 @@ export class ConversationImages {
   }
   async retain(input: typeof SendMessage.Type, scope: ChatSendScope): Promise<void> {
     if (this.responses.read(input.operationId) === null) {
-      // Exact accepted historical delivery; no new input/candidate/history is written.
       await retainConversationFiles(this.options.env, input, scope);
       return;
     }
