@@ -1,4 +1,4 @@
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { storeEffect } from "./store.ts";
 import { admitPublication, barrierRow } from "./publication-admission.ts";

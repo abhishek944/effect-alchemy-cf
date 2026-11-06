@@ -1,6 +1,6 @@
 import type { CatalogImageModelId } from "@abhishek944/pi-image-gen/core";
 import { Schema } from "effect";
-import { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
+import { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
 import {
   AcceptedInputBinding,
   AcceptedInputDigest,
@@ -9,7 +9,6 @@ import {
 } from "./chat-accepted-input-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { ImagePreferences } from "./chat-image-preference-schema.ts";
-import { isBoundedImageResponseJson } from "./chat-image-response-json.ts";
 
 /** Persisted image records reuse the neutral accepted-input identities and schemas unchanged. */
 export {
@@ -69,7 +68,6 @@ export const ImageResponseCandidate = Schema.Struct({
   officeTarget: Schema.optionalKey(OfficeSendTarget),
   referenceInputs: Schema.optionalKey(ChatReferenceInputs),
 }).check(
-  Schema.makeFilter(isBoundedImageResponseJson),
   Schema.makeFilter((candidate) =>
     (candidate.referenceInputs ?? []).every(
       (ref) =>

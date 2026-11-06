@@ -1,12 +1,8 @@
 import { createHash } from "node:crypto";
 import { Schema } from "effect";
 import { UniverType } from "@univerjs/protocol";
-import { decodeWireSync, OfficeInvalid, safeFailure, type Kind } from "@starter/office-contract";
-import {
-  decodeNativeFrame,
-  encodeNativeFrame,
-  NATIVE_WIRE_LIMITS,
-} from "@starter/office-contract/native-wire";
+import { decodeWireSync, OfficeInvalid, safeFailure, type Kind } from "@highchat/office-contract";
+import { decodeNativeFrame, encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
 import type {
   JobBinding,
@@ -17,20 +13,12 @@ import type {
 import { JobBindingSchema, MutationCandidateSchema } from "./schemas.ts";
 import { SnapshotWithBlocksSchema } from "./snapshot-schema.ts";
 
-export const JOB_NATIVE_LIMITS = Object.freeze({
-  ...NATIVE_WIRE_LIMITS,
-  maxBytes: 32 * 1024 * 1024,
-});
-export const JOB_OUTPUT_LIMITS = Object.freeze({
-  ...NATIVE_WIRE_LIMITS,
-  maxBytes: 16 * 1024 * 1024,
-});
 export const digestBytes = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
 export const ownerDigest = (owner: OwnerScope): string =>
   digestBytes(new TextEncoder().encode(JSON.stringify([owner.stage, owner.ownerId])));
 export const snapshotDigest = (native: ISnapshotWithBlocks): string =>
-  digestBytes(encodeNativeFrame("snapshot", native, JOB_NATIVE_LIMITS));
+  digestBytes(encodeNativeFrame("snapshot", native));
 export function bindingKey(value: JobBinding): string {
   const b = decodeWireSync(JobBindingSchema)(value);
   return JSON.stringify([
@@ -91,12 +79,7 @@ export function requireSnapshot(native: ISnapshotWithBlocks, binding: JobBinding
       throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
     for (const id of group.blocks) {
       const block = blocks.get(id);
-      if (
-        !block ||
-        used.has(id) ||
-        block.endRow < block.startRow ||
-        block.data.byteLength > 2 * 1024 * 1024
-      )
+      if (!block || used.has(id) || block.endRow < block.startRow)
         throw new OfficeInvalid(safeFailure("CONTENT_REQUIRED"));
       used.add(id);
     }
@@ -105,15 +88,10 @@ export function requireSnapshot(native: ISnapshotWithBlocks, binding: JobBinding
 }
 const InputSchema = Schema.Struct({ binding: JobBindingSchema, native: Schema.Unknown });
 export function decodeJobInput(bytes: Uint8Array, expected: JobBinding): NativeInputFrame {
-  const input = decodeWireSync(InputSchema)(
-    decodeNativeFrame(bytes, "job-input", JOB_NATIVE_LIMITS).payload,
-  );
+  const input = decodeWireSync(InputSchema)(decodeNativeFrame(bytes, "job-input").payload);
   requireBinding(input.binding, expected);
   // Hash the original wire value before schema reconstruction can reorder object keys.
-  if (
-    digestBytes(encodeNativeFrame("snapshot", input.native, JOB_NATIVE_LIMITS)) !==
-    expected.inputDigest
-  )
+  if (digestBytes(encodeNativeFrame("snapshot", input.native)) !== expected.inputDigest)
     throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
   decodeWireSync(SnapshotWithBlocksSchema)(input.native);
   if (!Schema.is(SnapshotWithBlocksSchema)(input.native))
@@ -126,8 +104,7 @@ export function decodeMutationCandidate(
   expected: JobBinding,
 ): MutationCandidateFrame {
   const result = decodeWireSync(MutationCandidateSchema)(
-    decodeNativeFrame(bytes, "job-output", { ...JOB_OUTPUT_LIMITS, maxBytes: 2 * 1024 * 1024 })
-      .payload,
+    decodeNativeFrame(bytes, "job-output").payload,
   );
   requireBinding(result.binding, expected);
   return result;

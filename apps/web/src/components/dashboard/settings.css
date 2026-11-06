@@ -82,24 +82,6 @@
   overflow-wrap: anywhere;
 }
 
-[data-dashboard] [data-cx="settings-disabled"] {
-  padding: 6px 12px;
-  border: 1px solid var(--cx-line);
-  border-radius: var(--cx-radius-button);
-  background: var(--cx-composer);
-  color: var(--cx-muted);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-/* Keep the explicit "Not configured" label readable while still inert. */
-[data-dashboard] [data-cx="settings-disabled"]:disabled {
-  opacity: 1;
-  cursor: not-allowed;
-}
-
 [data-dashboard] [data-cx="theme-select"] {
   padding: 6px 12px;
   border: 1px solid var(--cx-line);

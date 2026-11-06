@@ -110,7 +110,7 @@ export function readCreateWorktree(input: unknown): CreateWorktreeDatabaseInput 
   const object = objectFields(input, ["record", "units"]);
   return {
     record: readWorktreeRecord(object.record),
-    units: boundedArray(object.units, 1).map(readWorktreeUnit),
+    units: boundedArray(object.units).map(readWorktreeUnit),
   };
 }
 export function readRemoved(input: unknown): SetWorktreeUnitRemovedDatabaseInput {

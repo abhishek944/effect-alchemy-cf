@@ -1,7 +1,11 @@
 import { Effect } from "effect";
-import type { CreateDocument, Receipt, Target } from "@starter/office-contract";
-import { officeAttachmentIds, officeImportOptions, OfficeNotFound } from "@starter/office-contract";
-import type { OfficeRuntime } from "@starter/office-react";
+import type { CreateDocument, Receipt, Target } from "@highchat/office-contract";
+import {
+  officeAttachmentIds,
+  officeImportOptions,
+  OfficeNotFound,
+} from "@highchat/office-contract";
+import type { OfficeRuntime } from "@highchat/office-react";
 import type { SavedFile } from "./chat-library-types";
 
 export type OriginalOffice = {

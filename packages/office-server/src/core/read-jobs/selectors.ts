@@ -1,4 +1,4 @@
-import type { InspectQuery } from "@starter/office-contract";
+import type { InspectQuery } from "@highchat/office-contract";
 import { officeFailure } from "../failure.ts";
 import type { InspectionNativeResult } from "./inspection.ts";
 

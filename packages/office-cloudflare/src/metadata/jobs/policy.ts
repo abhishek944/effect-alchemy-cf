@@ -1,6 +1,5 @@
-import { OfficeLimited, safeFailure } from "@starter/office-contract";
-import type { ArtifactRef } from "@starter/office-contract";
-import type { IsolatedJob, JobRecord } from "@starter/office-server/ports";
+import type { ArtifactRef } from "@highchat/office-contract";
+import type { IsolatedJob, JobRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { canonical, conflict, invalid } from "../store.ts";
 
@@ -85,21 +84,6 @@ export async function validateJob(db: MetadataStore, record: JobRecord): Promise
         : state.error.code === "OUTCOME_UNKNOWN")
     )
       throw invalid();
-  }
-  for (const ref of jobRefs(record)) {
-    const max =
-      ref.kind === "upload"
-        ? db.limits.uploadBytes
-        : ref.kind === "code"
-          ? db.limits.codeBytes
-          : ref.kind === "native-proposal"
-            ? db.limits.proposalBytes
-            : ref.kind === "render"
-              ? db.limits.renderBytes
-              : ref.kind === "inspection"
-                ? db.limits.responseBytes
-                : db.limits.nativeBytes;
-    if (ref.bytes > max) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   }
 }
 export function validateAdvance(previous: JobRecord, next: JobRecord, expected: number): void {

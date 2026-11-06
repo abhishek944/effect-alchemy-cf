@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { Editor, decodeWire } from "@starter/office-contract";
+import { Editor, decodeWire } from "@highchat/office-contract";
 import type { IBatchAllowedResponse } from "@univerjs/protocol";
 import type { HumanActor, OfficeDependencies } from "../ports/index.ts";
 import type { OfficeNativeRuntime } from "../core/native-runtime.ts";
@@ -36,7 +36,6 @@ export const evaluateViewPermissions = Effect.fn("Office.evaluateViewPermissions
       scope: record.target.scope,
     });
     native = yield* materializeNativeSnapshot(
-      deps,
       runtime,
       {
         kind: "read",

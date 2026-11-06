@@ -1,4 +1,4 @@
-import type { NativeEditorPermit } from "@starter/office-server/ports";
+import type { NativeEditorPermit } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { canonical, conflict, sqlNow } from "./store.ts";
 import { readView } from "./sessions/views.ts";

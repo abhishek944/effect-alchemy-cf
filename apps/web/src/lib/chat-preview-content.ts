@@ -49,8 +49,6 @@ export function csvRows(text: string): string[][] {
 }
 
 async function originalBytes(source: AttachmentSource, signal: AbortSignal): Promise<Uint8Array> {
-  if (source.byteSize > 1024 * 1024)
-    throw new Error("This file exceeds the content preview limit.");
   if (isLocalAttachment(source)) return new Uint8Array(await source.file.arrayBuffer());
   const response = await fetch(savedOriginalUrl(source), {
     credentials: "same-origin",

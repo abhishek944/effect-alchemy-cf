@@ -1,5 +1,9 @@
 import { Schema } from "effect";
-import { DIAGNOSTIC_TYPES, DIAGNOSTIC_CODES, DIAGNOSTIC_FRAME_PATTERN } from "@starter/diagnostics";
+import {
+  DIAGNOSTIC_TYPES,
+  DIAGNOSTIC_CODES,
+  DIAGNOSTIC_FRAME_PATTERN,
+} from "@highchat/diagnostics";
 import { Id, decodeWireSync } from "./primitives.ts";
 
 // Job stderr is untrusted. Project finite fields only; never relay arbitrary foreign text.

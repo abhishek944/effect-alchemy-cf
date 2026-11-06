@@ -66,11 +66,11 @@ export const RenderSelection = Schema.Union([
   }),
   Schema.Struct({
     kind: Schema.Literal("doc"),
-    pages: Schema.Array(Revision).check(Schema.isMinLength(1), Schema.isMaxLength(32)),
+    pages: Schema.Array(Revision).check(Schema.isMinLength(1)),
   }),
   Schema.Struct({
     kind: Schema.Literal("slide"),
-    pages: Schema.Array(NativeId).check(Schema.isMinLength(1), Schema.isMaxLength(32)),
+    pages: Schema.Array(NativeId).check(Schema.isMinLength(1)),
   }),
 ]);
 export type RenderSelection = typeof RenderSelection.Type;

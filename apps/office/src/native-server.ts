@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { Effect, Exit, Schema } from "effect";
-import { OfficeInvalid, OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeInvalid, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import type { MakeOfficeNodeServer, OfficeNodeServerOptions } from "./native-listener-types.ts";
 import { makeNativeServerIO, NativeServerOptions } from "./native-server-io.ts";
 

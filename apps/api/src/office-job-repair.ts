@@ -1,4 +1,4 @@
-import type { IsolatedJob, OperationRecord } from "@starter/office-server/ports";
+import type { IsolatedJob, OperationRecord } from "@highchat/office-server/ports";
 import { officeSame } from "./office-private-authority.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";
 

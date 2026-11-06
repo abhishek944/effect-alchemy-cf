@@ -4,7 +4,7 @@
  * synthesis, no retry, no redirects.
  */
 import { Option, Schema } from "effect";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { beginSpeechAttempt, drainResponse, readBoundedBytes } from "./chat-speech-io.ts";
 import type { SpeechModel, SpeechVoice, TranscriptionModel } from "./chat-speech-schema.ts";
 import {

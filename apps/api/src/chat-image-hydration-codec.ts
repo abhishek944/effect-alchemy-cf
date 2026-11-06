@@ -1,5 +1,4 @@
 import type { ImageContent } from "@earendil-works/pi-ai";
-import { MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS } from "./chat-attachment-schema.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import { readImageInfo } from "./chat-files-image.ts";
 import { hydrationFailure } from "./chat-image-hydration-types.ts";
@@ -19,12 +18,7 @@ export const encodeHydrationBase64 = (bytes: Uint8Array): string => {
 export const legacyHydrationByteSize = (block: ImageContent, model: ChatCatalogModel): number => {
   if (!model.imageInput) return hydrationFailure("model_image_unsupported");
   const data = block.data;
-  if (
-    data.length === 0 ||
-    data.length % 4 !== 0 ||
-    data.length > 4 * Math.ceil(MAX_IMAGE_BYTES / 3)
-  )
-    return hydrationFailure("model_image_limits");
+  if (data.length === 0 || data.length % 4 !== 0) return hydrationFailure("model_image_limits");
   const padding = data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0;
   const end = data.length - padding;
   for (let index = 0; index < end; index++) {
@@ -46,11 +40,7 @@ export const legacyHydrationByteSize = (block: ImageContent, model: ChatCatalogM
   )
     return hydrationFailure("original_integrity");
   const bytes = (data.length / 4) * 3 - padding;
-  if (
-    bytes <= 0 ||
-    bytes > MAX_IMAGE_BYTES ||
-    (model.imageResize !== null && data.length > model.imageResize.maxBytes)
-  )
+  if (bytes <= 0 || (model.imageResize !== null && data.length > model.imageResize.maxBytes))
     return hydrationFailure("model_image_limits");
   return bytes;
 };
@@ -71,7 +61,6 @@ export const checkLegacyHydrationImage = (
     info.animated ||
     info.width <= 0 ||
     info.height <= 0 ||
-    info.width * info.height > MAX_IMAGE_PIXELS ||
     `image/${info.format}` !== block.mimeType
   )
     return hydrationFailure("original_integrity");

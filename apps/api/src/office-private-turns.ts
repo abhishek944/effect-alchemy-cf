@@ -1,16 +1,16 @@
 import { Effect } from "effect";
-import { createCoordinatorControl } from "@starter/office-cloudflare/coordinator-control";
+import { createCoordinatorControl } from "@highchat/office-cloudflare/coordinator-control";
 import type {
   CoordinatorControl,
   VerifiedCoordinatorContext,
-} from "@starter/office-cloudflare/coordinator-control";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
+} from "@highchat/office-cloudflare/coordinator-control";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
 import type {
   OfficeMetadata,
   NativeTarget,
   SerialAdmission,
   WritePermit,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import { officeCoreContext } from "./office-private-placement.ts";
 import { assertOfficeTaskSerial } from "./office-task-native-policy.ts";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";

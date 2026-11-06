@@ -1,10 +1,10 @@
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { FileMediaType, type FileDescriptor, type FileKind } from "./chat-attachment-schema.ts";
 import { isOfficeMediaType } from "./chat-office-media.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { collectFileBody, holdFileBody } from "./chat-file-io-body.ts";
-import { ChatFileIOUnavailable, fileByteLimit, fileIOUnavailable } from "./chat-file-io-limits.ts";
+import { ChatFileIOUnavailable, fileIOUnavailable } from "./chat-file-io-limits.ts";
 
 // Worker runtime global; the infra compiler must not need Worker ambient declarations.
 declare const FixedLengthStream: typeof cf.FixedLengthStream;
@@ -13,8 +13,7 @@ export const fileObjectKind = (object: cf.R2Object, expected?: FileDescriptor): 
   const media = decodeOption(FileMediaType, object.httpMetadata?.contentType);
   if (media === null) throw fileIOUnavailable("metadata");
   const kind = media.startsWith("image/") ? "image" : isOfficeMediaType(media) ? "office" : "text";
-  if (!Number.isSafeInteger(object.size) || object.size < 1 || object.size > fileByteLimit(kind))
-    throw fileIOUnavailable("limit");
+  if (!Number.isSafeInteger(object.size) || object.size < 1) throw fileIOUnavailable("limit");
   if (
     expected !== undefined &&
     (object.size !== expected.byteSize ||

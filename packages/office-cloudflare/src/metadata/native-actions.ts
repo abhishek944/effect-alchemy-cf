@@ -1,4 +1,4 @@
-import type { NativeReceiptKey, NativeWriteRecord } from "@starter/office-server/ports";
+import type { NativeReceiptKey, NativeWriteRecord } from "@highchat/office-server/ports";
 import { invalid } from "./store.ts";
 /** Provider-private action mapping. No caller-controlled action or generic receipt lookup is exported by the application port. */
 export function nativeReceiptAction(key: NativeReceiptKey): string {

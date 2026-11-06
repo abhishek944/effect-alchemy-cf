@@ -7,12 +7,7 @@ export function officeBinaryInput(
   request: OfficePrivateRequest,
 ) {
   if (body === null) throw officeDenied();
-  const cursor = officeBinaryCursor(
-    body,
-    request.signal,
-    request.original.deadline,
-    request.charge,
-  );
+  const cursor = officeBinaryCursor(body, request.signal, request.original.deadline);
   let pending: Promise<unknown> | undefined, closing: Promise<void> | undefined;
   let resolveDone: (() => void) | undefined, rejectDone: ((error: unknown) => void) | undefined;
   let empty = 0;

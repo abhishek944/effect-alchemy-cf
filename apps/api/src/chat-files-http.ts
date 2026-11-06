@@ -2,8 +2,8 @@
  * Worker HTTP boundary for private chat attachments.
  *
  * `ownerId` is supplied by the authenticated parent layer; this module never
- * reads an owner claim from the request. Bodies stream through the exact
- * per-kind limit before validation, and every accepted byte is written to the
+ * reads an owner claim from the request. Content is validated before every
+ * accepted byte is written to the
  * owner-scoped staging key before metadata becomes `ready`. Responses are JSON
  * descriptors or original bytes only: no keys, no base64, no public URL.
  *
@@ -13,7 +13,7 @@
  * Private `/files/*` envelopes stay internal to the catalog client.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure, type FailureContext } from "@starter/diagnostics";
+import { reportFailure, type FailureContext } from "@highchat/diagnostics";
 import { decodeOption, json } from "./chat-internal.ts";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";

@@ -3,8 +3,8 @@ import {
   withDiagnostic,
   reportFailure,
   type FailureContext,
-} from "@starter/diagnostics";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+} from "@highchat/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 
 export type OfficeStreamCompletion =
   | { readonly ok: true }

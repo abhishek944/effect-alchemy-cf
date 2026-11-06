@@ -1,0 +1,179 @@
+:where(.landing-closing) .closing-footer nav {
+  gap: 30px;
+  display: flex;
+}
+:where(.landing-closing) .back-top {
+  gap: 12px;
+}
+:where(.landing-closing) .closing-C .invite {
+  grid-template-columns: minmax(0px, 1.3fr) minmax(0px, 0.7fr);
+  align-items: end;
+  gap: 90px;
+  display: grid;
+}
+:where(.landing-closing) .closing-C .invite h2 {
+  font-size: 116px;
+}
+:where(.landing-closing) .closing-C .invite-actions {
+  padding-bottom: 14px;
+}
+:where(.landing-closing) .closing-C .closing-intro {
+  margin: 0px 0px 30px;
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .closing {
+    min-height: 900px;
+    padding: 90px 24px 260px;
+  }
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .invite h2,
+  :where(.landing-closing) .closing-C .invite h2 {
+    font-size: clamp(50px, 9vw, 92px);
+  }
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .closing-C .invite {
+    display: block;
+  }
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .closing-C .invite-actions {
+    margin-top: 35px;
+  }
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .closing-footer {
+    flex-wrap: wrap;
+    bottom: 105px;
+    left: 24px;
+    right: 24px;
+  }
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .closing-footer nav {
+    gap: 20px;
+  }
+}
+@media (width <= 900px) {
+  :where(.landing-closing) .closing-intro {
+    font-size: 16px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing {
+    min-height: 100svh;
+    padding: 72px 24px 95px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .invite .eyebrow {
+    max-width: 160px;
+    margin-bottom: 26px;
+    font-size: 8px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .invite h2 {
+    letter-spacing: -0.06em;
+    font-size: 58px;
+    line-height: 1;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .invite-actions {
+    margin-top: 28px;
+    padding-bottom: 0px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-intro {
+    margin: 0px 0px 26px;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer {
+    gap: 8px 20px;
+    margin-top: 64px;
+    padding-top: 24px;
+    position: relative;
+    inset: auto;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer .brand {
+    flex-basis: 100%;
+    font-size: 18px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer nav {
+    gap: 20px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-actions {
+    gap: 12px 24px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .primary {
+    min-height: 54px;
+    font-size: 15px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .secondary {
+    font-size: 14px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing)[data-closing-phone="C"] .invite {
+    text-align: center;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing)[data-closing-phone="C"] .invite .eyebrow {
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing)[data-closing-phone="C"] .invite h2 {
+    font-size: 60px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing)[data-closing-phone="C"] .closing-actions {
+    justify-content: center;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing)[data-closing-phone="C"] .closing-footer {
+    text-align: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing)[data-closing-phone="C"] .closing-footer .brand {
+    flex-basis: auto;
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-closing):not([data-closing-phone="A"]) .invite h2 {
+      font-size: 50px;
+    }
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer {
+      gap: 6px 12px;
+    }
+  }
+}

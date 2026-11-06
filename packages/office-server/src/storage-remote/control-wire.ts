@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, Digest, Id } from "@starter/office-contract";
+import { Count, Digest, Id } from "@highchat/office-contract";
 import { HostEpoch, HostId, HostPermit, HostTarget, hostMethod } from "./host-wire.ts";
 import { HostEditorPermit } from "./editor-records.ts";
 

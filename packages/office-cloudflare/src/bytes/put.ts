@@ -1,16 +1,16 @@
-import { reportFailure, withCause } from "@starter/diagnostics";
+import { reportFailure, withCause } from "@highchat/diagnostics";
 import {
   ArtifactRef,
   OfficeInvalid,
   OfficeLimited,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { conflict, invalid } from "../metadata/store.ts";
 import { MAX_ATTEMPTS, assertKey, unknownOutcome } from "./data.ts";
 import type { PutInput, RefRow } from "./data.ts";
 import type { ByteStore } from "./store.ts";
-import type { OwnerScope } from "@starter/office-server/ports";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import { transfer, writeObject } from "./stream.ts";
 
 async function duplicate(

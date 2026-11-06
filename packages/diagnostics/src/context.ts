@@ -1,4 +1,5 @@
 import { Effect, References } from "effect";
+import { toolArgumentFields } from "./tool-arguments.ts";
 
 /** All labels are fixed application-owned names, never foreign text or request data. */
 export interface FailureContext {
@@ -35,6 +36,12 @@ export interface FailureContext {
   readonly deadlineAt?: number | undefined;
   readonly bytes?: number | undefined;
   readonly exitCode?: number | undefined;
+  /** Unknown input is projected through the finite Office argument allowlist, never dumped. */
+  readonly toolArguments?: unknown;
+  readonly step?: string | undefined;
+  readonly referenceKind?: "native" | "original" | "missing" | undefined;
+  readonly acceptedReferenceCount?: number | undefined;
+  readonly acceptedOriginalCount?: number | undefined;
 }
 export const diagnosticReason = Symbol("application.diagnostic.reason");
 /** Preserve the native error and its cause; the reason is not serialized to public schemas. */
@@ -76,6 +83,12 @@ export function contextFields(context: FailureContext) {
     deadline_at: metric(context.deadlineAt),
     bytes: metric(context.bytes),
     exit_code: metric(context.exitCode),
+    tool_arguments:
+      context.toolArguments === undefined ? undefined : toolArgumentFields(context.toolArguments),
+    step: safeLabel(context.step),
+    reference_kind: safeLabel(context.referenceKind),
+    accepted_reference_count: metric(context.acceptedReferenceCount),
+    accepted_original_count: metric(context.acceptedOriginalCount),
   };
   return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
 }

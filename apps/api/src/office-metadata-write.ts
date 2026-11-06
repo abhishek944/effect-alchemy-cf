@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import type { OfficeError } from "@starter/office-contract";
-import type { OfficeMetadata } from "@starter/office-server/ports";
-import type { HostMetadata } from "@starter/office-server/native-remote";
+import type { OfficeError } from "@highchat/office-contract";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
+import type { HostMetadata } from "@highchat/office-server/native-remote";
 import type { OfficeMetadataResult } from "./office-metadata-dispatch.ts";
 
 type WriteName =

@@ -23,7 +23,7 @@ const build: WorkerBuildOptions = {
   input: {
     plugins: [
       {
-        name: "starter:verify-native-entry",
+        name: "highchat:verify-native-entry",
         generateBundle(_options, bundle) {
           for (const chunk of Object.values(bundle)) {
             if (chunk.type === "chunk" && chunk.isEntry) {

@@ -2,7 +2,7 @@
  * Raw SQL primitives for owner-catalog file metadata.
  *
  * All file state lives in one owner actor, so these statements are the only
- * place that touches the `files` table. Policy (quota, idempotency, binding
+ * place that touches the `files` table. Policy (idempotency, binding
  * decisions) stays in `chat-files-catalog.ts`.
  */
 import type { ChatSqlStorage } from "./chat-ledger.ts";
@@ -103,11 +103,21 @@ export const fileRows = (
   fileIds: readonly string[],
 ): readonly ChatFileRecord[] => {
   if (fileIds.length === 0) return [];
-  const placeholders = fileIds.map(() => "?").join(", ");
-  const rows = db
-    .exec<RawFileRow>(`SELECT ${COLUMNS} FROM files WHERE file_id IN (${placeholders})`, ...fileIds)
-    .toArray()
-    .map(toRecord);
+  // SQLite-backed Durable Objects accept at most 100 bound parameters per query.
+  const rows: ChatFileRecord[] = [];
+  for (let offset = 0; offset < fileIds.length; offset += 100) {
+    const batch = fileIds.slice(offset, offset + 100);
+    const placeholders = batch.map(() => "?").join(", ");
+    rows.push(
+      ...db
+        .exec<RawFileRow>(
+          `SELECT ${COLUMNS} FROM files WHERE file_id IN (${placeholders})`,
+          ...batch,
+        )
+        .toArray()
+        .map(toRecord),
+    );
+  }
   const byId = new Map(rows.map((row) => [row.fileId, row]));
   return fileIds.flatMap((fileId) => {
     const row = byId.get(fileId);
@@ -129,7 +139,8 @@ export const usageBytes = (db: ChatSqlStorage): UsageBytes =>
         COALESCE(SUM(CASE WHEN state = 'accepted' THEN byte_size ELSE 0 END), 0) AS retained,
         COALESCE(SUM(CASE WHEN state = 'ready' THEN byte_size ELSE 0 END), 0) AS staged,
         (COALESCE(SUM(CASE WHEN state = 'uploading' THEN byte_size ELSE 0 END), 0)
-          + (SELECT COALESCE(SUM(remaining_bytes), 0) FROM image_calls)) AS reserved,
+          + (SELECT COALESCE(SUM(byte_size), 0) FROM image_outputs
+             WHERE state = 'pending')) AS reserved,
         COALESCE(SUM(CASE WHEN state = 'failed'
             OR (state IN ('deleted', 'expired') AND expires_at IS NOT NULL)
           THEN byte_size ELSE 0 END), 0) AS pending
@@ -164,7 +175,7 @@ export const listFileRows = (db: ChatSqlStorage, chatId: string): readonly ChatF
   db
     .exec<RawFileRow>(
       `SELECT ${COLUMNS} FROM files WHERE chat_id = ? AND state IN ('ready', 'accepted')
-       ORDER BY created_at ASC, file_id ASC LIMIT 200`,
+       ORDER BY created_at ASC, file_id ASC`,
       chatId,
     )
     .toArray()

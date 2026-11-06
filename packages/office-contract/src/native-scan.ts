@@ -7,7 +7,10 @@ const invalid = (): never => {
 type Container = { remaining: number; map: boolean; key: boolean; keys: Set<string> };
 /** Scan lengths/depth/nodes/keys BEFORE MessagePack allocates decoded arrays/maps/binaries. */
 export function scanNativeMessagePack(bytes: Uint8Array, limits: NativeWireLimits): void {
-  if (bytes.byteLength === 0 || bytes.byteLength > limits.maxBytes)
+  if (
+    bytes.byteLength === 0 ||
+    (limits.maxBytes !== undefined && bytes.byteLength > limits.maxBytes)
+  )
     throw new NativeWireError("LIMIT_EXCEEDED");
   const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const stack: Container[] = [{ remaining: 1, map: false, key: false, keys: new Set() }];
@@ -30,7 +33,10 @@ export function scanNativeMessagePack(bytes: Uint8Array, limits: NativeWireLimit
       stack.pop();
       continue;
     }
-    if (++nodes > limits.maxNodes || stack.length - 1 > limits.maxDepth)
+    if (
+      (limits.maxNodes !== undefined && ++nodes > limits.maxNodes) ||
+      (limits.maxDepth !== undefined && stack.length - 1 > limits.maxDepth)
+    )
       throw new NativeWireError("LIMIT_EXCEEDED");
     const isKey = parent.map && parent.key;
     parent.remaining--;
@@ -88,7 +94,8 @@ export function scanNativeMessagePack(bytes: Uint8Array, limits: NativeWireLimit
       continue;
     }
     if (stringLength !== null) {
-      if (stringLength > limits.maxStringBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (limits.maxStringBytes !== undefined && stringLength > limits.maxStringBytes)
+        throw new NativeWireError("LIMIT_EXCEEDED");
       const start = take(stringLength);
       const text = utf8.decode(bytes.subarray(start, start + stringLength));
       if (isKey) {
@@ -97,14 +104,18 @@ export function scanNativeMessagePack(bytes: Uint8Array, limits: NativeWireLimit
       }
     } else if (binaryLength !== null) {
       if (isKey) invalid();
-      if (binaryLength > limits.maxBinaryBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (limits.maxBinaryBytes !== undefined && binaryLength > limits.maxBinaryBytes)
+        throw new NativeWireError("LIMIT_EXCEEDED");
       take(binaryLength);
     } else if (count !== null) {
       if (isKey) invalid();
-      if (count > (map ? limits.maxMapLength : limits.maxArrayLength))
-        throw new NativeWireError("LIMIT_EXCEEDED");
+      const maximum = map ? limits.maxMapLength : limits.maxArrayLength;
+      if (maximum !== undefined && count > maximum) throw new NativeWireError("LIMIT_EXCEEDED");
       const remaining = count * (map ? 2 : 1);
-      if (remaining > limits.maxNodes - nodes) throw new NativeWireError("LIMIT_EXCEEDED");
+      // Every declared child requires at least one byte; reject malformed lengths before allocation.
+      if (remaining > bytes.length - pos) invalid();
+      if (limits.maxNodes !== undefined && remaining > limits.maxNodes - nodes)
+        throw new NativeWireError("LIMIT_EXCEEDED");
       stack.push({ remaining, map, key: map, keys: new Set() });
     }
   }

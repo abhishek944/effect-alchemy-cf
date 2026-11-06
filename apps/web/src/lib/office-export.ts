@@ -1,4 +1,4 @@
-import type { ArtifactRef } from "@starter/office-contract";
+import type { ArtifactRef } from "@highchat/office-contract";
 
 /**
  * Browser-side doc export policy: media identity, honest failure phases and a bounded local

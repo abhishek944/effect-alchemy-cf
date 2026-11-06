@@ -1,9 +1,9 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
-import type { ArtifactRef } from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWire } from "@highchat/office-contract";
+import type { ArtifactRef } from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { OfficeDependencies, OwnerScope } from "../../ports/index.ts";
-import { JOB_OUTPUT_LIMITS, requireBinding } from "../../jobs/frames.ts";
+import { requireBinding } from "../../jobs/frames.ts";
 import { exportMediaType } from "../../jobs/media.ts";
 import { RenderOutputSchema } from "../../jobs/output.ts";
 import { byteStream, readArtifact } from "../bytes.ts";
@@ -32,18 +32,10 @@ export const ordinaryJobOutput = Effect.fn("Office.readJobs.output")(function* (
 ) {
   if (output.kind !== job.kind)
     return yield* Effect.fail(officeFailure("INVALID_INPUT", job.binding.operationId));
-  const wire = yield* readArtifact(
-    deps,
-    owner,
-    output,
-    job.kind === "export"
-      ? 10 * 1024 * 1024
-      : Math.min(deps.policy.limits.renderBytes, JOB_OUTPUT_LIMITS.maxBytes),
-  );
+  const wire = yield* readArtifact(deps, owner, output);
   if (job.kind === "export") {
     if (
       output.mediaType !== exportMediaType(job.options) ||
-      wire.byteLength > 10 * 1024 * 1024 ||
       (["xlsx", "docx", "pptx"].includes(job.options.format) &&
         (wire.byteLength < 22 || wire[0] !== 80 || wire[1] !== 75))
     )
@@ -51,21 +43,19 @@ export const ordinaryJobOutput = Effect.fn("Office.readJobs.output")(function* (
     return output;
   }
   const count = job.selection.kind === "sheet" ? 1 : job.selection.pages.length;
-  if (count > deps.policy.limits.renderPages)
-    return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", job.binding.operationId));
   if (output.mediaType === "image/png") {
-    const image = yield* Effect.try({
+    yield* Effect.try({
       try: () => dimensions(wire),
       catch: () => officeFailure("INVALID_INPUT"),
     });
-    if (count !== 1 || image.width * image.height > deps.policy.limits.renderPixels)
+    if (count !== 1)
       return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", job.binding.operationId));
     return output;
   }
   if (output.mediaType !== "application/vnd.office.render-bundle+msgpack")
     return yield* Effect.fail(officeFailure("INVALID_INPUT", job.binding.operationId));
   const raw = yield* Effect.try({
-    try: () => decodeNativeFrame(wire, "job-output", JOB_OUTPUT_LIMITS).payload,
+    try: () => decodeNativeFrame(wire, "job-output").payload,
     catch: () => officeFailure("INVALID_INPUT"),
   });
   const bundle = yield* decodeWire(RenderOutputSchema)(raw).pipe(
@@ -74,15 +64,12 @@ export const ordinaryJobOutput = Effect.fn("Office.readJobs.output")(function* (
   yield* Effect.try({
     try: () => {
       requireBinding(bundle.binding, job.binding);
-      let pixels = 0;
       for (const image of bundle.images) {
         const size = dimensions(image.bytes);
         if (size.width !== image.width || size.height !== image.height)
           throw officeFailure("INVALID_INPUT");
-        pixels += size.width * size.height;
       }
-      if (bundle.images.length !== count || pixels > deps.policy.limits.renderPixels)
-        throw officeFailure("LIMIT_EXCEEDED");
+      if (bundle.images.length !== count) throw officeFailure("LIMIT_EXCEEDED");
     },
     catch: (error) => (isOfficeError(error) ? error : officeFailure("INVALID_INPUT")),
   });
@@ -90,8 +77,6 @@ export const ordinaryJobOutput = Effect.fn("Office.readJobs.output")(function* (
     try: () => imageZip(bundle.images.map((image) => image.bytes)),
     catch: () => officeFailure("LIMIT_EXCEEDED"),
   });
-  if (zip.byteLength > deps.policy.limits.renderBytes)
-    return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", job.binding.operationId));
   return yield* deps.bytes.put(owner, {
     id: "render-" + job.binding.jobId,
     kind: "render",

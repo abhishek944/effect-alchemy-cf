@@ -14,19 +14,8 @@ import { Schema } from "effect";
 import { DomainUuid, IsoTimestamp } from "./chat-capabilities.ts";
 import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "./chat-office-media.ts";
 
-export const MAX_ATTACHMENTS_PER_MESSAGE = 5;
-export const MAX_IMAGE_BYTES = 10_485_760;
-export const MAX_IMAGE_PIXELS = 16_000_000;
-export const MAX_TEXT_FILE_BYTES = 1_048_576;
-export const MAX_OFFICE_BYTES = 10_485_760;
-export const MAX_MESSAGE_ATTACHMENT_BYTES = 20_971_520;
-export const MAX_QUOTED_TEXT_CHARS = 100_000;
 export const MAX_EXCERPT_CHARS = 2_000;
-export const RETAINED_BYTES_PER_USER = 1_073_741_824;
 export const ABANDONED_UPLOAD_TTL_MS = 86_400_000;
-export const LOCAL_DRAFT_BYTES_PER_TAB = 41_943_040;
-export const PREVIEW_CACHE_BYTES = 20_971_520;
-export const PREVIEW_DECODED_BYTES = 67_108_864;
 
 const ByteCount = Schema.Number.check(
   Schema.makeFilter((value) => Number.isSafeInteger(value) && value > 0),
@@ -74,15 +63,9 @@ export type FileName = typeof FileName.Type;
 export const AttachmentId = DomainUuid;
 export type AttachmentId = typeof AttachmentId.Type;
 
-/** Unique submitted references; a duplicate id would be double-counted by quota. */
-export const AttachmentReferences = Schema.Array(AttachmentId).check(
-  Schema.isMaxLength(MAX_ATTACHMENTS_PER_MESSAGE),
-  Schema.makeFilter(unique),
-);
+/** Unique submitted references preserve one unambiguous original identity. */
+export const AttachmentReferences = Schema.Array(AttachmentId).check(Schema.makeFilter(unique));
 export type AttachmentReferences = typeof AttachmentReferences.Type;
-
-const maxBytesFor = (kind: FileKind): number =>
-  kind === "image" ? MAX_IMAGE_BYTES : kind === "office" ? MAX_OFFICE_BYTES : MAX_TEXT_FILE_BYTES;
 
 /** Safe display metadata for one owner- and chat-scoped original. */
 export const FileDescriptor = Schema.Struct({
@@ -101,12 +84,9 @@ export const FileDescriptor = Schema.Struct({
   expiresAt: Schema.NullOr(IsoTimestamp),
 }).check(
   Schema.makeFilter((file) => {
-    if (file.byteSize > maxBytesFor(file.kind)) return false;
     if ((file.kind === "image") !== file.mediaType.startsWith("image/")) return false;
     if (file.kind === "office" && !isOfficeMediaType(file.mediaType)) return false;
     if (file.kind !== "office" && isOfficeMediaType(file.mediaType)) return false;
-    if (file.width !== null && file.height !== null && file.width * file.height > MAX_IMAGE_PIXELS)
-      return false;
     if (file.state !== "ready") return true;
     if (file.kind === "image")
       return file.width !== null && file.height !== null && file.excerpt === null;
@@ -119,8 +99,8 @@ export type FileDescriptor = typeof FileDescriptor.Type;
 
 export const FileDescriptorList = Schema.Struct({
   chatId: DomainUuid,
-  files: Schema.Array(FileDescriptor)
-    .check(Schema.isMaxLength(MAX_ATTACHMENTS_PER_MESSAGE))
-    .check(Schema.makeFilter((files) => unique(files.map((file) => file.id)))),
+  files: Schema.Array(FileDescriptor).check(
+    Schema.makeFilter((files) => unique(files.map((file) => file.id))),
+  ),
 }).check(Schema.makeFilter((list) => list.files.every((file) => file.chatId === list.chatId)));
 export type FileDescriptorList = typeof FileDescriptorList.Type;

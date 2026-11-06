@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Receipt } from "@starter/office-contract";
+import type { Receipt } from "@highchat/office-contract";
 import { useReviewActions } from "./review-actions.ts";
 import { reviewBlocker } from "./review-data.ts";
 import { useReviewEvidence } from "./use-review-evidence.ts";

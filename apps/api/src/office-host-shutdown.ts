@@ -1,4 +1,4 @@
-import { reportFailure, withCause, withDiagnostic } from "@starter/diagnostics";
+import { reportFailure, withCause, withDiagnostic } from "@highchat/diagnostics";
 import { officeDenied } from "./office-private-authority.ts";
 import { closeOfficeHostEntry } from "./office-host-entry.ts";
 import { closeOfficeHostChannel } from "./office-host-channel.ts";

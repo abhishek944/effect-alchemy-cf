@@ -2,7 +2,7 @@ import type {
   NativeWriteRecord,
   OperationRecord,
   SerialAdmission,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
 import { conflict } from "../store.ts";

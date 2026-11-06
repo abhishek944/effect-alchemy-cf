@@ -1,4 +1,4 @@
-import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@starter/office-contract";
+import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@highchat/office-contract";
 import { createChatFilesCatalogClient } from "./chat-files-client.ts";
 import { digestCompactImageInput } from "./chat-image-response-digest.ts";
 import { ImageResponseError, responseValue } from "./chat-image-response-codec.ts";

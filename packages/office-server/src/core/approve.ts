@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { Approve, decodeWire } from "@starter/office-contract";
+import { Approve, decodeWire } from "@highchat/office-contract";
 import type {
   ApprovalRecord,
   HumanActor,

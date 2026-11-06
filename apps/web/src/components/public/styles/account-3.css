@@ -1,0 +1,16 @@
+@media (max-width: 360px) {
+  :where(.public-auth) .back {
+    font-size: 0.6875rem;
+  }
+}
+@media (max-width: 360px) {
+  :where(.public-auth) main {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
+@media (max-width: 360px) {
+  :where(.public-auth) h1 {
+    font-size: 3.125rem;
+  }
+}

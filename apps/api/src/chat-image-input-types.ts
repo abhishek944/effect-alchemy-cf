@@ -6,7 +6,7 @@ import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ImageOriginalBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
 import type { ChatImageResponseStore } from "./chat-image-response-store.ts";
-import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
 
 export class ImageInputError extends Error {
   readonly code:

@@ -1,12 +1,7 @@
 import type { ImageContent, TextContent, UserMessage } from "@earendil-works/pi-ai";
-import { MAX_EXCERPT_CHARS, MAX_QUOTED_TEXT_CHARS } from "./chat-attachment-schema.ts";
+import { MAX_EXCERPT_CHARS } from "./chat-attachment-schema.ts";
 import { chatFilesImageCompatibility } from "./chat-files-native.ts";
-import {
-  attachmentBoundary,
-  countTextChars,
-  decodeTextFile,
-  quotedAttachmentBlock,
-} from "./chat-files-text.ts";
+import { attachmentBoundary, decodeTextFile, quotedAttachmentBlock } from "./chat-files-text.ts";
 import { csvReferenceBlock, isCsvOriginal } from "./chat-image-hydration-csv.ts";
 import { createChatLibraryClient } from "./chat-library-client.ts";
 import type { SavedOriginalMetadata } from "./chat-library-original.ts";
@@ -112,7 +107,6 @@ export const loadHydrationOccurrence = async (
   ).length;
   let textIndex = 0;
   let csvIndex = 0;
-  let quotedChars = 0;
   for (const original of item.originals) {
     hydrationSignal(input.signal);
     const slices = selections.get(original.file.id);
@@ -153,8 +147,6 @@ export const loadHydrationOccurrence = async (
       return hydrationFailure("invalid_context");
     }
     for (const text of texts) {
-      quotedChars += countTextChars(text);
-      if (quotedChars > MAX_QUOTED_TEXT_CHARS) hydrationFailure("quoted_text_too_large");
       content.push({
         type: "text",
         text: quotedAttachmentBlock({

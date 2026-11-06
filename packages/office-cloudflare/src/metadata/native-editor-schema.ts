@@ -1,13 +1,13 @@
 import { Schema } from "effect";
-import { ArtifactRef, Count, Digest, Id, Revision } from "@starter/office-contract";
-import type { NativeReceiptBinding } from "@starter/office-server/ports";
+import { ArtifactRef, Count, Digest, Id, Revision } from "@highchat/office-contract";
+import type { NativeReceiptBinding } from "@highchat/office-server/ports";
 import type {
   NativeEditorLeaf,
   NativeEditorObservation,
   NativeEditorPermit,
   Store,
-} from "@starter/office-server/ports";
-import { NativeChange } from "@starter/office-server/native-remote";
+} from "@highchat/office-server/ports";
+import { NativeChange } from "@highchat/office-server/native-remote";
 import type { NativeAdmission } from "../native/types.ts";
 import type { VerifiedCoordinatorContext } from "./coordinator/types.ts";
 import { NativeId, Permit } from "./schemas.ts";

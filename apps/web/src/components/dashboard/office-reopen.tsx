@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { DraftTransition, Receipt } from "@starter/office-contract";
-import type { OfficeRuntime } from "@starter/office-react";
+import type { DraftTransition, Receipt } from "@highchat/office-contract";
+import type { OfficeRuntime } from "@highchat/office-react";
 import type { OfficeSelection } from "./workspace-preview-model";
 import { useWorkspacePreview } from "./workspace-preview-context";
 

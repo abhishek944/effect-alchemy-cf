@@ -1,4 +1,4 @@
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 
 /** One bounded record for a theme dispatch whose observation/receipt was uncertain. */
 export const reportThemeObservation = (

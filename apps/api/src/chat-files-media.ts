@@ -1,12 +1,5 @@
 /** Filename-to-media allowlist and actual content validation. */
-import {
-  type FileKind,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
-  MAX_TEXT_FILE_BYTES,
-  MAX_OFFICE_BYTES,
-  MAX_EXCERPT_CHARS,
-} from "./chat-attachment-schema.ts";
+import { type FileKind, MAX_EXCERPT_CHARS } from "./chat-attachment-schema.ts";
 import { isOfficeContainer, officeMediaType } from "./chat-office-media.ts";
 import { readImageInfo } from "./chat-files-image.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
@@ -146,11 +139,9 @@ export const inspectFileBytes = (
   const media = resolveMedia(name);
   if (media === null) return filesFail("unsupported_type");
   if (media.kind === "image") {
-    if (bytes.byteLength > MAX_IMAGE_BYTES) return filesFail("file_too_large");
     const info = readImageInfo(bytes);
     if (!info.ok) return filesFail("invalid_content");
     if (info.width <= 0 || info.height <= 0) return filesFail("invalid_content");
-    if (info.width * info.height > MAX_IMAGE_PIXELS) return filesFail("file_too_large");
     if (info.animated) return filesFail("unsupported_type");
     if (info.format !== formatOf(media.mediaType)) return filesFail("unsupported_type");
     return filesOk({
@@ -163,7 +154,6 @@ export const inspectFileBytes = (
     });
   }
   if (media.kind === "office") {
-    if (bytes.byteLength > MAX_OFFICE_BYTES) return filesFail("file_too_large");
     const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
     if (!isOfficeContainer(bytes, extension)) return filesFail("unsupported_type");
     return filesOk({
@@ -175,7 +165,6 @@ export const inspectFileBytes = (
       chars: 0,
     });
   }
-  if (bytes.byteLength > MAX_TEXT_FILE_BYTES) return filesFail("file_too_large");
   if (hasImageSignature(bytes)) return filesFail("unsupported_type");
   const decoded = decodeTextFile(bytes, MAX_EXCERPT_CHARS);
   if (!decoded.ok) return filesFail("invalid_content");

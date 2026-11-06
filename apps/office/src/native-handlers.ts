@@ -1,8 +1,8 @@
 import { finished } from "node:stream/promises";
 import { Effect } from "effect";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import { classifyNativeRoute } from "@starter/office-server/native-protocol";
-import type { OfficeDependencies, OwnerScope } from "@starter/office-server/ports";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import { classifyNativeRoute } from "@highchat/office-server/native-protocol";
+import type { OfficeDependencies, OwnerScope } from "@highchat/office-server/ports";
 import type { makeNativeApplication } from "./native-app.ts";
 import type { makeOfficeProtocolPool } from "./native-protocol-pool.ts";
 import type { OfficeRequestContext } from "./native-request-context.ts";

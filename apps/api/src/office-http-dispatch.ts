@@ -7,7 +7,7 @@ import type { CurrentOfficeSession } from "./office-authentication.ts";
 import { artifact, channel, download, protocol, upload } from "./office-http-binary.ts";
 import { officeCore } from "./office-http-call.ts";
 import { officeOriginalSource, officeSources } from "./office-http-sources.ts";
-import { OfficeOriginalRequest } from "@starter/office-contract";
+import { OfficeOriginalRequest } from "@highchat/office-contract";
 import { stageOfficeOriginal } from "./office-http-original-stage.ts";
 import type { OfficeDispatch } from "./office-http-call.ts";
 import { officeProtocolPath } from "./office-http-channel.ts";
@@ -67,9 +67,7 @@ export const dispatchOffice = (
       return yield* channel(dispatch, web.body);
     const staging = /^\/api\/office\/originals\/([A-Za-z0-9_-]{16,96})\/stage$/.exec(pathname);
     if (web.method === "POST" && staging?.[1] !== undefined) {
-      const raw = yield* officeReadJson(web.body, 4096).pipe(
-        Effect.catch(() => Effect.succeed(null)),
-      );
+      const raw = yield* officeReadJson(web.body).pipe(Effect.catch(() => Effect.succeed(null)));
       const parsed = Schema.decodeUnknownOption(OfficeOriginalRequest, {
         onExcessProperty: "error",
       })(typeof raw === "object" && raw !== null ? { ...raw, fileRef: staging[1] } : null);

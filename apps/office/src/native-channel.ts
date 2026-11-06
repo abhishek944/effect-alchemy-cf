@@ -2,13 +2,12 @@ import { Effect, type Schema } from "effect";
 import {
   decodeWireSync,
   OfficeInvalid,
-  OfficeLimited,
   OfficeUnavailable,
   safeFailure,
   type Failure,
   type OfficeError,
-} from "@starter/office-contract";
-import { hostEnvelope } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import { hostEnvelope } from "@highchat/office-server/native-remote";
 import { officeChannelProfile, type OfficeControlOptions } from "./native-channel-profile.ts";
 export type { OfficeControlOptions } from "./native-channel-profile.ts";
 import { readOfficeControlBody } from "./native-channel-body.ts";
@@ -24,7 +23,7 @@ export type OfficeRemoteMethod<Q, A> = {
 };
 const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
 /** Mandatory T47-bound private transport. Selectors and this factory do NOT authenticate a caller. */
-function createPrivateJsonChannel(options: OfficeControlOptions, maximum: number) {
+function createPrivateJsonChannel(options: OfficeControlOptions) {
   const profile = officeChannelProfile(options);
   const { url, request, signal: parent } = profile;
   const stop = new AbortController();
@@ -32,17 +31,11 @@ function createPrivateJsonChannel(options: OfficeControlOptions, maximum: number
   let closed = false,
     closePromise: Promise<void> | undefined,
     cleanupFailures = 0;
-  let calls = 0,
-    bytes = 0,
-    active = 0;
+  let active = 0;
   const cleanupFailed = () => {
     cleanupFailures++;
     closed = true;
     stop.abort();
-  };
-  const charge = (size: number) => {
-    bytes += size;
-    if (bytes > profile.maxBytes) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   };
   function call<Q, A>(
     definition: OfficeRemoteMethod<Q, A>,
@@ -59,7 +52,6 @@ function createPrivateJsonChannel(options: OfficeControlOptions, maximum: number
             if (closed || parent.aborted || effectSignal.aborted || remaining <= 0)
               throw unavailable();
             if (active >= profile.maxActive) throw new OfficeUnavailable(safeFailure("BUSY"));
-            if (calls >= profile.maxCalls) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
             const callId = crypto.randomUUID();
             let body: string;
             try {
@@ -74,10 +66,6 @@ function createPrivateJsonChannel(options: OfficeControlOptions, maximum: number
             } catch {
               throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
             }
-            const length = new TextEncoder().encode(body).byteLength;
-            if (length > maximum) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
-            charge(length);
-            calls++;
             active++;
             const timeout = new AbortController();
             const timer = setTimeout(
@@ -115,9 +103,8 @@ function createPrivateJsonChannel(options: OfficeControlOptions, maximum: number
                 response,
                 signal,
                 profile.deadline,
-                charge,
                 cleanupFailed,
-                maximum,
+                null,
               );
               const value = decodeWireSync(hostEnvelope(definition.response))(
                 JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw)),
@@ -184,9 +171,9 @@ function createPrivateJsonChannel(options: OfficeControlOptions, maximum: number
   return Object.freeze({ call, drain, close });
 }
 export const createOfficeControlChannel = (options: OfficeControlOptions) =>
-  createPrivateJsonChannel(options, 16 * 1024);
+  createPrivateJsonChannel(options);
 export const createOfficeManifestChannel = (options: OfficeControlOptions) =>
-  createPrivateJsonChannel(options, 2 * 1024 * 1024);
+  createPrivateJsonChannel(options);
 export type OfficeControlChannel = ReturnType<typeof createOfficeControlChannel>;
 export type OfficeControlCaller = Pick<OfficeControlChannel, "call">;
 export type OfficeControlSession = Pick<OfficeControlChannel, "call" | "drain">;

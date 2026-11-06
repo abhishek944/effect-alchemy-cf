@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { safeFailure } from "@starter/office-contract";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import { safeFailure } from "@highchat/office-contract";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type { NativeProposalFrame, OfficeDependencies, OperationRecord } from "../ports/index.ts";
 import type { OfficeNativeRuntime } from "./native-runtime.ts";
 import { makeNativeJournal } from "./native-journal.ts";

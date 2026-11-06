@@ -1,4 +1,4 @@
-import { Auth } from "@starter/auth";
+import { Auth } from "@highchat/auth";
 import { RuntimeContext } from "alchemy";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
@@ -11,7 +11,7 @@ import { AuthenticationUnavailable, Unauthorized } from "./model.ts";
 export class AdminAuthentication extends HttpApiMiddleware.Service<
   AdminAuthentication,
   { provides: CurrentAdmin }
->()("starter/AdminAuthentication", {
+>()("highchat/AdminAuthentication", {
   error: [Unauthorized, Forbidden, AuthenticationUnavailable],
 }) {
   static readonly layer = Layer.effect(

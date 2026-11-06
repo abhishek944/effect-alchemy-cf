@@ -1,4 +1,4 @@
-import type { NativeTarget, SerialAdmission } from "@starter/office-server/ports";
+import type { NativeTarget, SerialAdmission } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
 import type { Turn } from "./types.ts";

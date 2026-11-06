@@ -26,7 +26,7 @@ type RolldownPluginOption = Plugins extends readonly (infer Item)[] ? Item : Plu
  * register the classes as Effect Durable Objects or generate bridge proxies.
  */
 export const chatObjectsEntryPlugin = (): RolldownPluginOption => ({
-  name: "starter:chat-objects-entry",
+  name: "highchat:chat-objects-entry",
   transform(code: string, id: string) {
     if (!id.includes("virtual:alchemy-entry:")) return null;
     return { code: `${code}\n${chatObjectExports}\n`, map: null };

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { Schema } from "effect";
-import { Count, OfficeSheetSelection, View, decodeWireSync } from "@starter/office-contract";
+import { Count, OfficeSheetSelection, View, decodeWireSync } from "@highchat/office-contract";
 
 const Nonce = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/));
 const RequestId = Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/));

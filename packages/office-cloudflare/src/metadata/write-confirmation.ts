@@ -1,5 +1,5 @@
-import { Revision, decodeWireSync } from "@starter/office-contract";
-import type { WritePermit, NativeWriteRecord } from "@starter/office-server/ports";
+import { Revision, decodeWireSync } from "@highchat/office-contract";
+import type { WritePermit, NativeWriteRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { conflict, invalid, missing } from "./store.ts";
 import { WriteRow } from "./schemas.ts";

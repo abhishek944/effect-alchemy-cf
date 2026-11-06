@@ -1,5 +1,5 @@
 {
-  "name": "@starter/diagnostics",
+  "name": "@highchat/diagnostics",
   "private": true,
   "type": "module",
   "exports": {

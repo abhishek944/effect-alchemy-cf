@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Effect, Schema } from "effect";
-import { OfficeUnavailable, decodeWireSync, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, decodeWireSync, safeFailure } from "@highchat/office-contract";
 
 export type OfficeNamespace = Pick<cf.DurableObjectNamespace, "get" | "getByName">;
 const Namespace = Schema.declare<OfficeNamespace>(

@@ -1,6 +1,6 @@
 import { Predicate, Schema } from "effect";
-import { decodeWireSync, OfficeInvalid, safeFailure } from "@starter/office-contract";
-import { NATIVE_WIRE_LIMITS, encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWireSync, OfficeInvalid, safeFailure } from "@highchat/office-contract";
+import { NATIVE_WIRE_LIMITS, encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { IMutation } from "@univerjs/protocol";
 import type { NativeInputFrame } from "../ports/jobs.ts";
 import { validateDrawingTextMutation } from "./slide-policy.ts";
@@ -24,7 +24,7 @@ const Cell = Schema.Struct({
   si: optional(Schema.String),
   s: optional(Schema.Union([Schema.String, Schema.Null])),
 });
-const Index = Schema.String.check(Schema.isPattern(/^(0|[1-9][0-9]{0,5})$/));
+const Index = Schema.String.check(Schema.isPattern(/^(0|[1-9][0-9]*)$/));
 const common = {
   unitId: Id,
   trigger: optional(Schema.String),
@@ -95,12 +95,7 @@ export function noExternalGraphics(value: unknown): void {
 /** Verified initial content profile; lifecycle/ACL/media/reference mutations fail explicitly. */
 export function validateContentMutation(input: NativeInputFrame, mutation: IMutation): void {
   const params = decodeWireSync(object)(JSON.parse(mutation.data));
-  encodeNativeFrame("job-output", params, {
-    ...NATIVE_WIRE_LIMITS,
-    maxBytes: 2 * 1024 * 1024,
-    maxDepth: 32,
-    maxNodes: 100_000,
-  });
+  encodeNativeFrame("job-output", params, NATIVE_WIRE_LIMITS);
   if (params.unitId !== input.binding.unitId) deny();
   if (input.binding.kind === "slide" && mutation.id === "slide.mutation.set-drawing-apply") {
     validateDrawingTextMutation(input, params, noExternalGraphics);

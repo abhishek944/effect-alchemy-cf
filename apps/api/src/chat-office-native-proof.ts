@@ -1,11 +1,11 @@
 import { Schema } from "effect";
-import { reportFailure } from "@starter/diagnostics";
-import { Digest, Id } from "@starter/office-contract";
+import { reportFailure } from "@highchat/diagnostics";
+import { Digest, Id } from "@highchat/office-contract";
 import {
   OFFICE_TOOL_NAME,
   OFFICE_PANEL_TOOL_NAME,
   type OfficeToolIntent,
-} from "@starter/office-pi";
+} from "@highchat/office-pi";
 import { LiveDoc, type ToolExecutionApi } from "@earendil-works/pi-durable";
 import {
   requireAcceptedInputAccess,
@@ -40,6 +40,8 @@ export async function resolveOfficeCall(
       operationId: intent.operationId,
       taskId: api.taskId,
       callId: api.callId,
+      toolArguments: { ...intent, command: [intent.command.command] },
+      step: intent.step,
       event: "application.denial",
     });
     return null;
@@ -47,7 +49,7 @@ export async function resolveOfficeCall(
   requireAcceptedInputAccess(access, context);
   if (api.conversationId !== access.conversationId) return deny("conversation-mismatch");
   if (!intent.step) return deny("intent-step-missing");
-  if ((intent.attachmentId === undefined) === (intent.referenceId === undefined))
+  if (intent.attachmentId === undefined || intent.referenceId !== undefined)
     return deny("intent-source-invalid");
   const stepMemo = await api.memo(`univer.step.v1.${intent.step}`, context);
   const memo = decodeOption(IntentMemo, await api.memo(`office.intent.v1.${intent.step}`, context));

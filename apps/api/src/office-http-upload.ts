@@ -1,11 +1,5 @@
 import { Option, Schema } from "effect";
-import {
-  ArtifactRef,
-  Id,
-  OFFICE_LIMITS,
-  UploadHeaders,
-  decodeWireSync,
-} from "@starter/office-contract";
+import { ArtifactRef, Id, UploadHeaders, decodeWireSync } from "@highchat/office-contract";
 
 /** Real opaque upload metadata for the PRIVATE binding. Omission stays null, never a content SHA. */
 export type OfficeUpload = {
@@ -33,9 +27,6 @@ export function officeUploadMetadata(request: Request, operationId: string): Off
   } catch {
     return { ok: false, limited: false };
   }
-  const cap =
-    header["x-office-kind"] === "code" ? OFFICE_LIMITS.codeBytes : OFFICE_LIMITS.uploadBytes;
-  if (header["x-office-bytes"] > cap) return { ok: false, limited: true };
   let filename: string;
   try {
     // The real client percent-encodes the header value; the private metadata is the real name.

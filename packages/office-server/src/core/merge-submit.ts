@@ -27,10 +27,13 @@ export const submitMerge = Effect.fn("Office.submitMerge")(function* (
     Effect.gen(function* () {
       const bundle = yield* readReviewBundle(deps, review);
       yield* verifyOperation(deps, record, permit.target, phase);
-      const memberID = metadataDigest(
-        ["office-merge-member", 1, record.owner.stage, record.owner.ownerId, permit.operationId],
-        4096,
-      );
+      const memberID = metadataDigest([
+        "office-merge-member",
+        1,
+        record.owner.stage,
+        record.owner.ownerId,
+        permit.operationId,
+      ]);
       const journal = yield* makeNativeJournal(
         deps,
         record,
@@ -65,7 +68,6 @@ export const submitMerge = Effect.fn("Office.submitMerge")(function* (
                   null,
                   bundle.capture.kind,
                   revision,
-                  deps.policy.limits,
                 );
           return { worktree: merged.worktree, actual };
         },

@@ -1,11 +1,11 @@
-import { makeOfficeExtension } from "@starter/office-pi";
+import { makeOfficeExtension } from "@highchat/office-pi";
 import type {
   OfficePiHost,
   OfficeResolution,
   OfficeTaskAccess,
   OfficeTaskPort,
-} from "@starter/office-pi";
-import { uploadOfficeBytes } from "@starter/office-contract/client";
+} from "@highchat/office-pi";
+import { uploadOfficeBytes } from "@highchat/office-contract/client";
 import type { Registry } from "@earendil-works/pi-durable";
 
 /** T11 must supply real verified private host resources; this example constructs no actor. */

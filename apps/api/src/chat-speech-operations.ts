@@ -8,7 +8,7 @@
  * from a failed attempt, and TTS characters are an honest estimate.
  */
 import { speechSynthesisWithinLimit } from "./chat-speech-schema.ts";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { fingerprintSpeech } from "./chat-speech-fingerprint.ts";
 import {
   SpeechTransportError,

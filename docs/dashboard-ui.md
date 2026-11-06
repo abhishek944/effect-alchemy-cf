@@ -26,7 +26,10 @@ color pairing is 4.29:1, not a blanket contrast-compliance guarantee.
 - `/chat/{chatId}`: authenticated workspace for that saved chat UUID; direct links
   survive reload and email sign-in. `/` and `/dashboard` open the remembered chat
   or the first saved chat and replace the landing URL.
-  Signed-out visitors see the existing signup/signin screen.
+  Signed-out visitors see the existing signup/signin screen. Without a selected
+  chat, the conversation shows an explicit New action instead of a writable but
+  unsendable composer. Starting/selecting a chat restores the normal composer;
+  failed/uncertain creation keeps its existing catalog-action recovery notice.
 - `/settings/general`, `/settings/skills`, `/settings/profile`, `/settings/appearance`,
   `/settings/images` and `/settings/account`: grouped settings in the same frame.
 - `/admin`: existing separate admin portal with its access checks preserved.
@@ -51,8 +54,8 @@ The avatar always sits at the bottom of the icon rail. Its native popover shows
 real Better Auth identity, Settings and Log out. Clicking the identity row opens
 `/settings/profile`; there is no separate Profile item in the account popup.
 Escape and outside clicks dismiss the popup. Signout uses the existing auth client.
-The screenshot's subscription, usage, pets and invitation integrations are absent
-because this starter has no services for those features.
+Commercial subscriptions, pets and invitations are not part of this personal office.
+AI usage and cost remain available through the chat controls.
 
 ## Chat and panes
 
@@ -125,7 +128,9 @@ scrolling remains available. Unsupported browsers retain accessible descriptions
 
 Scoped styles/components live in `apps/web/src/components/dashboard/`.
 The light signin screen and admin portal retain their existing appearance.
-Settings extension rows remain disabled. Profile supports a trimmed display name,
+General shows the signed-in account. Unsupported extension, accent and account-export
+placeholder rows are omitted; no account-wide export capability is implied.
+Profile supports a trimmed display name,
 optional About me and private original JPEG/PNG/WebP avatars with atomic Save/Cancel.
 Email remains read-only; username is absent. All three avatar formats are limited
 to 5 MiB and 2 million pixels; no crop or re-encoding is applied.
@@ -138,13 +143,12 @@ with an explicit AI/history disclosure. Email and avatars are excluded.
 General dashboard failures use one persistent, neutral notice with an error icon,
 short title, explanation, safe recovery action and Dismiss. Chat creation,
 rename and archive failures sit immediately above the composer. Catalog loading
-errors remain in the sidebar, billing errors in Account settings, and sign-out
+errors remain in the sidebar, and sign-out
 feedback inside the native account popup. Dismiss restores nearby keyboard focus;
 dismissing unavailable data keeps its read-recovery control reachable.
 
 **Check chats** only reloads the catalog. It never repeats uncertain chat creation
-or claims that a list refresh proves its outcome. Billing refresh does not replay
-checkout. Notices do not auto-dismiss, clear drafts or change connection readiness.
+or claims that a list refresh proves its outcome. Notices do not auto-dismiss, clear drafts or change connection readiness.
 Specialized send, connection, history, setup, file, voice and field errors retain
 their existing local presentation and recovery. Signin and admin are unchanged.
 

@@ -1,5 +1,5 @@
-import type { ArtifactRef } from "@starter/office-contract";
-import type { OwnerScope, OperationRecord, FrozenReview } from "@starter/office-server/ports";
+import type { ArtifactRef } from "@highchat/office-contract";
+import type { OwnerScope, OperationRecord, FrozenReview } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { canonical } from "./store.ts";
 import type { PredicateSQL } from "./native-fence.ts";

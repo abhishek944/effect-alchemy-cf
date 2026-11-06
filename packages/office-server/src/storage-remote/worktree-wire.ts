@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count } from "@starter/office-contract";
+import { Count } from "@highchat/office-contract";
 import { HostId, hostMethod } from "./host-wire.ts";
 import {
   HostMergeResult,

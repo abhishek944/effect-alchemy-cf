@@ -1,8 +1,5 @@
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
-import {
-  MAX_MESSAGE_ATTACHMENT_BYTES,
-  FileDescriptor as Descriptor,
-} from "./chat-attachment-schema.ts";
+import { FileDescriptor as Descriptor } from "./chat-attachment-schema.ts";
 import { Option, Schema } from "effect";
 import type { ChatFilesCatalogClient } from "./chat-files-client.ts";
 import { chatFilesImageCompatibility } from "./chat-files-native.ts";
@@ -136,10 +133,7 @@ export async function prepareImageInputFiles(
     orderedFiles.push(Object.freeze(file));
     orderedOriginals.push(Object.freeze(original));
   }
-  if (
-    orderedFiles.reduce((total, file) => total + file.byteSize, 0) > MAX_MESSAGE_ATTACHMENT_BYTES ||
-    !chatFilesImageCompatibility(orderedFiles, input.model).ok
-  )
+  if (!chatFilesImageCompatibility(orderedFiles, input.model).ok)
     throw new ImageInputError("invalid_input");
   return { files: orderedFiles, originals: orderedOriginals, uploadIds };
 }

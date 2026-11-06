@@ -1,5 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import { sessionSchemaStatements } from "./sessions/schemas.ts";
 import { jobSchemaStatements } from "./jobs/schemas.ts";
 

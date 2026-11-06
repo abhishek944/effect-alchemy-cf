@@ -1,6 +1,6 @@
 import { operationRecordSql } from "./legacy-failure.ts";
-import { Receipt, decodeWireSync } from "@starter/office-contract";
-import type { WritePermit } from "@starter/office-server/ports";
+import { Receipt, decodeWireSync } from "@highchat/office-contract";
+import type { WritePermit } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { canonical, conflict, invalid, missing } from "./store.ts";
 import { BarrierRow, OperationRow, DocumentRow } from "./schemas.ts";

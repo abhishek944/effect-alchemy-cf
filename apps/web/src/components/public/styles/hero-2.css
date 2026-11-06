@@ -1,0 +1,179 @@
+:where(.landing-hero) footer {
+  z-index: 5;
+  letter-spacing: 0.05em;
+  color: rgb(193, 194, 197);
+  justify-content: space-between;
+  align-items: center;
+  font:
+    10px ui-monospace,
+    monospace;
+  display: flex;
+  position: absolute;
+  bottom: 51px;
+  left: 64px;
+  right: 64px;
+}
+:where(.landing-hero) .chapter b {
+  color: rgb(125, 128, 137);
+  margin-right: 20px;
+  font-weight: 400;
+}
+:where(.landing-hero) .scroll-note {
+  align-items: center;
+  gap: 30px;
+  display: flex;
+}
+:where(.landing-hero) .scroll-note span {
+  font-size: 24px;
+}
+:where(.landing-hero) .skip {
+  color: rgb(0, 0, 0);
+  z-index: 20;
+  background: rgb(255, 255, 255);
+  padding: 12px;
+  position: absolute;
+  top: -70px;
+  left: 30px;
+}
+:where(.landing-hero) .skip:focus {
+  top: 10px;
+}
+:where(.landing-hero) .variant-B .content {
+  margin: 65px 64px 0px;
+}
+:where(.landing-hero) .variant-B h1 {
+  font-size: 140px;
+}
+:where(.landing-hero) .variant-B h1 span:nth-child(2) {
+  display: inline;
+}
+:where(.landing-hero) .variant-B .visual {
+  inset: 310px 0px 0px;
+}
+:where(.landing-hero) .variant-B .visual-shade {
+  background:
+    linear-gradient(
+      rgb(8, 9, 11) 0%,
+      rgba(8, 9, 11, 0.796) 13%,
+      rgba(8, 9, 11, 0.14) 48%,
+      rgba(8, 9, 11, 0.03) 68%,
+      rgba(8, 9, 11, 0.95) 100%
+    ),
+    linear-gradient(90deg, rgba(8, 9, 11, 0.9) 0%, rgba(8, 9, 11, 0.39) 28%, rgba(0, 0, 0, 0) 64%);
+}
+:where(.landing-hero) .variant-B .description {
+  margin-top: 33px;
+}
+:where(.landing-hero) .variant-B footer {
+  color: rgb(229, 225, 223);
+}
+:where(.landing-hero) .variant-B .details {
+  position: relative;
+}
+:where(.landing-hero) .variant-B .chapter b {
+  color: rgb(181, 172, 170);
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.landing-hero) *,
+  :where(.landing-hero) ::before,
+  :where(.landing-hero) ::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: auto ease 0s 1 normal none running none !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero {
+    height: max(900px, 100svh);
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) header {
+    height: 87px;
+    margin: 0px 24px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .brand {
+    gap: 9px;
+    font-size: 15px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) nav {
+    gap: 0px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) nav > :is(button, a):first-child {
+    display: none;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) nav .sign-in span {
+    margin-left: 12px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) h1 {
+    letter-spacing: -0.065em;
+    line-height: 0.98;
+    font-size: 72px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .content {
+    width: auto !important;
+    margin: 62px 24px 0px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .eyebrow {
+    letter-spacing: 0.08em;
+    font-size: 9px;
+    margin-bottom: 28px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .description {
+    font-size: 16px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .actions {
+    gap: 17px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .actions :is(button, a) {
+    font-size: 13px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .actions .primary {
+    gap: 22px;
+    padding: 0px 16px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .actions .secondary {
+    font-size: 12px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .visual {
+    border-radius: 0px !important;
+    width: auto !important;
+    inset: 320px 0px 0px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .variant-B h1 span {
+    display: block !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .variant-B .visual-shade {
+    background: linear-gradient(rgb(8, 9, 11), rgba(8, 9, 11, 0.314) 45%, rgba(8, 9, 11, 0.376));
+  }
+}

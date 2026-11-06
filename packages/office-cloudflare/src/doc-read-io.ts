@@ -6,9 +6,8 @@ import {
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import type { ErrorCode } from "@starter/office-contract";
-import { DOC_READ_LIMITS } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import type { ErrorCode } from "@highchat/office-contract";
 import type { DocReadLifetime } from "./doc-read-lifetime.ts";
 
 export function docReadError(code: ErrorCode) {
@@ -71,9 +70,8 @@ export async function readDocBody(
     void cancellation.catch(() => undefined);
   };
   life.signal.addEventListener("abort", cancel, { once: true });
-  const bytes = new Uint8Array(DOC_READ_LIMITS.controlBytes);
-  let size = 0,
-    chunks = 0;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
   try {
     while (true) {
       await guard();
@@ -83,7 +81,6 @@ export async function readDocBody(
           return reader.read().then((chunk) => {
             if (!chunk.done) {
               if (!(chunk.value instanceof Uint8Array)) throw docReadError("INVALID_INPUT");
-              life.charge(chunk.value.byteLength);
             }
             return chunk;
           });
@@ -93,19 +90,20 @@ export async function readDocBody(
       await guard();
       if (chunk.done) break;
       if (!(chunk.value instanceof Uint8Array)) throw docReadError("INVALID_INPUT");
-      if (
-        ++chunks > DOC_READ_LIMITS.controlBytes ||
-        chunk.value.byteLength > bytes.byteLength - size
-      )
-        throw docReadError("LIMIT_EXCEEDED");
-      bytes.set(chunk.value, size);
+      chunks.push(chunk.value);
       size += chunk.value.byteLength;
     }
     const declared = request.headers.get("content-length");
     if (declared !== null && (!/^(0|[1-9][0-9]*)$/.test(declared) || Number(declared) !== size))
       throw docReadError("INVALID_INPUT");
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
     try {
-      return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, size)));
+      return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
     } catch {
       throw docReadError("INVALID_INPUT");
     }

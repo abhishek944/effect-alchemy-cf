@@ -1,12 +1,12 @@
 import { Clock, Effect, Schema } from "effect";
-import { View, decodeWire } from "@starter/office-contract";
+import { View, decodeWire } from "@highchat/office-contract";
 import type { Actor, FrozenReview, OfficeDependencies, ViewRecord } from "../../ports/index.ts";
 import { snapshotDigest } from "../../jobs/frames.ts";
 import { SnapshotWithBlocksSchema } from "../../jobs/snapshot-schema.ts";
 import { loadNativeArtifact } from "../bytes.ts";
 import { sameOwner } from "../claims.ts";
 import { officeFailure } from "../failure.ts";
-import { boundedMetadataDigest } from "../operations.ts";
+import { metadataDigestEffect } from "../operations.ts";
 import type { ReviewBundle } from "../review-bundle.ts";
 import { lookupView } from "../views.ts";
 import { nativeTypes } from "../target.ts";
@@ -94,23 +94,16 @@ export const readRoles = Effect.fn("Office.reviewRead.roles")(function* (
 });
 
 /** Bind pagination to the frozen fingerprint and exact role/source/epoch vector, not an offset alone. */
-export const pageIdentity = (
-  deps: OfficeDependencies,
-  review: FrozenReview,
-  bindings: readonly RoleBinding[],
-) =>
-  boundedMetadataDigest(
-    [
-      "office-review-page",
-      1,
-      review,
-      bindings.map(({ role, record }) => [
-        role,
-        { ...record, view: { ...record.view, expiresAt: 0 } },
-      ]),
-    ],
-    deps.policy.limits.metadataBytes,
-  );
+export const pageIdentity = (review: FrozenReview, bindings: readonly RoleBinding[]) =>
+  metadataDigestEffect([
+    "office-review-page",
+    1,
+    review,
+    bindings.map(({ role, record }) => [
+      role,
+      { ...record, view: { ...record.view, expiresAt: 0 } },
+    ]),
+  ]);
 
 export function requireLeafRoles(review: FrozenReview, bundle: ReviewBundle): void {
   const ids = new Set<string>();

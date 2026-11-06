@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { officeReportBranch } from "./office-diagnostic-report.ts";
 import { officeCaught } from "./office-failure.ts";
 import {
@@ -9,8 +9,8 @@ import {
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { HostOfficeRequest } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import { HostOfficeRequest } from "@highchat/office-server/native-remote";
 import { officeHostOriginal } from "./office-host-auth.ts";
 import { officeHostProtocol } from "./office-host-protocol.ts";
 import { officeDenied } from "./office-private-authority.ts";
@@ -100,8 +100,7 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
     if (mode === "channel") {
       const input = decodeWireSync(Channel)(
         yield* Effect.tryPromise({
-          try: () =>
-            readOfficePrivateJson(request.body, request.signal, original.deadline, 16 * 1024),
+          try: () => readOfficePrivateJson(request.body, request.signal, original.deadline, null),
           catch: uncertain,
         }),
       );
@@ -129,14 +128,13 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
     if (mode === "core") {
       command = decodeWireSync(HostOfficeRequest)(
         yield* Effect.tryPromise({
-          try: () =>
-            readOfficePrivateJson(request.body, request.signal, original.deadline, 16 * 1024),
+          try: () => readOfficePrivateJson(request.body, request.signal, original.deadline, null),
           catch: uncertain,
         }),
       );
     } else if (mode === "upload") {
       const metadata = request.headers.get("x-office-upload");
-      if (metadata === null || metadata.length > 4096) return yield* Effect.fail(officeDenied());
+      if (metadata === null) return yield* Effect.fail(officeDenied());
       file = { kind: "upload", input: decodeWireSync(Schema.fromJsonString(Upload))(metadata) };
       path = "/__office/upload";
     } else if (mode === "download") {
@@ -169,17 +167,7 @@ export const officeHostApi = (root: OfficeHostRuntime, request: Request) => {
     if (command !== null)
       body = JSON.stringify({ version: 1, invocationId: entry.frame.id, callId, payload: command });
     return yield* Effect.tryPromise({
-      try: () =>
-        forwardOfficeHost(
-          root,
-          entry,
-          request,
-          path,
-          body,
-          mode === "download" ? root.policy.limits.nativeBytes : 16 * 1024,
-          false,
-          callId,
-        ),
+      try: () => forwardOfficeHost(root, entry, request, path, body, null, false, callId),
       catch: uncertain,
     });
   }).pipe(

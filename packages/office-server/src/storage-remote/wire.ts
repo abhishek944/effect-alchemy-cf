@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
-import { Count, Digest, Id, Revision, decodeWireSync } from "@starter/office-contract";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
+import { Count, Digest, Id, Revision, decodeWireSync } from "@highchat/office-contract";
 import { NativeReceiptBinding, NativeReceiptKey } from "../ports/native-receipts.ts";
 
 /** Private broker DTOs only. Type-only SDK imports belong at Node adapters, never Worker content decode. */
@@ -14,8 +14,8 @@ export const NativePiece = Schema.Struct({
 export const NativeValue = Schema.Struct({
   codec: Schema.Literal(NATIVE_WIRE_CODEC),
   kind: Schema.Literals(["snapshot", "block", "changeset"]),
-  bytes: Positive.check(Schema.isLessThanOrEqualTo(128 * 1024 * 1024)),
-  parts: Schema.Array(NativePiece).check(Schema.isMinLength(1), Schema.isMaxLength(32)),
+  bytes: Positive,
+  parts: Schema.Array(NativePiece).check(Schema.isMinLength(1)),
 });
 export type NativeValue = typeof NativeValue.Type;
 export const NativeSnapshot = Schema.Struct({
@@ -28,7 +28,7 @@ export const NativeSnapshot = Schema.Struct({
       blockID: NativeId,
       value: NativeValue,
     }),
-  ).check(Schema.isMaxLength(4096)),
+  ),
 });
 export type NativeSnapshot = typeof NativeSnapshot.Type;
 export const NativeChange = Schema.Struct({
@@ -106,7 +106,7 @@ export type NativeReadRequest = typeof NativeReadRequest.Type;
 export const NativePartRequest = Schema.Struct({
   origin: PublishedOrigin,
   valueDigest: Digest,
-  part: Count.check(Schema.isLessThanOrEqualTo(31)),
+  part: Count,
 });
 export type NativePartRequest = typeof NativePartRequest.Type;
 export function validateNativeValueRef(input: unknown): NativeValue {

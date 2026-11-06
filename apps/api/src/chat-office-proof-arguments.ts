@@ -1,12 +1,12 @@
 import { Schema } from "effect";
-import { Digest, decodeWireSync } from "@starter/office-contract";
+import { Digest, decodeWireSync } from "@highchat/office-contract";
 import {
   OfficePanelRequest,
   UniverCliRequest,
   OFFICE_TOOL_NAME,
   OFFICE_PANEL_TOOL_NAME,
   type OfficeToolIntent,
-} from "@starter/office-pi";
+} from "@highchat/office-pi";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
 
 const StepMemo = Schema.Struct({ requestDigest: Digest, intentDigest: Digest });
@@ -26,7 +26,7 @@ export async function officeIntentMatches(
   toolName: string,
   memo: unknown,
 ): Promise<boolean> {
-  if (!intent.step || (intent.attachmentId === undefined) === (intent.referenceId === undefined))
+  if (!intent.step || intent.attachmentId === undefined || intent.referenceId !== undefined)
     return false;
   const request =
     toolName === OFFICE_PANEL_TOOL_NAME
@@ -36,9 +36,8 @@ export async function officeIntentMatches(
         : null;
   if (
     request === null ||
-    ("referenceId" in request
-      ? request.referenceId !== intent.referenceId || intent.attachmentId !== undefined
-      : request.attachmentId !== intent.attachmentId || intent.referenceId !== undefined)
+    request.attachmentId !== intent.attachmentId ||
+    request.worktreeId !== intent.worktreeId
   )
     return false;
   const saved = decodeWireSync(StepMemo)(memo);
@@ -57,9 +56,12 @@ export async function officeIntentMatches(
       String(api.conversationId),
       api.callId,
       unbound,
-      ...(intent.referenceId === undefined
-        ? [intent.attachmentId, intent.step, intent.basis ?? null]
-        : ["office.reference", intent.referenceId, intent.step, intent.basis ?? null]),
+      "office.source.v2",
+      intent.attachmentId,
+      intent.worktreeId ?? null,
+      intent.step,
+      intent.basis ?? null,
+      intent.mainView ?? null,
     ]))
   );
 }

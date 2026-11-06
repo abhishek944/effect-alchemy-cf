@@ -1,6 +1,6 @@
 import { Option, Schema } from "effect";
-import { Id, OfficeChannel, OfficeChannelRequest } from "@starter/office-contract";
-export { OfficeChannel, OfficeChannelRequest } from "@starter/office-contract";
+import { Id, OfficeChannel, OfficeChannelRequest } from "@highchat/office-contract";
+export { OfficeChannel, OfficeChannelRequest } from "@highchat/office-contract";
 const decodeId = (value: string | undefined): string | null =>
   value === undefined ? null : Option.getOrNull(Schema.decodeUnknownOption(Id)(value));
 const decodeChannel = (value: unknown) =>

@@ -1,5 +1,5 @@
-import type { ArtifactRef } from "@starter/office-contract";
-import type { FrozenReview, ViewRecord } from "@starter/office-server/ports";
+import type { ArtifactRef } from "@highchat/office-contract";
+import type { FrozenReview, ViewRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import type { PredicateSQL } from "./native-fence.ts";
 import { canonical, conflict, missing } from "./store.ts";

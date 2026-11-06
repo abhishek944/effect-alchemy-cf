@@ -2,14 +2,12 @@ import type { ImageArgs } from "@abhishek944/pi-image-gen/core";
 import { Schema } from "effect";
 import { DomainUuid } from "./chat-capabilities.ts";
 import {
-  CALL_EVIDENCE_BYTES,
   CallDigest,
   CallIdentity,
   CallIndex,
   CallPositive,
   CallUrl,
   callJson,
-  callFitsJson,
   ImageCallError,
   callParse,
   callValue,
@@ -53,12 +51,12 @@ function ordered(entries: readonly (readonly [string, unknown])[]): boolean {
   return entries.every(([key], index) => index === 0 || (entries[index - 1]?.[0] ?? "") < key);
 }
 export function readImageCallCanonical(input: { canonicalRequest: string }) {
-  const raw = callParse(input.canonicalRequest, CALL_EVIDENCE_BYTES);
+  const raw = callParse(input.canonicalRequest, null);
   if (JSON.stringify(raw) !== input.canonicalRequest) throw new ImageCallError("invalid_input");
   return callValue(Canonical, raw);
 }
 
-const identity = (value: unknown): string => callJson(value, CALL_EVIDENCE_BYTES);
+const identity = (value: unknown): string => callJson(value, null);
 function matchesCanonical(input: {
   canonicalRequest: string;
   args: typeof NativeImageCallArgs.Type;
@@ -97,15 +95,9 @@ export const ImageCallAdmission = Schema.Struct({
   toolTaskId: CallIdentity,
   nativeCallId: CallIdentity,
   requestDigest: CallDigest,
-  canonicalRequest: Schema.String.check(
-    Schema.isMinLength(1),
-    Schema.isMaxLength(CALL_EVIDENCE_BYTES),
-  ),
+  canonicalRequest: Schema.String.check(Schema.isMinLength(1)),
   args: NativeImageCallArgs,
-}).check(
-  Schema.makeFilter((input) => callFitsJson(input, CALL_EVIDENCE_BYTES)),
-  Schema.makeFilter(matchesCanonical),
-);
+}).check(Schema.makeFilter(matchesCanonical));
 export type ImageCallAdmission = Omit<typeof ImageCallAdmission.Type, "args"> & {
   readonly args: Readonly<ImageArgs>;
 };

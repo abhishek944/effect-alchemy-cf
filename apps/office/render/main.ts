@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { mountOfficeRenderPage } from "@starter/office-server/render-page";
+import { mountOfficeRenderPage } from "@highchat/office-server/render-page";
 import "./styles.css";
 
 const fonts = document.createElement("link");

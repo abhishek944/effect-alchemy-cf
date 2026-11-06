@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { FrozenReview, OfficeMetadata, ViewRecord } from "@starter/office-server/ports";
+import type { FrozenReview, OfficeMetadata, ViewRecord } from "@highchat/office-server/ports";
 import type { OfficeTaskInvocation } from "./office-task-issuance.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import type { OfficeTaskAcknowledged } from "./office-task-metadata-record.ts";
@@ -56,8 +56,8 @@ export async function assertOfficeTaskView(
     throw officeDenied();
   if (bound !== null) {
     const freshAttachmentRead =
-      original.task.binding.attachment?.target !== null &&
-      original.task.binding.attachment?.target !== undefined &&
+      original.task.binding.source !== null &&
+      original.task.binding.source !== undefined &&
       original.task.proof.association.intent.basis === undefined;
     const scope = record.target.scope;
     const draft = await Effect.runPromise(metadata.draft(record.owner, bound.draftId));
@@ -74,6 +74,14 @@ export async function assertOfficeTaskView(
       draft === null ||
       draft.generation !== bound.generation ||
       draft.worktreeId !== record.source.worktreeId
+    )
+      throw officeDenied();
+  } else if (original.task.binding.selected?.scope.kind === "main") {
+    if (
+      record.target.scope.kind !== "main" ||
+      record.source.kind !== "core" ||
+      record.view.documentId !== original.task.binding.selected.documentId ||
+      record.source.revision !== record.view.revision
     )
       throw officeDenied();
   } else {

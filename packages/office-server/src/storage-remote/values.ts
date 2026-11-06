@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire, type OfficeError } from "@starter/office-contract";
+import { decodeWire, type OfficeError } from "@highchat/office-contract";
 import type { NativeAccess } from "../ports/index.ts";
 import { collectBytes } from "../core/bytes.ts";
 import { officeFailure } from "../core/failure.ts";
@@ -61,7 +61,7 @@ export const loadPublishedValue = Effect.fn("Office.loadPublishedValue")(functio
     const part = ref.parts[index];
     if (part === undefined) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
     const stream = yield* reader.readPart({ origin, valueDigest: digest, part: index });
-    const chunk = yield* collectBytes(stream, part.bytes, 4 * 1024 * 1024);
+    const chunk = yield* collectBytes(stream, part.bytes);
     if (sha256(chunk) !== part.digest) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
     bytes.set(chunk, offset);
     offset += chunk.byteLength;

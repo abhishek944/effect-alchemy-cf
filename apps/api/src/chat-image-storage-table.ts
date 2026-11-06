@@ -6,7 +6,6 @@ export type ImageCallRow = {
   chat_id: string;
   operation_id: string;
   request_json: string;
-  remaining_bytes: number;
   state: "reserved" | "running" | "finished";
 };
 export type ImageOutputRow = {
@@ -24,6 +23,7 @@ export type ImageOutputRow = {
 };
 
 export const ensureImageStorageSchema = (db: ChatSqlStorage): void => {
+  // Keep the old remaining_bytes column readable without migration; it no longer grants capacity.
   db.exec(`CREATE TABLE IF NOT EXISTS image_calls (
     call_id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, operation_id TEXT NOT NULL,
     request_json TEXT NOT NULL, remaining_bytes INTEGER NOT NULL CHECK(remaining_bytes >= 0),
@@ -90,7 +90,7 @@ export const insertImageCall = (db: ChatSqlStorage, input: ImageReservation): vo
     input.chatId,
     input.operationId,
     imageReservationJson(input),
-    input.maxOutputBytes,
+    0,
     Date.now(),
   );
 };

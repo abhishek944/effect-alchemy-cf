@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
 import { Schema } from "effect";
-import { OfficeUnavailable, decodeWireSync, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, decodeWireSync, safeFailure } from "@highchat/office-contract";
 import type { OfficeNamespace } from "./office-private-bindings.ts";
 
 type Loopback = (init: { readonly props: { readonly target: cf.Fetcher } }) => cf.Fetcher;

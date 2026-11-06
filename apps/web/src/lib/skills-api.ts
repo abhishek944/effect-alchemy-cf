@@ -1,5 +1,5 @@
 /** Validated owner Skills client; receipt GET only observes, and uncertain POST is never replayed. */
-import { readResponseRequestId, serverReference, withReference } from "./browser-diagnostics";
+import { readResponseRequestId, serverReference } from "./browser-diagnostics";
 import {
   MAX_SKILL_BYTES,
   parsePublishedSkillUpload,
@@ -19,6 +19,7 @@ export class SkillsApiError extends Error {
   readonly code: SkillErrorBody["code"] | null;
   readonly current: SkillFile | null;
   readonly requestId: string | null;
+  readonly reference: string;
 
   constructor(
     status: number,
@@ -29,7 +30,8 @@ export class SkillsApiError extends Error {
     operation = "skills.request",
     responseStatus = status,
   ) {
-    super(withReference(message, serverReference(operation, responseStatus, requestId)));
+    super(message);
+    this.reference = serverReference(operation, responseStatus, requestId);
     this.name = "SkillsApiError";
     this.status = status;
     this.code = code;
@@ -47,7 +49,7 @@ const statusMessages: Record<number, string> = {
   422: "That skill file was not valid.",
   429: "Too many requests. Wait a moment and try again.",
   503: "Skills are temporarily unavailable. Try again shortly.",
-  507: "The skill library has reached a retention limit.",
+  507: "Your skill library is full.",
 };
 export function skillsErrorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === "AbortError") {
@@ -57,13 +59,12 @@ export function skillsErrorMessage(error: unknown): string {
   if (error instanceof TypeError) {
     return "Could not reach the server. Check your connection and try again.";
   }
-  if (error instanceof Error && error.message) return error.message;
   return "Something went wrong. Please try again.";
 }
 const unexpectedResponse = (response: Response, operation: string): SkillsApiError =>
   new SkillsApiError(
     502,
-    "The server returned an unexpected response.",
+    "Unable to complete your request. Please try again.",
     null,
     null,
     readResponseRequestId(response),
@@ -77,7 +78,8 @@ async function failure(response: Response, operation: string): Promise<SkillsApi
   } catch {
     parsed = null;
   }
-  const message = statusMessages[response.status] ?? `Request failed (${response.status}).`;
+  const message =
+    statusMessages[response.status] ?? "Unable to complete your request. Please try again.";
   return new SkillsApiError(
     response.status,
     message,

@@ -1,5 +1,5 @@
 import type { SavedFile } from "@/lib/chat-library-types";
-import type { Target } from "@starter/office-contract";
+import type { Target } from "@highchat/office-contract";
 import type { TabDescriptor } from "./workspace-session";
 
 export type OfficeSelection = {

@@ -1,3 +1,4 @@
+import { appConfig } from "@/lib/app-config";
 import type { MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import type { AdminIdentity } from "@/lib/admin-api";
@@ -55,10 +56,10 @@ export default function AdminSidebarContent({
         onClick={(event) => handleNav(event, "/")}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-sm text-primary-foreground">
-          E
+          {appConfig.initial}
         </span>
         <span className="leading-tight">
-          Effect Alchemy
+          {appConfig.name}
           <span className="block text-xs font-medium text-muted-foreground">Admin portal</span>
         </span>
       </a>

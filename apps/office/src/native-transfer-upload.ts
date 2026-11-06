@@ -1,4 +1,4 @@
-import { OfficeLimited, safeFailure } from "@starter/office-contract";
+import { OfficeLimited, safeFailure } from "@highchat/office-contract";
 
 /** Stream prefix + original bytes once; no tee, native JSON or whole-file collection. */
 export function officeBinaryUpload(
@@ -7,7 +7,6 @@ export function officeBinaryUpload(
   expected: number,
   signal: AbortSignal,
   deadline: number,
-  charge: (bytes: number) => void,
 ) {
   if (original === null && expected !== 0) throw new Error("Missing binary upload");
   const source =
@@ -34,7 +33,6 @@ export function officeBinaryUpload(
         check();
         if (cancelled) return undefined;
         if (!header) {
-          charge(prefix.byteLength);
           controller.enqueue(prefix);
           header = true;
           return undefined;
@@ -62,7 +60,6 @@ export function officeBinaryUpload(
           if (cancelled) return undefined;
           if (!tail.done) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
         }
-        charge(part.value.byteLength);
         controller.enqueue(part.value);
         if (finish) {
           controller.close();

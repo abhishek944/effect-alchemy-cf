@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { ExportRequest, RenderRequest, decodeWire } from "@starter/office-contract";
+import { ExportRequest, RenderRequest, decodeWire } from "@highchat/office-contract";
 import type { OfficeDependencies, OfficeService } from "../../ports/index.ts";
 import { officeFailure } from "../failure.ts";
 import type { OfficeNativeRuntime } from "../native-runtime.ts";

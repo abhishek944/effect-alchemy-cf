@@ -1,5 +1,4 @@
 import { Schema } from "effect";
-import { readBoundedBody } from "./body-limit.ts";
 import { decodeOption, json } from "./chat-internal.ts";
 import type { ChatGeneratedStorage } from "./chat-generated-storage.ts";
 import {
@@ -68,9 +67,7 @@ export const handleChatGeneratedRequest = async (
       }
     }
     if (request.method === "POST") {
-      const bytes = await readBoundedBody(request, 65_536);
-      if (bytes === null) throw new ImageStorageError("invalid_input");
-      const raw: unknown = JSON.parse(new TextDecoder().decode(bytes));
+      const raw: unknown = await request.json();
       if (url.pathname === "/files/generated/reserve") {
         const input = decodeOption(ImageReservation, raw);
         if (input === null) throw new ImageStorageError("invalid_input");

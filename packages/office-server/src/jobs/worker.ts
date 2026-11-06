@@ -1,9 +1,9 @@
-import { diagnosticMetadata, reportFailure } from "@starter/diagnostics";
+import { diagnosticMetadata, reportFailure } from "@highchat/diagnostics";
 import { jobEvent, type JobPhase } from "./worker-diagnostics.ts";
 import { prepareContentExecutionProgram } from "@univer-cli/content-execution";
-import { CodeText, decodeWireSync, OfficeInvalid, safeFailure } from "@starter/office-contract";
-import { encodeNativeFrame } from "@starter/office-contract/native-wire";
-import { decodeJobInput, digestBytes, JOB_OUTPUT_LIMITS, requireSnapshot } from "./frames.ts";
+import { CodeText, decodeWireSync, OfficeInvalid, safeFailure } from "@highchat/office-contract";
+import { encodeNativeFrame } from "@highchat/office-contract/native-wire";
+import { decodeJobInput, digestBytes, requireSnapshot } from "./frames.ts";
 import { decodeJobRequest } from "./transport.ts";
 import { SnapshotWithBlocksSchema } from "./snapshot-schema.ts";
 import { exportNative, importNative } from "./exchange.ts";
@@ -53,7 +53,6 @@ async function executeJob(
     if (
       job.options.kind !== binding.kind ||
       job.input.kind !== "upload" ||
-      input.byteLength > 10 * 1024 * 1024 ||
       digestBytes(input) !== binding.inputDigest
     )
       throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
@@ -61,21 +60,19 @@ async function executeJob(
     const native = decodeWireSync(SnapshotWithBlocksSchema)(await importNative(job, input));
     requireSnapshot(native, binding);
     enter("result");
-    return encodeNativeFrame("job-output", { binding, native }, JOB_OUTPUT_LIMITS);
+    return encodeNativeFrame("job-output", { binding, native });
   }
   const seed = decodeJobInput(input, binding);
   if (job.kind === "export") {
     if (job.options.kind !== binding.kind) throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
     enter("export");
     const output = await exportNative(job, seed.native);
-    if (output.byteLength > 10 * 1024 * 1024)
-      throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
     enter("result");
-    return encodeNativeFrame(
-      "job-output",
-      { binding, bytes: output, mediaType: exportMediaType(job.options) },
-      JOB_OUTPUT_LIMITS,
-    );
+    return encodeNativeFrame("job-output", {
+      binding,
+      bytes: output,
+      mediaType: exportMediaType(job.options),
+    });
   }
   enter("runtime");
   const runtime = await loadOfflineRuntime(seed);
@@ -102,16 +99,11 @@ async function executeJob(
       });
       if (
         result.state.baseRevision !== binding.baseRevision ||
-        result.state.awaitingChangeset !== null ||
-        result.mutations.length > 5000
+        result.state.awaitingChangeset !== null
       )
         throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
       enter("result");
-      return encodeNativeFrame(
-        "job-output",
-        { binding, mutations: result.mutations },
-        { ...JOB_OUTPUT_LIMITS, maxBytes: 2 * 1024 * 1024 },
-      );
+      return encodeNativeFrame("job-output", { binding, mutations: result.mutations });
     }
     if (job.kind === "inspect") {
       enter("inspect");
@@ -119,41 +111,21 @@ async function executeJob(
       if (runtime.getState().pendingMutationCount !== 0)
         throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
       enter("result");
-      return encodeNativeFrame(
-        "job-output",
-        { binding, result },
-        { ...JOB_OUTPUT_LIMITS, maxBytes: 64 * 1024 },
-      );
+      return encodeNativeFrame("job-output", { binding, result });
     }
     enter("render");
     const result = await renderNative(runtime, job, render);
-    if (
-      runtime.getState().pendingMutationCount !== 0 ||
-      result.images.length < 1 ||
-      result.images.length > 8
-    )
+    if (runtime.getState().pendingMutationCount !== 0 || result.images.length < 1)
       throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
-    let pixels = 0,
-      total = 0;
-    for (const image of result.images) {
-      pixels += image.width * image.height;
-      total += image.bytes.byteLength;
-      if (pixels > 16_000_000 || total > 16 * 1024 * 1024)
-        throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
-    }
     enter("result");
-    return encodeNativeFrame(
-      "job-output",
-      {
-        binding,
-        images: result.images.map((image) => ({
-          bytes: image.bytes,
-          width: image.width,
-          height: image.height,
-        })),
-      },
-      JOB_OUTPUT_LIMITS,
-    );
+    return encodeNativeFrame("job-output", {
+      binding,
+      images: result.images.map((image) => ({
+        bytes: image.bytes,
+        width: image.width,
+        height: image.height,
+      })),
+    });
   })();
   const result = await executing.then(
     (value) => ({ value }),

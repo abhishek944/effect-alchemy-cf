@@ -1,5 +1,5 @@
 import { Cause, Effect } from "effect";
-import { OfficeErrors, OfficeUnavailable } from "@starter/office-contract";
+import { OfficeErrors, OfficeUnavailable } from "@highchat/office-contract";
 import { officeFailureReported, officeReportCause } from "./office-diagnostic-report.ts";
 
 /** Final Response owners only. Typed domain denials stay silent; reported reasons never repeat. */

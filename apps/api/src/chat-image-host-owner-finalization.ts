@@ -1,8 +1,8 @@
 import type { ImageHostExecution } from "./chat-image-host-types.ts";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { ImageStorageError } from "./chat-image-storage-schema.ts";
 
-/** Finish acknowledgment closes unused capacity, not unresolved owner output-intent holds. */
+/** Finish acknowledgment closes dispatch ownership, not unresolved output intents. */
 export async function acknowledgeImageHostOwner(execution: ImageHostExecution): Promise<void> {
   const key = execution.plan.key;
   let acknowledged = false;

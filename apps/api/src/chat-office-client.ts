@@ -1,7 +1,7 @@
 import { Option, Schema } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { HostOffice, HostOfficeRequest, hostEnvelope } from "@starter/office-server/native-remote";
-import type { OfficeTaskPort } from "@starter/office-pi";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostOffice, HostOfficeRequest, hostEnvelope } from "@highchat/office-server/native-remote";
+import type { OfficeTaskPort } from "@highchat/office-pi";
 import { officeErrorFromFailure } from "./office-http-model.ts";
 import { assertOfficeTaskCommand, assertOfficeTaskReceipt } from "./office-task-command.ts";
 import { officeDenied } from "./office-private-authority.ts";

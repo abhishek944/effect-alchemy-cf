@@ -3,8 +3,8 @@ import {
   type UnitLoadDataWithBlocks,
 } from "@univerjs-pro/collaboration-service";
 import type { ISheetBlock } from "@univerjs/protocol";
-import type { Kind, OfficeLimits } from "@starter/office-contract";
-import { JOB_NATIVE_LIMITS, snapshotDigest } from "../jobs/frames.ts";
+import type { Kind } from "@highchat/office-contract";
+import { snapshotDigest } from "../jobs/frames.ts";
 import { nativeTypes } from "./target.ts";
 import { officeFailure } from "./failure.ts";
 import type { NativeServices } from "./native-services.ts";
@@ -18,7 +18,6 @@ export async function materializeRevision(
   worktreeId: string | null,
   kind: Kind,
   revision: number,
-  limits: OfficeLimits,
   preflight?: NativeLoadPreflight,
 ) {
   const type = nativeTypes[kind];
@@ -32,8 +31,7 @@ export async function materializeRevision(
     loaded.targetRevision !== revision ||
     loaded.snapshot.unitID !== read.unitID ||
     loaded.snapshot.type !== type ||
-    loaded.snapshot.rev > revision ||
-    loaded.changesets.length > limits.historyScanRevisions
+    loaded.snapshot.rev > revision
   )
     throw officeFailure("HISTORY_INCOMPLETE");
   let head = loaded.snapshot.rev;
@@ -51,10 +49,8 @@ export async function materializeRevision(
   const ids = Object.values(loaded.snapshot.workbook?.blockMeta ?? {}).flatMap(
     (group) => group.blocks,
   );
-  if (ids.length > limits.blockCount || new Set(ids).size !== ids.length)
-    throw officeFailure("LIMIT_EXCEEDED");
+  if (new Set(ids).size !== ids.length) throw officeFailure("LIMIT_EXCEEDED");
   const sheetBlocks: ISheetBlock[] = [];
-  let bytes = 0;
   for (const blockID of ids) {
     const input = { unitID: read.unitID, type, blockID };
     const result =
@@ -63,9 +59,6 @@ export async function materializeRevision(
         : await services.drafts.getSheetBlock({ ...input, worktreeID: worktreeId }, context);
     if (result.block === null || result.block.id !== blockID)
       throw officeFailure("CONTENT_REQUIRED");
-    bytes += result.block.data.byteLength;
-    if (result.block.data.byteLength > limits.blockBytes || bytes > JOB_NATIVE_LIMITS.maxBytes)
-      throw officeFailure("LIMIT_EXCEEDED");
     sheetBlocks.push(result.block);
   }
   const input: UnitLoadDataWithBlocks = { ...loaded, sheetBlocks };

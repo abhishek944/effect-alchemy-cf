@@ -37,11 +37,10 @@ cookies, Server-Sent Events and WebSocket upgrades.
 The pinned local workerd uses compatibility date `2026-09-25`; cloud Workers
 retain `2026-10-05`. Cloud checks are required for differences between these dates.
 
-Nonsecret chat/model and billing catalog/account settings are read from
+Public `APP_NAME` branding and nonsecret chat/model settings are read from
 `packages/config/.env.dev`; the file's Gateway setting overrides the shell. The
 development audio key comes from the private OpenRouter profile, never `.env.dev`
-or another stage file. Billing uses test-only credentials from the default
-profile (see [billing setup](billing-setup.md)). `.env.prod` is never loaded. The launcher
+or another stage file. `.env.prod` is never loaded. The launcher
 pins `AUTH_BASE_URL` to blank (same-origin) and `ALLOW_PRODUCTION` to false in its
 child environment, preventing inherited cloud settings from redirecting local auth.
 Provider credentials remain in profiles; never copy production credentials into
@@ -68,6 +67,15 @@ Gateway ID; leave it blank until that Gateway is provisioned. Restart after edit
 **Alchemy dev is not a universal no-cloud guarantee:** remote bindings can
 provision cloud proxy resources. Review them before starting changed stacks.
 Never run `alchemy dev --stage dev` or `--stage prod`.
+
+## Branding and build stage
+
+`APP_NAME` in `.env.dev` supplies the local UI and backend name. Restart both
+Worker and Vite after changing it. `APP_DOMAIN` never attaches a domain locally;
+auth and API calls stay same-origin on localhost. No production origin is used.
+`pnpm build` loads dev configuration before Turbo; `APP_STAGE=prod pnpm build`
+is an explicit offline build with production public values, not a deployment.
+See [naming](naming.md). Rebuild the Office image after package/source changes.
 
 ## Local Office container
 
@@ -138,7 +146,7 @@ After a change:
 
 1. Frontend/CSS/React edit: keep both commands running; Vite updates the browser.
 2. Office frame source change: run
-   `pnpm --filter @starter/office-react build:frame`, then refresh the browser.
+   `pnpm --filter @highchat/office-react build:frame`, then refresh the browser.
    Vite serves the built frame from `packages/office-react/dist` under `/office/`
    so the iframe stays same-origin and authenticated. A missing frame build
    returns a 503 with that command instead of breaking the rest of the app.
@@ -169,7 +177,7 @@ blank page. Use `pnpm lint` and `pnpm build` before handing off changes.
 9. Edit an API source file and confirm it does not reload automatically; restart
    `pnpm dev` and confirm the new build is served.
 10. Open an Office panel and confirm `/office/frame.html` loads after
-    `pnpm --filter @starter/office-react build:frame` when the frame is not built.
+    `pnpm --filter @highchat/office-react build:frame` when the frame is not built.
 11. After explicit dev Gateway/BYOK setup, check saved chats, streaming, Stop and
     refresh/reconnect using the [Pi chat acceptance steps](pi-chat.md).
 

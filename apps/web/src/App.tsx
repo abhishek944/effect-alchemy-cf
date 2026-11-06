@@ -1,65 +1,35 @@
+import { lazy, Suspense, useState } from "react";
 import AdminPortal from "@/components/admin/admin-portal";
-import AuthPanel from "@/components/auth-panel";
+import AuthRedirect from "@/components/auth-redirect";
 import Workspace from "@/components/dashboard/workspace";
+import SessionPending from "@/components/session-pending";
 import { authClient } from "@/lib/auth-client";
+import { isPublicAuthPath } from "@/lib/public-auth-route";
 import { usePathname } from "@/lib/router";
+
+const PublicPages = lazy(() => import("@/components/public/public-pages"));
 
 export default function App() {
   const pathname = usePathname();
-  const { data: session, isPending } = authClient.useSession();
+  const { data: session, isPending, error } = authClient.useSession();
+  const [checkedSession, setCheckedSession] = useState(!isPending);
+  if (!checkedSession && !isPending) setCheckedSession(true);
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
 
   if (isAdminRoute) return <AdminPortal />;
-  if (session) return <Workspace user={session.user} pathname={pathname} />;
-  if (isPending) {
-    return (
-      <main className="grid min-h-svh place-items-center bg-[#181818] text-[#a3a3a3]">
-        <output className="flex items-center gap-3 text-sm" aria-live="polite">
-          <span
-            className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent"
-            aria-hidden="true"
-          />
-          Checking your session…
-        </output>
-      </main>
-    );
+  if (session) {
+    if (isPublicAuthPath(pathname)) return <AuthRedirect />;
+    return <Workspace user={session.user} pathname={pathname} />;
   }
-
+  // A background anonymous-session refresh must not tear down the public page.
+  if (!checkedSession && isPending && !isPublicAuthPath(pathname)) return <SessionPending />;
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <header className="mx-auto flex h-[76px] max-w-6xl items-center justify-between px-6 sm:px-8">
-        <a
-          href="/"
-          className="flex items-center gap-3 font-semibold tracking-tight"
-          aria-label="Effect Alchemy Starter home"
-        >
-          <span className="grid size-9 place-items-center rounded-xl bg-primary text-sm text-primary-foreground">
-            E
-          </span>
-          <span>Effect Alchemy</span>
-        </a>
-        <span className="hidden text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground sm:block">
-          Starter
-        </span>
-      </header>
-      <main className="mx-auto grid min-h-[calc(100svh-76px)] max-w-6xl items-center gap-12 px-6 py-14 sm:px-8 lg:grid-cols-[1fr_440px] lg:gap-20 lg:py-16">
-        <section className="max-w-xl">
-          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-            <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
-            A fresh space for your next idea
-          </p>
-          <h1 className="text-5xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-6xl lg:text-[4.5rem]">
-            Make room for
-            <br />
-            <span className="text-muted-foreground">what comes next.</span>
-          </h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-muted-foreground sm:text-lg">
-            A quiet starting point for your next project. Sign in to pick up where you left off, or
-            create an account to begin.
-          </p>
-        </section>
-        <AuthPanel />
-      </main>
-    </div>
+    <Suspense fallback={<SessionPending message="Loading page…" />}>
+      <PublicPages
+        pathname={pathname}
+        checking={isPending}
+        sessionError={error ? error.message || "Please try again." : null}
+      />
+    </Suspense>
   );
 }

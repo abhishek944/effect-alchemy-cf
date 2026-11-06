@@ -5,22 +5,26 @@ import {
   OfficeUnavailable,
   decodeWire,
   safeFailure,
-} from "@starter/office-contract";
-import { composeOffice, makeNativeRuntime, type OfficeNativeRuntime } from "@starter/office-server";
-import { HostPolicy } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import {
+  composeOffice,
+  makeNativeRuntime,
+  type OfficeNativeRuntime,
+} from "@highchat/office-server";
+import { HostPolicy } from "@highchat/office-server/native-remote";
 import { resolveNativeView } from "./native-app-view.ts";
 import {
   OwnerClaims,
   type OfficeDependencies,
   type OwnerScope,
   type ViewRecord,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import {
   createOfficeProtocol,
   type OfficeProtocolAuthority,
   type OfficeViewProtocol,
   type OfficeSubmissionAuthority,
-} from "@starter/office-server/native-protocol";
+} from "@highchat/office-server/native-protocol";
 
 type Protocol = ReturnType<typeof createOfficeProtocol>;
 export type NativeApplicationOptions = {

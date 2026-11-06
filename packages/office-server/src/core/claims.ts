@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { decodeWire, type DocumentScope } from "@starter/office-contract";
+import { decodeWire, type DocumentScope } from "@highchat/office-contract";
 import { OriginalActorClaims } from "../ports/index.ts";
 import type {
   Actor,

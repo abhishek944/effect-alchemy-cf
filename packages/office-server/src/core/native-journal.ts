@@ -1,5 +1,5 @@
 import { Clock, Effect, type Scope } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type {
   NativeWriteRecord,
   OfficeDependencies,
@@ -10,7 +10,7 @@ import { NativeReceiptKey } from "../ports/index.ts";
 import type { NativeJournal, NativeStep } from "./native-lease.ts";
 import { nativeReceiptKey, nativeWriteHeader } from "./native-key.ts";
 import { stageNativeArtifact } from "./bytes.ts";
-import { advanceOperation, boundedMetadataDigest, terminalReceipt } from "./operations.ts";
+import { advanceOperation, metadataDigestEffect, terminalReceipt } from "./operations.ts";
 import { verifyOperation } from "./claims.ts";
 import { officeFailure } from "./failure.ts";
 import { StoredOperation } from "./record-schemas.ts";
@@ -48,7 +48,7 @@ const beforeStep = Effect.fn("Office.beforeNativeStep")(function* (
   const receiptKey = yield* decodeWire(NativeReceiptKey)(nativeReceiptKey(step, permit)).pipe(
     Effect.mapError(() => officeFailure("INVALID_INPUT", permit.operationId)),
   );
-  const id = yield* boundedMetadataDigest({ stepId: permit.stepId, receiptKey }, 4096);
+  const id = yield* metadataDigestEffect({ stepId: permit.stepId, receiptKey });
   if (yield* findNativeWrite(deps, operation.owner, permit.operationId, id))
     return yield* Effect.fail(officeFailure("OUTCOME_UNKNOWN", permit.operationId));
   const currentValue = yield* deps.metadata.operation(operation.owner, permit.operationId);

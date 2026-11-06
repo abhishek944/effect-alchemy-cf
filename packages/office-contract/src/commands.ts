@@ -1,6 +1,5 @@
 import { Schema } from "effect";
 import { Cursor, Id, Target } from "./primitives.ts";
-import { OFFICE_LIMITS } from "./limits.ts";
 import {
   CreateDocument,
   CreateDraft,
@@ -12,14 +11,9 @@ import {
 import { InspectRequest } from "./content.ts";
 import { ImportInto } from "./import-into.ts";
 
-const encoder = new TextEncoder();
 const malformedUtf16 = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u;
 export const CodeText = Schema.String.check(
-  Schema.isMaxLength(OFFICE_LIMITS.codeBytes),
-  Schema.makeFilter(
-    (source: string) =>
-      !malformedUtf16.test(source) && encoder.encode(source).byteLength <= OFFICE_LIMITS.codeBytes,
-  ),
+  Schema.makeFilter((source: string) => !malformedUtf16.test(source)),
 );
 /** Transient command source only: stage bytes first; never put this command in OperationIntent. */
 export const StageCode = Schema.Struct({ operationId: Id, source: CodeText });

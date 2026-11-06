@@ -1,5 +1,5 @@
-import { NativeReceiptBinding } from "@starter/office-server/ports";
-import type { NativeWriteRecord, Store, WritePermit } from "@starter/office-server/ports";
+import { NativeReceiptBinding } from "@highchat/office-server/ports";
+import type { NativeWriteRecord, Store, WritePermit } from "@highchat/office-server/ports";
 import type { NativeAdmission } from "../native/types.ts";
 import { captureNativeAdmission } from "../native/admission-fence.ts";
 import type { OfficeProviderOptions } from "./store.ts";

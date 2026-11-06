@@ -5,15 +5,10 @@ import {
   OfficeInvalid,
   safeFailure,
   type ArtifactRef,
-} from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+} from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { IsolatedJob } from "../ports/jobs.ts";
-import {
-  decodeMutationCandidate,
-  JOB_OUTPUT_LIMITS,
-  requireBinding,
-  requireSnapshot,
-} from "./frames.ts";
+import { decodeMutationCandidate, requireBinding, requireSnapshot } from "./frames.ts";
 import { JobBindingSchema } from "./schemas.ts";
 import { SnapshotWithBlocksSchema } from "./snapshot-schema.ts";
 import { exportMediaType } from "./media.ts";
@@ -22,7 +17,7 @@ const Envelope = { binding: JobBindingSchema };
 const Image = Schema.Struct({ bytes: Schema.Uint8Array, width: Count, height: Count });
 export const RenderOutputSchema = Schema.Struct({
   ...Envelope,
-  images: Schema.Array(Image).check(Schema.isMinLength(1), Schema.isMaxLength(8)),
+  images: Schema.Array(Image).check(Schema.isMinLength(1)),
 });
 export const ImportedOutputSchema = Schema.Struct({
   ...Envelope,
@@ -52,7 +47,7 @@ export function validateJobOutput(
       mediaType: "application/vnd.office.mutation-candidate+msgpack",
     };
   }
-  const payload = decodeNativeFrame(wire, "job-output", JOB_OUTPUT_LIMITS).payload;
+  const payload = decodeNativeFrame(wire, "job-output").payload;
   if (job.kind === "import") {
     const output = decodeWireSync(ImportedOutputSchema)(payload);
     requireBinding(output.binding, job.binding);
@@ -66,10 +61,7 @@ export function validateJobOutput(
   if (job.kind === "export") {
     const output = decodeWireSync(FileOutputSchema)(payload);
     requireBinding(output.binding, job.binding);
-    if (
-      output.mediaType !== exportMediaType(job.options) ||
-      output.bytes.byteLength > 10 * 1024 * 1024
-    )
+    if (output.mediaType !== exportMediaType(job.options))
       throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
     if (
       ["xlsx", "docx", "pptx"].includes(job.options.format) &&
@@ -79,7 +71,6 @@ export function validateJobOutput(
     return { bytes: output.bytes, kind: "export", mediaType: output.mediaType };
   }
   if (job.kind === "inspect") {
-    if (wire.byteLength > 64 * 1024) throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
     const output = decodeWireSync(InspectionOutputSchema)(payload);
     requireBinding(output.binding, job.binding);
     return {
@@ -90,8 +81,6 @@ export function validateJobOutput(
   }
   const output = decodeWireSync(RenderOutputSchema)(payload);
   requireBinding(output.binding, job.binding);
-  let pixels = 0,
-    total = 0;
   for (const image of output.images) {
     const view = new DataView(image.bytes.buffer, image.bytes.byteOffset, image.bytes.byteLength);
     if (
@@ -103,10 +92,6 @@ export function validateJobOutput(
       view.getUint32(20) !== image.height
     )
       throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
-    pixels += image.width * image.height;
-    total += image.bytes.byteLength;
-    if (pixels > 16_000_000 || total > 16 * 1024 * 1024)
-      throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
   }
   const [single] = output.images;
   return output.images.length === 1 && single !== undefined

@@ -1,13 +1,13 @@
 import { Effect } from "effect";
-import type { ArtifactRef, DraftTarget } from "@starter/office-contract";
+import type { ArtifactRef, DraftTarget } from "@highchat/office-contract";
 import type {
   DraftRecord,
   FrozenReview,
   NativeTarget,
   OfficeMetadata,
   ViewRecord,
-} from "@starter/office-server/ports";
-import { reviewFingerprintInput } from "@starter/office-server/native-remote";
+} from "@highchat/office-server/ports";
+import { reviewFingerprintInput } from "@highchat/office-server/native-remote";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";
 import type { OfficeMetadataResponse } from "./office-metadata-dispatch.ts";

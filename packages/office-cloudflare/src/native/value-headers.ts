@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import type { IChangeset, ISheetBlock, ISnapshot } from "@univerjs/protocol";
 import { NativeName, NativeType, Natural, objectFields, parseMetadata } from "./metadata-parse.ts";
-import { digest, metadata, nativeLimits, NativeStorageError } from "./types.ts";
+import { digest, NativeStorageError } from "./types.ts";
 
 const Hex = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/));
 const SnapshotHeader = Schema.Struct({
@@ -51,13 +51,7 @@ export type NativeValueHeader =
     };
 export async function blockIdentityDigest(blocks: readonly string[]): Promise<string> {
   const ids = [...new Set(blocks)].toSorted();
-  if (ids.length > nativeLimits.blocks)
-    throw new NativeStorageError("LIMIT", "Too many native block dependencies");
-  return digest(
-    new TextEncoder().encode(
-      metadata(["office-native-block-ids", 1, ids], nativeLimits.manifestBytes),
-    ),
-  );
+  return digest(new TextEncoder().encode(JSON.stringify(["office-native-block-ids", 1, ids])));
 }
 export async function snapshotHeader(value: ISnapshot): Promise<NativeValueHeader> {
   return {

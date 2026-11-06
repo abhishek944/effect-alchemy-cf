@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type {
   CreateUnitFromDataInput,
   ISnapshotWithBlocks,

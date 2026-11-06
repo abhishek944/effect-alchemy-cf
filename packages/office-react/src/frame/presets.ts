@@ -13,7 +13,7 @@ import { UniverProFormulaEnginePlugin } from "@univerjs-pro/engine-formula";
 import { UniverShapeEditorPlugin } from "@univerjs-pro/shape-editor";
 import { UniverShapeEditorUIPlugin } from "@univerjs-pro/shape-editor-ui";
 import type { IPreset } from "@univerjs/presets";
-import type { Kind } from "@starter/office-contract";
+import type { Kind } from "@highchat/office-contract";
 
 export function nativePresets(container: HTMLElement, kind: Kind, remote: boolean): IPreset[] {
   if (kind === "sheet")

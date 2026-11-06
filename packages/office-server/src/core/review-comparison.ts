@@ -1,4 +1,4 @@
-import { decodeWireSync, Change, type LeafValue } from "@starter/office-contract";
+import { decodeWireSync, Change, type LeafValue } from "@highchat/office-contract";
 import {
   transformSnapshotToWorkbookData,
   transformSnapshotToDocumentData,
@@ -17,7 +17,6 @@ import { SlidesUnitComparisonAdapter } from "@univerjs-pro/slides-history";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
 import { OFFICE_NATIVE_TYPES } from "../jobs/runtime-factory.ts";
 import type { ReadyCapture } from "./review-bundle.ts";
-import { metadataDigest } from "./operations.ts";
 
 async function unitData(
   capture: ReadyCapture,
@@ -63,8 +62,6 @@ const marker = (
 ): typeof LeafValue.Type => ({ kind: "native-view", viewId, reason });
 function leaf(value: unknown, viewId: string): typeof LeafValue.Type {
   if (value === undefined) return marker(viewId, "absent");
-  if (typeof value === "string" && new TextEncoder().encode(value).byteLength > 256)
-    return marker(viewId, "oversize");
   if (
     value === null ||
     typeof value === "string" ||
@@ -84,13 +81,6 @@ function change(item: IUnitComparisonItem, before: string, after: string): typeo
     moved: item.moved,
     path: [...item.path],
   };
-  const whole = () =>
-    decodeWireSync(Change)({
-      ...base,
-      path: [],
-      leaves: [{ path: [], before: marker(before, "oversize"), after: marker(after, "oversize") }],
-    });
-  if (item.changes.length > 100 || item.path.length > 32) return whole();
   const normalized = decodeWireSync(Change)({
     ...base,
     leaves: item.changes.map((value) => ({
@@ -99,12 +89,7 @@ function change(item: IUnitComparisonItem, before: string, after: string): typeo
       after: leaf(value.after, after),
     })),
   });
-  try {
-    metadataDigest(normalized, 6 * 1024);
-    return normalized;
-  } catch {
-    return whole();
-  }
+  return normalized;
 }
 /** All prepared native items are retained. SDK's default page is never mistaken for the complete result. */
 export async function compareReview(

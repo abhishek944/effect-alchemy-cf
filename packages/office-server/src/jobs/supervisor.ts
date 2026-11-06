@@ -1,11 +1,11 @@
 import { Clock, Effect } from "effect";
-import { reportFailureEffect } from "@starter/diagnostics";
+import { reportFailureEffect } from "@highchat/diagnostics";
 import {
   decodeWireSync,
   OfficeInvalid,
   OfficeUnavailable,
   safeFailure,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type {
   IsolatedJob,
   IsolatedJobs,
@@ -41,7 +41,6 @@ export function makeIsolatedJobs(options: IsolatedJobsOptions): IsolatedJobs {
   if (
     !Number.isSafeInteger(options.jobSeconds) ||
     options.jobSeconds < 1 ||
-    options.jobSeconds > 120 ||
     !Number.isSafeInteger(options.maxActive) ||
     options.maxActive < 1 ||
     options.maxActive > 4 ||

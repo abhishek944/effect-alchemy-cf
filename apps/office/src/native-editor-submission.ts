@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { Effect } from "effect";
 import type { IChangeset } from "@univerjs/protocol";
 import type { CollabMemberContext } from "@univerjs-pro/collaboration-service";
-import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import type { OfficeNativeRuntime } from "@starter/office-server";
-import type { OfficeSubmissionAuthority } from "@starter/office-server/native-protocol";
-import type { NativeTarget, OfficeDependencies } from "@starter/office-server/ports";
+import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import type { OfficeNativeRuntime } from "@highchat/office-server";
+import type { OfficeSubmissionAuthority } from "@highchat/office-server/native-protocol";
+import type { NativeTarget, OfficeDependencies } from "@highchat/office-server/ports";
 import type { NativeApplicationOptions } from "./native-app.ts";
 import type { OfficeEditorClient } from "./native-editor-client.ts";
 import type { OfficeEditorPublication } from "./native-editor-publication.ts";
@@ -97,20 +97,14 @@ export function createOfficeSubmissionAuthority(options: {
       )
       .digest("hex");
     const client = await Effect.runPromise(
-      stageEditorArtifact(
-        options.bytes,
-        target.owner,
-        clientId,
-        {
-          version: 1,
-          kind: "editor-client",
-          target,
-          worktreeId,
-          memberId: context.memberID,
-          changeset,
-        },
-        Math.min(options.policy.limits.nativeBytes, 16 * 1024 * 1024),
-      ),
+      stageEditorArtifact(options.bytes, target.owner, clientId, {
+        version: 1,
+        kind: "editor-client",
+        target,
+        worktreeId,
+        memberId: context.memberID,
+        changeset,
+      }),
     );
     check();
     // Exactly ONE admission attempt. Lost ACK/observed does not supply a dispatch permit.

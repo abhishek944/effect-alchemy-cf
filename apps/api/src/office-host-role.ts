@@ -1,7 +1,7 @@
 import { Schema } from "effect";
-import { OwnerClaims } from "@starter/office-server/ports";
-import { HostId } from "@starter/office-server/native-remote";
-import { Id } from "@starter/office-contract";
+import { OwnerClaims } from "@highchat/office-server/ports";
+import { HostId } from "@highchat/office-server/native-remote";
+import { Id } from "@highchat/office-contract";
 
 export const OfficeHostRole = Schema.Union([
   Schema.Tuple([Schema.Literal("office-host"), OwnerClaims]),

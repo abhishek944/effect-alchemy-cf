@@ -1,24 +1,13 @@
-/** Legacy inline preparation retains its1.75MiB native row ceiling, without resizing.
+/** Legacy inline preparation remains readable without resizing.
  * New sends use compact image-input preparation and request-only hydration instead.
  */
 import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 import type { UserInput } from "@earendil-works/pi-durable";
 import type * as cf from "@cloudflare/workers-types";
-import {
-  MAX_ATTACHMENTS_PER_MESSAGE,
-  MAX_EXCERPT_CHARS,
-  MAX_MESSAGE_ATTACHMENT_BYTES,
-  MAX_QUOTED_TEXT_CHARS,
-  type FileDescriptor,
-} from "./chat-attachment-schema.ts";
+import { MAX_EXCERPT_CHARS, type FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import type { ChatFilesPrepareResult } from "./chat-files-ops.ts";
-import {
-  filesFail,
-  filesOk,
-  MAX_NATIVE_SERIALIZED_BYTES,
-  type ChatFilesResult,
-} from "./chat-files-model.ts";
+import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
 import { readOwnedOriginal } from "./chat-files-store.ts";
 import {
   attachmentBoundary,
@@ -27,10 +16,7 @@ import {
   quotedAttachmentBlock,
 } from "./chat-files-text.ts";
 import { csvReferenceBlock, isCsvOriginal } from "./chat-image-hydration-csv.ts";
-import {
-  chatFilesImageCompatibility,
-  imageBase64Bytes as base64Bytes,
-} from "./chat-files-image-policy.ts";
+import { chatFilesImageCompatibility } from "./chat-files-image-policy.ts";
 export { chatFilesImageCompatibility } from "./chat-files-image-policy.ts";
 
 export type NativeContent = {
@@ -58,23 +44,15 @@ export const buildNativeInput = async (input: {
   readonly model: ChatCatalogModel;
   readonly read: (fileId: string) => Promise<Uint8Array | null>;
 }): Promise<ChatFilesResult<NativeContent>> => {
-  if (input.attachments.length > MAX_ATTACHMENTS_PER_MESSAGE) return filesFail("too_many_files");
   const files = input.attachments.map((attachment) => attachment.file);
-  if (files.reduce((sum, file) => sum + file.byteSize, 0) > MAX_MESSAGE_ATTACHMENT_BYTES)
-    return filesFail("message_too_large");
   const compatibility = chatFilesImageCompatibility(files, input.model);
   if (!compatibility.ok) return filesFail(compatibility.code);
-  const estimated = files
-    .filter((file) => file.kind === "image")
-    .reduce((sum, file) => sum + base64Bytes(file.byteSize), 0);
-  if (estimated > MAX_NATIVE_SERIALIZED_BYTES) return filesFail("native_storage_limit");
   const blocks: (TextContent | ImageContent)[] = [];
   if (input.text.length > 0) blocks.push({ type: "text", text: input.text });
   const boundary = attachmentBoundary();
   const textTotal = files.filter((file) => file.kind === "text" && !isCsvOriginal(file)).length;
   const csvTotal = files.filter(isCsvOriginal).length;
   const officeTotal = files.filter((file) => file.kind === "office").length;
-  let quotedChars = 0;
   let textIndex = 0;
   let csvIndex = 0;
   let officeIndex = 0;
@@ -116,8 +94,6 @@ export const buildNativeInput = async (input: {
     }
     const decoded = decodeTextFile(bytes, MAX_EXCERPT_CHARS);
     if (!decoded.ok) return filesFail("invalid_content");
-    quotedChars += decoded.chars;
-    if (quotedChars > MAX_QUOTED_TEXT_CHARS) return filesFail("quoted_text_too_large");
     blocks.push({
       type: "text",
       text: quotedAttachmentBlock({
@@ -133,8 +109,6 @@ export const buildNativeInput = async (input: {
     textIndex += 1;
   }
   if (blocks.length === 0) return filesFail("invalid_input");
-  const serialized = new TextEncoder().encode(JSON.stringify(blocks)).byteLength;
-  if (serialized > MAX_NATIVE_SERIALIZED_BYTES) return filesFail("native_storage_limit");
   return filesOk({ content: blocks, files });
 };
 

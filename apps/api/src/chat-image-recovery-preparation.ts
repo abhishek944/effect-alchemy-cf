@@ -1,5 +1,5 @@
 import { UserEntry, type UserInput } from "@earendil-works/pi-durable";
-import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
 import { installedChatModel } from "./chat-capability-catalog.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import { ChatInvalid } from "./chat-model.ts";

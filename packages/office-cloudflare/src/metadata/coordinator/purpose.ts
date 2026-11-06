@@ -1,5 +1,5 @@
 import { operationRecordSql } from "../legacy-failure.ts";
-import type { NativeTarget, SerialAdmission } from "@starter/office-server/ports";
+import type { NativeTarget, SerialAdmission } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
 import { canonical, conflict, sqlNow } from "../store.ts";

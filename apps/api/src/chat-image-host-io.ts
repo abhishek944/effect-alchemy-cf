@@ -1,14 +1,10 @@
 import type { ImageHost } from "@abhishek944/pi-image-gen/core";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { readAcceptedOriginal } from "./chat-image-original.ts";
 import { runImageIO } from "./chat-image-io.ts";
 import { retainImageResponseBody } from "./chat-image-io-response.ts";
 import { ImageIOError } from "./chat-image-io-error.ts";
-import {
-  NATIVE_IMAGE_RESPONSE_BYTES,
-  NATIVE_IMAGE_TIMEOUT_MS,
-  nativeImageLimits,
-} from "./chat-image-policy.ts";
+import { NATIVE_IMAGE_TIMEOUT_MS } from "./chat-image-policy.ts";
 import { assertImageHostReady } from "./chat-image-host-proof.ts";
 import { imageHostRefusal } from "./chat-image-host-sources.ts";
 import { rememberImageHostFile } from "./chat-image-host-settlement.ts";
@@ -54,12 +50,10 @@ export function imageHostIO(
   const { deps, plan, lifetime, client } = execution;
   const ownerScope = deps.catalog.id.toString();
   if (ownerScope !== deps.expectedOwnerScope) return imageHostRefusal();
-  const referenceBytes = plan.sources.reduce((sum, item) => sum + item.authority.file.byteSize, 0);
   const sink = client.sink({ chatId: plan.proof.snapshot.chatId, callId: plan.key });
   return {
     ...(context.abortSignal === undefined ? {} : { signal: context.abortSignal }),
     timeoutMs: NATIVE_IMAGE_TIMEOUT_MS,
-    limits: nativeImageLimits(referenceBytes),
     loadOriginal(reference, signal) {
       const source = plan.sources[reference.index];
       if (reference.role !== "image" || source === undefined || source.url !== reference.url)
@@ -145,7 +139,6 @@ export function imageHostIO(
           const response = await retainImageResponseBody({
             response: raw,
             track: lifetime.track,
-            responseBytes: NATIVE_IMAGE_RESPONSE_BYTES,
             operationId: plan.proof.snapshot.operationId,
             ...(options.signal === undefined ? {} : { signal: options.signal }),
           });

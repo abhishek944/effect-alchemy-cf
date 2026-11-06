@@ -1,4 +1,4 @@
-import { decodeWireSync } from "@starter/office-contract";
+import { decodeWireSync } from "@highchat/office-contract";
 import type {
   MutationCandidateFrame,
   NativeInputFrame,

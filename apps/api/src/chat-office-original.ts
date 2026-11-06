@@ -3,8 +3,8 @@ import {
   type AcceptedOfficeFile,
   type OfficeResolution,
   type OfficeStagingPhase,
-} from "@starter/office-pi";
-import { officeImportOptions } from "@starter/office-contract";
+} from "@highchat/office-pi";
+import { officeImportOptions } from "@highchat/office-contract";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";
 import { holdFileBody } from "./chat-file-io-body.ts";
 import { ChatFileIOUnavailable } from "./chat-file-io-limits.ts";

@@ -1,6 +1,5 @@
 import { Option, Schema } from "effect";
 import { DomainUuid } from "./chat-capabilities.ts";
-import { MAX_IMAGE_BYTES, RETAINED_BYTES_PER_USER } from "./chat-attachment-schema.ts";
 
 export const ImageCallId = Schema.String.check(
   Schema.isMinLength(1),
@@ -27,7 +26,8 @@ export const ImageReservation = Schema.Struct({
   ...ImageCallKey.fields,
   operationId: DomainUuid,
   requestDigest: ImageDigest,
-  maxOutputBytes: ImagePositive.check(Schema.isLessThanOrEqualTo(RETAINED_BYTES_PER_USER)),
+  /** Legacy request identity only; new calls do not reserve output quota. */
+  maxOutputBytes: Schema.optionalKey(ImagePositive),
   sources: ImageSources,
   model: Schema.Literals(["flare", "sunburst"]),
   size: Schema.Literals(["auto", "1024x1024", "1024x1536", "1536x1024"]),
@@ -40,7 +40,7 @@ export type ImageOutputKey = typeof ImageOutputKey.Type;
 export const ImageReceiptExpectation = Schema.Struct({
   digest: ImageDigest,
   total: ImagePositive,
-  byteSize: ImagePositive.check(Schema.isLessThanOrEqualTo(MAX_IMAGE_BYTES)),
+  byteSize: ImagePositive,
   mediaType: Schema.Literals(["image/jpeg", "image/png", "image/webp"]),
 });
 export type ImageReceiptExpectation = typeof ImageReceiptExpectation.Type;

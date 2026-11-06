@@ -1,9 +1,9 @@
 import { Effect } from "effect";
-import { OfficeSourceReadRequest, decodeWireSync } from "@starter/office-contract";
+import { OfficeSourceReadRequest, decodeWireSync } from "@highchat/office-contract";
 import {
   readOfficeDocumentSources,
   readOfficeOriginalTarget,
-} from "@starter/office-cloudflare/metadata";
+} from "@highchat/office-cloudflare/metadata";
 import type { OfficeHostActive, OfficeHostRuntime } from "./office-host-state.ts";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import { officeHostOriginal } from "./office-host-auth.ts";
@@ -50,7 +50,6 @@ export const officeHostSources = (
     return yield* Effect.try({
       try: () => {
         const body = JSON.stringify(value); // Each metadata reader validates its own finite DTO.
-        if (new TextEncoder().encode(body).byteLength > 12 * 1024) throw officeDenied();
         return new Response(body, { headers: { "content-type": "application/json" } });
       },
       catch: officeCaught,

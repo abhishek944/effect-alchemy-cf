@@ -6,7 +6,7 @@ import type {
   EditorAction,
   OfficeError,
   Receipt,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { NativeTarget, OwnerScope, WritePermit } from "./identity.ts";
 import type { NativeReceiptBinding } from "./native-receipts.ts";
 import type {

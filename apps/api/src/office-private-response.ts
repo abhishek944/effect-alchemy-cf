@@ -6,18 +6,16 @@ type Owner = ReturnType<typeof officeHostFrameIO>;
 /** Bounded metadata only. Actual body-reader/pull ownership survives returning HTTP headers. */
 export function officePrivateResponse(
   value: unknown,
-  maximum: number,
+  maximum: number | null,
   owner: Owner,
   signal: AbortSignal,
   deadline: number,
   cleanup: boolean,
   peer: () => Promise<void>,
   status: number = 200,
-  charge?: (bytes: number) => void,
 ) {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
-  if (bytes.byteLength > maximum) throw officeDenied();
-  charge?.(bytes.byteLength);
+  if (maximum !== null && bytes.byteLength > maximum) throw officeDenied();
   const source = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(bytes);

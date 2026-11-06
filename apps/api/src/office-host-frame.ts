@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import type { NativePrivateFile } from "../../office/src/native-private-wire.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
-import type { HostOfficeRequest } from "@starter/office-server/native-remote";
+import type { HostOfficeRequest } from "@highchat/office-server/native-remote";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { OfficeHostPlacements } from "./office-host-placements.ts";
 import {
@@ -35,7 +35,6 @@ export class OfficeHostFrame {
   private readonly deadlineTimer: ReturnType<typeof setTimeout>;
   private readonly cleanupTimer: ReturnType<typeof setTimeout>;
   private readonly calls = new Set<string>();
-  private bytes = 0;
   private finished = false;
   private failed = false;
   private closed = false;
@@ -82,7 +81,7 @@ export class OfficeHostFrame {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ frameId: this.id }),
       });
-      await readOfficePrivateJson(response.body, this.work.signal, this.deadline, 16 * 1024);
+      await readOfficePrivateJson(response.body, this.work.signal, this.deadline, null);
       if (response.status !== 200) throw officeDenied();
       this.work.signal.throwIfAborted();
     };
@@ -96,18 +95,12 @@ export class OfficeHostFrame {
       signal: this.work.signal,
       currentPlacement: (documentId: string) => options.placements.current(documentId),
       live,
-      charge: (bytes: number) => this.charge(bytes),
       receive: (callId: string) => this.receive(callId),
       keepIO: (resource: OfficePrivateIO, cleanup: boolean) => this.io.hold(resource, cleanup),
     });
   }
-  private charge(bytes: number): void {
-    if (!Number.isSafeInteger(bytes) || bytes < 0 || this.bytes > 1024 * 1024 * 1024 - bytes)
-      throw officeDenied();
-    this.bytes += bytes;
-  }
   private receive(callId: string): void {
-    if (this.calls.has(callId) || this.calls.size >= 65536) throw officeDenied();
+    if (this.calls.has(callId)) throw officeDenied();
     this.calls.add(callId);
   }
   reportFinished(kind: "http" | "upgrade", clean: boolean): void {

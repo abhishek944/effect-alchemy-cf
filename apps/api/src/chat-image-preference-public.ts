@@ -36,7 +36,7 @@ export class ImagePreferencesApi extends HttpApiGroup.make("imagePreferences")
   .middleware(ChatAuthentication) {}
 
 // Same API identifier/group key as parent composition, without a root Api import cycle.
-const PreferencesApi = HttpApi.make("starter").add(ImagePreferencesApi);
+const PreferencesApi = HttpApi.make("highchat").add(ImagePreferencesApi);
 
 export const ImagePreferencesLive = HttpApiBuilder.group(
   PreferencesApi,

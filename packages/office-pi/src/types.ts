@@ -7,6 +7,8 @@ import type {
   CreateDraft,
   Cursor,
   DraftTarget,
+  OfficeSourceDescriptor,
+  OfficeSendTarget,
   DraftTransition,
   Execute,
   ExportRequest,
@@ -18,8 +20,8 @@ import type {
   Receipt,
   RenderRequest,
   Target,
-} from "@starter/office-contract";
-import type { BinaryUpload } from "@starter/office-contract/client";
+} from "@highchat/office-contract";
+import type { BinaryUpload } from "@highchat/office-contract/client";
 import type { ToolExecutionApi, ToolRegistration } from "@earendil-works/pi-durable";
 
 export type OfficeToolContext = Parameters<ToolRegistration["execute"]>[2];
@@ -73,6 +75,7 @@ export type OfficeAttachmentPage = {
   readonly nextCursor: string | null;
 };
 export type OfficeTaskAccess = {
+  readonly source: OfficeSourceDescriptor | null;
   readonly reference?: Extract<ChatReferenceInput, { readonly kind: "native" }>;
   /** Root-proven same-input branch descriptor, not a grant or current-head guess. */
   readonly referenceBasis?: DraftTarget;
@@ -108,6 +111,9 @@ export type OfficeToolIntent = {
   /** Private server-derived workflow step; never accepted as model authority. */
   readonly attachmentId?: string;
   readonly referenceId?: string;
+  readonly worktreeId?: string;
+  /** Private checkpoint from a real current Main open, not a model argument. */
+  readonly mainView?: OfficeSendTarget;
   readonly step?: string;
   readonly basis?: DraftTarget;
 };

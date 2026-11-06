@@ -1,5 +1,5 @@
 import type * as cf from "@cloudflare/workers-types";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import type { Context } from "@earendil-works/pi-ai";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import type { GenerationRequestProof } from "./chat-image-request-types.ts";

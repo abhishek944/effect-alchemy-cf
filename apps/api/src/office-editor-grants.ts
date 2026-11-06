@@ -1,10 +1,10 @@
 import { Effect } from "effect";
-import type { NativeEditorLeaf, NativeEditorPermit } from "@starter/office-server/ports";
+import type { NativeEditorLeaf, NativeEditorPermit } from "@highchat/office-server/ports";
 import type {
   NativeStorageHooks,
   NativePublicationPreparation,
-} from "@starter/office-cloudflare/native";
-import type { HostEditor } from "@starter/office-server/native-remote";
+} from "@highchat/office-cloudflare/native";
+import type { HostEditor } from "@highchat/office-server/native-remote";
 import type { OfficeEditorChannel } from "./office-editor-channel.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { officeDeniedReason } from "./office-private-values.ts";

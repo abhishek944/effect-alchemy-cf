@@ -3,7 +3,6 @@ import { ImageCallState, type ImageCallView } from "./chat-image-call-schema.ts"
 import { imageCallTotals, isUnsettledImageCall } from "./chat-image-call-cost.ts";
 import type { CallSql, ImageCallRow } from "./chat-image-call-table.ts";
 import {
-  CALL_EVIDENCE_BYTES,
   CALL_STATE_BYTES,
   CallIndex,
   callJson,
@@ -14,8 +13,7 @@ import {
 } from "./chat-image-call-values.ts";
 
 export function encodeAdmission(input: ImageCallAdmission): string {
-  callJson(input, CALL_EVIDENCE_BYTES);
-  return callJson(callValue(ImageCallAdmission, input), CALL_EVIDENCE_BYTES);
+  return callJson(callValue(ImageCallAdmission, input), null);
 }
 export function outputCount(sql: CallSql, key: string): number {
   const count = sql
@@ -25,11 +23,7 @@ export function outputCount(sql: CallSql, key: string): number {
 }
 export function decodeCallRow(row: ImageCallRow, sql: CallSql): ImageCallView {
   try {
-    const admission = callValue(
-      ImageCallAdmission,
-      callParse(row.evidence_json, CALL_EVIDENCE_BYTES),
-      "corrupt",
-    );
+    const admission = callValue(ImageCallAdmission, callParse(row.evidence_json, null), "corrupt");
     const state = callValue(ImageCallState, callParse(row.state_json, CALL_STATE_BYTES), "corrupt");
     if (
       admission.key !== row.call_key ||

@@ -1,20 +1,20 @@
 import { Schema } from "effect";
 import { UniverType, type IChangeset, type ISheetBlock, type ISnapshot } from "@univerjs/protocol";
-import { Count, Revision, decodeWireSync } from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+import { Count, Revision, decodeWireSync } from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import { officeFailure } from "../core/failure.ts";
 import { SnapshotWithBlocksSchema } from "../jobs/snapshot-schema.ts";
 
 const Name = Schema.String.check(Schema.isMaxLength(256));
 const NativeId = Name.check(Schema.isMinLength(1));
-const Text = Schema.String.check(Schema.isMaxLength(8 * 1024 * 1024));
-const Binary = Schema.Uint8Array.check(Schema.isMaxLength(128 * 1024 * 1024));
+const Text = Schema.String;
+const Binary = Schema.Uint8Array;
 const Resource = Schema.Struct({
   id: Schema.optional(Schema.UndefinedOr(NativeId)),
   name: Name,
   data: Text,
 });
-const Resources = Schema.mutable(Schema.Array(Resource).check(Schema.isMaxLength(4096)));
+const Resources = Schema.mutable(Schema.Array(Resource));
 const UnitMetaFields = {
   unitID: NativeId,
   rev: Revision,
@@ -34,13 +34,13 @@ const WorksheetMeta = Schema.Struct({
 });
 const BlockMeta = Schema.Struct({
   sheetID: Schema.optionalKey(Schema.UndefinedOr(NativeId)),
-  blocks: Schema.mutable(Schema.Array(NativeId).check(Schema.isMaxLength(4096))),
+  blocks: Schema.mutable(Schema.Array(NativeId)),
 });
 const WorkbookMeta = Schema.Struct({
   ...UnitMetaFields,
-  sheetOrder: Schema.mutable(Schema.Array(NativeId).check(Schema.isMaxLength(4096))),
-  sheets: Schema.Record(NativeId, WorksheetMeta).check(Schema.isMaxProperties(4096)),
-  blockMeta: Schema.Record(NativeId, BlockMeta).check(Schema.isMaxProperties(4096)),
+  sheetOrder: Schema.mutable(Schema.Array(NativeId)),
+  sheets: Schema.Record(NativeId, WorksheetMeta),
+  blockMeta: Schema.Record(NativeId, BlockMeta),
 });
 /** Represented SDK payloads retain absent fields and extensions; finite wire DTOs stay separately strict. */
 const SnapshotFields = Schema.Struct({
@@ -62,7 +62,7 @@ const BlockFields = Schema.Struct({
   id: NativeId,
   startRow: Count,
   endRow: Count,
-  data: Schema.Uint8Array.check(Schema.isMaxLength(8 * 1024 * 1024)),
+  data: Schema.Uint8Array,
 });
 const BlockEnvelope = Schema.declare<ISheetBlock>((value): value is ISheetBlock =>
   Schema.is(BlockFields)(value),
@@ -75,7 +75,7 @@ export const ChangesetEnvelope = Schema.Struct({
   revision: Revision,
   userID: NativeId,
   memberID: NativeId,
-  mutations: Schema.mutable(Schema.Array(MutationEnvelope).check(Schema.isMaxLength(20_000))),
+  mutations: Schema.mutable(Schema.Array(MutationEnvelope)),
   sid: Schema.optional(Schema.UndefinedOr(NativeId)),
   reqId: Schema.optional(Schema.UndefinedOr(Count)),
   mutationSize: Schema.optional(Schema.UndefinedOr(Count)),

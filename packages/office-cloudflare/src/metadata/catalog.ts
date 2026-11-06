@@ -1,5 +1,5 @@
-import { Id, decodeWireSync } from "@starter/office-contract";
-import type { DocumentRecord, OfficeMetadata, OwnerScope } from "@starter/office-server/ports";
+import { Id, decodeWireSync } from "@highchat/office-contract";
+import type { DocumentRecord, OfficeMetadata, OwnerScope } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { conflict, invalid, missing, storeEffect } from "./store.ts";
 import { discoveryPageBytes, requirePageProgress } from "./pages.ts";
@@ -42,7 +42,7 @@ export function createCatalog(
         let bytes = 0;
         for (const row of rows) {
           bytes += row.record.length * 3;
-          if (bytes > Math.min(db.limits.responseBytes, discoveryPageBytes)) break;
+          if (bytes > discoveryPageBytes) break;
           const value = await documentRow(db, owner, row.id);
           if (value) items.push(value);
         }

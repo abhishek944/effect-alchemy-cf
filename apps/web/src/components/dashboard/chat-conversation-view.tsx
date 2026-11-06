@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { ThreadPrimitive } from "@assistant-ui/react";
 import type { ChatSnapshot } from "@/lib/chat-api";
 import ChatFooter from "./chat-footer";
+import ChatStart from "./chat-start";
 import ChatMessageList from "./chat-message-list";
 import ChatNotices from "./chat-notices";
 import { HistoryControls } from "./chat-history-ui";
@@ -67,7 +68,7 @@ export function ChatConversationView({
         </p>
       )}
       <ChatNotices chatId={chatId} />
-      <ChatFooter {...footer} />
+      {chatId === "none" ? <ChatStart /> : <ChatFooter {...footer} />}
     </ThreadPrimitive.Root>
   );
 }

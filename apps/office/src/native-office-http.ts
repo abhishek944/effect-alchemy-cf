@@ -1,15 +1,15 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { finished } from "node:stream/promises";
 import { Cause, Effect, Exit } from "effect";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import {
   OfficeInvalid,
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { HostOfficeRequest, hostEnvelope } from "@starter/office-server/native-remote";
-import type { Actor, OfficeService } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { HostOfficeRequest, hostEnvelope } from "@highchat/office-server/native-remote";
+import type { Actor, OfficeService } from "@highchat/office-server/ports";
 import { invokeOfficeCall } from "./native-office-call.ts";
 
 /** PRIVATE metadata only. Input streams never contain native documents/code/blob JSON. */
@@ -33,7 +33,6 @@ export async function readOfficeNodeJson(
       if (part.done) break;
       if (!(part.value instanceof Uint8Array)) throw new Error("Invalid Office metadata stream");
       bytes += part.value.byteLength;
-      if (bytes > 16 * 1024 || chunks.length >= 1024) throw new Error("Office metadata limit");
       chunks.push(part.value);
     }
     const completed = await completion;
@@ -115,23 +114,12 @@ export async function handleOfficeControl(
       error: safeFailure(reads.has(input.payload.method) ? "UNAVAILABLE" : "OUTCOME_UNKNOWN"),
     };
   }
-  let output = JSON.stringify({
+  const output = JSON.stringify({
     version: 1,
     invocationId: input.invocationId,
     callId: input.callId,
     payload,
   });
-  if (new TextEncoder().encode(output).byteLength > 16 * 1024) {
-    output = JSON.stringify({
-      version: 1,
-      invocationId: input.invocationId,
-      callId: input.callId,
-      payload: {
-        method: input.payload.method,
-        error: safeFailure(reads.has(input.payload.method) ? "LIMIT_EXCEEDED" : "OUTCOME_UNKNOWN"),
-      },
-    });
-  }
   if (binding.signal.aborted || response.destroyed || response.writableEnded)
     throw new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
   response.writeHead(200, {

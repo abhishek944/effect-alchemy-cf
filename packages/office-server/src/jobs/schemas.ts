@@ -11,8 +11,8 @@ import {
   Kind,
   RenderSelection,
   Revision,
-} from "@starter/office-contract";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+} from "@highchat/office-contract";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const JobBindingSchema = Schema.Struct({
@@ -77,9 +77,9 @@ export const IsolatedJobSchema = Schema.Union([
 ]);
 export const MutationSchema = Schema.Struct({
   id: NativeId,
-  data: Schema.String.check(Schema.isMaxLength(2 * 1024 * 1024)),
+  data: Schema.String,
 });
 export const MutationCandidateSchema = Schema.Struct({
   binding: ExecutionBindingSchema,
-  mutations: Schema.Array(MutationSchema).check(Schema.isMaxLength(5000)),
+  mutations: Schema.Array(MutationSchema),
 });

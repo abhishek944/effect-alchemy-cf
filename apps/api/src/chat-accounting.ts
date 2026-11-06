@@ -10,7 +10,7 @@
  * pretending success.
  */
 import type { Models } from "@earendil-works/pi-ai/models";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import {
   defineExtension,
   GenerationTask,

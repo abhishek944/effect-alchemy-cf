@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
-import { withCause, withDiagnostic, type FailureContext } from "@starter/diagnostics";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { withCause, withDiagnostic, type FailureContext } from "@highchat/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 
 /** The configured Container belongs to this DO, even across a DO restart. Its old
  * process cannot retain the new runtime's private registrations. Stop, never adopt,

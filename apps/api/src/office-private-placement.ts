@@ -1,14 +1,13 @@
 import { Effect } from "effect";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { VerifiedCoordinatorContext } from "@starter/office-cloudflare/coordinator-control";
-import type { OfficeMetadata, NativeTarget } from "@starter/office-server/ports";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { VerifiedCoordinatorContext } from "@highchat/office-cloudflare/coordinator-control";
+import type { OfficeMetadata, NativeTarget } from "@highchat/office-server/ports";
 import { officeDenied, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeCoreOrigin } from "./office-core-origin.ts";
 
 /** Scalar correlation only; actual private platform/session verification precedes use. */
 export async function officePrivateDigest(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(JSON.stringify(value));
-  if (bytes.byteLength > 16 * 1024) throw officeDenied();
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

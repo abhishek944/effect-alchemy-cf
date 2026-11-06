@@ -1,11 +1,10 @@
 import { Clock, Effect } from "effect";
-import { Document, DocumentPage, Draft, DraftPage, decodeWire } from "@starter/office-contract";
+import { Document, DocumentPage, Draft, DraftPage, decodeWire } from "@highchat/office-contract";
 import type { Actor, DraftRecord, OfficeDependencies, OwnerScope } from "../ports/index.ts";
 import { authorize } from "./claims.ts";
-import { boundedMetadataDigest, metadataDigest } from "./operations.ts";
+import { metadataDigest } from "./operations.ts";
 import { nativeCall, officeFailure } from "./failure.ts";
 
-const TOOL_PAGE_BYTES = 12 * 1024;
 export const reviewKey = (
   owner: OwnerScope,
   documentId: string,
@@ -13,17 +12,14 @@ export const reviewKey = (
   generation: number,
   readyRevision: number,
 ): string =>
-  metadataDigest(
-    {
-      stage: owner.stage,
-      owner: owner.ownerId,
-      document: documentId,
-      draft: draftId,
-      generation,
-      revision: readyRevision,
-    },
-    4096,
-  );
+  metadataDigest({
+    stage: owner.stage,
+    owner: owner.ownerId,
+    document: documentId,
+    draft: draftId,
+    generation,
+    revision: readyRevision,
+  });
 export const reviewIdentity = (draft: DraftRecord, readyRevision: number): string =>
   reviewKey(draft.owner, draft.documentId, draft.id, draft.generation, readyRevision);
 export const readDraft = Effect.fn("Office.readDraft")(function* (
@@ -92,8 +88,6 @@ export const makeOfficeReads = (deps: OfficeDependencies) => ({
       items: records.items.map((row) => row.document),
       next: records.next,
     }).pipe(Effect.mapError(() => officeFailure("CONTENT_REQUIRED")));
-    // Provider pagination must fit this budget. Never slice/drop items and claim completion.
-    yield* boundedMetadataDigest(page, TOOL_PAGE_BYTES);
     return page;
   }),
   document: Effect.fn("Office.document")(function* (actor: Actor, id: string) {
@@ -113,7 +107,6 @@ export const makeOfficeReads = (deps: OfficeDependencies) => ({
     const page = yield* decodeWire(DraftPage)({ items, next: records.next }).pipe(
       Effect.mapError(() => officeFailure("CONTENT_REQUIRED")),
     );
-    yield* boundedMetadataDigest(page, TOOL_PAGE_BYTES);
     return page;
   }),
   events: Effect.fn("Office.events")(function* (actor: Actor, documentId: string, after: number) {

@@ -30,11 +30,9 @@ export type CapabilityLoadState = "idle" | "loading" | "ready" | "error";
 /** Honest wording for an authenticated capability request that failed. */
 export function capabilityMessage(error: unknown, action: string): string {
   if (error instanceof ChatApiError) {
-    if (error.status === 404)
-      return `${action} is not available on this server. Ask the operator to enable it. ${error.message}`;
-    if (error.status === 401)
-      return `You are signed out. Sign in again to continue. ${error.message}`;
-    if (error.status === 403) return `${action} was blocked for this account. ${error.message}`;
+    if (error.status === 404) return `${action} is currently unavailable.`;
+    if (error.status === 401) return "You are signed out. Sign in again to continue.";
+    if (error.status === 403) return `${action} is not available for your account.`;
   }
   return `${action} failed. ${errorMessage(error)}`;
 }

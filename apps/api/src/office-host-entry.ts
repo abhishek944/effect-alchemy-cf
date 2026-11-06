@@ -1,6 +1,6 @@
-import type { HostOfficeRequest } from "@starter/office-server/native-remote";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
-import type { NativeAccess, ViewRecord } from "@starter/office-server/ports";
+import type { HostOfficeRequest } from "@highchat/office-server/native-remote";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
+import type { NativeAccess, ViewRecord } from "@highchat/office-server/ports";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { NativePrivateResolution } from "../../office/src/native-private-wire.ts";
 import { OfficeHostFrame } from "./office-host-frame.ts";

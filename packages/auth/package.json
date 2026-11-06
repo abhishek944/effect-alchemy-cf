@@ -1,5 +1,5 @@
 {
-  "name": "@starter/auth",
+  "name": "@highchat/auth",
   "private": true,
   "type": "module",
   "exports": {
@@ -7,19 +7,15 @@
     "./database": "./src/database.ts",
     "./office-session": "./src/office-session.ts",
     "./admin-users": "./src/admin-users.ts",
-    "./cloudflare": "./src/cloudflare.ts",
-    "./billing-store": "./src/billing-store.ts",
-    "./billing-data": "./src/billing-data.ts",
-    "./billing-lease": "./src/billing-lease.ts",
-    "./billing-writes": "./src/billing-writes.ts"
+    "./cloudflare": "./src/cloudflare.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@alchemy.run/better-auth": "2.0.0-beta.80",
-    "@starter/diagnostics": "workspace:*",
-    "@starter/integrations": "workspace:*",
+    "@highchat/config": "workspace:*",
+    "@highchat/diagnostics": "workspace:*",
     "alchemy": "2.0.0-beta.80",
     "better-auth": "1.7.7",
     "effect": "4.0.1",

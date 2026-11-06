@@ -1,7 +1,7 @@
-import { decodeWireSync, officeImportOptions } from "@starter/office-contract";
-import type { OfficeIntentCommand } from "@starter/office-pi";
-import type { OperationRecord } from "@starter/office-server/ports";
-import { HostOfficeRequest } from "@starter/office-server/native-remote";
+import { decodeWireSync, officeImportOptions } from "@highchat/office-contract";
+import type { OfficeIntentCommand } from "@highchat/office-pi";
+import type { OperationRecord } from "@highchat/office-server/ports";
+import { HostOfficeRequest } from "@highchat/office-server/native-remote";
 import type { NativePrivateFile } from "../../office/src/native-private-wire.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import type { OfficeTaskProof } from "./office-task-proof.ts";

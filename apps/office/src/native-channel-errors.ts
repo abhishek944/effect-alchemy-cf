@@ -11,7 +11,7 @@ import {
   safeFailure,
   type Failure,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 
 export const isOfficeChannelError = Schema.is(Schema.Union(OfficeErrors));
 /** Retain finite domain codes, never foreign messages, stack traces or an unsafe retry hint. */

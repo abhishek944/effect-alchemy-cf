@@ -1,5 +1,5 @@
 import { Predicate, Schema } from "effect";
-import { decodeWireSync, OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { decodeWireSync, OfficeInvalid, safeFailure } from "@highchat/office-contract";
 
 // These 1.0.3 serializers/onLoad handlers use empty object maps, not arbitrary empty graphs.
 const emptyMaps = new Set([
@@ -21,7 +21,7 @@ const Resource = Schema.Struct({
   name: Schema.String,
   data: Schema.String,
 });
-const Resources = Schema.Array(Resource).check(Schema.isMaxLength(128));
+const Resources = Schema.Array(Resource);
 function deny(): never {
   throw new OfficeInvalid(safeFailure("FORBIDDEN"));
 }

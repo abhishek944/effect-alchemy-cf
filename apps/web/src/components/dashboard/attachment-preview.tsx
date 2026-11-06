@@ -10,24 +10,14 @@ import { usePinnedImage } from "./chat-pinned-image";
 import "./attachment-preview.css";
 
 function LocalImage({ file, compact }: { file: LocalFile; compact: boolean }) {
-  const lease =
-    file.reservationKey && file.width && file.height
-      ? {
-          key: file.reservationKey,
-          decodedBytes: file.width * file.height * 4,
-          previewBytes: file.byteSize,
-        }
-      : null;
-  const { imgRef, state } = usePinnedImage(file.previewUrl, lease);
+  const { imgRef, state } = usePinnedImage(file.previewUrl);
   return (
     <span data-cx="attachment-local-image">
-      {file.previewUrl && lease ? <img ref={imgRef} alt={file.name} data-state={state} /> : null}
-      {(!file.previewUrl || !lease || state !== "ready") && (
+      {file.previewUrl ? <img ref={imgRef} alt={file.name} data-state={state} /> : null}
+      {(!file.previewUrl || state !== "ready") && (
         <span>
           {compact ? (
             <AttachmentFallback />
-          ) : file.previewLimited ? (
-            "Image preview unavailable: close other previews and reattach."
           ) : state === "error" ? (
             "Image preview could not be loaded."
           ) : (

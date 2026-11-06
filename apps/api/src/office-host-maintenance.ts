@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { Id, decodeWireSync } from "@starter/office-contract";
+import { Id, decodeWireSync } from "@highchat/office-contract";
 import { officeCaught } from "./office-private-authority.ts";
 import { officeDeny } from "./office-diagnostic-report.ts";
 import { assertOfficeHostFrame } from "./office-host-auth.ts";
@@ -21,8 +21,7 @@ export const officeHostMaintenance = (root: OfficeHostRuntime, request: Request)
     yield* Effect.tryPromise({ try: () => root.process.peer(boot, false), catch: officeCaught });
     const path = new URL(request.url).pathname;
     const body = yield* Effect.tryPromise({
-      try: () =>
-        readOfficePrivateJson(request.body, request.signal, Date.now() + 10_000, 16 * 1024),
+      try: () => readOfficePrivateJson(request.body, request.signal, Date.now() + 10_000, null),
       catch: officeCaught,
     });
     let owner = root.bootIO;
@@ -51,7 +50,7 @@ export const officeHostMaintenance = (root: OfficeHostRuntime, request: Request)
     } else return yield* Effect.fail(deny("route-invalid"));
     return officePrivateResponse(
       null,
-      16 * 1024,
+      null,
       owner,
       request.signal,
       Date.now() + 10_000,

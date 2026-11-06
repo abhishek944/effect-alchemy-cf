@@ -1,5 +1,5 @@
 import type { Effect } from "effect";
-import type { OfficeClient } from "@starter/office-contract/client";
+import type { OfficeClient } from "@highchat/office-contract/client";
 
 /** Host captures its authenticated HttpClient/runtime; this package never creates a second runtime. */
 export type OfficeRunner = <A, E>(

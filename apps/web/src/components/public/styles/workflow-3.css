@@ -1,0 +1,135 @@
+@media (width <= 760px) {
+  :where(.landing-workflow) .flow-controls button {
+    color: rgb(245, 242, 233);
+    cursor: pointer;
+    background: rgb(16, 17, 19);
+    border: 1px solid rgb(68, 70, 74);
+    border-radius: 3px;
+    width: 44px;
+    height: 44px;
+    font:
+      24px "DM Sans",
+      sans-serif;
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-workflow):not([data-workflow-phone="A"]) .section-heading h2 {
+      font-size: 36px;
+    }
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    :where(.landing-workflow)[data-workflow-phone="E"] .step {
+      flex-basis: 248px;
+    }
+  }
+}
+:where(.landing-workflow) .flow-controls {
+  display: none;
+}
+:where(.landing-workflow) .flow-controls span {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+:where(.landing-workflow) .section-heading {
+  flex-wrap: wrap;
+}
+:where(.landing-workflow) .section-heading > div {
+  min-width: 0px;
+}
+:where(.landing-workflow) .section-heading h2 {
+  overflow-wrap: anywhere;
+  font-size: 4.75rem;
+}
+:where(.landing-workflow) .eyebrow {
+  font-size: 0.625rem;
+}
+:where(.landing-workflow) .intro {
+  font-size: 1.0625rem;
+}
+:where(.landing-workflow) .workflow-C .step h3 {
+  overflow-wrap: anywhere;
+  font-size: 2.375rem;
+}
+:where(.landing-workflow) .step p {
+  font-size: 1.0625rem;
+}
+:where(.landing-workflow) .step-index {
+  font-size: 0.6875rem;
+}
+:where(.landing-workflow) .workflow-C .step-index {
+  width: 2.625rem;
+  height: 2.625rem;
+  top: -1.375rem;
+}
+:where(.landing-workflow) .workflow-C .step {
+  padding-top: 2.375rem;
+}
+:where(.landing-workflow)[data-shader="D"] .shader-field {
+  height: var(--wash-height, 350px);
+}
+@media (width <= 760px) {
+  div:where(.landing-workflow):not([data-workflow-phone="A"]) .section {
+    padding-top: max(40px, -40px + 5rem);
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workflow):not([data-workflow-phone="A"]) .section-heading h2 {
+    font-size: 2.5625rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workflow):not([data-workflow-phone="A"]) .eyebrow {
+    font-size: 0.5rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workflow):not([data-workflow-phone="A"]) .intro {
+    font-size: 0.9375rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workflow):not([data-workflow-phone="A"]) .step h3 {
+    font-size: 1.5625rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workflow):not([data-workflow-phone="A"]) .step p {
+    font-size: 0.9375rem;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow)[data-workflow-phone="E"] .step {
+    padding: 24px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow)[data-workflow-phone="E"] .step-index {
+    width: 3rem;
+    height: 3rem;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow) .flow-controls {
+    font-size: 0.6875rem;
+    display: flex;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow) .flow-controls button {
+    width: 2.75rem;
+    min-width: 44px;
+    height: 2.75rem;
+    min-height: 44px;
+    font-size: 1.5rem;
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-workflow):not([data-workflow-phone="A"]) .section-heading h2 {
+      font-size: 2.25rem;
+    }
+  }
+}

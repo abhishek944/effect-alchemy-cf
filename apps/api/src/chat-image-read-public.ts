@@ -45,7 +45,7 @@ export class ChatImageReadsApi extends HttpApiGroup.make("chatImageReads")
   )
   .middleware(ChatAuthentication) {}
 
-const ImageReadsApi = HttpApi.make("starter").add(ChatImageReadsApi);
+const ImageReadsApi = HttpApi.make("highchat").add(ChatImageReadsApi);
 export const ChatImageReadsLive = HttpApiBuilder.group(
   ImageReadsApi,
   "chatImageReads",

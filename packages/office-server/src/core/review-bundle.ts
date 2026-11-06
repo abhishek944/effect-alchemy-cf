@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { Change, Count, Id, Kind, Label, Revision, decodeWire } from "@starter/office-contract";
+import { Change, Count, Id, Kind, Label, Revision, decodeWire } from "@highchat/office-contract";
 import type { FrozenReview, OfficeDependencies } from "../ports/index.ts";
 import { SnapshotWithBlocksSchema } from "../jobs/snapshot-schema.ts";
 import { loadNativeArtifact } from "./bytes.ts";
@@ -8,7 +8,7 @@ import { metadataDigest } from "./operations.ts";
 import { reviewFingerprintInput } from "../storage-remote/review-identity.ts";
 
 export const reviewFingerprint = (review: Omit<FrozenReview, "fingerprint">): string =>
-  metadataDigest(reviewFingerprintInput(review), 16384);
+  metadataDigest(reviewFingerprintInput(review));
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const ReadyCapture = Schema.Struct({
   purpose: Schema.Literal("office-ready-capture"),
@@ -33,8 +33,8 @@ export const ReadyCapture = Schema.Struct({
   fidelity: Schema.Literals(["history", "snapshot"]),
   // The public comparison engine accepts unknown history metadata and owns its product interpretation.
   // These are binary actual SDK results, never application metadata or reconstructed changesets.
-  leftChangesets: Schema.Array(Schema.Unknown).check(Schema.isMaxLength(16384)),
-  rightChangesets: Schema.Array(Schema.Unknown).check(Schema.isMaxLength(16384)),
+  leftChangesets: Schema.Array(Schema.Unknown),
+  rightChangesets: Schema.Array(Schema.Unknown),
 });
 export type ReadyCapture = typeof ReadyCapture.Type;
 /** Full normalized comparison is private and immutable; public API pages are bounded separately. */
@@ -42,11 +42,11 @@ export const ReviewBundle = Schema.Struct({
   purpose: Schema.Literal("office-review-bundle"),
   version: Schema.Literal(1),
   capture: ReadyCapture,
-  changes: Schema.Array(Change).check(Schema.isMaxLength(100000)),
+  changes: Schema.Array(Change),
   totalChanges: Count,
   fidelity: Schema.Literals(["history", "snapshot"]),
   readiness: Schema.Literals(["ready", "degraded"]),
-  diagnostics: Schema.Array(Label).check(Schema.isMaxLength(32)),
+  diagnostics: Schema.Array(Label),
 });
 export type ReviewBundle = typeof ReviewBundle.Type;
 export const readReviewBundle = Effect.fn("Office.readReviewBundle")(function* (

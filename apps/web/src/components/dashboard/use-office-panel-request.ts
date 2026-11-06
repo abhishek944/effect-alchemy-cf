@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent } from "react";
-import type { Target } from "@starter/office-contract";
+import type { Target } from "@highchat/office-contract";
 import { useChatStore } from "@/lib/chat-store-context";
 import { useWorkspacePreview } from "./workspace-preview-context";
 

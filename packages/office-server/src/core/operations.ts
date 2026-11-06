@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { decodeWire, type OperationPhase } from "@starter/office-contract";
+import { decodeWire, type OperationPhase } from "@highchat/office-contract";
 import type {
   ActorClaims,
   DocumentRecord,
@@ -11,8 +11,8 @@ import type {
 import { officeFailure } from "./failure.ts";
 
 import { StoredOperation } from "./record-schemas.ts";
-import { actorIdentity, boundedMetadataDigest } from "./control-identity.ts";
-export { sha256, metadataDigest, boundedMetadataDigest } from "./control-identity.ts";
+import { actorIdentity, metadataDigestEffect } from "./control-identity.ts";
+export { sha256, metadataDigest, metadataDigestEffect } from "./control-identity.ts";
 import { createOperationRecord } from "./operation-create.ts";
 import { prepareOperation } from "./operation-prepare.ts";
 export const reserveOperation = Effect.fn("Office.reserveOperation")(function* (
@@ -36,10 +36,7 @@ export const reserveOperation = Effect.fn("Office.reserveOperation")(function* (
       const accepted = yield* decodeWire(StoredOperation)(raw).pipe(
         Effect.mapError(() => officeFailure("CONTENT_REQUIRED")),
       );
-      const savedLineage = yield* boundedMetadataDigest(
-        actorIdentity(accepted.actor),
-        deps.policy.limits.metadataBytes,
-      );
+      const savedLineage = yield* metadataDigestEffect(actorIdentity(accepted.actor));
       if (
         accepted.intentDigest !== intentDigest ||
         accepted.lineageDigest !== lineageDigest ||
@@ -90,7 +87,7 @@ export const advanceOperation = Effect.fn("Office.advanceOperation")(function* (
   const normalized = yield* decodeWire(StoredOperation)(next).pipe(
     Effect.mapError(() => officeFailure("INVALID_INPUT")),
   );
-  yield* boundedMetadataDigest(normalized, deps.policy.limits.metadataBytes);
+  yield* metadataDigestEffect(normalized);
   return yield* deps.metadata.advanceOperation(normalized, record.receipt.version);
 });
 export const terminalReceipt = (phase: OperationPhase): boolean =>

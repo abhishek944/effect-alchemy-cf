@@ -3,15 +3,15 @@
 Browser/Worker-safe Effect 4.0.1 schemas and HTTP client for private Sheets, Docs
 and Slides. This package owns finite application boundaries, not SDK content,
 OT, storage, authentication, rendering or execution. Native SDK types stay in
-`@starter/office-server/ports`. No sibling checkout is a dependency.
+`@highchat/office-server/ports`. No sibling checkout is a dependency.
 
 ## Exports
 
-- `@starter/office-contract`: request/result/error schemas, `OfficeApi`,
+- `@highchat/office-contract`: request/result/error schemas, `OfficeApi`,
   `OfficeCommand`, `decodeWire`/`decodeWireSync`, limits and type aliases.
-- `@starter/office-contract/client`: `makeOfficeClient`, `OfficeClient`,
+- `@highchat/office-contract/client`: `makeOfficeClient`, `OfficeClient`,
   `uploadOfficeBytes` and `BinaryUpload`.
-- `@starter/office-contract/native-wire`: internal bounded MessagePack native
+- `@highchat/office-contract/native-wire`: internal bounded MessagePack native
   artifact codec. Do not expose it as a model tool or public document store.
 
 ```ts

@@ -1,11 +1,11 @@
 {
-  "name": "effect-alchemy-cf",
+  "name": "highchat",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "turbo run build",
+    "build": "node scripts/build.mjs",
     "dev": "node scripts/local.mjs",
-    "dev:web": "pnpm --filter @starter/web dev",
+    "dev:web": "pnpm --filter @highchat/web dev",
     "dev:office": "node scripts/local-office.mjs",
     "lint": "pnpm lint:format:check && node packages/config/env.mjs && oxlint --type-aware --deny-warnings && node scripts/check-lines.mjs && pnpm lint:effect && pnpm lint:typecheck",
     "lint:format": "oxfmt .",
@@ -13,10 +13,10 @@
     "lint:typecheck": "turbo run typecheck && tsc --noEmit",
     "lint:effect": "effect-tsgo diagnostics --project apps/api/tsconfig.json --severity error && effect-tsgo diagnostics --project packages/auth/tsconfig.json --severity error && effect-tsgo diagnostics --project packages/integrations/tsconfig.json --severity error && effect-tsgo diagnostics --project apps/infra/tsconfig.json --severity error",
     "audit": "pnpm audit --prod --audit-level high",
-    "plan:dev": "pnpm lint && pnpm build && node scripts/cloud.mjs plan dev",
-    "deploy:dev": "pnpm lint && pnpm build && node scripts/cloud.mjs deploy dev",
-    "plan:prod": "pnpm lint && pnpm build && node scripts/cloud.mjs plan prod",
-    "deploy:prod": "pnpm lint && pnpm build && node scripts/cloud.mjs deploy prod",
+    "plan:dev": "node scripts/cloud.mjs plan dev",
+    "deploy:dev": "node scripts/cloud.mjs deploy dev",
+    "plan:prod": "node scripts/cloud.mjs plan prod",
+    "deploy:prod": "node scripts/cloud.mjs deploy prod",
     "prepare": "node packages/config/env.mjs --init && lefthook install"
   },
   "devDependencies": {

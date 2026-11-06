@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Id, decodeWire } from "@starter/office-contract";
+import { Id, decodeWire } from "@highchat/office-contract";
 import type { Actor, OfficeDependencies, OfficeService, OperationRecord } from "../ports/index.ts";
 import type { OfficeNativeRuntime } from "./native-runtime.ts";
 import { operationCaller, operationTarget } from "./operation-caller.ts";
@@ -92,7 +92,7 @@ export function makeOfficeOperations(
       let record = context.record;
       if (record === null) return yield* Effect.fail(officeFailure("NOT_FOUND", id));
       if (context.claims !== null)
-        yield* requireExistingIntent(deps, context.claims, record, record.intent);
+        yield* requireExistingIntent(context.claims, record, record.intent);
       if (terminalReceipt(record.receipt.phase)) return record.receipt;
       if (
         record.intent.kind === "approve" ||

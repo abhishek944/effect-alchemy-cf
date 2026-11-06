@@ -10,7 +10,6 @@ import { ChatCapabilitiesApi } from "./chat-capability-api.ts";
 import { ImagePreferencesApi } from "./chat-image-preference-public.ts";
 import { ChatLibraryApi } from "./chat-library-public.ts";
 import { ChatImageReadsApi } from "./chat-image-read-public.ts";
-import { BillingApi, BillingAdminApi } from "./billing-api.ts";
 import { User } from "./model.ts";
 
 class Public extends HttpApiGroup.make("public").add(
@@ -23,7 +22,7 @@ class Private extends HttpApiGroup.make("private")
   .add(HttpApiEndpoint.get("me", "/api/me", { success: User }))
   .middleware(Authentication) {}
 
-export class Api extends HttpApi.make("starter")
+export class Api extends HttpApi.make("highchat")
   .add(Public)
   .add(Private)
   .add(AdminApi)
@@ -32,6 +31,4 @@ export class Api extends HttpApi.make("starter")
   .add(ImagePreferencesApi)
   .add(ChatLibraryApi)
   .add(ChatImageReadsApi)
-  .add(AccountApi)
-  .add(BillingApi)
-  .add(BillingAdminApi) {}
+  .add(AccountApi) {}

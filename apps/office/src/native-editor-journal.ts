@@ -1,15 +1,15 @@
 import { isDeepStrictEqual } from "node:util";
 import { Effect, type Scope } from "effect";
-import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { HostEditorPermit } from "@starter/office-server/native-remote";
-import { decodeWireSync } from "@starter/office-contract";
-import { prepareSdkEditorCommit } from "@starter/office-server/native-codec";
-import type { OfficeNativeRuntime } from "@starter/office-server";
+import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import { HostEditorPermit } from "@highchat/office-server/native-remote";
+import { decodeWireSync } from "@highchat/office-contract";
+import { prepareSdkEditorCommit } from "@highchat/office-server/native-codec";
+import type { OfficeNativeRuntime } from "@highchat/office-server";
 import type {
   NativeEditorLeaf,
   NativeEditorPermit,
   OfficeDependencies,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { OfficeEditorClient } from "./native-editor-client.ts";
 import { captureNativeTarget } from "./native-target.ts";
 import { stageEditorArtifact } from "./native-editor-artifact.ts";
@@ -67,22 +67,16 @@ export const makeOfficeEditorJournal = Effect.fn("Office.editorJournal")(functio
           };
     const id = crypto.randomUUID();
     const payload = await run(
-      stageEditorArtifact(
-        options.bytes,
-        permit.target.owner,
+      stageEditorArtifact(options.bytes, permit.target.owner, id, {
+        version: 1,
+        kind: "editor-native-write",
         id,
-        {
-          version: 1,
-          kind: "editor-native-write",
-          id,
-          submissionId: permit.submissionId,
-          stepId: permit.stepId,
-          target: permit.target,
-          receipt,
-          step,
-        },
-        options.policy.limits.nativeBytes,
-      ),
+        submissionId: permit.submissionId,
+        stepId: permit.stepId,
+        target: permit.target,
+        receipt,
+        step,
+      }),
     );
     check();
     const state: EditorPublication = {

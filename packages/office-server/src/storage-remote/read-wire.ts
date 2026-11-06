@@ -1,21 +1,13 @@
 import { Schema } from "effect";
 import { UniverType } from "@univerjs/protocol";
-import { Count, Revision } from "@starter/office-contract";
+import { Count, Revision } from "@highchat/office-contract";
 import { NativeSnapshot, NativeValue } from "./wire.ts";
 
 /** Private metadata only. Real host authority and published-piece access remain mandatory. */
 export const DOC_READ_LIMITS = Object.freeze({
-  controlBytes: 16 * 1024,
-  metadataBytes: 2 * 1024 * 1024,
   pieceBytes: 4 * 1024 * 1024,
   historyPage: 8,
 });
-export type DocReadBudget = {
-  readonly maxCalls: number;
-  readonly maxBytes: number;
-  readonly maxValueBytes: number;
-  readonly maxHistoryRevisions: number;
-};
 const Name = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const DocReadRequest = Schema.Union([
   Schema.Struct({ method: Schema.Literal("unit") }),

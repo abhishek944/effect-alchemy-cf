@@ -8,7 +8,7 @@
  * resolution and the owner's own failure message.
  */
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
-import type { ChatReferenceInputs } from "@starter/office-contract";
+import type { ChatReferenceInputs } from "@highchat/office-contract";
 import type {
   ChatConnection,
   ChatPanelRequest,

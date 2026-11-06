@@ -8,8 +8,7 @@ import { moveRow, popupRows } from "./chat-popup-rows";
 const GROUP_LABELS = { openai: "OpenAI", anthropic: "Claude" } as const;
 
 function availabilityNote(entry: ChatCatalog["models"][number]): string {
-  if (entry.availability === "not_enabled") return "Not enabled in this stage";
-  if (entry.availability === "stage_unconfigured") return "Needs stage configuration";
+  if (entry.availability !== "enabled") return "Currently unavailable";
   return entry.imageInput ? "Images · Text" : "Text";
 }
 

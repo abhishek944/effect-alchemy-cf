@@ -6,13 +6,12 @@ import {
   OfficeLimited,
   safeFailure,
   type ImportInto,
-} from "@starter/office-contract";
-import { encodeNativeFrame, NativeWireError } from "@starter/office-contract/native-wire";
+} from "@highchat/office-contract";
+import { encodeNativeFrame, NativeWireError } from "@highchat/office-contract/native-wire";
 import type { NativeInputFrame } from "../ports/jobs.ts";
 import { loadOfflineRuntime } from "./offline.ts";
 import { requireSheetProfile, checkedImportSheet } from "./sheet-profile.ts";
 import { prepareSheetStyles } from "./sheet-styles.ts";
-import { JOB_NATIVE_LIMITS } from "./frames.ts";
 import { preflightSheetLoads } from "./sheet-load-preflight.ts";
 
 function deny(): never {
@@ -48,12 +47,7 @@ export function sheetInsertions(
   const selected = source.sheetOrder.filter(
     (id) => requested === "all" || names.has(source.sheets[id]?.name ?? ""),
   );
-  if (
-    !selected.length ||
-    selected.length > 32 ||
-    (requested !== "all" && selected.length !== requested.length)
-  )
-    deny();
+  if (!selected.length || (requested !== "all" && selected.length !== requested.length)) deny();
   const targetNames = new Set(
     Object.values(target.sheets).map((sheet) => sheet.name?.toLowerCase()),
   );
@@ -94,7 +88,7 @@ export function sheetInsertions(
     }),
   }));
   try {
-    encodeNativeFrame("job-output", result, { ...JOB_NATIVE_LIMITS, maxBytes: 2 * 1024 * 1024 });
+    encodeNativeFrame("job-output", result);
   } catch (error) {
     if (error instanceof NativeWireError)
       throw error.code === "LIMIT_EXCEEDED"

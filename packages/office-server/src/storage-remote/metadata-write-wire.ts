@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, Digest, Editor, EditorAction, Id, Receipt } from "@starter/office-contract";
+import { Count, Digest, Editor, EditorAction, Id, Receipt } from "@highchat/office-contract";
 import { NativeReceiptBinding, OwnerClaims } from "../ports/index.ts";
 import {
   HostDocumentRecord,

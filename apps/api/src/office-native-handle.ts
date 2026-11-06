@@ -3,8 +3,8 @@ import type {
   NativeReadInvocation,
   NativeReadReferences,
   NativeValueRef,
-} from "@starter/office-cloudflare/native";
-import type { NativeTarget } from "@starter/office-server/ports";
+} from "@highchat/office-cloudflare/native";
+import type { NativeTarget } from "@highchat/office-server/ports";
 import type { officeNativeWriter } from "./office-native-writer.ts";
 import {
   officeDenied,

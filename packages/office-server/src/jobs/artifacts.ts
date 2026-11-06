@@ -1,11 +1,11 @@
-import { reportFailure, withCause } from "@starter/diagnostics";
+import { reportFailure, withCause } from "@highchat/diagnostics";
 import { Effect } from "effect";
 import {
   OfficeInvalid,
   OfficeUnavailable,
   safeFailure,
   type ArtifactRef,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { OfficeBytes, OwnerScope } from "../ports/index.ts";
 import { digestBytes } from "./frames.ts";
 
@@ -16,10 +16,8 @@ export const readJobArtifact = Effect.fn("Office.jobs.readArtifact")(function* (
   bytes: OfficeBytes,
   owner: OwnerScope,
   ref: ArtifactRef,
-  cap: number,
   cancellation?: AbortSignal,
 ) {
-  if (ref.bytes > cap) return yield* Effect.fail(new OfficeInvalid(safeFailure("LIMIT_EXCEEDED")));
   const found = yield* bytes.get(owner, ref.id);
   if (!found || artifactKey(found.ref) !== artifactKey(ref))
     return yield* Effect.fail(new OfficeInvalid(safeFailure("CONTENT_REQUIRED")));
@@ -41,7 +39,7 @@ export const readJobArtifact = Effect.fn("Office.jobs.readArtifact")(function* (
           const part = await reader.read();
           if (part.done) break;
           size += part.value.byteLength;
-          if (size > ref.bytes || size > cap) throw new Error("Artifact length mismatch.");
+          if (size > ref.bytes) throw new Error("Artifact length mismatch.");
           chunks.push(part.value);
         }
         const result = new Uint8Array(size);

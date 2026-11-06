@@ -2,7 +2,7 @@ import { LifecycleService, LifecycleStages, type Injector } from "@univerjs/core
 import { DocSkeletonManagerService } from "@univerjs/docs";
 import { IRenderManagerService } from "@univerjs/engine-render";
 import { EMPTY, filter, firstValueFrom, map, startWith, switchMap, timeout } from "rxjs";
-import type { Kind } from "@starter/office-contract";
+import type { Kind } from "@highchat/office-contract";
 
 /** A loaded model or empty canvas is not evidence that the native result is laid out. */
 export async function confirmNativeRendering(injector: Injector, kind: Kind, unitId: string) {

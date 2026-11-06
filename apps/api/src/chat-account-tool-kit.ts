@@ -8,7 +8,7 @@
  * folded into an unavailable result.
  */
 import type { ToolExecutionApi, ToolExecutionResult } from "@earendil-works/pi-durable";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import { Effect } from "effect";
 import { doCall, type ChatCatalogStub, type DoCall } from "./chat-bindings.ts";
 import type { ResolveResult, ToolContext } from "./chat-account-resolver.ts";

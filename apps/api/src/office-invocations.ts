@@ -1,21 +1,23 @@
-import { withCause } from "@starter/diagnostics";
-import type { Auth } from "@starter/auth";
+import { withCause } from "@highchat/diagnostics";
+import type { Auth } from "@highchat/auth";
 import type { RuntimeContext } from "alchemy";
 import {
   type OfficeSessionEpochs,
   revalidateOfficeSessionBinding,
   type OfficeSessionBinding,
-} from "@starter/auth/office-session";
+} from "@highchat/auth/office-session";
 import {
   OfficeForbidden,
+  OFFICE_LIMITS,
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { OwnerClaims, type HumanActor, type OwnerScope } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { OwnerClaims } from "@highchat/office-server/ports";
+import type * as Ports from "@highchat/office-server/ports";
 import { Clock, Effect } from "effect";
-import type { OfficeError } from "@starter/office-contract";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
+import type { OfficeError } from "@highchat/office-contract";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
 import type { OfficeTaskProofReader } from "./office-task-callback.ts";
 import { officeDeny, type OfficeDiagnosticMetadata } from "./office-diagnostic-report.ts";
 import { OfficeTaskSelector } from "./office-task-proof.ts";
@@ -28,7 +30,7 @@ import {
 export type OfficeHumanPurpose = "request" | "channel";
 type HumanInvocation = {
   readonly purpose: OfficeHumanPurpose;
-  readonly actor: HumanActor;
+  readonly actor: Ports.HumanActor;
   readonly session: OfficeSessionBinding;
   readonly deadline: number;
 };
@@ -43,10 +45,10 @@ type Registration = {
 const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
 /** Owned by the container DO, not a public session-ID authentication endpoint. */
 export class OfficeInvocationRegistry {
-  readonly #owner: OwnerScope;
+  readonly #owner: Ports.OwnerScope;
   readonly #issued = new Map<string, Registration>();
   #issuing = 0;
-  constructor(owner: OwnerScope) {
+  constructor(owner: Ports.OwnerScope) {
     this.#owner = Object.freeze(decodeWireSync(OwnerClaims)(structuredClone(owner)));
   }
   #live(session: OfficeSessionBinding): Live<void> {
@@ -87,7 +89,6 @@ export class OfficeInvocationRegistry {
       throw error;
     }
   }
-  /** ONLY the authenticated Worker's private DO binding may register original51 metadata. */
   registerHuman(
     original: OfficeSessionBinding,
     purpose: OfficeHumanPurpose,
@@ -97,13 +98,14 @@ export class OfficeInvocationRegistry {
       yield* this.#live(session);
       const now = yield* Clock.currentTimeMillis;
       if (purpose !== "request" && purpose !== "channel") return yield* Effect.fail(forbidden());
-      // An editor belongs to the real session; ordinary commands retain their finite work budget.
       const deadline =
-        purpose === "channel" ? session.expiresAt : Math.min(session.expiresAt, now + 120_000);
+        purpose === "channel"
+          ? session.expiresAt
+          : Math.min(session.expiresAt, now + OFFICE_LIMITS.jobSeconds * 1000);
       if (deadline <= now) return yield* Effect.fail(forbidden());
       if (this.#issued.size + this.#issuing >= 128)
         return yield* Effect.fail(new OfficeUnavailable(safeFailure("BUSY")));
-      const actor: HumanActor = Object.freeze({
+      const actor: Ports.HumanActor = Object.freeze({
         capability: "human",
         owner: this.#owner,
         principalId: session.ownerId,
@@ -116,7 +118,6 @@ export class OfficeInvocationRegistry {
       return record;
     });
   }
-  /** Actual Root event bindings only; own bounded slot through physical IO settlement. */
   registerTask(
     selector: OfficeTaskSelector,
     readProof: OfficeTaskProofReader,

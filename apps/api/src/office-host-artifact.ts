@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { createOfficeBytes } from "@starter/office-cloudflare/bytes";
+import { createOfficeBytes } from "@highchat/office-cloudflare/bytes";
 import type { OfficeHostActive } from "./office-host-state.ts";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import { officeDenied } from "./office-private-authority.ts";

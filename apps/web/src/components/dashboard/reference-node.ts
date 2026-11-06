@@ -7,7 +7,7 @@ import {
   type NodeKey,
   type SerializedTextNode,
 } from "lexical";
-import type { ChatReferenceInput } from "@starter/office-contract";
+import type { ChatReferenceInput } from "@highchat/office-contract";
 import type { ReferenceValue } from "./reference-types";
 import type { SavedFile } from "@/lib/chat-library-types";
 

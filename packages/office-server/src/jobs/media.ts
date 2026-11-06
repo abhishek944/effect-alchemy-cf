@@ -1,4 +1,4 @@
-import type { ExportOptions } from "@starter/office-contract";
+import type { ExportOptions } from "@highchat/office-contract";
 
 export function exportMediaType(options: ExportOptions): string {
   switch (options.format) {

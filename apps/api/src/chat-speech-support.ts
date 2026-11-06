@@ -1,5 +1,5 @@
 /** Shared authenticated speech admission, settlement and usage attribution. */
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import type { SpeechPreferences } from "./chat-speech-schema.ts";
 import { resolveSpeechRuntime, type SpeechRuntime } from "./chat-speech-runtime.ts";
 import type {

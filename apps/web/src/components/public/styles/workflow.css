@@ -1,0 +1,178 @@
+:where(.landing-workflow)[class] {
+  --lightningcss-light: ;
+  --lightningcss-dark: initial;
+  color-scheme: dark;
+  color: rgb(245, 242, 233);
+  font-synthesis: none;
+  background: rgb(8, 9, 11);
+  font-family: "DM Sans", sans-serif;
+}
+:where(.landing-workflow) * {
+  box-sizing: border-box;
+}
+div:where(.landing-workflow) {
+  margin: 0px;
+}
+:where(.landing-workflow) .section {
+  min-height: 820px;
+  padding: 65px 64px 80px;
+  position: relative;
+  overflow: hidden;
+}
+:where(.landing-workflow) .section-heading {
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 50px;
+  display: flex;
+}
+:where(.landing-workflow) .eyebrow {
+  letter-spacing: 0.13em;
+  align-items: center;
+  gap: 11px;
+  margin: 0px 0px 22px;
+  font:
+    10px ui-monospace,
+    monospace;
+  display: flex;
+}
+:where(.landing-workflow) .eyebrow i {
+  background: rgb(255, 167, 101);
+  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+}
+:where(.landing-workflow) h2 {
+  letter-spacing: -0.06em;
+  margin: 0px;
+  font-size: 76px;
+  font-weight: 500;
+  line-height: 0.97;
+}
+:where(.landing-workflow) .intro {
+  color: rgb(182, 183, 187);
+  max-width: 320px;
+  margin: 0px 0px 5px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+:where(.landing-workflow) h3 {
+  letter-spacing: -0.045em;
+  margin: 0px 0px 16px;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.12;
+}
+@media (width <= 760px) {
+  :where(.landing-workflow) .section {
+    min-height: calc(-60px + 100svh);
+    padding: 48px 24px 70px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow) .section-heading {
+    display: block;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow) .intro {
+    margin-top: 25px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workflow) h2 {
+    font-size: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.landing-workflow) * {
+    scroll-behavior: auto !important;
+    animation: auto ease 0s 1 normal none running none !important;
+  }
+}
+:where(.landing-workflow) .section {
+  isolation: isolate;
+}
+:where(.landing-workflow) .shader-root {
+  display: contents;
+}
+:where(.landing-workflow) .section-heading {
+  z-index: 2;
+  position: relative;
+}
+:where(.landing-workflow) .shader-field {
+  z-index: 0;
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+  overflow: hidden;
+}
+:where(.landing-workflow) .shader-shade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+}
+:where(.landing-workflow) .shader-error {
+  color: rgb(255, 193, 160);
+  font-size: 13px;
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+}
+:where(.landing-workflow)[data-shader="D"] .intro {
+  color: rgb(215, 216, 220);
+}
+:where(.landing-workflow)[data-shader="D"] .shader-field {
+  height: 350px;
+  bottom: auto;
+}
+:where(.landing-workflow)[data-shader="D"] .shader-shade {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0) 25%, rgb(8, 9, 11)),
+    linear-gradient(90deg, rgba(8, 9, 11, 0.74), rgba(8, 9, 11, 0.267));
+}
+:where(.landing-workflow) .section {
+  min-height: 900px;
+  padding: 65px 64px 90px;
+}
+:where(.landing-workflow) .section-heading h2 {
+  max-width: 800px;
+  font-size: 76px;
+}
+:where(.landing-workflow) .intro {
+  min-width: 240px;
+  max-width: 300px;
+}
+:where(.landing-workflow) .story {
+  z-index: 2;
+  margin-top: 60px;
+  position: relative;
+}
+:where(.landing-workflow) .step h3 {
+  letter-spacing: -1.3px;
+  margin: 20px 0px 16px;
+  font-size: 34px;
+  line-height: 1.1;
+}
+:where(.landing-workflow) .step p {
+  color: rgb(185, 187, 194);
+  max-width: 330px;
+  margin: 0px;
+  font-size: 17px;
+  line-height: 1.65;
+}
+:where(.landing-workflow) .step-index {
+  letter-spacing: 1px;
+  color: rgb(231, 161, 110);
+  font: 11px monospace;
+}
+:where(.landing-workflow) .workflow-C .story {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 42px;
+  margin-top: 80px;
+  display: grid;
+}
+:where(.landing-workflow) .workflow-C .step {
+  border-top: 1px solid rgb(104, 96, 91);
+  padding-top: 38px;
+  position: relative;
+}

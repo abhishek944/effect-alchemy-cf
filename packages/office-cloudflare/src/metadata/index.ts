@@ -1,4 +1,4 @@
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficeProviderOptions } from "./store.ts";
 import { MetadataStore, storeEffect } from "./store.ts";
 import { createCatalog } from "./catalog.ts";

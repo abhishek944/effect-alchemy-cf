@@ -1,5 +1,5 @@
-import { jobDiagnostics } from "@starter/office-contract";
-import { reportFailure } from "@starter/diagnostics";
+import { jobDiagnostics } from "@highchat/office-contract";
+import { reportFailure } from "@highchat/diagnostics";
 import { decodeJobRequest } from "./transport.ts";
 import {
   createDockerExecutor,

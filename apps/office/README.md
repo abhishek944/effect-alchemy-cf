@@ -32,18 +32,18 @@ acceptance record; select that immutable ID, never the mutable tag, for a job.
 
 The image entrypoint runs real native Sheet/Doc/Slide initialization and PNG
 capture. It is a fixed artifact smoke, not the application CLI dispatch. Invoke it
-only through `@starter/office-server/executor`, with a finite image profile and
+only through `@highchat/office-server/executor`, with a finite image profile and
 empty stdin. Its output contains synthetic native PNG bytes for artifact review.
 The verified runner must return exited/0 and confirmed cleanup before the smoke
 output can be interpreted. No output claims an application commit.
 
 ## Runtime exports and boundaries
 
-`@starter/office-server/jobs` exports `OFFICE_NATIVE_TYPES`,
+`@highchat/office-server/jobs` exports `OFFICE_NATIVE_TYPES`,
 `createOfficeHeadless`, `createOfficeRuntimeFactory` and `createOfficeRenderer`.
 These compose public SDK services and retain their native types; they are not a
 sandbox. The caller owns close/dispose, backend authority and the outer boundary.
-`@starter/office-server/render-page` exports `mountOfficeRenderPage` for the
+`@highchat/office-server/render-page` exports `mountOfficeRenderPage` for the
 standalone browser entry. The Node artifact also exports the bundled factory
 module as `runtime-foundation.mjs`, without private source-exported TypeScript.
 

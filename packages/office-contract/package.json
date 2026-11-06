@@ -1,5 +1,5 @@
 {
-  "name": "@starter/office-contract",
+  "name": "@highchat/office-contract",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,8 +12,8 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
+    "@highchat/diagnostics": "workspace:*",
     "@msgpack/msgpack": "3.1.3",
-    "@starter/diagnostics": "workspace:*",
     "effect": "4.0.1"
   },
   "devDependencies": {

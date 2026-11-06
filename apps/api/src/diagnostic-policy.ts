@@ -1,11 +1,5 @@
 import { Forbidden, UserNotFound } from "./admin-model.ts";
 import {
-  BillingConflict,
-  BillingForbidden,
-  BillingInvalidInput,
-  BillingMissing,
-} from "./billing-model.ts";
-import {
   ChatArchived,
   ChatBusy,
   ChatForbidden,
@@ -23,10 +17,6 @@ const expected = [
   Unauthorized,
   Forbidden,
   UserNotFound,
-  BillingConflict,
-  BillingForbidden,
-  BillingInvalidInput,
-  BillingMissing,
   ChatArchived,
   ChatBusy,
   ChatForbidden,

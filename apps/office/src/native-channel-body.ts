@@ -1,19 +1,18 @@
-import { OfficeLimited, safeFailure } from "@starter/office-contract";
+import { OfficeLimited, safeFailure } from "@highchat/office-contract";
 
 /** Finite control/ref-manifest metadata only, NEVER native document, piece or file content. */
 export async function readOfficeControlBody(
   response: Response,
   signal: AbortSignal,
   deadline: number,
-  charge: (bytes: number) => void,
   cleanupFailed: () => void,
-  maximum: number,
+  maximum: number | null,
 ): Promise<Uint8Array> {
   if (response.body === null) throw new Error("Missing private control body");
-  if (!Number.isSafeInteger(maximum) || maximum < 1 || maximum > 2 * 1024 * 1024)
+  if (maximum !== null && (!Number.isSafeInteger(maximum) || maximum < 1))
     throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   // One bounded allocation: arbitrarily fragmented/empty input cannot grow retained-item overhead.
-  const output = new Uint8Array(maximum);
+  const chunks: Uint8Array[] = [];
   const reader = response.body.getReader();
   const closed = reader.closed.then(
     () => undefined,
@@ -61,12 +60,18 @@ export async function readOfficeControlBody(
         if (++empty > 1024) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
         continue;
       }
-      charge(size);
-      if (size > maximum - bytes) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
-      output.set(part.value, bytes);
+      if (maximum !== null && size > maximum - bytes)
+        throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
+      chunks.push(part.value);
       bytes += size;
     }
-    return output.subarray(0, bytes);
+    const output = new Uint8Array(bytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      output.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return output;
   };
   let result: Uint8Array,
     cleanupError = false;

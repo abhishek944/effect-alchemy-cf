@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
 import type { NativeApplicationOptions } from "./native-app.ts";
 import { createOfficeProtocolAuthority } from "./native-protocol-authority.ts";
 import { createOfficeViewProtocol } from "./native-view-protocol.ts";
@@ -10,7 +10,7 @@ import type {
   NativePrivateInvocations,
   NativePrivateInvocation,
 } from "./native-private-invocations.ts";
-import type { OfficeDependencies } from "@starter/office-server/ports";
+import type { OfficeDependencies } from "@highchat/office-server/ports";
 import { nativePrivateMembers } from "./native-private-members.ts";
 
 const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));

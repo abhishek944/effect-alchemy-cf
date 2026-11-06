@@ -33,7 +33,7 @@ export function localOfficeImageRef() {
 export function buildLocalOfficeImage() {
   /** @type {[string, string[]][]} */
   const commands = [
-    ["pnpm", ["--filter", "@starter/office-runtime", "build:jobs:prepare"]],
+    ["pnpm", ["--filter", "@highchat/office-runtime", "build:jobs:prepare"]],
     [
       "docker",
       [

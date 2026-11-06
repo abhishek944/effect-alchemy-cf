@@ -1,4 +1,4 @@
-import { OfficeForbidden, OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { OfficeForbidden, OfficeInvalid, safeFailure } from "@highchat/office-contract";
 import type { CollaborationRuntimeBackend } from "@univer-cli/univer-collaboration-runtime";
 import type { NativeInputFrame } from "../ports/jobs.ts";
 import { OFFICE_NATIVE_TYPES, createOfficeRuntimeFactory } from "./runtime-factory.ts";
@@ -47,7 +47,7 @@ export async function loadOfflineRuntime(input: NativeInputFrame) {
       };
     },
   };
-  return createOfficeRuntimeFactory(backend, { maxCodeLength: 32 * 1024 }).load(
+  return createOfficeRuntimeFactory(backend).load(
     binding.unitId,
     OFFICE_NATIVE_TYPES[binding.kind],
   );

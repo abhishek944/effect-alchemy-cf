@@ -4,14 +4,7 @@
  * UTF-8 validity and decoded dimensions before acceptance.
  */
 import type { ChatFileDescriptor, ChatFileDescriptorList } from "@/lib/chat-capability-file-types";
-import {
-  MAX_ATTACHMENTS_PER_MESSAGE,
-  MAX_EXCERPT_CHARS,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
-  MAX_TEXT_FILE_BYTES,
-  MAX_OFFICE_BYTES,
-} from "@/lib/chat-capability-file-types";
+import { MAX_EXCERPT_CHARS } from "@/lib/chat-capability-file-types";
 import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "@/lib/chat-office-media";
 import {
   isBoundedText,
@@ -20,8 +13,6 @@ import {
   listed,
 } from "@/lib/chat-capability-validate";
 import { isRecord, isUuid } from "@/lib/chat-validate-base";
-
-export { MAX_ATTACHMENTS_PER_MESSAGE } from "@/lib/chat-capability-file-types";
 
 const mediaTypePattern = new RegExp(
   `^(image\\/(jpeg|png|webp)|${OFFICE_MEDIA_PATTERN}|application\\/json|text\\/[a-z0-9][a-z0-9.+-]{0,63})$`,
@@ -36,9 +27,9 @@ const fileStates: readonly ChatFileDescriptor["state"][] = [
 
 const unique = (values: readonly string[]): boolean => new Set(values).size === values.length;
 
-/** Unique validated attachment references; duplicates would double-count quota. */
+/** Unique validated attachment references preserve original identity. */
 export function parseAttachmentIds(value: unknown): string[] | null {
-  if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS_PER_MESSAGE) return null;
+  if (!Array.isArray(value)) return null;
   const ids: string[] = [];
   for (const id of value) {
     if (!isUuid(id)) return null;
@@ -62,24 +53,12 @@ export function parseChatFileDescriptor(value: unknown): ChatFileDescriptor | nu
   if ((value.kind === "image") !== value.mediaType.startsWith("image/")) return null;
   if (value.kind === "office" && !isOfficeMediaType(value.mediaType)) return null;
   if (value.kind !== "office" && isOfficeMediaType(value.mediaType)) return null;
-  const maxBytes =
-    value.kind === "image"
-      ? MAX_IMAGE_BYTES
-      : value.kind === "office"
-        ? MAX_OFFICE_BYTES
-        : MAX_TEXT_FILE_BYTES;
-  if (!isPositiveCount(value.byteSize) || value.byteSize > maxBytes) return null;
+  if (!isPositiveCount(value.byteSize)) return null;
   if (value.width !== null && !isPositiveCount(value.width)) return null;
   if (value.height !== null && !isPositiveCount(value.height)) return null;
   if (value.excerpt !== null && !isBoundedText(value.excerpt, MAX_EXCERPT_CHARS)) return null;
   if (!isIsoTimestamp(value.createdAt)) return null;
   if (value.expiresAt !== null && !isIsoTimestamp(value.expiresAt)) return null;
-  if (
-    value.width !== null &&
-    value.height !== null &&
-    value.width * value.height > MAX_IMAGE_PIXELS
-  )
-    return null;
   if (value.state === "ready") {
     const complete =
       value.kind === "image"
@@ -107,7 +86,6 @@ export function parseChatFileDescriptor(value: unknown): ChatFileDescriptor | nu
 
 export function parseChatFileDescriptorList(value: unknown): ChatFileDescriptorList | null {
   if (!isRecord(value) || !isUuid(value.chatId) || !Array.isArray(value.files)) return null;
-  if (value.files.length > MAX_ATTACHMENTS_PER_MESSAGE) return null;
   const files: ChatFileDescriptor[] = [];
   for (const item of value.files) {
     const file = parseChatFileDescriptor(item);

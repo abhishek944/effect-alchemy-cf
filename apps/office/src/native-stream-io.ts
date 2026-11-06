@@ -46,7 +46,7 @@ export async function emptyBody(body: ReadableStream<Uint8Array>): Promise<void>
 export async function readBytes(
   source: ReadableStream<Uint8Array>,
   length: number,
-  maximum: number,
+  maximum: number | null,
   digest: string | null,
   owners: Set<{ cancel(reason: unknown): Promise<void> }>,
   check: () => void,

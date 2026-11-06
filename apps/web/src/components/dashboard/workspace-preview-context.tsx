@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
 import { useWorkspaceOffice } from "./workspace-office-context";
-import { panelKey } from "./workspace-office-scope";
 import { restorePreview, storePreview } from "./workspace-session";
 import { useWorkspacePreviewActions } from "./use-workspace-preview-actions";
 import { useChatOpenReads, type ChatOpenRead } from "./use-chat-open-reads";
@@ -21,13 +20,7 @@ import type {
   WorkspaceImageFile,
   WorkspacePreviewTab,
 } from "./workspace-preview-model";
-import {
-  MAX_NATIVE_SURFACES,
-  nativeSurfaceCount,
-  updateView,
-  viewEntries,
-  type WorkspaceViews,
-} from "./workspace-preview-views";
+import { updateView, viewEntries, type WorkspaceViews } from "./workspace-preview-views";
 export type { WorkspaceImageFile, WorkspacePreviewTab } from "./workspace-preview-model";
 
 type PreviewContext = PreviewView & {
@@ -47,9 +40,6 @@ type PreviewContext = PreviewView & {
   openSavedFile: (chatId: string, fileId: string, reveal: boolean) => void;
   openRead: (chatId: string) => ChatOpenRead | null;
   dismissOpen: (chatId: string, read: ChatOpenRead) => void;
-  /** Restoration reserves one aggregate native slot before it hydrates a native descriptor. */
-  claimNativeRestore: (chatId: string, tabId: string) => boolean;
-  releaseNativeRestore: (chatId: string, tabId: string) => void;
   resolveOffice: (id: string, chatId: string, selection: OfficeSelection) => void;
   registerReveal: (reveal: () => void) => () => void;
   restoreTab: (chatId: string, captured: WorkspacePreviewTab, tab: WorkspacePreviewTab) => void;
@@ -79,8 +69,7 @@ export function WorkspacePreviewProvider({
   }, [selectedId, active]);
   const [views, publishViews] = useState<WorkspaceViews>({});
   const viewsRef = useRef<WorkspaceViews>({});
-  // Admission owns pending and committed views. React receives a snapshot, never an updater
-  // that reads mutable claims and may be eagerly evaluated or replayed later.
+  // Publish each origin-addressed update from the latest committed view snapshot.
   const setViews = useCallback((update: SetStateAction<WorkspaceViews>) => {
     const next = typeof update === "function" ? update(viewsRef.current) : update;
     viewsRef.current = next;
@@ -94,7 +83,6 @@ export function WorkspacePreviewProvider({
     (selectedId === null ? null : views[selectedId]) ??
     initialPreview(selectedId, "workspace-tab-0");
   const stored = useRef(new Map<string, PreviewView>());
-  const claims = useRef(new Set<string>());
   useLayoutEffect(() => {
     for (const [chatId, view] of viewEntries(views)) {
       if (stored.current.get(chatId) === view) continue;
@@ -114,7 +102,6 @@ export function WorkspacePreviewProvider({
     );
     return () => activate(null, null);
   }, [active, activeTab.id, activeTab.kind, activate, selectedId]);
-  const reserved = useCallback(() => claims.current.size, []);
   const readViews = useCallback(() => viewsRef.current, []);
   const openReads = useChatOpenReads();
   const actions = useWorkspacePreviewActions({
@@ -122,22 +109,9 @@ export function WorkspacePreviewProvider({
     setViews,
     activeId: projected.activeId,
     readViews,
-    reserved,
-    report: office.report,
     leave: office.leave,
     cancelFiles: openReads.cancelFiles,
   });
-  const claimNativeRestore = useCallback((chatId: string, tabId: string) => {
-    const key = panelKey(chatId, tabId);
-    if (claims.current.has(key)) return true;
-    if (nativeSurfaceCount(viewsRef.current) + claims.current.size >= MAX_NATIVE_SURFACES)
-      return false;
-    claims.current.add(key);
-    return true;
-  }, []);
-  const releaseNativeRestore = useCallback((chatId: string, tabId: string) => {
-    claims.current.delete(panelKey(chatId, tabId));
-  }, []);
   const openRead = useCallback(
     (chatId: string) => openReads.reads[chatId] ?? null,
     [openReads.reads],
@@ -153,13 +127,11 @@ export function WorkspacePreviewProvider({
   );
   const restoreTab = useCallback(
     (chatId: string, captured: WorkspacePreviewTab, tab: WorkspacePreviewTab) => {
-      // Convert the claim into a counted surface in the same synchronous ownership turn.
       setViews((current) => {
         const next = updateView(current, chatId, (view) => ({
           ...view,
           tabs: view.tabs.map((value) => (value === captured ? tab : value)),
         }));
-        claims.current.delete(panelKey(chatId, captured.id));
         return next;
       });
     },
@@ -176,8 +148,6 @@ export function WorkspacePreviewProvider({
           openReads.openSavedFile(chatId, fileId, show, actions.openImageIn),
         openRead,
         dismissOpen: openReads.dismiss,
-        claimNativeRestore,
-        releaseNativeRestore,
         resolveOffice,
         restoreTab,
       }}

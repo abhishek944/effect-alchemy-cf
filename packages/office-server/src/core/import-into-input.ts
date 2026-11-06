@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWireSync } from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type {
   IsolatedJob,
   NativeInputFrame,
@@ -15,7 +15,7 @@ import { operationTarget } from "./operation-caller.ts";
 import { operationRecord } from "./operation-read.ts";
 import { advanceOperation } from "./operations.ts";
 import { officeFailure } from "./failure.ts";
-import { decodeJobInput, snapshotDigest, JOB_NATIVE_LIMITS } from "../jobs/frames.ts";
+import { decodeJobInput, snapshotDigest } from "../jobs/frames.ts";
 import { ProposalBindingSchema } from "../jobs/schemas.ts";
 import { SnapshotWithBlocksSchema } from "../jobs/snapshot-schema.ts";
 import { preflightSheetLoads } from "../jobs/sheet-load-preflight.ts";
@@ -44,7 +44,6 @@ export const importIntoInput = Effect.fn("Office.importIntoInput")(function* (
     yield* verifyOperation(deps, original, target, phase);
     const epochs = yield* deps.authority.current(original.owner, original.documentId);
     const native = yield* materializeNativeSnapshot(
-      deps,
       runtime,
       { kind: "read", target, ...epochs },
       original.worktreeId,
@@ -60,14 +59,10 @@ export const importIntoInput = Effect.fn("Office.importIntoInput")(function* (
       try: () => snapshotDigest(native),
       catch: () => officeFailure("LIMIT_EXCEEDED"),
     });
-    const ref = yield* stageNativeArtifact(
-      deps,
-      original.owner,
-      "native-input",
-      "job-input",
-      { binding: { ...base, inputDigest: digest }, native },
-      Math.min(deps.policy.limits.nativeBytes, JOB_NATIVE_LIMITS.maxBytes),
-    );
+    const ref = yield* stageNativeArtifact(deps, original.owner, "native-input", "job-input", {
+      binding: { ...base, inputDigest: digest },
+      native,
+    });
     const current = yield* operationRecord(deps, original.owner, input.operationId);
     if (current === null) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
     yield* verifyOperation(deps, current, target, phase);
@@ -81,17 +76,10 @@ export const importIntoInput = Effect.fn("Office.importIntoInput")(function* (
   const ref = record.artifacts.input;
   if (ref === null || ref.kind !== "native-input")
     return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
-  const bytes = yield* readArtifact(
-    deps,
-    record.owner,
-    ref,
-    Math.min(deps.policy.limits.nativeBytes, JOB_NATIVE_LIMITS.maxBytes),
-  );
+  const bytes = yield* readArtifact(deps, record.owner, ref);
   const frame = yield* Effect.try({
     try: () => {
-      const raw = decodeWireSync(Input)(
-        decodeNativeFrame(bytes, "job-input", JOB_NATIVE_LIMITS).payload,
-      );
+      const raw = decodeWireSync(Input)(decodeNativeFrame(bytes, "job-input").payload);
       const binding = { ...base, inputDigest: snapshotDigest(raw.native) };
       const checked = decodeJobInput(bytes, binding);
       return { binding, native: checked.native };

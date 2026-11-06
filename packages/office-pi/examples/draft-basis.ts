@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { Draft, View, OfficeInvalid, decodeWireSync } from "@starter/office-contract";
-import type { OfficeTaskPort } from "@starter/office-pi";
+import { Draft, View, OfficeInvalid, decodeWireSync } from "@highchat/office-contract";
+import type { OfficeTaskPort } from "@highchat/office-pi";
 
 /** Use after a confirmed create/reopen receipt, or with an authorized discovered draft ID. */
 export const readDraftExecutionBasis = (client: OfficeTaskPort, draftId: string) =>

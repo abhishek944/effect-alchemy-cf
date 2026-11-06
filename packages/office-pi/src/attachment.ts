@@ -3,8 +3,8 @@ import {
   officeImportOptions,
   OfficeUnavailable,
   safeFailure,
-} from "@starter/office-contract";
-import type { Draft, Receipt, Target, View } from "@starter/office-contract";
+} from "@highchat/office-contract";
+import type { Draft, Receipt, Target, View } from "@highchat/office-contract";
 import type { OfficeWorkflow } from "./workflow.ts";
 import type { OfficeOutput } from "./dispatch.ts";
 
@@ -22,6 +22,35 @@ export const confirmedImport = (
   receipt.error === null &&
   receipt.documentId !== null &&
   receipt.draftId !== null;
+
+/** Public recovery instructions only; these IDs never grant access or dispatch anything. */
+export function attachmentWorkflow(attachmentId: string, receipt: Receipt | null) {
+  const ready = receipt !== null && confirmedImport(receipt);
+  return {
+    state: ready ? "ready" : receipt === null ? "import-required" : "import-unconfirmed",
+    nextAction: ready ? "inspect-worktree" : receipt === null ? "import" : "observe-import",
+    attachmentId,
+    worktreeId: ready ? receipt.draftId : null,
+    operationId: receipt?.operationId ?? null,
+    phase: receipt?.phase ?? null,
+    instructions: ready
+      ? "Import is confirmed. Pass this worktreeId explicitly with your inspect command; do not inspect Main or guess a draft."
+      : receipt === null
+        ? "This saved original is not imported. Call the next import command first, then inspect with the confirmed returned worktreeId."
+        : "Import is not confirmed. Observe this exact operation; do not inspect, re-import or retry an uncertain write.",
+    ...(!ready
+      ? {
+          nextCall: {
+            tool: "univer_cli",
+            arguments: {
+              attachmentId,
+              command: receipt === null ? ["import"] : ["operation", receipt.operationId],
+            },
+          },
+        }
+      : {}),
+  };
+}
 
 /** Reuses the same import operation as explicit user opens. Never imports an original twice. */
 export async function attachmentImport(

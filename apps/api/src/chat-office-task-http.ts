@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { reportFailure } from "@starter/diagnostics";
-import { Id, decodeWireSync } from "@starter/office-contract";
+import { reportFailure } from "@highchat/diagnostics";
+import { Id, decodeWireSync } from "@highchat/office-contract";
 import type { ChatOfficeTaskBroker } from "./chat-office-task-broker.ts";
 import { readOfficePrivateJson } from "./office-private-json.ts";
 import { json } from "./chat-internal.ts";

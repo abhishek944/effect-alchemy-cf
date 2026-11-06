@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import { decodeWire } from "@highchat/office-contract";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type {
   ExecutionBinding,
   IsolatedJob,
@@ -9,7 +9,7 @@ import type {
   OfficeDependencies,
   OperationRecord,
 } from "../ports/index.ts";
-import { ownerDigest, snapshotDigest, JOB_NATIVE_LIMITS } from "../jobs/frames.ts";
+import { ownerDigest, snapshotDigest } from "../jobs/frames.ts";
 import { materializeNativeSnapshot } from "./input.ts";
 import { stageNativeArtifact } from "./bytes.ts";
 import { advanceOperation } from "./operations.ts";
@@ -97,14 +97,13 @@ export const executionJob = Effect.fn("Office.executionJob")(function* (
   const code = yield* decodeWire(StoredArtifact)(source.ref).pipe(
     Effect.mapError(() => officeFailure("CONTENT_REQUIRED", input.operationId)),
   );
-  if (code.kind !== "code" || code.bytes > deps.policy.limits.codeBytes)
+  if (code.kind !== "code")
     return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", input.operationId));
   const document = yield* deps.metadata.document(record.owner, record.documentId);
   if (document === null || record.worktreeId !== worktreeId)
     return yield* Effect.fail(officeFailure("CONTENT_REQUIRED", input.operationId));
   const epochs = yield* deps.authority.current(record.owner, record.documentId);
   const native = yield* materializeNativeSnapshot(
-    deps,
     runtime,
     { kind: "read", target, ...epochs },
     worktreeId,
@@ -131,14 +130,10 @@ export const executionJob = Effect.fn("Office.executionJob")(function* (
     imageDigest: deps.policy.imageDigest,
     codec: NATIVE_WIRE_CODEC,
   };
-  const artifact = yield* stageNativeArtifact(
-    deps,
-    record.owner,
-    "native-input",
-    "job-input",
-    { binding, native },
-    Math.min(deps.policy.limits.nativeBytes, JOB_NATIVE_LIMITS.maxBytes),
-  );
+  const artifact = yield* stageNativeArtifact(deps, record.owner, "native-input", "job-input", {
+    binding,
+    native,
+  });
   const job: ExecuteJob = { kind: "execute", binding, input: artifact, code, target: input.target };
   const now = yield* Clock.currentTimeMillis;
   const queued: JobRecord = {

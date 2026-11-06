@@ -7,8 +7,8 @@ import {
   Id,
   OfficeUnavailable,
   safeFailure,
-} from "@starter/office-contract";
-import type { OfficeBytes } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import type { OfficeBytes } from "@highchat/office-server/ports";
 
 // Bounds durable uncertainty markers per immutable owner/ID, including crashed upload attempts.
 export const MAX_ATTEMPTS = 32;

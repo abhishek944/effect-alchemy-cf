@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count } from "@starter/office-contract";
+import { Count } from "@highchat/office-contract";
 import { UniverType } from "@univerjs/protocol";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
 
@@ -56,7 +56,7 @@ const Envelope = Schema.Struct({
       endRow: Count,
       data: Schema.Uint8Array,
     }),
-  ).check(Schema.isMaxLength(4096)),
+  ),
 });
 /**
  * Foreign SDK content, not a replacement protocol model. Actual 1.0.3 Exchange output omits

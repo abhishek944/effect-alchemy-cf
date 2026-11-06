@@ -1,6 +1,6 @@
-import { ArtifactRef, Id, decodeWireSync } from "@starter/office-contract";
-import type { ArtifactRef as Ref } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+import { ArtifactRef, Id, decodeWireSync } from "@highchat/office-contract";
+import type { ArtifactRef as Ref } from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import { assertKey, missingContent, unknownOutcome } from "./data.ts";
 import type { ByteStore } from "./store.ts";
 import { verifiedBody } from "./stream.ts";

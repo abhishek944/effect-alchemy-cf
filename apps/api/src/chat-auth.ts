@@ -1,5 +1,5 @@
-import { Auth } from "@starter/auth";
-import { OfficeSessionEpochs } from "@starter/auth/office-session";
+import { Auth } from "@highchat/auth";
+import { OfficeSessionEpochs } from "@highchat/auth/office-session";
 import { RuntimeContext } from "alchemy";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
@@ -17,7 +17,7 @@ import { CurrentChatOfficeSession, makeChatOfficeSessionCapture } from "./chat-o
 export class ChatAuthentication extends HttpApiMiddleware.Service<
   ChatAuthentication,
   { provides: CurrentUser | CurrentChatOfficeSession }
->()("starter/ChatAuthentication", {
+>()("highchat/ChatAuthentication", {
   error: [Unauthorized, ChatForbidden, AuthenticationUnavailable],
 }) {
   static readonly layer = Layer.effect(

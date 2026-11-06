@@ -1,0 +1,108 @@
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer nav {
+      gap: 14px;
+    }
+  }
+}
+:where(.landing-closing) .closing {
+  flex-direction: column;
+  row-gap: 64px;
+  padding-bottom: 96px;
+  display: flex;
+}
+:where(.landing-closing) .closing-footer {
+  flex: 0 0 auto;
+  margin-top: auto;
+  position: relative;
+  inset: auto;
+}
+:where(.landing-closing) .invite-title,
+:where(.landing-closing) .invite-actions {
+  min-width: 0px;
+}
+:where(.landing-closing) .closing-C .invite h2 {
+  overflow-wrap: anywhere;
+  font-size: 7.25rem;
+}
+:where(.landing-closing) .invite .eyebrow {
+  font-size: 0.625rem;
+}
+:where(.landing-closing) .closing-intro {
+  font-size: 1.125rem;
+}
+:where(.landing-closing) .closing-actions .primary {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  font-size: 0.9375rem;
+}
+:where(.landing-closing) .primary span {
+  font-size: 1.4375rem;
+}
+:where(.landing-closing) .secondary {
+  font-size: 0.9375rem;
+}
+:where(.landing-closing) .closing-footer a {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  font-size: 0.8125rem;
+}
+:where(.landing-closing) .closing-footer .brand {
+  font-size: 1.1875rem;
+}
+:where(.landing-closing) .closing-footer nav {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+:where(.landing-closing) .closing .shader-field {
+  height: var(--wash-height, 580px);
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing {
+    row-gap: 0px;
+    padding-top: max(72px, -8px + 5rem);
+    padding-bottom: 95px;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .invite h2 {
+    font-size: 3.625rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .invite .eyebrow {
+    font-size: 0.5rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-intro {
+    font-size: 1rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .primary {
+    font-size: 0.9375rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .secondary {
+    font-size: 0.875rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer .brand {
+    font-size: 1.125rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-closing):not([data-closing-phone="A"]) .closing-footer nav {
+    justify-content: center;
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-closing):not([data-closing-phone="A"]) .invite h2 {
+      font-size: 3.125rem;
+    }
+  }
+}

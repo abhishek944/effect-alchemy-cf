@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import type { IChangeset, ISheetBlock } from "@univerjs/protocol";
 import { NativeName, NativeType, Natural, objectFields, parseMetadata } from "./metadata-parse.ts";
-import { NativeStorageError, nativeLimits } from "./types.ts";
+import { NativeStorageError } from "./types.ts";
 
 const Text = Schema.String;
 const List = <S extends Schema.Constraint>(schema: S) => Schema.Array(schema).pipe(Schema.mutable);
@@ -33,7 +33,7 @@ export function readNativeBlock(input: unknown): ISheetBlock {
   if (!Schema.is(Block)(object))
     throw new NativeStorageError("CONTENT", "Invalid native block metadata");
   const value = object;
-  if (value.endRow < value.startRow || value.data.byteLength > nativeLimits.blockBytes) {
+  if (value.endRow < value.startRow) {
     throw new NativeStorageError("CONTENT", "Invalid native block metadata");
   }
   return value;

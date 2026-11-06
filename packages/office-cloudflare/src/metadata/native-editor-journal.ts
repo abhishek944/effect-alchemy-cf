@@ -1,4 +1,4 @@
-import type { NativeEditorLeaf, NativeEditorPermit } from "@starter/office-server/ports";
+import type { NativeEditorLeaf, NativeEditorPermit } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { conflict } from "./store.ts";
 import { artifactEdges, completeRefs } from "./artifacts.ts";

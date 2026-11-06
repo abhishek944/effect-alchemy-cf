@@ -1,4 +1,4 @@
-import type { ArtifactRef } from "@starter/office-contract";
+import type { ArtifactRef } from "@highchat/office-contract";
 import type { NativeChange } from "../storage-remote/wire.ts";
 import type { NativeTarget } from "./identity.ts";
 import type { NativeReceiptBinding, NativeReceiptKey } from "./native-receipts.ts";

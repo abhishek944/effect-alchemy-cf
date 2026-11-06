@@ -1,6 +1,6 @@
 import { operationRecordSql } from "./legacy-failure.ts";
-import { Count, Id, decodeWireSync } from "@starter/office-contract";
-import type { OfficeMetadata, OperationRecord, OwnerScope } from "@starter/office-server/ports";
+import { Count, Id, decodeWireSync } from "@highchat/office-contract";
+import type { OfficeMetadata, OperationRecord, OwnerScope } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { canonical, conflict, invalid, missing, sqlNow, storeEffect } from "./store.ts";
 import { OperationRow } from "./schemas.ts";
@@ -116,11 +116,6 @@ export function createOperations(
             AND NOT EXISTS(SELECT 1 FROM office_meta_jobs WHERE owner=? AND operation=?)
             AND NOT EXISTS(SELECT 1 FROM office_meta_writes WHERE owner=? AND operation=?)`;
           values.push(owner, id, db.encode(OperationRow, previous), owner, id, owner, id);
-        }
-        if (record.receipt.phase === "queued" && previous.receipt.phase !== "queued") {
-          predicate +=
-            " AND (SELECT count(*) FROM office_meta_operations WHERE owner=? AND document=? AND phase='queued')<?";
-          values.push(owner, record.documentId, db.limits.queueDepth);
         }
         if (["cancelled-before-dispatch", "failed-before-submit"].includes(record.receipt.phase)) {
           predicate +=

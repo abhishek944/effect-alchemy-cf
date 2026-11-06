@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 
 const unavailable = () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
 

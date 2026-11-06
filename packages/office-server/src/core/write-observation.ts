@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { Revision, decodeWire } from "@starter/office-contract";
+import { Revision, decodeWire } from "@highchat/office-contract";
 import { NativeReceiptBinding, NativeReceiptKey } from "../ports/index.ts";
 import type {
   NativeTarget,

@@ -1,15 +1,14 @@
 import { Effect, Schema } from "effect";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import {
   Count,
   decodeWireSync,
   OfficeInvalid,
-  OfficeLimited,
   OfficeUnavailable,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
-import { hostEnvelope } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import { hostEnvelope } from "@highchat/office-server/native-remote";
 import { officeChannelProfile, type OfficeControlOptions } from "./native-channel-profile.ts";
 import type { OfficeRemoteMethod } from "./native-channel.ts";
 import type { OfficeBinaryChannel, OfficeBinaryInput } from "./native-transfer-types.ts";
@@ -20,8 +19,8 @@ import { officeBinaryResponse } from "./native-transfer-body.ts";
 import { isOfficeChannelError, officeChannelError } from "./native-channel-errors.ts";
 
 const Transfer = Schema.Struct({
-  requestBytes: Count.check(Schema.isLessThanOrEqualTo(256 * 1024 * 1024)),
-  responseLimit: Count.check(Schema.isLessThanOrEqualTo(256 * 1024 * 1024)),
+  requestBytes: Count,
+  responseLimit: Schema.NullOr(Count),
   mutation: Schema.Boolean,
 });
 const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
@@ -29,9 +28,7 @@ const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
 export function createOfficeBinaryChannel(options: OfficeControlOptions): OfficeBinaryChannel {
   const profile = officeChannelProfile(options);
   const resources = new Set<OfficeBinaryResource>();
-  let calls = 0,
-    bytes = 0,
-    closed = false,
+  let closed = false,
     failed = false,
     closing: Promise<void> | undefined;
   let failureCause: unknown;
@@ -40,10 +37,6 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
     failed = true;
     closed = true;
     for (const resource of resources) resource.revoke();
-  };
-  const charge = (size: number) => {
-    bytes += size;
-    if (bytes > profile.maxBytes) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   };
   function exchange<Q, A>(
     definition: OfficeRemoteMethod<Q, A>,
@@ -64,8 +57,6 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
             return Promise.reject(unavailable());
           if (resources.size >= profile.maxActive)
             return Promise.reject(new OfficeUnavailable(safeFailure("BUSY")));
-          if (calls >= profile.maxCalls)
-            return Promise.reject(new OfficeLimited(safeFailure("LIMIT_EXCEEDED")));
           const limits = decodeWireSync(Transfer)({
             requestBytes: transfer.requestBytes,
             responseLimit: transfer.responseLimit,
@@ -89,7 +80,6 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
           );
           resources.add(resource);
           void resource.done.then(() => resources.delete(resource));
-          calls++;
           const begin = async () => {
             resource.check();
             const upload = officeBinaryUpload(
@@ -98,7 +88,6 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
               limits.requestBytes,
               resource.signal,
               profile.deadline,
-              charge,
             );
             resource.add(upload.cancel);
             const init: RequestInit & { readonly duplex: "half" } = {
@@ -120,7 +109,6 @@ export function createOfficeBinaryChannel(options: OfficeControlOptions): Office
               resource,
               profile.invocationId,
               callId,
-              charge,
             );
             if ("error" in reply.payload) {
               peer = officeChannelError(reply.payload.error);

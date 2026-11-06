@@ -41,4 +41,4 @@ export type EmailReceipt = typeof EmailReceipt.Type;
 export class Email extends Context.Service<
   Email,
   { readonly send: (message: EmailMessage) => Effect.Effect<EmailReceipt, IntegrationError> }
->()("starter/integrations/Email") {}
+>()("highchat/integrations/Email") {}

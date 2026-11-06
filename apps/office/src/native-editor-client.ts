@@ -1,11 +1,11 @@
 import { Effect } from "effect";
-import { HostEditor } from "@starter/office-server/native-remote";
-import type { ArtifactRef } from "@starter/office-contract";
+import { HostEditor } from "@highchat/office-server/native-remote";
+import type { ArtifactRef } from "@highchat/office-contract";
 import type {
   NativeEditorPermit,
   NativeEditorLeaf,
   NativeReceiptBinding,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { OfficeControlCaller } from "./native-channel.ts";
 
 /** Real private calls only. A duplicate/unknown result supplies no dispatch permit. */

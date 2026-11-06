@@ -1,0 +1,181 @@
+:where(.public-auth) .primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 54px;
+  width: 100%;
+  margin-top: 30px;
+  padding: 12px 20px;
+  background: #f3f0e7;
+  color: #08090b;
+  border: 0;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+:where(.public-auth) .primary span {
+  font-size: 1.875rem;
+  font-weight: 400;
+  line-height: 1;
+}
+:where(.public-auth) .primary:hover {
+  background: #fff;
+}
+:where(.public-auth) .switch {
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: #bfc0c5;
+  margin: 28px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid #ffffff26;
+}
+:where(.public-auth) .switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #f3f0e7;
+  min-height: 44px;
+}
+:where(.public-auth) .skip {
+  position: absolute;
+  top: -100px;
+  left: 24px;
+  z-index: 9;
+  padding: 15px;
+  background: #f3f0e7;
+  color: #08090b;
+}
+:where(.public-auth) .skip:focus {
+  top: 12px;
+}
+:where(.public-auth) .art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+:where(.public-auth) .shader-root,
+:where(.public-auth) .shader-field {
+  position: absolute;
+  inset: 0;
+}
+:where(.public-auth) .shader-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #08090b 0%, transparent 45%, #08090b 100%);
+}
+:where(.public-auth) .shader-error {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  font-size: 0.75rem;
+}
+:where(.public-auth).variant-B .art {
+  right: 30%;
+  top: 110px;
+  mask-image: linear-gradient(90deg, #000 40%, transparent);
+}
+@media (max-width: 1370px) and (min-width: 761px) {
+  :where(.public-auth) main {
+    margin: 0 48px;
+    gap: 50px;
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}
+@media (max-width: 1370px) and (min-width: 761px) {
+  :where(.public-auth) h1 {
+    font-size: 5.375rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) header {
+    margin: 0 24px;
+    height: 86px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .brand {
+    font-size: 0.875rem;
+    gap: 8px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .brand svg {
+    width: 23px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .back {
+    font-size: 0.75rem;
+    gap: 8px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .back span {
+    font-size: 1.25rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) main {
+    display: flex;
+    flex-direction: column;
+    gap: 38px;
+    margin: 0;
+    padding: 48px 24px 60px;
+    min-height: 0;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .intro {
+    width: 100%;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) h1 {
+    font-size: 3.625rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .eyebrow {
+    font-size: 0.5625rem;
+    margin-bottom: 22px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .support {
+    font-size: 1rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .account {
+    max-width: 440px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) h2 {
+    font-size: 2.125rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .account-intro {
+    font-size: 0.875rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .art,
+  :where(.public-auth).variant-B .art {
+    inset: 86px 0 auto;
+    height: 430px;
+    mask-image: linear-gradient(#000, transparent);
+  }
+}
+@media (max-width: 360px) {
+  :where(.public-auth) header {
+    margin: 0 18px;
+  }
+}
+@media (max-width: 360px) {
+  :where(.public-auth) .brand span {
+    max-width: 112px;
+  }
+}

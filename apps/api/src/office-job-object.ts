@@ -4,13 +4,13 @@ import {
   withDiagnostic,
   reportEventEffect,
   reportedFailure,
-} from "@starter/diagnostics";
+} from "@highchat/diagnostics";
 import { officeReportBranch } from "./office-diagnostic-report.ts";
 import type * as cf from "@cloudflare/workers-types";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
-import { createOfficeMetadata } from "@starter/office-cloudflare/metadata";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
+import { createOfficeMetadata } from "@highchat/office-cloudflare/metadata";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
 import { officeJobProcess } from "./office-job-process.ts";
 
 const unknown = (cause?: unknown) => {

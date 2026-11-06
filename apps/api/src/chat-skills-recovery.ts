@@ -1,5 +1,5 @@
 /** Operation-scoped recovery: shared admission, native submit and DTO. */
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { ConversationBusy, type UserInput } from "@earendil-works/pi-durable";
 import { ROOT_SESSION, type PiHarness, type PiSubmitOptions } from "agents/harness/pi";
 import type { ChatAdmissionFence } from "./chat-admission-fence.ts";

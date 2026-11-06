@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { bindingScopeFailure } from "./chat-image-binding-types.ts";
 
 export type ImageBindingBody = {

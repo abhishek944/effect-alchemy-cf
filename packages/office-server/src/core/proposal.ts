@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import type { IChangeset } from "@univerjs/protocol";
-import { decodeWire, type ArtifactRef } from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWire, type ArtifactRef } from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type {
   ProposalBinding,
   NativeProposalFrame,
@@ -23,7 +23,7 @@ export const readProposal = Effect.fn("Office.readProposal")(function* (
   expected: ProposalBinding,
 ) {
   if (ref.kind !== "native-proposal") return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
-  const bytes = yield* readArtifact(deps, owner, ref, deps.policy.limits.proposalBytes);
+  const bytes = yield* readArtifact(deps, owner, ref);
   const raw = yield* Effect.try({
     try: () => decodeNativeFrame(bytes, "proposal").payload,
     catch: () => officeFailure("CONTENT_REQUIRED"),
@@ -44,8 +44,7 @@ export const readProposal = Effect.fn("Office.readProposal")(function* (
     !change.sid ||
     change.reqId === undefined ||
     change.reqId < 1 ||
-    change.userID !== owner.ownerId ||
-    change.mutations.length > deps.policy.limits.mutationCount
+    change.userID !== owner.ownerId
   )
     return yield* Effect.fail(officeFailure("CONTENT_REQUIRED", expected.operationId));
   const result: NativeProposalFrame = { binding: proposal.binding, changeset: change };

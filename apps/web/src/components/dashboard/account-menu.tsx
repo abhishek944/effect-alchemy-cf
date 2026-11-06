@@ -58,12 +58,12 @@ export default function AccountMenu({ user }: { user: DashboardUser }) {
     try {
       const { error } = await authClient.signOut();
       if (error) {
-        setFeedback(error.message || "Unable to sign out. Please try again.");
+        setFeedback("Unable to sign out. Please try again.");
       } else {
         close();
       }
     } catch {
-      setFeedback("The server did not respond. Check your connection before trying again.");
+      setFeedback("Unable to sign out. Please try again.");
     } finally {
       setPending(false);
     }

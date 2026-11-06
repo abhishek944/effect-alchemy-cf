@@ -5,7 +5,7 @@ export type ChatInputSelection = { name: string; scope: string; quote: string | 
 
 export function parseInputSelections(value: unknown): ChatInputSelection[] | null {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > 8) return null;
+  if (!Array.isArray(value)) return null;
   const selections: ChatInputSelection[] = [];
   for (const item of value) {
     if (!isRecord(item) || !isText(item.name) || !isText(item.scope)) return null;

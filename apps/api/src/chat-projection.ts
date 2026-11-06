@@ -6,14 +6,12 @@ import { messageUsage } from "./chat-accounting.ts";
 import { storedMessageTime } from "./chat-time.ts";
 import { decodeOption } from "./chat-internal.ts";
 import {
-  FRAME_BYTES,
   MAX_BLOCK_VISITS,
   MAX_ENTRY_FETCHES,
   MAX_MODEL_CANDIDATES,
   InvalidCursor,
   NativeDescending,
   TEXT_PREVIEW_UNITS,
-  encodedBytes,
   encodeHistoryCursor,
   type HistoryCursor,
   type HistoryPage,
@@ -30,7 +28,6 @@ export const buildWindow = async (
   cursor: HistoryCursor | null,
   limit: number,
   inputForEntry: (entry: number) => Promise<PublicChatInput | null>,
-  byteBudget = FRAME_BYTES,
   blockBudget = MAX_BLOCK_VISITS,
   candidateBudget = MAX_MODEL_CANDIDATES,
   hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean = () => false,
@@ -54,7 +51,6 @@ export const buildWindow = async (
     candidateBudget,
   );
   let exhausted = false;
-  let used = 4096; // Coverage/cursor/envelope reserve exceeds all bounded v1 metadata.
   const messages: ChatMessage[] = [];
   while (budget.fetches < MAX_ENTRY_FETCHES && messages.length < limit) {
     const max = ceiling !== null && isEntryId(ceiling) ? ceiling : undefined;
@@ -119,20 +115,12 @@ export const buildWindow = async (
         through = { entryId: entry.id, modelIndex: i };
         continue;
       }
-      const units = Math.min(TEXT_PREVIEW_UNITS, Math.floor((byteBudget - used - 1024) / 6));
-      if (units < 2) {
-        entryResume = entry.id;
-        indexResume = i;
-        finished = false;
-        break;
-      }
       const source = publicInputMessage(message, role === "user" ? input : null);
-      const slice = sliceText(source, 0, 0, units, blockBudget - budget.blocks);
+      const slice = sliceText(source, 0, 0, TEXT_PREVIEW_UNITS, blockBudget - budget.blocks);
       budget.blocks += slice.visited;
-      const available = Math.max(0, byteBudget - used - 1024 - slice.text.length * 6);
       const tools =
         message.role === "assistant"
-          ? await toolHistory.project(entry, message, ceiling, available, liveTools)
+          ? await toolHistory.project(entry, message, ceiling, liveTools)
           : {};
       const id = `${entry.id}:${i}`;
       const candidate: ChatMessage = {
@@ -150,15 +138,7 @@ export const buildWindow = async (
         ...textInfo(chat.id, id, committedRevision(entry.id, role), slice),
         ...tools,
       };
-      const size = encodedBytes(candidate) + 1;
-      if (used + size > byteBudget) {
-        entryResume = entry.id;
-        indexResume = i;
-        finished = false;
-        break;
-      }
       messages.push(candidate);
-      used += size;
       through = { entryId: entry.id, modelIndex: i };
     }
     if (!finished) break;
@@ -195,6 +175,5 @@ export const buildWindow = async (
             }),
     },
   };
-  if (encodedBytes(result) > byteBudget) throw new Error("History byte budget exceeded");
   return result;
 };

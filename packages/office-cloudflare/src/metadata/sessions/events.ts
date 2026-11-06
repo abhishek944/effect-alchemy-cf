@@ -1,4 +1,4 @@
-import type { OwnerScope, ViewRecord } from "@starter/office-server/ports";
+import type { OwnerScope, ViewRecord } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "../store.ts";
 import { eventStatement } from "../events.ts";
 

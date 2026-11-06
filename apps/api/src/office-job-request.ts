@@ -1,6 +1,6 @@
-import { decodeWireSync } from "@starter/office-contract";
-import { HostJobRecord } from "@starter/office-server/native-remote";
-import type { JobRecord } from "@starter/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostJobRecord } from "@highchat/office-server/native-remote";
+import type { JobRecord } from "@highchat/office-server/ports";
 import { officeBinaryCursor } from "./office-private-frame.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 
@@ -14,12 +14,8 @@ export async function officeJobRequest(
   deadline: number,
   revoke: () => void,
 ) {
-  let total = 0,
-    empty = 0;
-  const cursor = officeBinaryCursor(source, signal, deadline, (bytes) => {
-    total += bytes;
-    if (total > 34 * 1024 * 1024) throw officeDenied();
-  });
+  let empty = 0;
+  const cursor = officeBinaryCursor(source, signal, deadline);
   let chunk: Uint8Array = new Uint8Array(0);
   let offset = 0;
   let closing: Promise<void> | undefined;
@@ -70,13 +66,7 @@ export async function officeJobRequest(
     const metadataBytes = header.getUint32(4),
       inputBytes = header.getUint32(8),
       codeBytes = header.getUint32(12);
-    if (
-      metadataBytes === 0 ||
-      metadataBytes > 16 * 1024 ||
-      inputBytes > 32 * 1024 * 1024 ||
-      codeBytes > 32 * 1024
-    )
-      throw officeDenied();
+    if (metadataBytes === 0) throw officeDenied();
     const metadata = await exact(metadataBytes);
     const job = decodeWireSync(HostJobRecord.fields.job)(
       JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(metadata)),

@@ -1,10 +1,10 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Cause, Config, Effect } from "effect";
-import { diagnosticMetadata } from "@starter/diagnostics";
+import { diagnosticMetadata } from "@highchat/diagnostics";
 import * as HttpBody from "effect/http/HttpBody";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import type * as cf from "@cloudflare/workers-types";
-import { safeFailure } from "@starter/office-contract";
+import { safeFailure } from "@highchat/office-contract";
 import type { OfficeInvocationRegistry } from "./office-invocations.ts";
 import type { OfficeHostRole } from "./office-host-role.ts";
 import { officeStorageBindings } from "./office-storage-bindings.ts";

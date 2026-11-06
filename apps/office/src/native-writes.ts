@@ -1,22 +1,22 @@
 import { createHash } from "node:crypto";
 import type { IChangeset } from "@univerjs/protocol";
 import type { SaveSnapshotInput } from "@univerjs-pro/collaboration-service";
-import { decodeWireSync, OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWireSync, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import { encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import {
   NativeChange,
   nativeValueDigest,
   type NativeProducer,
   type HostValueHeader,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-server/native-remote";
 import {
   prepareSdkSnapshot,
   prepareSdkEditorCommit,
   decodeChangeset,
-} from "@starter/office-server/native-codec";
+} from "@highchat/office-server/native-codec";
 import type { NativeSession } from "./native-client.ts";
 import type { NativeValues } from "./native-values.ts";
-import { nativeId, invalidBytes } from "./native-stream-io.ts";
+import { nativeId } from "./native-stream-io.ts";
 
 export async function stageSdkSnapshot(
   s: NativeSession,
@@ -31,14 +31,7 @@ export async function stageSdkSnapshot(
     type: input.snapshot.type,
     revision: input.snapshot.rev,
   };
-  if ((input.sheetBlocks?.length ?? 0) > Math.min(4096, s.policy.limits.blockCount))
-    throw invalidBytes();
-  const framed = prepareSdkSnapshot(
-    input.snapshot,
-    input.sheetBlocks ?? [],
-    expected,
-    values.maximum,
-  );
+  const framed = prepareSdkSnapshot(input.snapshot, input.sheetBlocks ?? [], expected);
   const producer = values.producer(expected, framed.contentDigest, source);
   const blocks = [];
   for (const block of framed.blocks)

@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { Id, OfficeUnavailable, decodeWireSync, safeFailure } from "@starter/office-contract";
+import { Id, OfficeUnavailable, decodeWireSync, safeFailure } from "@highchat/office-contract";
 import { classifyNativeRoute } from "../../../packages/office-server/src/protocol/routes.ts";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { OfficeHostActive, OfficeHostRuntime } from "./office-host-state.ts";
@@ -67,16 +67,7 @@ export const officeHostProtocol = (
     });
     channel.frames.add(entry);
     return yield* Effect.tryPromise({
-      try: () =>
-        forwardOfficeHost(
-          root,
-          entry,
-          request,
-          path,
-          request.body,
-          root.policy.limits.nativeBytes,
-          true,
-        ),
+      try: () => forwardOfficeHost(root, entry, request, path, request.body, null, true),
       catch: () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")),
     });
   });

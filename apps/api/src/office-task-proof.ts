@@ -6,14 +6,13 @@ import {
   ArtifactRef,
   Digest,
   Id,
-  OFFICE_LIMITS,
   OfficeCommand,
   officeImportOptions,
   OfficeSendTarget,
   decodeWireSync,
-} from "@starter/office-contract";
-import { OriginalActorClaims } from "@starter/office-server/ports";
-import type { OfficeIntentCommand } from "@starter/office-pi";
+} from "@highchat/office-contract";
+import { OriginalActorClaims } from "@highchat/office-server/ports";
+import type { OfficeIntentCommand } from "@highchat/office-pi";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { ImageOriginalBinding, ImageResponseIdentity } from "./chat-image-response-schema.ts";
 import { decodeChatOfficeSession } from "./chat-office-session.ts";
@@ -21,7 +20,7 @@ import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 import type { OfficeTaskAssociation } from "./chat-office-task-association.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { OfficeTaskFile, officeTaskFile } from "./office-task-file.ts";
-import type { ArtifactRef as ArtifactReference } from "@starter/office-contract";
+import type { ArtifactRef as ArtifactReference } from "@highchat/office-contract";
 
 /** Private callback selectors only. Never credentials or a browser/model grant request. */
 export const OfficeTaskSelector = Schema.Struct({
@@ -40,7 +39,7 @@ export const OfficeStageReceipt = Schema.Struct({
   ),
 );
 export type OfficeStageReceipt = typeof OfficeStageReceipt.Type;
-export const OfficeStageReceipts = Schema.Array(OfficeStageReceipt).check(Schema.isMaxLength(32));
+export const OfficeStageReceipts = Schema.Array(OfficeStageReceipt);
 const Lease = Schema.Struct({ id: Id, notAfter: Count });
 const Intent = Schema.Struct({
   operationId: Id,
@@ -48,6 +47,8 @@ const Intent = Schema.Struct({
   command: Schema.Unknown,
   attachmentId: Schema.optionalKey(Id),
   referenceId: Schema.optionalKey(Id),
+  worktreeId: Schema.optionalKey(Id),
+  mainView: Schema.optionalKey(OfficeSendTarget),
   step: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{0,63}$/))),
   basis: Schema.optionalKey(DraftTarget),
 });
@@ -62,7 +63,7 @@ const Reply = Schema.Struct({
     acceptedInput: OriginalActorClaims.members[1].fields.acceptedInput,
     intent: Intent,
     target: Schema.NullOr(OfficeSendTarget),
-    originals: Schema.Array(ImageOriginalBinding).check(Schema.isMaxLength(5)),
+    originals: Schema.Array(ImageOriginalBinding),
     retained: Schema.NullOr(OfficeTaskFile),
     reference: Schema.optionalKey(ChatReferenceInput),
   }),
@@ -72,7 +73,7 @@ const StagedCode = Schema.Struct({
   input: Schema.Struct({
     operationId: Id,
     digest: Digest,
-    bytes: Count.check(Schema.isLessThanOrEqualTo(OFFICE_LIMITS.codeBytes)),
+    bytes: Count,
   }),
 });
 function decodeCommand(value: unknown): OfficeIntentCommand {
@@ -149,15 +150,17 @@ export function decodeOfficeTaskProof(input: unknown): OfficeTaskProof {
   const session = decodeChatOfficeSession(JSON.stringify(association.session) ?? null);
   if (session === null) throw officeDenied();
   const reference = association.reference;
-  if (association.intent.referenceId !== undefined) {
-    if (
-      association.intent.attachmentId !== undefined ||
-      reference?.kind !== "native" ||
-      reference.id !== association.intent.referenceId ||
-      !officeSame(reference.target, association.target)
-    )
-      throw officeDenied();
-  } else if (reference !== undefined) throw officeDenied();
+  if (association.intent.attachmentId === undefined || association.intent.referenceId !== undefined)
+    throw officeDenied();
+  if (
+    reference !== undefined &&
+    (reference.kind !== "native" ||
+      reference.target.documentId !== association.intent.attachmentId ||
+      !officeSame(reference.target, association.target))
+  )
+    throw officeDenied();
+  if (association.intent.mainView !== undefined && association.intent.mainView.kind !== "main")
+    throw officeDenied();
   return freezeImageRequestValue(
     {
       lease: decoded.lease,

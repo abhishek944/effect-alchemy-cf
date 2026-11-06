@@ -1,4 +1,4 @@
-import type { NativeTarget, OperationRecord } from "@starter/office-server/ports";
+import type { NativeTarget, OperationRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { canonical, conflict } from "../store.ts";
 import { readView } from "../sessions/views.ts";

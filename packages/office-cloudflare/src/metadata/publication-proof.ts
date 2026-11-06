@@ -1,4 +1,4 @@
-import type { OwnerScope } from "@starter/office-server/ports";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import type { PredicateSQL } from "./native-fence.ts";
 import { canonical, conflict } from "./store.ts";
@@ -12,10 +12,9 @@ export async function publicationProof(
   scope: string,
 ): Promise<PredicateSQL> {
   const rows = await db.all<{ record: string }>(
-    "SELECT record FROM office_meta_writes WHERE owner=? AND operation=? ORDER BY id LIMIT 101",
+    "SELECT record FROM office_meta_writes WHERE owner=? AND operation=? ORDER BY id",
     [db.owner(owner), operationId],
   );
-  if (rows.length > 100) throw conflict("HISTORY_INCOMPLETE");
   const writes = rows.map((row) => db.decode(WriteRow, row.record));
   if (writes.some((write) => ["staged", "dispatching", "unknown"].includes(write.phase)))
     throw conflict("OUTCOME_UNKNOWN");

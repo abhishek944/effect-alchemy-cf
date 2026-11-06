@@ -1,8 +1,8 @@
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import { officeLifecycle, officeObserve as observe } from "./office-lifecycle.ts";
 import { officeNativeMonitor } from "./office-platform.ts";
 import type * as cf from "@cloudflare/workers-types";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import type { officePrivateStream } from "./office-private-stream.ts";
 import {
   officeJobExecution,
@@ -133,7 +133,7 @@ export function officeJobProcess(state: cf.DurableObjectState, imageRef: string,
       throw withDiagnostic(unavailable(), "job-deadline-expired");
     used = true;
     binding = association;
-    const deadline = Math.min(notAfter, Date.now() + 120_000);
+    const deadline = notAfter;
     deadlineAt = deadline;
     originalSignal = signal;
     signal.addEventListener("abort", abort, { once: true });

@@ -8,10 +8,6 @@ import {
   FileMediaType,
   FileName,
   MAX_EXCERPT_CHARS,
-  MAX_IMAGE_BYTES,
-  MAX_MESSAGE_ATTACHMENT_BYTES,
-  MAX_TEXT_FILE_BYTES,
-  MAX_OFFICE_BYTES,
 } from "./chat-attachment-schema.ts";
 import { isOfficeMediaType } from "./chat-office-media.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
@@ -37,7 +33,7 @@ export type ChatFilesUsageView = {
   /** Uncertain failed uploads and purge-pending tombstones still holding bytes. */
   readonly pendingBytes: number;
   readonly usedBytes: number;
-  readonly quotaBytes: number;
+  readonly quotaBytes: number | null;
 };
 
 export type ChatFilesRemoveResult = "removed" | "in_use" | "not_found";
@@ -45,15 +41,9 @@ export type ChatFilesRemoveResult = "removed" | "in_use" | "not_found";
 const Now = Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0));
 const Digest = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
 const PixelCount = Schema.Number.check(
-  Schema.isInt(),
-  Schema.isGreaterThan(0),
-  Schema.isLessThanOrEqualTo(100_000),
+  Schema.makeFilter((value) => Number.isSafeInteger(value) && value > 0),
 );
-const ByteSize = Schema.Number.check(
-  Schema.isInt(),
-  Schema.isGreaterThan(0),
-  Schema.isLessThanOrEqualTo(MAX_MESSAGE_ATTACHMENT_BYTES),
-);
+const ByteSize = PixelCount;
 const Excerpt = Schema.String.check(Schema.isMaxLength(MAX_EXCERPT_CHARS));
 
 /** Metadata must already be internally consistent; the store only records it. */
@@ -67,8 +57,6 @@ const consistent = (input: {
 }): boolean => {
   const image = input.kind === "image";
   const office = input.kind === "office";
-  const limit = image ? MAX_IMAGE_BYTES : office ? MAX_OFFICE_BYTES : MAX_TEXT_FILE_BYTES;
-  if (input.byteSize > limit) return false;
   if (image !== input.mediaType.startsWith("image/")) return false;
   if (office !== isOfficeMediaType(input.mediaType)) return false;
   if (image) return input.width !== null && input.height !== null && input.excerpt === null;

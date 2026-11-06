@@ -1,4 +1,4 @@
-import { reportedFailure, reportFailureEffect, withCause } from "@starter/diagnostics";
+import { reportedFailure, reportFailureEffect, withCause } from "@highchat/diagnostics";
 import { Effect } from "effect";
 import { AuthenticationUnavailable } from "./model.ts";
 

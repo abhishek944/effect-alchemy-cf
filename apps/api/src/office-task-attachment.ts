@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import { officeAttachmentIds, officeImportOptions } from "@starter/office-contract";
-import type { DraftTarget } from "@starter/office-contract";
-import type { OfficeMetadata, OperationRecord } from "@starter/office-server/ports";
+import { officeAttachmentIds, officeImportOptions } from "@highchat/office-contract";
+import type { DraftTarget } from "@highchat/office-contract";
+import type { OfficeMetadata, OperationRecord } from "@highchat/office-server/ports";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
 import { officeTaskFile } from "./office-task-file.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
@@ -18,7 +18,7 @@ export async function readOfficeTaskAttachment(
   observeOnly = false,
 ): Promise<OfficeTaskAttachment | null> {
   const { intent, session } = proof.association;
-  if (!intent.attachmentId) return null;
+  if (!intent.attachmentId || proof.association.reference?.kind === "native") return null;
   // Same-Send original or the ready retained file of this owner/chat; both proved before use.
   const file = officeTaskFile(proof.association, intent.attachmentId);
   if (!file) throw officeDenied();
@@ -72,7 +72,7 @@ export async function readOfficeTaskAttachment(
     operation.receipt.documentId !== operation.documentId
   )
     throw officeDenied();
-  const basis = observeOnly ? undefined : intent.basis;
+  const basis = observeOnly || intent.worktreeId !== draft.id ? undefined : intent.basis;
   if (
     basis &&
     (basis.documentId !== draft.documentId ||

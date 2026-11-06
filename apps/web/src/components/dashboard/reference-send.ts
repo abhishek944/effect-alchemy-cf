@@ -1,4 +1,4 @@
-import { freezeChatReferenceInputs, type ChatReferenceInputs } from "@starter/office-contract";
+import { freezeChatReferenceInputs, type ChatReferenceInputs } from "@highchat/office-contract";
 import type { SendSnapshot } from "@/lib/chat-store-context";
 
 const safeBoundary = (text: string, offset: number) =>

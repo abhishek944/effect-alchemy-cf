@@ -13,7 +13,6 @@ import { ChatCapabilitiesLive } from "./chat-capability-http.ts";
 import { ImagePreferencesLive } from "./chat-image-preference-public.ts";
 import { ChatLibraryLive } from "./chat-library-public.ts";
 import { ChatImageReadsLive } from "./chat-image-read-public.ts";
-import { BillingLive, BillingAdminLive } from "./billing-http.ts";
 import { CurrentUser } from "./model.ts";
 
 const PublicLive = HttpApiBuilder.group(Api, "public", (handlers) =>
@@ -36,8 +35,6 @@ export const HttpLive = HttpApiBuilder.layer(Api).pipe(
       ChatLibraryLive,
       ChatImageReadsLive,
       AccountLive,
-      BillingLive,
-      BillingAdminLive,
     ),
   ),
   Layer.provide(

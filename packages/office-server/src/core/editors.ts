@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { Editor, EditorAction, decodeWire } from "@starter/office-contract";
+import { Editor, EditorAction, decodeWire } from "@highchat/office-contract";
 import type { HumanActor, OfficeDependencies } from "../ports/index.ts";
 import { authorize } from "./claims.ts";
 import { lookupView, openRecord } from "./views.ts";

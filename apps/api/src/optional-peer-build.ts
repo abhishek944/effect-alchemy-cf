@@ -67,7 +67,7 @@ const importSources = (program: unknown): string[] => {
 };
 
 export const optionalPeerBuildPlugin = (): ReturnType<typeof chatObjectsEntryPlugin> => ({
-  name: "starter:optional-peer-imports",
+  name: "highchat:optional-peer-imports",
   resolveId(source: string) {
     return isUnsupportedOptionalPeer(source)
       ? { id: source, external: true, moduleSideEffects: false }

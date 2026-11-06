@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { withDiagnostic } from "@starter/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import { withDiagnostic } from "@highchat/diagnostics";
 import { officeImageReference } from "./office-image.ts";
 import { officeJobStreams } from "./office-job-streams.ts";
 import { officePrivateStream } from "./office-private-stream.ts";
@@ -113,7 +113,7 @@ export function officeJobExecution(
   event("stdout", { reason: "entered" });
   const output = officePrivateStream(
     io.stdout,
-    32 * 1024 * 1024,
+    null,
     signal,
     deadline,
     async () => {

@@ -9,26 +9,15 @@ import {
   type IWorksheetData,
   type Nullable,
 } from "@univerjs/core";
-import {
-  OfficeConflict,
-  OfficeInvalid,
-  OfficeLimited,
-  safeFailure,
-} from "@starter/office-contract";
+import { OfficeConflict, OfficeInvalid, safeFailure } from "@highchat/office-contract";
 
 type Style = string | Nullable<IStyleData>;
-const MAX_STYLES = 4096;
 /** Only documented native style slots are remapped, never a guessed plugin/resource graph. */
 export function prepareSheetStyles(
   source: IWorkbookData,
   target: IWorkbookData,
   sheets: readonly IWorksheetData[],
 ): { readonly sheets: readonly IWorksheetData[]; readonly styles: Record<string, IStyleData> } {
-  if (
-    Object.keys(source.styles).length > MAX_STYLES ||
-    Object.keys(target.styles).length > MAX_STYLES
-  )
-    throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   const from = new Styles(source.styles),
     into = new Styles(Tools.deepClone(target.styles));
   const added = new Map<string, IStyleData>();
@@ -58,7 +47,6 @@ export function prepareSheetStyles(
           throw new OfficeConflict(safeFailure("NATIVE_CONFLICT"));
         added.set(id, value);
       }
-      if (added.size > MAX_STYLES) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
     }
     return id;
   };

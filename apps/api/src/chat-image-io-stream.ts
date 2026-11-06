@@ -1,4 +1,3 @@
-import { MAX_IMAGE_BYTES } from "./chat-attachment-schema.ts";
 import { checkImageIOSignal, ImageIOError } from "./chat-image-io-error.ts";
 
 /** Structural boundary shared by Workers R2 and Fetch streams; chunks stay unknown. */
@@ -29,7 +28,7 @@ export const readImageStream = async (
   byteSize: number,
   signal?: AbortSignal,
 ): Promise<Uint8Array> => {
-  if (!Number.isSafeInteger(byteSize) || byteSize < 1 || byteSize > MAX_IMAGE_BYTES)
+  if (!Number.isSafeInteger(byteSize) || byteSize < 1)
     throw new ImageIOError("stream_limit", "The original byte length is invalid.");
   const reader = stream.getReader();
   let cancellation: Promise<void> | undefined;

@@ -1,6 +1,6 @@
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import type { NativeValueHeader } from "./value-headers.ts";
-import type { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import type { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type { ISnapshot, IChangeset } from "@univerjs/protocol";
 import type { WorktreeStatus } from "@univerjs-pro/collaboration-worktree-service";
 
@@ -123,12 +123,9 @@ export class NativeStorageError extends Error {
 }
 export const nativeLimits = Object.freeze({
   pieceBytes: 4 * 1024 * 1024,
-  aggregateBytes: 128 * 1024 * 1024,
-  parts: 32,
-  blocks: 4096,
-  metadataBytes: 16 * 1024,
-  manifestBytes: 2 * 1024 * 1024,
-  blockBytes: 8 * 1024 * 1024,
+  // https://developers.cloudflare.com/d1/platform/limits/ — SQL string/BLOB/row: 2,000,000 bytes.
+  metadataBytes: 2_000_000,
+  manifestBytes: 2_000_000,
   historyPage: 128,
 });
 export async function digest(bytes: Uint8Array): Promise<string> {

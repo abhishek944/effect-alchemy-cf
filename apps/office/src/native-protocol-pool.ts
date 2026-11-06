@@ -1,7 +1,7 @@
 import { Effect, Exit, Scope } from "effect";
-import { withCause } from "@starter/diagnostics";
-import { OfficeInvalid, OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import type { createOfficeProtocol } from "@starter/office-server/native-protocol";
+import { withCause } from "@highchat/diagnostics";
+import { OfficeInvalid, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import type { createOfficeProtocol } from "@highchat/office-server/native-protocol";
 import type { makeNativeApplication } from "./native-app.ts";
 
 type Application = Effect.Success<ReturnType<typeof makeNativeApplication>>;

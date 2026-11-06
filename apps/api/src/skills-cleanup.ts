@@ -10,7 +10,7 @@
  * versions and their objects are never selected, so pinned originals survive.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { retireSkillObject } from "./skills-objects.ts";
 import { skillVersionRow, type SkillStorage, type SkillVersionRow } from "./skills-rows.ts";
 

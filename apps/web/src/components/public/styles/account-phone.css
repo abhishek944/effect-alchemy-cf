@@ -1,0 +1,52 @@
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] main {
+    padding-top: 32px;
+    gap: 28px;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] .intro {
+    text-align: center;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] .intro .eyebrow {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] h1 {
+    font-size: 2.125rem;
+    line-height: 1.08;
+    margin-bottom: 14px;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] h1 br {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] .support {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] .account > h2,
+  div:where(.public-auth)[data-phone="C"] .account > .eyebrow,
+  div:where(.public-auth)[data-phone="C"] .account-intro {
+    text-align: center;
+    justify-content: center;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] .account > .eyebrow {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  div:where(.public-auth)[data-phone="C"] .art {
+    height: 300px;
+  }
+}

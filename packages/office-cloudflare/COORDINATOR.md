@@ -1,6 +1,6 @@
 # Trusted Office placement and turn control
 
-`@starter/office-cloudflare/coordinator-control` exposes the existing same-Office-D1
+`@highchat/office-cloudflare/coordinator-control` exposes the existing same-Office-D1
 persistence facade directly, not a new coordinator framework or HTTP service:
 
 - `createCoordinatorControl(options, verifiedContext)` returns `CoordinatorControl`.

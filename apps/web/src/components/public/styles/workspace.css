@@ -1,0 +1,182 @@
+:where(.landing-workspace)[class] {
+  --lightningcss-light: ;
+  --lightningcss-dark: initial;
+  color-scheme: dark;
+  color: rgb(245, 242, 233);
+  font-synthesis: none;
+  background: rgb(8, 9, 11);
+  font-family: "DM Sans", sans-serif;
+}
+:where(.landing-workspace) * {
+  box-sizing: border-box;
+}
+div:where(.landing-workspace) {
+  margin: 0px;
+}
+:where(.landing-workspace) .section {
+  min-height: 820px;
+  padding: 65px 64px 80px;
+  position: relative;
+  overflow: hidden;
+}
+:where(.landing-workspace) .section-heading {
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 50px;
+  display: flex;
+}
+:where(.landing-workspace) .eyebrow {
+  letter-spacing: 0.13em;
+  align-items: center;
+  gap: 11px;
+  margin: 0px 0px 22px;
+  font:
+    10px ui-monospace,
+    monospace;
+  display: flex;
+}
+:where(.landing-workspace) .eyebrow i {
+  background: rgb(255, 167, 101);
+  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+}
+:where(.landing-workspace) h2 {
+  letter-spacing: -0.06em;
+  margin: 0px;
+  font-size: 76px;
+  font-weight: 500;
+  line-height: 0.97;
+}
+:where(.landing-workspace) .intro {
+  color: rgb(182, 183, 187);
+  max-width: 320px;
+  margin: 0px 0px 5px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+:where(.landing-workspace) h3 {
+  letter-spacing: -0.045em;
+  margin: 0px 0px 16px;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.12;
+}
+:where(.landing-workspace) .words p {
+  color: rgb(174, 177, 184);
+  max-width: 310px;
+  margin: 0px;
+  font-size: 16px;
+  line-height: 1.55;
+}
+:where(.landing-workspace) .number {
+  letter-spacing: 0.1em;
+  color: rgb(155, 159, 167);
+  font:
+    9px ui-monospace,
+    monospace;
+}
+:where(.landing-workspace) .pillars {
+  grid-template-columns: repeat(3, minmax(0px, 1fr));
+  gap: 22px;
+  margin-top: 52px;
+  display: grid;
+}
+:where(.landing-workspace) .pillar {
+  position: relative;
+}
+:where(.landing-workspace) .graphic {
+  color: rgb(201, 201, 201);
+}
+:where(.landing-workspace) .graphic svg {
+  width: 120px;
+  height: 120px;
+  display: block;
+}
+:where(.landing-workspace) .direction-B .pillar {
+  background: rgb(15, 16, 19);
+  border: 1px solid rgba(255, 255, 255, 0.094);
+  border-radius: 4px;
+  min-height: 315px;
+  padding: 25px 28px 30px;
+}
+:where(.landing-workspace) .direction-B .graphic {
+  margin: 15px 0px 22px;
+}
+:where(.landing-workspace) .direction-B .pillar-0 .graphic {
+  color: rgb(147, 203, 208);
+}
+:where(.landing-workspace) .direction-B .pillar-1 .graphic {
+  color: rgb(220, 162, 121);
+}
+:where(.landing-workspace) .direction-B .pillar-2 .graphic {
+  color: rgb(166, 171, 208);
+}
+:where(.landing-workspace) .direction-B .words p {
+  max-width: 305px;
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) .section {
+    min-height: calc(-60px + 100svh);
+    padding: 48px 24px 70px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) .section-heading {
+    display: block;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) .intro {
+    margin-top: 25px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) h2 {
+    font-size: 48px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) .pillars {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.landing-workspace) * {
+    scroll-behavior: auto !important;
+    animation: auto ease 0s 1 normal none running none !important;
+  }
+}
+:where(.landing-workspace) .section {
+  isolation: isolate;
+}
+:where(.landing-workspace) .shader-root {
+  display: contents;
+}
+:where(.landing-workspace) .section-heading,
+:where(.landing-workspace) .pillars {
+  z-index: 2;
+  position: relative;
+}
+:where(.landing-workspace) .shader-field {
+  z-index: 0;
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+  overflow: hidden;
+}
+:where(.landing-workspace) .shader-shade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+}
+:where(.landing-workspace) .shader-error {
+  color: rgb(255, 193, 160);
+  font-size: 13px;
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+}
+:where(.landing-workspace)[data-shader="D"] .intro {
+  color: rgb(215, 216, 220);
+}

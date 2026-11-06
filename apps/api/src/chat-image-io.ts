@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { checkImageIOSignal, imageIOCancelled, safeImageIOError } from "./chat-image-io-error.ts";
 
 export type ImageIOTracker = <T>(work: () => Promise<T>) => Promise<T>;

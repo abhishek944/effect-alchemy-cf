@@ -1,4 +1,4 @@
-import { OfficeForbidden, decodeWireSync, safeFailure } from "@starter/office-contract";
+import { OfficeForbidden, decodeWireSync, safeFailure } from "@highchat/office-contract";
 import type { MetadataStore } from "../store.ts";
 import { canonical, sqlNow } from "../store.ts";
 import type { DocumentKey, VerifiedCoordinatorContext } from "./types.ts";

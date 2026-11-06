@@ -26,7 +26,7 @@ import type {
   ReviewPage,
   Target,
   View,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { Actor, HumanActor, RecoveryActor, VerifyActor } from "./identity.ts";
 import type { OfficeBytes, OfficeMetadata } from "./storage.ts";
 import type { DocumentAuthority } from "./authority.ts";

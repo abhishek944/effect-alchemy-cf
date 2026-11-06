@@ -76,8 +76,8 @@ export async function prepareOfficeFoundation(
     publicDir: false,
     envPrefix: "__OFFICE_NO_PUBLIC_ENV_",
     ssr: {
-      noExternal: [/^@starter\//u],
-      external: Object.keys(server.dependencies).filter((name) => !name.startsWith("@starter/")),
+      noExternal: [/^@highchat\//u],
+      external: Object.keys(server.dependencies).filter((name) => !name.startsWith("@highchat/")),
     },
     build: {
       ssr: true,
@@ -88,7 +88,7 @@ export async function prepareOfficeFoundation(
       sourcemap: false,
       reportCompressedSize: false,
       rolldownOptions: {
-        external: Object.keys(server.dependencies).filter((name) => !name.startsWith("@starter/")),
+        external: Object.keys(server.dependencies).filter((name) => !name.startsWith("@highchat/")),
         input: composition.entries ?? {
           "foundation-smoke": join(application, "src/foundation-smoke.ts"),
           "runtime-foundation": join(repository, "packages/office-server/src/jobs/index.ts"),

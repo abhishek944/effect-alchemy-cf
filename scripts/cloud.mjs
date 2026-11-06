@@ -1,7 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { parseEnv } from "node:util";
-import { billingProfileEnvironment } from "./billing-profile.mjs";
+import { buildEnvironment } from "../packages/config/stage.ts";
 import { speechProfileEnvironment } from "./speech-profile.mjs";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -18,15 +16,19 @@ if (
 const require = createRequire(new URL("../apps/infra/package.json", import.meta.url));
 const cli = fileURLToPath(new URL("../bin/cli.js", pathToFileURL(require.resolve("alchemy"))));
 const profile = stage === "prod" ? "prod" : "default";
-const configuration = parseEnv(
-  readFileSync(new URL(`../packages/config/.env.${stage}`, import.meta.url), "utf8"),
-);
-const billing = billingProfileEnvironment(profile, stage, configuration);
+const buildEnv = buildEnvironment(stage);
+for (const check of ["lint", "build"]) {
+  const checked = spawnSync("pnpm", [check], {
+    cwd: fileURLToPath(new URL("../", import.meta.url)),
+    env: buildEnv,
+    stdio: "inherit",
+  });
+  if (checked.error) throw checked.error;
+  if (checked.status !== 0) process.exit(checked.status ?? 1);
+}
 const speech = speechProfileEnvironment(profile, stage);
 /** @type {NodeJS.ProcessEnv} */
-const childEnvironment = { ...process.env, ...billing, ...speech };
-delete childEnvironment.BILLING_ENVIRONMENT;
-delete childEnvironment.BILLING_NAMESPACE;
+const childEnvironment = { ...buildEnv, ...speech };
 const result = spawnSync(
   process.execPath,
   [

@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { officeDenied, type OfficePrivateIO } from "./office-private-authority.ts";
 
 /** Actual promises/readers/bodies, not map-emptiness or cancellation acknowledgements as a seal. */

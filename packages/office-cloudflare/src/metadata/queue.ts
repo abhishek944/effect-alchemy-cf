@@ -1,5 +1,5 @@
-import { OfficeConflict, OfficeForbidden, safeFailure } from "@starter/office-contract";
-import type { OfficeMetadata, OperationRecord } from "@starter/office-server/ports";
+import { OfficeConflict, OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import type { OfficeMetadata, OperationRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { invalid, sqlNow, storeEffect } from "./store.ts";
 import { OperationRow } from "./schemas.ts";

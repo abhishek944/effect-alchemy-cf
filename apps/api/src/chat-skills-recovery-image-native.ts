@@ -1,6 +1,6 @@
 import type { UserInput } from "@earendil-works/pi-durable";
 import { UserEntry } from "@earendil-works/pi-durable";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import type { RecoveryRunner } from "./chat-skills-recovery.ts";
 import { PI_BACKGROUND } from "./chat-runtime.ts";
 import { json } from "./chat-internal.ts";

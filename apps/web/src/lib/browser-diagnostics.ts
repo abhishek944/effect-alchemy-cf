@@ -30,7 +30,7 @@ export function browserBuild(): { service: string; release: string } {
 }
 
 /**
- * Copyable safe reference for an HTTP/decode failure. The operation is a
+ * Diagnostic-only reference for an HTTP/decode failure. The operation is a
  * fixed route template, never a raw path or identifier from a URL.
  */
 export function serverReference(
@@ -40,11 +40,6 @@ export function serverReference(
 ): string {
   const id = safeIdentity(requestId);
   return id ? `${safeLabel(operation)} · ${status} · ${id}` : `${safeLabel(operation)} · ${status}`;
-}
-
-/** Append the safe reference to an existing user-facing message. */
-export function withReference(message: string, reference: string): string {
-  return `${message} (ref ${reference})`;
 }
 
 export type BrowserEventInput = {
@@ -120,18 +115,20 @@ export class OfficeRuntimeError extends Error {
 const OFFICE_MESSAGES: Record<string, string> = {
   "runtime-unavailable": "Office services are unavailable. Reload the page and try again.",
   "open-unconfirmed": "The Office document could not be opened. Reload and try again.",
-  "document-changed": "Office document changed.",
-  "frozen-view": "Invalid frozen Office view.",
-  "generation-changed": "Office draft generation changed.",
-  "branch-changed": "Office branch changed.",
-  "anchor-changed": "Save and reopen this Office tab before Send; its displayed anchor changed.",
-  "editor-unavailable": "Office editor authority is unavailable.",
-  "channel-unconfirmed": "The Office channel could not be confirmed. Reload and try again.",
-  "channel-expired": "Office channel expired.",
-  "ack-unavailable": "Native save acknowledgement is unavailable.",
-  "drain-unconfirmed": "Editor drain is unconfirmed.",
-  "revoke-unconfirmed": "Unused editor cleanup is unconfirmed.",
-  "head-changed": "The saved head changed.",
+  "document-changed": "This document has changed. Check your changes before continuing.",
+  "frozen-view": "This document could not be loaded. Reopen it and try again.",
+  "generation-changed": "This draft has changed. Keep this document open and check your changes.",
+  "branch-changed": "This draft has changed. Keep this document open and check your changes.",
+  "anchor-changed": "Save and reopen this document before sending your message.",
+  "editor-unavailable": "The document editor is unavailable. Please try again.",
+  "channel-unconfirmed": "Could not connect to the document editor. Please try again.",
+  "channel-expired": "Your document session has expired. Reopen the document to continue.",
+  "ack-unavailable":
+    "We couldn’t confirm your changes were saved. Keep this document open and try again.",
+  "drain-unconfirmed":
+    "We couldn’t confirm your changes were saved. Keep this document open and try again.",
+  "revoke-unconfirmed": "We couldn’t close the document editor. Please try again.",
+  "head-changed": "The saved document has changed. Reopen it to continue.",
 };
 /** Classify once with a fixed phase/reason; aborts and classified errors pass through. */
 export function officeFail(

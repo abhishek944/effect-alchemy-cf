@@ -1,4 +1,4 @@
-import type { FailureContext } from "@starter/diagnostics";
+import type { FailureContext } from "@highchat/diagnostics";
 import { officeReadable } from "./office-platform.ts";
 import {
   officeStreamFailures,
@@ -6,17 +6,17 @@ import {
   officeStreamFinish,
   officeStreamUnavailable as unavailable,
 } from "./office-stream-failure.ts";
-/** Opaque Worker bytes. Source join, owning finish and actual outgoing pull completion are distinct. */
 export function officePrivateStream(
   source: unknown,
-  maximum: number,
+  maximum: number | null,
   signal: AbortSignal,
   deadline: number,
   finish: () => Promise<void>,
   revoke: () => void,
   context?: FailureContext,
 ) {
-  if (!Number.isSafeInteger(maximum) || maximum < 1 || !Number.isSafeInteger(deadline))
+  const invalidMaximum = maximum !== null && (!Number.isSafeInteger(maximum) || maximum < 1);
+  if (invalidMaximum || !Number.isSafeInteger(deadline))
     throw unavailable("transfer-configuration");
   const failures = officeStreamFailures();
   const reader = officeReadable(source).getReader();
@@ -155,7 +155,7 @@ export function officePrivateStream(
       }
       if (!(part.value instanceof Uint8Array)) throw unavailable("transfer-chunk-type");
       count += part.value.byteLength;
-      if (count > maximum || (part.value.byteLength === 0 && ++empty > 1024))
+      if ((maximum !== null && count > maximum) || (part.value.byteLength === 0 && ++empty > 1024))
         throw unavailable("transfer-byte-bound");
       phase = "write";
       outgoing.enqueue(part.value);

@@ -76,7 +76,6 @@ export async function prepareImageHostPlan(
     catalogImageRoute(image.model, image.gatewayId),
   );
   const canonicalRequest = canonicalizePreparedRequest(request);
-  if (canonicalRequest.length > 256 * 1024) return imageHostRefusal();
   const requestDigest = await digestText(canonicalRequest);
   const key = await digestText(
     JSON.stringify([

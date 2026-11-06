@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { Count, Cursor, Id, Label, Scalar } from "./primitives.ts";
 
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
-const Ids = Schema.Array(NativeId).check(Schema.isMinLength(1), Schema.isMaxLength(32));
+const Ids = Schema.Array(NativeId).check(Schema.isMinLength(1));
 export const InspectQuery = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("workbook") }),
   Schema.Struct({ kind: Schema.Literal("worksheet"), worksheetId: NativeId }),
@@ -32,12 +32,12 @@ export const InspectionEntry = Schema.Union([
     kind: Schema.Literal("text"),
     id: NativeId,
     index: Count,
-    text: Schema.String.check(Schema.isMaxLength(16_384)),
+    text: Schema.String,
   }),
 ]);
 export const Inspection = Schema.Struct({
   viewId: Id,
-  entries: Schema.Array(InspectionEntry).check(Schema.isMaxLength(1000)),
+  entries: Schema.Array(InspectionEntry),
   next: Cursor,
   complete: Schema.Boolean,
 });

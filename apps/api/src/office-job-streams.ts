@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure, type FailureContext } from "@starter/diagnostics";
-import { jobDiagnostics, OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { reportFailure, type FailureContext } from "@highchat/diagnostics";
+import { jobDiagnostics, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import { officePrivateStream } from "./office-private-stream.ts";
 
 /** The fresh job owns stdin/stderr transfers; stdout stays streamed to its original consumer. */
@@ -32,7 +32,7 @@ export function officeJobStreams(
     throw new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
   const incoming = officePrivateStream(
     body,
-    64 * 1024 * 1024,
+    null,
     signal,
     deadline,
     () => Promise.resolve(),
@@ -41,7 +41,7 @@ export function officeJobStreams(
   );
   const stderr = officePrivateStream(
     process.stderr,
-    64 * 1024,
+    null,
     signal,
     deadline,
     () => Promise.resolve(),

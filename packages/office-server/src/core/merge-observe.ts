@@ -80,7 +80,6 @@ export const observeMerge = Effect.fn("Office.observeMerge")(function* (
     revision === null
       ? null
       : yield* materializeNativeSnapshot(
-          deps,
           runtime,
           { kind: "read", target: main, ...epoch },
           null,

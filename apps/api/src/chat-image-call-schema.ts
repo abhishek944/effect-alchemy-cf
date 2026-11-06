@@ -6,7 +6,6 @@ import { ImageCallCost, ImageCallMetadata } from "./chat-image-call-metadata.ts"
 import {
   CallAmount,
   CallIndex,
-  CALL_EVIDENCE_BYTES,
   CALL_STATE_BYTES,
   CALL_SUMMARY_BYTES,
   callFitsJson,
@@ -75,8 +74,8 @@ export const ImageCallView = Schema.Struct({
   ...ImageCallState.fields,
 }).check(
   Schema.makeFilter((view) => {
-    const { admission, ...state } = view;
-    return Schema.is(ImageCallState)(state) && callFitsJson(admission, CALL_EVIDENCE_BYTES);
+    const { admission: _admission, ...state } = view;
+    return Schema.is(ImageCallState)(state);
   }),
 );
 export type ImageCallView = typeof ImageCallView.Type;

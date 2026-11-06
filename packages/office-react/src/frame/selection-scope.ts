@@ -1,6 +1,6 @@
 import { DOC_RANGE_TYPE } from "@univerjs/core";
 import { DocSelectionManagerService } from "@univerjs/docs";
-import type { OfficeNativeReferenceContext } from "@starter/office-contract";
+import type { OfficeNativeReferenceContext } from "@highchat/office-contract";
 import type { NativeApplication } from "./native.ts";
 import { captureSheetSelection } from "./selection.ts";
 import { nativeFailure } from "./lifecycle.ts";
@@ -68,7 +68,6 @@ export function validateScope(native: NativeApplication, unitId: string, scope: 
     if (!sheet || sheet.isSheetHidden()) throw captureFailure("capture-unavailable");
     if (
       scope.ranges.length < 1 ||
-      scope.ranges.length > 8 ||
       scope.ranges.some(
         (r) =>
           ![r.startRow, r.endRow, r.startColumn, r.endColumn].every(
@@ -102,7 +101,6 @@ export function validateScope(native: NativeApplication, unitId: string, scope: 
     start < 0 ||
     start >= end ||
     end > stream.length - 2 ||
-    text.length > 4096 ||
     splitSurrogate(stream, start) ||
     splitSurrogate(stream, end) ||
     text.split("").some((character) => {

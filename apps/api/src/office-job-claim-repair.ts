@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import { withDiagnostic } from "@starter/diagnostics";
-import { safeFailure } from "@starter/office-contract";
-import type { JobRecord, OfficeMetadata } from "@starter/office-server/ports";
+import { withDiagnostic } from "@highchat/diagnostics";
+import { safeFailure } from "@highchat/office-contract";
+import type { JobRecord, OfficeMetadata } from "@highchat/office-server/ports";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeJobControlUnit } from "./office-job-repair.ts";
 import { sameOfficeTaskInput } from "./office-task-lineage.ts";

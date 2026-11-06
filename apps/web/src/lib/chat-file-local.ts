@@ -4,18 +4,11 @@
  * uploads or stores anything. Classification follows the exact server filename
  * allowlist, never an operating-system MIME guess, and content is validated:
  * fatal UTF-8 with the control policy for text, real image structure for
- * JPEG/PNG/WebP, and bounded OOXML structure for Office. A thumbnail is created
- * only when the tab budget grants a reservation; Office stays staged without a
+ * JPEG/PNG/WebP, and OOXML structure for Office. Office stays staged without a
  * browser preview.
  */
 import type { ChatFileDescriptor, FileKind } from "@/lib/chat-capability-file-types";
-import {
-  MAX_EXCERPT_CHARS,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
-  MAX_TEXT_FILE_BYTES,
-  MAX_OFFICE_BYTES,
-} from "@/lib/chat-capability-file-types";
+import { MAX_EXCERPT_CHARS } from "@/lib/chat-capability-file-types";
 import { isOfficeContainer } from "@/lib/chat-office-media";
 import { readImageInfo } from "@/lib/chat-file-image-policy";
 import {
@@ -34,11 +27,6 @@ export type LocalFileState =
   | "unsupported"
   | "failed";
 
-export type PreviewPolicy = {
-  /** Reserves the tab budget before any object URL or decode is created. */
-  allowPreview: (decodedBytes: number, previewBytes: number) => boolean;
-};
-
 export type LocalFile = {
   /** Attachment UUID; the same identity is uploaded and submitted on send. */
   id: string;
@@ -53,10 +41,6 @@ export type LocalFile = {
   height: number | null;
   excerpt: string | null;
   previewUrl: string | null;
-  /** True when the tab preview budget withheld this file's thumbnail. */
-  previewLimited: boolean;
-  /** Lease key charged while this row's thumbnail/preview work is alive. */
-  reservationKey: string | null;
   descriptor: ChatFileDescriptor | null;
 };
 
@@ -79,8 +63,6 @@ function baseRow(file: File, id: string, mediaType: string, kind: FileKind): Loc
     height: null,
     excerpt: null,
     previewUrl: null,
-    previewLimited: false,
-    reservationKey: null,
     descriptor: null,
   };
 }
@@ -111,23 +93,11 @@ async function decodeCheck(file: File, url: string): Promise<void> {
 }
 
 /** Validates one selected file and reads the metadata its compact row shows. */
-export async function prepareLocalFile(
-  file: File,
-  id: string,
-  policy: PreviewPolicy,
-): Promise<LocalFile> {
+export async function prepareLocalFile(file: File, id: string): Promise<LocalFile> {
   const media = resolveMedia(file.name);
   if (media === null) return rejected(file, id, UNSUPPORTED_REASON);
   const base = baseRow(file, id, media.mediaType, media.kind);
-  const limit =
-    media.kind === "image"
-      ? MAX_IMAGE_BYTES
-      : media.kind === "office"
-        ? MAX_OFFICE_BYTES
-        : MAX_TEXT_FILE_BYTES;
-  if (file.size <= 0 || file.size > limit) {
-    return { ...base, state: "failed", error: fileSizeReason(media.kind, file.size, limit) };
-  }
+  if (file.size <= 0) return { ...base, state: "failed", error: "Empty files cannot be attached." };
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (media.kind === "office") {
     const extension = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
@@ -161,14 +131,7 @@ export async function prepareLocalFile(
       state: "unsupported",
       error: "The file content does not match its extension.",
     };
-  if (info.width * info.height > MAX_IMAGE_PIXELS) {
-    return { ...base, state: "failed", error: "This image is larger than 16 megapixels." };
-  }
-  const decodedBytes = info.width * info.height * 4;
   const dimensions = { width: info.width, height: info.height };
-  if (!policy.allowPreview(decodedBytes, bytes.byteLength)) {
-    return { ...base, ...dimensions, state: "ready", previewLimited: true };
-  }
   const url = URL.createObjectURL(file);
   try {
     await decodeCheck(file, url);
@@ -177,11 +140,6 @@ export async function prepareLocalFile(
     return { ...base, ...dimensions, state: "failed", error: "This image could not be decoded." };
   }
   return { ...base, ...dimensions, state: "ready", previewUrl: url };
-}
-
-function fileSizeReason(kind: FileKind, size: number, limit: number): string {
-  const label = kind === "image" ? "Images" : kind === "office" ? "Office files" : "Text files";
-  return `${label} must be between 1 byte and ${formatFileSize(limit)}; this one is ${formatFileSize(size)}.`;
 }
 
 export function releaseLocalFile(file: LocalFile): void {

@@ -1,4 +1,4 @@
-import { withDiagnostic } from "@starter/diagnostics";
+import { withDiagnostic } from "@highchat/diagnostics";
 import { Config, type Context, Effect, Schema } from "effect";
 import { type ChatNamespaces, doCall } from "./chat-bindings.ts";
 import { OperationReceipt } from "./chat-contract.ts";

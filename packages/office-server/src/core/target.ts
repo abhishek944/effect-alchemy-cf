@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { UniverType } from "@univerjs/protocol";
-import { Target, decodeWire } from "@starter/office-contract";
+import { Target, decodeWire } from "@highchat/office-contract";
 import type { Actor, ActorClaims, OfficeDependencies } from "../ports/index.ts";
 import { authorize, sameOwner } from "./claims.ts";
 import { StoredDocument, StoredDraft } from "./record-schemas.ts";

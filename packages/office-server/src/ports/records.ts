@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Digest, Id, Revision } from "@starter/office-contract";
+import { Digest, Id, Revision } from "@highchat/office-contract";
 import type {
   ArtifactRef,
   CreateDocument,
@@ -14,7 +14,7 @@ import type {
   RenderRequest,
   Approve,
   View,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { ActorClaims, NativeTarget, OwnerScope } from "./identity.ts";
 import type { IsolatedJob, JobState } from "./jobs.ts";
 import type { NativeReceiptBinding, NativeReceiptKey } from "./native-receipts.ts";

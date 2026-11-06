@@ -1,14 +1,12 @@
-import { withCause } from "@starter/diagnostics";
-import { decodeWireSync, Failure, type ErrorCode } from "@starter/office-contract";
+import { withCause } from "@highchat/diagnostics";
+import { decodeWireSync, Failure, type ErrorCode } from "@highchat/office-contract";
 import { isOfficeError, officeFailure } from "../core/failure.ts";
-import { DOC_READ_LIMITS } from "./read-wire.ts";
 type IoOptions = {
   readonly origin: string;
   readonly requestId: string;
   readonly fetch: (request: Request) => Promise<Response>;
   readonly expiresAt: number;
   readonly signal: AbortSignal;
-  readonly charge: (bytes: number) => void;
 };
 const statusErrors: Readonly<Record<number, ErrorCode | undefined>> = {
   401: "UNAUTHENTICATED",
@@ -77,7 +75,11 @@ export function createDocReadIo(options: IoOptions) {
     managed.add(body);
     cleanup(Promise.resolve().then(() => body.cancel()));
   };
-  const collect = async (body: ReadableStream<Uint8Array>, maximum: number, prepaid: number) => {
+  const collect = async (
+    body: ReadableStream<Uint8Array>,
+    maximum: number | null,
+    prepaid: number,
+  ) => {
     const reader = body.getReader(),
       chunks: Uint8Array[] = [];
     managed.add(body);
@@ -86,10 +88,8 @@ export function createDocReadIo(options: IoOptions) {
       while (true) {
         const part = await wait(reader.read());
         if (part.done) break;
-        const before = Math.max(0, size - prepaid);
         size += part.value.byteLength;
-        options.charge(Math.max(0, size - prepaid) - before);
-        if (size > maximum) throw officeFailure("LIMIT_EXCEEDED");
+        if (maximum !== null && size > maximum) throw officeFailure("LIMIT_EXCEEDED");
         chunks.push(part.value);
       }
     } finally {
@@ -112,13 +112,10 @@ export function createDocReadIo(options: IoOptions) {
   const perform = async (
     path: "/native-doc/control" | "/native-doc/part",
     text: string,
-    maximum: number,
+    maximum: number | null,
     prepaid: number,
   ) => {
     check();
-    const length = new TextEncoder().encode(text).byteLength;
-    if (length > DOC_READ_LIMITS.controlBytes) throw officeFailure("LIMIT_EXCEEDED");
-    if (!prepaid) options.charge(length);
     const request = new Request(new URL(path, options.origin), {
       method: "POST",
       headers: { "content-type": "application/json", "x-office-read-id": options.requestId },
@@ -146,7 +143,7 @@ export function createDocReadIo(options: IoOptions) {
         throw officeFailure("UNAVAILABLE");
       const bytes = await collect(
         value.body,
-        value.status === 200 ? maximum : DOC_READ_LIMITS.controlBytes,
+        value.status === 200 ? maximum : null,
         value.status === 200 ? prepaid : 0,
       );
       check();
@@ -175,7 +172,7 @@ export function createDocReadIo(options: IoOptions) {
     request(
       path: "/native-doc/control" | "/native-doc/part",
       text: string,
-      maximum: number,
+      maximum: number | null,
       prepaid = 0,
     ) {
       const task = perform(path, text, maximum, prepaid).catch((cause) => {

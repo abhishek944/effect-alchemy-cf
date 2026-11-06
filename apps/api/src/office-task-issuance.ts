@@ -1,14 +1,14 @@
-import type { Auth } from "@starter/auth";
-import type { OfficeSessionBinding, OfficeSessionEpochs } from "@starter/auth/office-session";
+import type { Auth } from "@highchat/auth";
+import type { OfficeSessionBinding, OfficeSessionEpochs } from "@highchat/auth/office-session";
 import type { RuntimeContext } from "alchemy";
 import { Clock, Effect } from "effect";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 import {
   createOfficeMetadata,
   readConfirmedTaskOperations,
-} from "@starter/office-cloudflare/metadata";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { OwnerScope, TaskActor } from "@starter/office-server/ports";
+} from "@highchat/office-cloudflare/metadata";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { OwnerScope, TaskActor } from "@highchat/office-server/ports";
 import type { OfficeTaskProofReader } from "./office-task-callback.ts";
 import {
   officeTaskSourceFile,
@@ -26,7 +26,7 @@ import { assertOfficeTaskReceipt } from "./office-task-command.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 import { initializeOfficeStorageSchema } from "./office-storage-schema.ts";
 import { readOfficeTaskAttachment } from "./office-task-attachment.ts";
-import { officeReferenceBasis } from "./office-task-reference.ts";
+import { readOfficeTaskSource } from "./office-task-source.ts";
 
 export type OfficeTaskLive<A> = Effect.Effect<
   A,
@@ -99,10 +99,14 @@ export function prepareOfficeTask(
         catch: officeCaught,
       }),
     );
-    const describeReference =
-      proof.association.intent.referenceId !== undefined &&
-      proof.association.intent.step === "describe";
-    const operations = yield* !observeOnly || describeReference
+    const source = yield* step(
+      "source-read",
+      Effect.tryPromise({
+        try: () => readOfficeTaskSource(metadataStore, proof, attachment),
+        catch: officeCaught,
+      }),
+    );
+    const operations = yield* !observeOnly
       ? step(
           "operations-read",
           readConfirmedTaskOperations(options, {
@@ -128,25 +132,17 @@ export function prepareOfficeTask(
             catch: officeCaught,
           }),
         );
-        const referenceBasis = describeReference
-          ? officeReferenceBasis(proof, operations)
-          : undefined;
-        return Object.freeze({
-          target: null,
-          fork: null,
-          readView: null,
-          ...(referenceBasis === undefined ? {} : { referenceBasis }),
-        });
+        return Object.freeze({ target: null, fork: null, readView: null });
       }
       return yield* step(
         "target-resolve",
         Effect.tryPromise({
-          try: () => resolveOfficeTaskTarget(metadataStore, proof, operations, attachment),
+          try: () => resolveOfficeTaskTarget(metadataStore, proof, operations, source),
           catch: officeCaught,
         }),
       );
     });
-    const binding = Object.freeze({ ...selected, attachment });
+    const binding = Object.freeze({ ...selected, attachment, source });
     const current = yield* step("proof-reread", read());
     if (!officeSame(current, proof)) return yield* Effect.fail(deny("proof-changed"));
     yield* step("session-recheck", live(session));

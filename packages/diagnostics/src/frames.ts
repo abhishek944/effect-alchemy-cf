@@ -42,10 +42,6 @@ const sources = [
     "chat-skills-defect",
     "chat-title",
     "chat-accounting",
-    "billing-sync",
-    "billing-checkout",
-    "billing-config",
-    "billing-ingress",
   ].map((name) => `apps/api/src/${name}.ts`),
   ...["worker", "native-bootstrap", "native-job-anchor", "native-main", "native-client"].map(
     (name) => `apps/office/src/${name}.ts`,
@@ -53,10 +49,8 @@ const sources = [
   ...["worker", "placement", "exchange", "run", "supervisor"].map(
     (name) => `packages/office-server/src/jobs/${name}.ts`,
   ),
-  ...["auth", "billing-store", "billing-data", "billing-lease", "billing-writes"].map(
-    (name) => `packages/auth/src/${name}.ts`,
-  ),
-  ...["http", "billing-dodo-client", "billing-polar-client", "slack-api", "cloudflare-email"].map(
+  "packages/auth/src/auth.ts",
+  ...["http", "slack-api", "cloudflare-email"].map(
     (name) => `packages/integrations/src/${name}.ts`,
   ),
 ];

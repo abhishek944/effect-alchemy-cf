@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
-import { encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWire } from "@highchat/office-contract";
+import { encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type {
   FrozenReview,
   OfficeDependencies,

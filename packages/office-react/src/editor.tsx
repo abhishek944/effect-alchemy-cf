@@ -7,7 +7,7 @@ import {
   useState,
   type Ref,
 } from "react";
-import type { View } from "@starter/office-contract";
+import type { View } from "@highchat/office-contract";
 import type { NativeSelectionCapture } from "./capture.ts";
 import {
   FrameInit,

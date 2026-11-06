@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { Merge, decodeWire } from "@starter/office-contract";
+import { Merge, decodeWire } from "@highchat/office-contract";
 import type {
   Actor,
   HumanActor,
@@ -156,7 +156,7 @@ export const progressMerge = Effect.fn("Office.progressMerge")(function* (
           }
           if (record === null) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
           if (context.claims !== null)
-            yield* requireExistingIntent(deps, context.claims, record, { kind: "merge", input });
+            yield* requireExistingIntent(context.claims, record, { kind: "merge", input });
           if (
             observing ||
             record.receipt.phase !== "admitted" ||

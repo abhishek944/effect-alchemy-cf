@@ -1,5 +1,5 @@
 import { Effect, type Scope } from "effect";
-import { safeFailure, type OfficeError } from "@starter/office-contract";
+import { safeFailure, type OfficeError } from "@highchat/office-contract";
 import type { OfficeDependencies, OperationRecord } from "../../ports/index.ts";
 import type { OfficeNativeRuntime } from "../native-runtime.ts";
 import { verifyOperation } from "../claims.ts";

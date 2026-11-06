@@ -8,8 +8,6 @@ type Options = {
   setViews: Dispatch<SetStateAction<WorkspaceViews>>;
   activeId: string;
   readViews: () => WorkspaceViews;
-  reserved: () => number;
-  report: (message: string) => void;
   leave: (chatId: string, id: string) => Promise<boolean>;
   cancelFiles: (chatId: string, fileIds: readonly string[]) => void;
 };
@@ -25,8 +23,6 @@ export function useWorkspacePreviewActions({
   setViews,
   activeId,
   readViews,
-  reserved,
-  report,
   leave,
   cancelFiles,
 }: Options) {
@@ -118,8 +114,6 @@ export function useWorkspacePreviewActions({
     scope,
     setViews,
     readViews,
-    reserved,
-    report,
     reveal: revealFor,
   });
   return {

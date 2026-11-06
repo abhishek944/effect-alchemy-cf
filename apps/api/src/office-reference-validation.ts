@@ -1,9 +1,9 @@
 import { Effect } from "effect";
-import type { OfficeSessionBinding } from "@starter/auth/office-session";
-import { revalidateOfficeSessionBinding } from "@starter/auth/office-session";
-import { createOfficeMetadata } from "@starter/office-cloudflare/metadata";
-import { freezeChatReferenceInputs, type ChatReferenceInputs } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+import type { OfficeSessionBinding } from "@highchat/auth/office-session";
+import { revalidateOfficeSessionBinding } from "@highchat/auth/office-session";
+import { createOfficeMetadata } from "@highchat/office-cloudflare/metadata";
+import { freezeChatReferenceInputs, type ChatReferenceInputs } from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import type { OfficeHostRole } from "./office-host-role.ts";
 import { officeStorageBindings } from "./office-storage-bindings.ts";
 import { officeTaskTargetReads } from "./office-task-target-reads.ts";

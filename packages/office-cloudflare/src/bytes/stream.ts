@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import type * as cf from "@cloudflare/workers-types";
 import { invalid } from "../metadata/store.ts";
 import { missingContent } from "./data.ts";

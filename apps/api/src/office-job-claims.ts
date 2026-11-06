@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import { reportEvent, withDiagnostic } from "@starter/diagnostics";
+import { reportEvent, withDiagnostic } from "@highchat/diagnostics";
 import type { OfficeJobExit } from "./office-job-process.ts";
-import type { JobRecord, OfficeMetadata } from "@starter/office-server/ports";
+import type { JobRecord, OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficeMetadataCall, OfficeMetadataResponse } from "./office-metadata-dispatch.ts";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";

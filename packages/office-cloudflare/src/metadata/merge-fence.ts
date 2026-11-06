@@ -1,4 +1,4 @@
-import type { WritePermit } from "@starter/office-server/ports";
+import type { WritePermit } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import type { PredicateSQL } from "./native-fence.ts";
 /** Retain the approved frozen draft through all native leaves; only this operation's main may advance. */

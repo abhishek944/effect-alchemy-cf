@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import type { NativeEditorPermit } from "@starter/office-server/ports";
-import { validateNativeValueRef } from "@starter/office-server/native-remote";
+import type { NativeEditorPermit } from "@highchat/office-server/ports";
+import { validateNativeValueRef } from "@highchat/office-server/native-remote";
 import { readValueHeader } from "../native/value-headers.ts";
 import { valueFingerprint } from "../native/value-proofs.ts";
 import type { MetadataStore } from "./store.ts";
@@ -17,7 +17,6 @@ export async function editorValue(
     key = leaf.receipt;
   if (
     leaf.submissionId !== p.submissionId ||
-    leaf.payload.bytes > db.limits.nativeBytes ||
     change.unitID !== p.target.unitId ||
     change.baseRev !== p.expectedHead ||
     change.revision !== p.expectedHead + 1 ||

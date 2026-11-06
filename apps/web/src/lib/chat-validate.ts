@@ -1,4 +1,4 @@
-import { Target } from "@starter/office-contract";
+import { Target } from "@highchat/office-contract";
 import { Schema, Option } from "effect";
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
 import type { SkillRecovery } from "@/lib/chat-skills-api";

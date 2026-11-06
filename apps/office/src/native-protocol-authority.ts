@@ -1,11 +1,11 @@
 import { finished } from "node:stream/promises";
 import { Effect } from "effect";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import { HostNativeAccess } from "@starter/office-server/native-remote";
-import { decodeWireSync } from "@starter/office-contract";
-import type { OfficeNativeRuntime } from "@starter/office-server";
-import type { NativeAccess } from "@starter/office-server/ports";
-import type { OfficeProtocolAuthority } from "@starter/office-server/native-protocol";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import { HostNativeAccess } from "@highchat/office-server/native-remote";
+import { decodeWireSync } from "@highchat/office-contract";
+import type { OfficeNativeRuntime } from "@highchat/office-server";
+import type { NativeAccess } from "@highchat/office-server/ports";
+import type { OfficeProtocolAuthority } from "@highchat/office-server/native-protocol";
 import type { OfficeRequestChannels } from "./native-request-context.ts";
 import type { OfficeRequestContext } from "./native-request-context.ts";
 

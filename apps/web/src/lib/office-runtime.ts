@@ -1,9 +1,9 @@
 import { Effect } from "effect";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import { officeFail, type OfficeRuntimePhase } from "@/lib/browser-diagnostics";
-import { makeOfficeClient } from "@starter/office-contract/client";
-import type { Editor, OfficeChannel, Target, View } from "@starter/office-contract";
-import type { OfficeRuntime, OfficeSave } from "@starter/office-react";
+import { makeOfficeClient } from "@highchat/office-contract/client";
+import type { Editor, OfficeChannel, Target, View } from "@highchat/office-contract";
+import type { OfficeRuntime, OfficeSave } from "@highchat/office-react";
 
 /** Browser boundary: existing same-origin human authentication, no provider or server imports. */
 export async function createOfficeRuntime(): Promise<OfficeRuntime> {

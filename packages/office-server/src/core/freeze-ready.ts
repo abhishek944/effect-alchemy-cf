@@ -1,6 +1,6 @@
 import { Clock, Effect, Schema } from "effect";
-import { withCause } from "@starter/diagnostics";
-import { decodeWire } from "@starter/office-contract";
+import { withCause } from "@highchat/diagnostics";
+import { decodeWire } from "@highchat/office-contract";
 import type {
   FrozenReview,
   OfficeDependencies,

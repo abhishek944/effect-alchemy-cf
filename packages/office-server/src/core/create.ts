@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { CreateDocument, CreateDraft, decodeWire } from "@starter/office-contract";
+import { CreateDocument, CreateDraft, decodeWire } from "@highchat/office-contract";
 import type { Actor, OfficeDependencies, OfficeService, OperationRecord } from "../ports/index.ts";
 import type { OfficeNativeRuntime } from "./native-runtime.ts";
 import { operationCaller } from "./operation-caller.ts";

@@ -1,4 +1,4 @@
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import type { SendMessage } from "./chat-model.ts";
 import type { ChatSendScope, ChatSubmissionOptions } from "./chat-submission-types.ts";
 

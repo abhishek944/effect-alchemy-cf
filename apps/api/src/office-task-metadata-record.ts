@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { officeImportOptions, type ArtifactRef } from "@starter/office-contract";
-import type { OfficeMetadata, OperationRecord, JobRecord } from "@starter/office-server/ports";
+import { officeImportOptions, type ArtifactRef } from "@highchat/office-contract";
+import type { OfficeMetadata, OperationRecord, JobRecord } from "@highchat/office-server/ports";
 import type { OfficeTaskInvocation } from "./office-task-issuance.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";

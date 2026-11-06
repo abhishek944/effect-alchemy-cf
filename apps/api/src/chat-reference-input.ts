@@ -2,8 +2,7 @@ import {
   freezeChatReferenceInputs,
   chatReferenceInputsIdentity,
   type ChatReferenceInputs,
-} from "@starter/office-contract";
-import { MAX_ATTACHMENTS_PER_MESSAGE } from "./chat-attachment-schema.ts";
+} from "@highchat/office-contract";
 import { ImageInputError } from "./chat-image-input-types.ts";
 import type { ImageOriginalBinding } from "./chat-image-response-schema.ts";
 
@@ -28,7 +27,7 @@ export function requireReferenceCaption(text: string, inputs: ChatReferenceInput
   }
 }
 
-/** Preserve the original-file cap/overlap policy, counting repeated inline occurrences once. */
+/** Preserve unique upload/reference ownership and exact inline occurrence boundaries. */
 export function validReferenceSend(input: {
   readonly text: string;
   readonly attachments: readonly string[];
@@ -40,7 +39,6 @@ export function validReferenceSend(input: {
     ref.kind === "original" ? [ref.fileId] : [],
   );
   return (
-    new Set([...ids, ...inline]).size <= MAX_ATTACHMENTS_PER_MESSAGE &&
     new Set(ids).size === ids.length &&
     !inline.some((id) => input.attachments.includes(id)) &&
     (input.referenceInputs ?? []).every(

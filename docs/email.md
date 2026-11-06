@@ -2,7 +2,7 @@
 
 ## Contract and low-level design
 
-`@starter/integrations/email` owns the schema and Effect `Email` service.
+`@highchat/integrations/email` owns the schema and Effect `Email` service.
 Business code calls `Email.send(message): Effect<EmailReceipt, IntegrationError>`.
 Methods have no platform/configuration requirements after their layer is built.
 Backend composition selects one provider; there is no registry, `EMAIL_PROVIDER`
@@ -31,15 +31,15 @@ API or deduplication guarantee. Existing code using those fields must be migrate
 
 ## Cloudflare composition (preferred Worker example)
 
-Add the server-only workspace dependency `@starter/integrations: workspace:*` to
+Add the server-only workspace dependency `@highchat/integrations: workspace:*` to
 a consumer and install with pnpm. Supply a native binding from that consumer's
 Worker environment. This adapter neither provisions resources nor reads env itself.
 
 ```ts
 import { Effect } from "effect";
-import { Email } from "@starter/integrations/email";
-import { CloudflareEmail } from "@starter/integrations/cloudflare-email";
-import type { CloudflareEmailBinding } from "@starter/integrations/cloudflare-email";
+import { Email } from "@highchat/integrations/email";
+import { CloudflareEmail } from "@highchat/integrations/cloudflare-email";
+import type { CloudflareEmailBinding } from "@highchat/integrations/cloudflare-email";
 
 const notification = (env: { EMAIL: CloudflareEmailBinding }) =>
   Effect.gen(function* () {
@@ -79,7 +79,7 @@ The same business effect can instead receive `ResendEmail.layer({ apiKey })`, wh
 ```ts
 import { Layer } from "effect";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
-import { ResendEmail } from "@starter/integrations/resend";
+import { ResendEmail } from "@highchat/integrations/resend";
 
 const ResendLive = ResendEmail.layerConfig.pipe(Layer.provide(FetchHttpClient.layer));
 // Provide ResendLive instead of the Cloudflare layer at the backend boundary.
@@ -109,7 +109,7 @@ Cloudflare needs no Resend key or HttpClient; Resend needs no Cloudflare binding
   the message or that it reached an inbox. Cloudflare may later retry soft bounces;
   those delivery retries are distinct from another application submission.
 - No generic email HTTP endpoint, auth callback, delivery webhook, ledger or UI is
-  enabled by adding these opt-in adapters. Slack and billing remain unchanged.
+  enabled by adding these opt-in adapters. Slack remains unchanged.
 
 ## Setup, privacy and user-owned live verification
 

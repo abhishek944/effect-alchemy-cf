@@ -1,5 +1,5 @@
 import { operationRecordSql } from "./legacy-failure.ts";
-import type { OfficeMetadata, FrozenReview } from "@starter/office-server/ports";
+import type { OfficeMetadata, FrozenReview } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { canonical, conflict, invalid, missing, sqlNow, storeEffect } from "./store.ts";
 import { ApprovalRow, ReviewRow, OperationRow } from "./schemas.ts";

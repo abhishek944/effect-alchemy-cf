@@ -6,7 +6,7 @@ import type {
   OfficeMetadata,
   OwnerScope,
   Page,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeTaskReviewGraph } from "./office-task-review.ts";
 import type { OfficeMetadataResponse } from "./office-metadata-dispatch.ts";

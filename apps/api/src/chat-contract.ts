@@ -7,7 +7,6 @@ export class RefreshFence extends Error {}
 export const WINDOW_MESSAGES = 80;
 export const HISTORY_DEFAULT_LIMIT = 40;
 export const HISTORY_MAX_LIMIT = 80;
-export const FRAME_BYTES = 128 * 1024;
 export const TEXT_BYTES = 32 * 1024;
 export const TEXT_PREVIEW_UNITS = 512;
 export const MAX_ENTRY_FETCHES = 16;

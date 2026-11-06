@@ -1,3 +1,4 @@
+import { constants as bufferConstants } from "node:buffer";
 import {
   createNodeTransport,
   type NodeTransportConnection,
@@ -38,8 +39,10 @@ export function createOfficeProtocol(
 ) {
   const endpointServices = submissionServices(services, submissions);
   const transport = createNodeTransport({
-    maxRequestBodyBytes: 16 * 1024 * 1024,
-    maxWebSocketMessageBytes: 16 * 1024 * 1024,
+    // SDK 1.0.3 requires positive finite limits and concatenates HTTP bodies into a Buffer.
+    maxRequestBodyBytes: bufferConstants.MAX_LENGTH,
+    // The Worker Durable Object receiving this socket has a real 32 MiB message boundary.
+    maxWebSocketMessageBytes: 32 * 1024 * 1024,
   });
   const tickets = new MemorySessionTicketStore();
   const main = new UniverCollabEndpoint(endpointServices.main, {

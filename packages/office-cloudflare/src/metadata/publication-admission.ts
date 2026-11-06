@@ -1,12 +1,12 @@
 import { operationRecordSql } from "./legacy-failure.ts";
-import { Digest, Id, decodeWireSync } from "@starter/office-contract";
+import { Digest, Id, decodeWireSync } from "@highchat/office-contract";
 import type {
   ApprovalRecord,
   OperationRecord,
   OwnerScope,
   PublicationBarrier,
   WritePermit,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { canonical, conflict, invalid, missing, sqlNow } from "./store.ts";
 import { ApprovalRow, BarrierRow, OperationRow } from "./schemas.ts";

@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import type { NativeFence } from "@starter/office-cloudflare/native";
-import type { NativeTarget, OfficeMetadata, SerialAdmission } from "@starter/office-server/ports";
+import type { NativeFence } from "@highchat/office-cloudflare/native";
+import type { NativeTarget, OfficeMetadata, SerialAdmission } from "@highchat/office-server/ports";
 import type { OfficeHeldTurn } from "./office-private-turns.ts";
 import type { OfficeEditorHeld } from "./office-editor-grants.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";

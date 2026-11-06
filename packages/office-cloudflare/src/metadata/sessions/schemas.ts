@@ -7,8 +7,8 @@ import {
   Id,
   Revision,
   View,
-} from "@starter/office-contract";
-import { OwnerClaims } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { OwnerClaims } from "@highchat/office-server/ports";
 import { NativeId } from "../schemas.ts";
 
 const Epoch = Count.check(Schema.isGreaterThanOrEqualTo(1));

@@ -4,11 +4,9 @@ import {
   SKILLS_BUDGET,
   SKILLS_INCOMPLETE,
   SKILLS_PINNED_UNAVAILABLE,
-  SKILLS_REQUEST_BUDGET,
   SKILLS_UNKNOWN_PROVENANCE,
 } from "./chat-skills-errors.ts";
 import { canonicalSkillContext, type GuardedRequest } from "./chat-skills-guard.ts";
-import { requestBudgetBytes, requestTextBytes } from "./chat-request-budget.ts";
 import type { SendEra } from "./chat-send-records.ts";
 import type { ChatSkillsStore } from "./chat-skills-store.ts";
 import { verifyAttemptState } from "./chat-skills-verify.ts";
@@ -30,7 +28,7 @@ const bytes = (value: string): number => new TextEncoder().encode(value).byteLen
 export const prepareSkillRequestFor = async (
   access: SkillRequestAccess,
   operationId: string,
-  model: Model<Api>,
+  _model: Model<Api>,
   context: Context,
   signal?: AbortSignal,
 ): Promise<GuardedRequest> => {
@@ -107,9 +105,5 @@ export const prepareSkillRequestFor = async (
     active.length > 0 ? active : null,
     access.now,
   );
-  if (requestTextBytes(projected) > requestBudgetBytes(model)) {
-    access.fail(operationId, SKILLS_REQUEST_BUDGET);
-    return { ok: false, message: SKILLS_REQUEST_BUDGET };
-  }
   return { ok: true, context: projected };
 };

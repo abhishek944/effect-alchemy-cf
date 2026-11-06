@@ -7,7 +7,7 @@
  * truncates, repairs or substitutes bytes, so a failed check is a hard error.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { skillObjectKey } from "./skills-manifest.ts";
 import { MAX_SKILL_BYTES, type SkillVersionRef } from "./skills-model.ts";
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Document, Draft } from "@starter/office-contract";
+import type { Document, Draft } from "@highchat/office-contract";
 import { useWorkspaceOffice } from "./workspace-office-context";
 import { useWorkspacePreview } from "./workspace-preview-context";
 import { OfficeSources } from "./office-sources";
@@ -54,8 +54,7 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
   }, [runtime, active, refreshKey]);
   const more = async (kind: "documents" | "drafts") => {
     const cursor = cursors[kind];
-    const rows = kind === "documents" ? documents : drafts;
-    if (busy || cursor === null || rows.length >= 200) return;
+    if (busy || cursor === null) return;
     const controller = new AbortController();
     request.current?.abort();
     request.current = controller;
@@ -68,7 +67,6 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        if (documents.length + page.items.length > 200) throw new Error("Office browser limit.");
         setDocuments([...documents, ...page.items]);
         setCursors((old) => ({ ...old, documents: page.next }));
       } else {
@@ -76,15 +74,12 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        if (drafts.length + page.items.length > 200) throw new Error("Office browser limit.");
         setDrafts([...drafts, ...page.items]);
         setCursors((old) => ({ ...old, drafts: page.next }));
       }
     } catch {
       if (!controller.signal.aborted)
-        setError(
-          "More Office rows are unavailable or exceed the 200-row browser budget. Refresh reloads the first pages; it cannot raise that limit or restore an unavailable service.",
-        );
+        setError("More Office rows are unavailable. Refresh reloads the first pages.");
     } finally {
       if (!controller.signal.aborted) setBusy(false);
     }
@@ -155,20 +150,12 @@ export function OfficeFiles({ active, refreshKey }: { active: boolean; refreshKe
         ))}
       </ul>
       {cursors.documents !== null && (
-        <button
-          type="button"
-          disabled={busy || documents.length >= 200}
-          onClick={() => void more("documents")}
-        >
+        <button type="button" disabled={busy} onClick={() => void more("documents")}>
           More Office documents
         </button>
       )}
       {cursors.drafts !== null && (
-        <button
-          type="button"
-          disabled={busy || drafts.length >= 200}
-          onClick={() => void more("drafts")}
-        >
+        <button type="button" disabled={busy} onClick={() => void more("drafts")}>
           More Office drafts
         </button>
       )}

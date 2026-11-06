@@ -1,4 +1,4 @@
-import { createOfficeHeadless, OFFICE_NATIVE_TYPES } from "@starter/office-server/jobs";
+import { createOfficeHeadless, OFFICE_NATIVE_TYPES } from "@highchat/office-server/jobs";
 
 export async function createSheetSample() {
   const native = await createOfficeHeadless({

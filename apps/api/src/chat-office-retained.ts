@@ -1,4 +1,4 @@
-import { officeImportOptions } from "@starter/office-contract";
+import { officeImportOptions } from "@highchat/office-contract";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { createChatLibraryClient } from "./chat-library-client.ts";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";

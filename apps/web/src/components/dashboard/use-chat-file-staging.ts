@@ -1,15 +1,10 @@
 /**
- * Staging lifecycle for local files: admission, preparation, removal and retry.
- *
- * Bytes are admitted against the aggregate message and tab budgets before they
- * are retained or decoded, and every thumbnail holds an explicit tab
- * reservation. A superseded or unmounted preparation releases its resources
- * instead of leaking an object URL.
+ * Staging lifecycle for local files: preparation, removal and retry.
+ * A superseded or unmounted preparation releases its resources instead of
+ * leaking an object URL.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { admitFiles } from "./chat-file-admission";
 import { createImageAttemptOwner } from "./chat-image-attempts";
-import { useImageBudget } from "./chat-image-budget";
 import { prepareLocalFile, releaseLocalFile, type LocalFile } from "@/lib/chat-file-local";
 
 function placeholder(file: File): LocalFile {
@@ -26,8 +21,6 @@ function placeholder(file: File): LocalFile {
     height: null,
     excerpt: null,
     previewUrl: null,
-    previewLimited: false,
-    reservationKey: null,
     descriptor: null,
   };
 }
@@ -49,8 +42,7 @@ export function useChatFileStaging(chatId: string | null): ChatFileStaging {
   const [byChat, setByChat] = useState<Record<string, LocalFile[]>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const rowsRef = useRef(byChat);
-  const budget = useImageBudget();
-  const attempts = useMemo(() => createImageAttemptOwner(budget), [budget]);
+  const attempts = useMemo(() => createImageAttemptOwner(), []);
 
   const applyRows = useCallback((targetChatId: string, rows: LocalFile[]) => {
     rowsRef.current = { ...rowsRef.current, [targetChatId]: rows };
@@ -59,7 +51,7 @@ export function useChatFileStaging(chatId: string | null): ChatFileStaging {
 
   const releaseRow = useCallback(
     (row: LocalFile) => {
-      // Pending work keeps its lease until it ends; settled rows free it now.
+      // Pending completions are fenced before they can install a preview.
       attempts.releaseRow(row.id);
       releaseLocalFile(row);
     },
@@ -81,7 +73,7 @@ export function useChatFileStaging(chatId: string | null): ChatFileStaging {
 
   useEffect(
     () => () => {
-      // Settled rows release now; in-flight attempts release their own lease later.
+      // Fence in-flight attempts; each late completion revokes its own object URL.
       for (const rows of Object.values(rowsRef.current)) {
         for (const row of rows) releaseRow(row);
       }
@@ -94,24 +86,17 @@ export function useChatFileStaging(chatId: string | null): ChatFileStaging {
       const lease = attempts.begin(row.id);
       const run = async () => {
         try {
-          const next = await prepareLocalFile(row.file, row.id, {
-            allowPreview: (decodedBytes, previewBytes) =>
-              attempts.reserve(lease, decodedBytes, previewBytes),
-          });
+          const next = await prepareLocalFile(row.file, row.id);
           const installed = rowsRef.current[targetChatId]?.some((item) => item.id === next.id);
           // Only the fenced attempt that still owns an installed row may land.
           if (!installed || !attempts.fenced(lease)) {
             attempts.discard(lease, next.previewUrl);
             return;
           }
-          attempts.settle(lease);
-          replace(targetChatId, next.id, () => ({
-            ...next,
-            reservationKey: attempts.reservedKey(lease),
-          }));
+          replace(targetChatId, next.id, () => next);
         } catch {
           const live = attempts.fenced(lease);
-          attempts.fail(lease);
+          attempts.discard(lease, null);
           if (live)
             replace(targetChatId, row.id, (current) => ({
               ...current,
@@ -129,14 +114,7 @@ export function useChatFileStaging(chatId: string | null): ChatFileStaging {
     (incoming: File[]) => {
       if (!chatId || incoming.length === 0) return;
       setNotice(null);
-      const { accepted, rejection } = admitFiles({
-        incoming,
-        chatRows: rowsRef.current[chatId] ?? [],
-        tabRows: Object.values(rowsRef.current).flat(),
-      });
-      if (rejection) setNotice(rejection);
-      if (accepted.length === 0) return;
-      const prepared = accepted.map(placeholder);
+      const prepared = incoming.map(placeholder);
       applyRows(chatId, [...(rowsRef.current[chatId] ?? []), ...prepared]);
       for (const row of prepared) startPreparation(chatId, row);
     },
@@ -166,15 +144,13 @@ export function useChatFileStaging(chatId: string | null): ChatFileStaging {
       const targetChatId = chatId;
       const row = rowsRef.current[targetChatId]?.find((item) => item.id === id);
       if (!row) return;
-      // A retry supersedes the previous attempt's preview and reservation.
+      // A retry supersedes the previous attempt and its preview.
       releaseRow(row);
       const fresh: LocalFile = {
         ...row,
         state: "preparing",
         error: null,
         previewUrl: null,
-        previewLimited: false,
-        reservationKey: null,
       };
       replace(targetChatId, id, () => fresh);
       startPreparation(targetChatId, fresh);

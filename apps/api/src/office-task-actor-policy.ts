@@ -4,17 +4,14 @@ import type {
   NativeTarget,
   OfficeMetadata,
   OperationRecord,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { OfficeTaskInvocation } from "./office-task-issuance.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { assertOfficeTaskCommand, assertOfficeTaskObservedIntent } from "./office-task-command.ts";
 import { sameOfficeTaskInput } from "./office-task-lineage.ts";
 import { officeTaskReviewTarget } from "./office-task-review.ts";
-
-/** Current original Root registration only, never a decoded actor supplied by Node/model.
- * This is actor/target metadata policy, NOT serial head/native publication or file authority.
- */
+/** Root registration metadata policy only; native fences and file authority remain separate. */
 export function officeTaskActorPolicy(
   metadata: OfficeMetadata,
   request: OfficePrivateRequest,
@@ -85,6 +82,14 @@ export function officeTaskActorPolicy(
           return yield* Effect.fail(officeDenied());
         return undefined;
       }
+      const sourceSelection = task.binding.selected;
+      if (
+        request.command?.method === "office.open" &&
+        sourceSelection?.scope.kind === "main" &&
+        input.scope.kind === "main" &&
+        sourceSelection.documentId === input.documentId
+      )
+        return undefined;
       const bound = actor.target;
       if (
         bound === null ||

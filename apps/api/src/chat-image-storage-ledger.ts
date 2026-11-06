@@ -1,7 +1,6 @@
 import type { AgentContext } from "agents";
-import { RETAINED_BYTES_PER_USER } from "./chat-attachment-schema.ts";
 import { insertUploading, promoteAccepted, clearPurge } from "./chat-files-mutations.ts";
-import { fileRow, usageBytes } from "./chat-files-table.ts";
+import { fileRow } from "./chat-files-table.ts";
 import { savedFileMetadata } from "./chat-library-metadata.ts";
 import {
   ImageReservation,
@@ -34,7 +33,14 @@ export class ChatImageStorageLedger {
       const db = this.storage.sql;
       const existing = imageCall(db, input);
       if (existing !== null) {
-        if (existing.request_json !== imageReservationJson(input))
+        const stored = requireImageValue(ImageReservation, JSON.parse(existing.request_json));
+        // Older identities include an output allowance. Retain it for equality only;
+        // omitting a removed policy field must not change the original paid request.
+        const identity =
+          input.maxOutputBytes === undefined && stored.maxOutputBytes !== undefined
+            ? { ...input, maxOutputBytes: stored.maxOutputBytes }
+            : input;
+        if (existing.request_json !== imageReservationJson(identity))
           throw new ImageStorageError("conflict");
         return { fresh: false };
       }
@@ -44,12 +50,6 @@ export class ChatImageStorageLedger {
         if (file?.chatId !== input.chatId || file.state !== "accepted" || file.kind !== "image")
           throw new ImageStorageError("invalid_input");
       }
-      const used = usageBytes(db);
-      if (
-        used.retained + used.staged + used.reserved + used.pending + input.maxOutputBytes >
-        RETAINED_BYTES_PER_USER
-      )
-        throw new ImageStorageError("quota_exceeded");
       // A call id reused in a different chat must never acquire a new reservation.
       const collision = db
         .exec(`SELECT call_id FROM image_calls WHERE call_id = ?`, input.callId)
@@ -97,8 +97,6 @@ export class ChatImageStorageLedger {
         .toArray()[0];
       if (key.index >= key.total || (observed !== undefined && observed.total !== key.total))
         throw new ImageStorageError("conflict");
-      if (pendingImageBytes(db, key.callId) + metadata.byteSize > call.remaining_bytes)
-        throw new ImageStorageError("quota_exceeded");
       db.exec(
         `INSERT INTO image_outputs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
         key.callId,
@@ -124,8 +122,7 @@ export class ChatImageStorageLedger {
       const row = imageOutput(db, key.callId, output.output_index);
       if (call === null || row === null) throw new ImageStorageError("not_admitted");
       if (row.state !== "accepted") {
-        if (call.remaining_bytes < row.byte_size || fileRow(db, row.file_id) !== null)
-          throw new ImageStorageError("conflict");
+        if (fileRow(db, row.file_id) !== null) throw new ImageStorageError("conflict");
         const ext = row.media_type === "image/jpeg" ? "jpg" : row.media_type.slice(6);
         insertUploading(db, {
           fileId: row.file_id,
@@ -152,11 +149,6 @@ export class ChatImageStorageLedger {
           key.callId,
           row.output_index,
         );
-        db.exec(
-          `UPDATE image_calls SET remaining_bytes = remaining_bytes - ? WHERE call_id = ?`,
-          row.byte_size,
-          key.callId,
-        );
       }
       const file = savedFileMetadata(db, key.chatId, row.file_id);
       if (file === null) throw new ImageStorageError("unavailable");
@@ -168,9 +160,10 @@ export class ChatImageStorageLedger {
       const db = this.storage.sql;
       if (imageCall(db, key) === null) throw new ImageStorageError("not_admitted");
       const pendingBytes = pendingImageBytes(db, key.callId);
+      if (!Number.isSafeInteger(pendingBytes) || pendingBytes < 0)
+        throw new ImageStorageError("unavailable");
       db.exec(
-        `UPDATE image_calls SET state = 'finished', remaining_bytes = ? WHERE call_id = ?`,
-        pendingBytes,
+        `UPDATE image_calls SET state = 'finished', remaining_bytes = 0 WHERE call_id = ?`,
         key.callId,
       );
       return { pendingBytes };

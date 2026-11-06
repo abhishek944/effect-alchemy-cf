@@ -4,12 +4,13 @@ import {
   Digest,
   Id,
   OfficeForbidden,
+  OFFICE_LIMITS,
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import type { OfficeResolution } from "@starter/office-pi";
-import type { ArtifactRef } from "@starter/office-contract";
+} from "@highchat/office-contract";
+import type { OfficeResolution } from "@highchat/office-pi";
+import type { ArtifactRef } from "@highchat/office-contract";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
 import { readOfficeStageReceipts, recordOfficeStageReceipt } from "./chat-office-stage-receipts.ts";
 import { requireAcceptedInputAccess, type AcceptedInputAccess } from "./chat-accepted-input.ts";
@@ -82,7 +83,7 @@ export class ChatOfficeTaskBroker {
       id: crypto.randomUUID(),
       operationId: resolution.intent.operationId,
       digest: resolution.intent.digest,
-      notAfter: Math.min(association.session.expiresAt, started + 120_000),
+      notAfter: Math.min(association.session.expiresAt, started + OFFICE_LIMITS.jobSeconds * 1000),
     };
     // Actual native task memo is first-writer-wins; recovery cannot refresh this original deadline.
     const memo = decodeWireSync(Memo)(

@@ -1,4 +1,4 @@
-import { OfficeLimited, safeFailure } from "@starter/office-contract";
+import { OfficeLimited, safeFailure } from "@highchat/office-contract";
 import type { officeBinaryCursor } from "./native-transfer-frame.ts";
 import type { OfficeBinaryResource } from "./native-transfer-resource.ts";
 
@@ -6,7 +6,7 @@ import type { OfficeBinaryResource } from "./native-transfer-resource.ts";
 export function officeBinaryResponse(
   cursor: ReturnType<typeof officeBinaryCursor>,
   resource: OfficeBinaryResource,
-  maximum: number,
+  maximum: number | null,
 ): ReadableStream<Uint8Array> {
   let count = 0;
   let state: "open" | "joining" | "finished" = "open";
@@ -36,7 +36,8 @@ export function officeBinaryResponse(
           return;
         }
         count += part.value.byteLength;
-        if (count > maximum) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
+        if (maximum !== null && count > maximum)
+          throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
         controller.enqueue(part.value);
       } catch (cause) {
         if (state !== "finished") {

@@ -1,5 +1,9 @@
 import { Effect } from "effect";
-import type { ActorVerification, NativeTarget, OfficeMetadata } from "@starter/office-server/ports";
+import type {
+  ActorVerification,
+  NativeTarget,
+  OfficeMetadata,
+} from "@highchat/office-server/ports";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeCaught } from "./office-failure.ts";
 import { officeDeniedReason as officeDenied, officeSame } from "./office-private-values.ts";

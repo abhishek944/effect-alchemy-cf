@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { OfficeMetadata, VerifyActor } from "@starter/office-server/ports";
+import type { OfficeMetadata, VerifyActor } from "@highchat/office-server/ports";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeCaught, officeDenied, officeSame } from "./office-private-authority.ts";
 import { officeTaskActorPolicy } from "./office-task-actor-policy.ts";

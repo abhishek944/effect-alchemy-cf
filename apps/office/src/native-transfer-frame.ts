@@ -1,12 +1,12 @@
-import { OfficeLimited, decodeWireSync, safeFailure } from "@starter/office-contract";
-import { hostEnvelope } from "@starter/office-server/native-remote";
+import { OfficeLimited, decodeWireSync, safeFailure } from "@highchat/office-contract";
+import { hostEnvelope } from "@highchat/office-server/native-remote";
 import type { OfficeRemoteMethod } from "./native-channel.ts";
 import type { OfficeBinaryResource } from "./native-transfer-resource.ts";
 
 const limited = () => new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
 export function officeBinaryPrefix(header: string): Uint8Array {
   const bytes = new TextEncoder().encode(header);
-  if (bytes.length === 0 || bytes.length > 16 * 1024) throw limited();
+  if (bytes.length === 0 || bytes.length >= 0x100000000) throw limited();
   const prefix = new Uint8Array(bytes.length + 4);
   new DataView(prefix.buffer).setUint32(0, bytes.length);
   prefix.set(bytes, 4);
@@ -19,11 +19,10 @@ export async function readOfficeBinaryReply<Q, A>(
   resource: OfficeBinaryResource,
   invocationId: string,
   callId: string,
-  charge: (bytes: number) => void,
 ) {
   if (!(response instanceof Response) || response.body === null)
     throw new Error("Invalid private binary response");
-  const cursor = officeBinaryCursor(response.body, resource.signal, resource.deadline, charge);
+  const cursor = officeBinaryCursor(response.body, resource.signal, resource.deadline);
   resource.add(() => cursor.close());
   resource.check();
   if (
@@ -46,7 +45,6 @@ export function officeBinaryCursor(
   body: ReadableStream<Uint8Array>,
   signal: AbortSignal,
   deadline: number,
-  charge: (bytes: number) => void,
 ) {
   const reader = body.getReader();
   // A terminal reader needs lock release, not cancel() rethrowing its stored operation error.
@@ -79,7 +77,6 @@ export function officeBinaryCursor(
     check();
     if (!part.done) {
       if (!(part.value instanceof Uint8Array)) throw new Error("Invalid private binary chunk");
-      charge(part.value.byteLength);
     }
     return part;
   };
@@ -100,7 +97,7 @@ export function officeBinaryCursor(
     next,
     async header(): Promise<unknown> {
       const length = new DataView((await exact(4)).buffer).getUint32(0);
-      if (length === 0 || length > 16 * 1024) throw limited();
+      if (length === 0) throw limited();
       return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await exact(length)));
     },
     close(): Promise<void> {

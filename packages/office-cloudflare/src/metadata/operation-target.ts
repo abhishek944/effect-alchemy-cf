@@ -1,4 +1,4 @@
-import type { OperationRecord } from "@starter/office-server/ports";
+import type { OperationRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import type { PredicateSQL } from "./native-fence.ts";
 /** Domain metadata identity consistency; fresh role/session/native admission remains the caller's responsibility. */

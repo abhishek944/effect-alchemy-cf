@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { Id, OfficeGroup, decodeWireSync } from "@starter/office-contract";
-import type { HostOffice } from "@starter/office-server/native-remote";
+import { Id, OfficeGroup, decodeWireSync } from "@highchat/office-contract";
+import type { HostOffice } from "@highchat/office-server/native-remote";
 
 export type OfficeRead = { readonly key: keyof typeof HostOffice; readonly input: unknown };
 export type OfficeWrite = {

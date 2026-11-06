@@ -7,7 +7,7 @@
  * SkillError envelopes with honest codes and the nullable current conflict file.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import {
   SkillCancelRequest,

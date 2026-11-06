@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { Editor, decodeWire } from "@starter/office-contract";
+import { Editor, decodeWire } from "@highchat/office-contract";
 import { UniverType, UnitObject, type IBatchAllowedResponse } from "@univerjs/protocol";
 import type { HumanActor, NativeTarget, OfficeDependencies } from "../ports/index.ts";
 import { authorize } from "../core/claims.ts";

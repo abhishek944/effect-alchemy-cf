@@ -1,8 +1,8 @@
-import { reportFailure } from "@starter/diagnostics";
-import type { OfficeSessionBinding } from "@starter/auth/office-session";
-import type { ChatReferenceInput, OfficeSendTarget } from "@starter/office-contract";
-import type { OfficeResolution, OfficeToolIntent } from "@starter/office-pi";
-import type { TaskActor } from "@starter/office-server/ports";
+import { reportFailure } from "@highchat/diagnostics";
+import type { OfficeSessionBinding } from "@highchat/auth/office-session";
+import type { ChatReferenceInput, OfficeSendTarget } from "@highchat/office-contract";
+import type { OfficeResolution, OfficeToolIntent } from "@highchat/office-pi";
+import type { TaskActor } from "@highchat/office-server/ports";
 import type { AcceptedOriginalBinding } from "./chat-accepted-input-schema.ts";
 import { requireAcceptedInputAccess, type AcceptedInputAccess } from "./chat-accepted-input.ts";
 import { freezeAcceptedInputValue } from "./chat-accepted-input-values.ts";
@@ -43,6 +43,9 @@ export async function resolveOfficeTaskAssociation(
     );
     if (proof === null) return null;
     const candidate = proof.current.candidate;
+    const reference = candidate.referenceInputs?.find(
+      (ref) => ref.kind === "native" && ref.target.documentId === resolution.intent.attachmentId,
+    );
     const session = records.officeSession(proof.operationId);
     const deny = (reason: string): null => {
       reportFailure(undefined, {
@@ -52,6 +55,12 @@ export async function resolveOfficeTaskAssociation(
         operationId: resolution.intent.operationId,
         taskId: resolution.api.taskId,
         callId: resolution.api.callId,
+        submissionId: proof.submissionId,
+        toolArguments: { ...resolution.intent, command: [resolution.intent.command.command] },
+        step: resolution.intent.step,
+        referenceKind: reference?.kind ?? "missing",
+        acceptedReferenceCount: candidate.referenceInputs?.length ?? 0,
+        acceptedOriginalCount: candidate.originals.length,
         event: "application.denial",
       });
       return null;
@@ -62,17 +71,9 @@ export async function resolveOfficeTaskAssociation(
     if (records.identity(proof.operationId) !== candidate.identityHash)
       return deny("accepted-input-identity");
     requireAcceptedInputAccess(access, resolution.context);
-    const referenceId = resolution.intent.referenceId;
-    const reference =
-      referenceId === undefined
-        ? undefined
-        : candidate.referenceInputs?.find((ref) => ref.id === referenceId);
-    if (
-      referenceId !== undefined &&
-      (reference?.kind !== "native" || resolution.intent.attachmentId !== undefined)
-    )
-      return deny("accepted-reference-missing");
-    const requested = resolution.intent.attachmentId;
+    if (resolution.intent.referenceId !== undefined || resolution.intent.attachmentId === undefined)
+      return deny("intent-source-invalid");
+    const requested = reference === undefined ? resolution.intent.attachmentId : undefined;
     const fromSend =
       requested === undefined
         ? undefined
@@ -82,7 +83,7 @@ export async function resolveOfficeTaskAssociation(
         ? null
         : await readOfficeRetainedOriginal(env, access.ownerId, access.chatId, requested);
     requireAcceptedInputAccess(access, resolution.context);
-    if (requested !== undefined && fromSend === undefined && retained === null)
+    if (reference === undefined && fromSend === undefined && retained === null)
       return deny("retained-original-missing");
     return freezeAcceptedInputValue(
       {

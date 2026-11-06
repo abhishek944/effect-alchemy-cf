@@ -1,11 +1,8 @@
 # Office workflows — source and operational boundaries
 
-Earlier bounded runs verified native editing, revision ACK, server drain and fresh
-reopening through Worker/Node/D1/R2, plus exact review and Ready-only reopen cases.
-Those historical results do not certify later changes or all concurrent schedules.
-Chat-scoped attachment access and selected-cell context require fresh user acceptance.
-Never replay an uncertain import/write to test a fix. Static checks and HTTP200 alone
-do not establish native save, conversion/merge fidelity or clean lifecycle behavior.
+Historical runs checked native editing, revision ACK/drain and exact review/reopen; they do not certify later changes, concurrency or current attachment/selection behavior.
+Never replay uncertain imports/writes. Static checks and HTTP200 do not establish native
+save, conversion/merge fidelity or clean lifecycle behavior.
 
 ## Originals, AI and document history
 
@@ -20,16 +17,17 @@ do not establish native save, conversion/merge fidelity or clean lifecycle behav
    are never sent implicitly. Native Docs capture raw selected UTF-16 text. See
    [inline references](chat-files.md#inline-references-and-selections) for limits.
 3. AI discovers saved chat files with paginated `get_attachments`, then uses
-   `univer_cli({attachmentId,command:[...argv]})` and one bundled Univer Skill.
-   Native inline sources use exclusive `referenceId` from the proven accepted input.
+   `univer_cli({attachmentId,worktreeId?,command:[...argv]})` and one bundled Univer Skill.
+   Use `attachmentId` for Main and add `worktreeId` for a specific working draft;
+   edits require it. See [AI selector contract](office-ai-selectors.md).
    A file need not be attached again to each message: the server resolves the retained
    original under the actual user/chat, never by trusting a model-supplied owner.
    The legacy `office` tool is disabled. This application CLI uses the
-   shared native server, not a second local `.univer` database. `import` resolves
-   an accepted original and imports once; later commands reuse that saved draft.
-   Workbook/Unit and worktree IDs are server-resolved, not model-supplied.
-   `open_in_panel({attachmentId})` requests that same imported draft after native
-   validation. Unsupported formats return `UNSUPPORTED_PREVIEW` without navigation.
+   shared native server, not a second local `.univer` database. Import the accepted original first;
+   inspect only with its confirmed worktreeId. Early reads return actionable workflow recovery.
+   Physical Workbook/Unit/worktree IDs are server-resolved; public worktreeId is Draft.id.
+   `open_in_panel({attachmentId,worktreeId})` requests that explicit draft after
+   native validation; omitting worktreeId selects Main, not the original draft. Unsupported formats return `UNSUPPORTED_PREVIEW` without navigation.
    Upload alone still does nothing. AI cannot approve/merge or impersonate a Human.
    A reference, digest, schema, epoch or header is not authentication. Panel
    requests expire after 30s, never replay on reload, and do not prove rendering.
@@ -46,13 +44,11 @@ Line endings normalize to LF; native structural control characters are rejected.
 Docs can export DOCX or TXT through the same authorized artifact pipeline. TXT is
 main-body plain text: no rich formatting, images, headers/footers or notes. The SDK
 handles text extraction, including its table text representation, not layout preservation.
-TXT retains the existing 1MiB upload limit and its unchanged original download.
-
-Office inputs share five files/20MiB per message and 1GiB owner accounting, with
-10MiB per modern Office original. Accepted originals remain permanent under their
-existing retention owner. Legacy XLS/DOC/PPT is not accepted in this attachment lane.
-Office bytes are not decoded as chat text or base64 model blocks. See [private
-files](chat-files.md) for storage, quotas, download authorization and uncertainty.
+TXT retains its unchanged original download. No application upload/file-count/owner-byte
+quota is imposed in this lane. Accepted originals remain under their existing retention
+owner. Legacy XLS/DOC/PPT is not accepted in this attachment lane. Office bytes are not
+decoded as chat text or base64 model blocks. See [private files](chat-files.md) for
+storage, download authorization and uncertainty.
 
 ## Editing and Human review
 
@@ -110,7 +106,7 @@ paused editor stays paused. If the ACK advanced beyond the opening View, the exi
 open API captures a same-target checkpoint whose revision must equal that ACK;
 a racing newer head refuses capture rather than changing the frozen AI input.
 
-Bounded Sheet import-into refuses unsupported formulas/rich cells/resources/graphs/
+Sheet import-into refuses unsupported formulas/rich cells/resources/graphs/
 history before allocation/publication rather than stripping content. Rich cross-
 Doc/Slide append is not promised. Native create/import/render/export/save fidelity,
 IME/body portals, responsive layouts and concurrent-user schedules need real user
@@ -121,8 +117,13 @@ acceptance on copies of non-sensitive files; no such acceptance is claimed here.
 The application CLI supports import, status, inspect, execute, export, worktree
 ready/reopen and exact-operation observation. Commands are argv, never shell input.
 Private step-scoped task attestations replace model-managed staging; source code
-still executes only in existing credential-free isolated jobs. Existing file and
-native limits remain; this interface does not add 100 MB transport support.
+still executes only in existing credential-free isolated jobs. Application whole-file,
+block, native-frame, mutation and render size/count quotas are removed. R2 values still
+use 4MiB pieces, and list/history pages remain paginated. This is not unlimited capacity:
+MessagePack/OJOB length fields are uint32; SQL metadata/manifest values must fit actual
+provider rows; the receiving Durable Object WebSocket boundary is 32MiB. Node/Worker
+memory and SDK/browser/format constraints still apply. Active Office operations allow up to 10 minutes, never beyond session expiry.
+Office tools override optional SDK output defaults with actual runtime buffer/string boundaries.
 
 One Node/Univer application image supplies owner-scoped warm document-host roles
 and separate fresh fixed-job roles. Browser code contains no provider clients or
@@ -196,5 +197,4 @@ operation/status as a copyable reference and projects fixed phase/reason
 records to the local browser console only (T17 local capture; no external
 collector). Cloud-sink delivery, native job-log retention, and privileged
 audit history are explicitly unverified and deferred; no new audit store is
-added. Do not induce a paid/native write or
-replay the historical uncertain upload merely to verify logging.
+added. Never replay an uncertain upload or induce a paid/native write merely to verify logging.

@@ -1,12 +1,12 @@
-import { createStrictNativeStorage } from "@starter/office-cloudflare/native";
+import { createStrictNativeStorage } from "@highchat/office-cloudflare/native";
 import type {
   NativeValueHeader,
   NativeValueRef,
   NativeScope,
-} from "@starter/office-cloudflare/native";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { OfficeMetadata } from "@starter/office-server/ports";
-import type { HostNativeProducer } from "@starter/office-server/native-remote";
+} from "@highchat/office-cloudflare/native";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
+import type { HostNativeProducer } from "@highchat/office-server/native-remote";
 import type { OfficeHeldTurn } from "./office-private-turns.ts";
 import { officeEditorPreparation, type OfficeEditorHeld } from "./office-editor-grants.ts";
 import { officeNativePreparation } from "./office-native-preparation.ts";

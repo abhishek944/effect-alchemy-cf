@@ -1,5 +1,5 @@
 import type { Effect } from "effect";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 import type { NativeTarget, OwnerScope, WritePermit } from "./identity.ts";
 
 /** Requested effects only; the provider independently validates original durable authority. */

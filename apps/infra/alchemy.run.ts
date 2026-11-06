@@ -1,6 +1,6 @@
-import ApiWorker from "@starter/api/worker";
-import { ChatFilesBucket } from "@starter/api/chat-resources";
-import { OfficeStorage } from "@starter/api/office-resources";
+import ApiWorker from "@highchat/api/worker";
+import { ChatFilesBucket } from "@highchat/api/chat-resources";
+import { OfficeStorage } from "@highchat/api/office-resources";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { AlchemyContext } from "alchemy/AlchemyContext";

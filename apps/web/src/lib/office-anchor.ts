@@ -1,12 +1,11 @@
 import {
-  MAX_OFFICE_SEND_ATTACHMENTS,
   Id,
   freezeOfficeSendTarget,
   type OfficeSendContext,
   type Target,
   type View,
-} from "@starter/office-contract";
-import type { OfficeEditorHandle, OfficeRuntime, OfficeSave } from "@starter/office-react";
+} from "@highchat/office-contract";
+import type { OfficeEditorHandle, OfficeRuntime, OfficeSave } from "@highchat/office-react";
 import { Schema } from "effect";
 import { officeFail } from "@/lib/browser-diagnostics";
 import { assertOfficeViewTarget, type OpenOffice } from "@/lib/office-runtime";
@@ -21,7 +20,7 @@ export const officeSendContext = (
   attachmentIds: readonly string[],
   sheet: OfficeSendContext["sheet"],
 ): OfficeSendContext | undefined => {
-  const ids = [...new Set(attachmentIds)].filter(isId).slice(0, MAX_OFFICE_SEND_ATTACHMENTS);
+  const ids = [...new Set(attachmentIds)].filter(isId);
   if (ids.length === 0 && sheet === undefined) return undefined;
   return {
     ...(ids.length === 0 ? {} : { attachmentIds: ids }),

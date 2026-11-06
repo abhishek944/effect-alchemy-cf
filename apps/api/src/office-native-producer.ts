@@ -1,10 +1,10 @@
-import { nativeValueDigest } from "@starter/office-server/native-remote";
-import type { HostNativeProducer } from "@starter/office-server/native-remote";
+import { nativeValueDigest } from "@highchat/office-server/native-remote";
+import type { HostNativeProducer } from "@highchat/office-server/native-remote";
 import type {
   NativeFence,
   NativeValueHeader,
   NativeValueRef,
-} from "@starter/office-cloudflare/native";
+} from "@highchat/office-cloudflare/native";
 import type { OfficeHeldTurn } from "./office-private-turns.ts";
 import type { OfficeEditorHeld } from "./office-editor-grants.ts";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";

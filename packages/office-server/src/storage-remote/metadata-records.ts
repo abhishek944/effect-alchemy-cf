@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ArtifactRef, Count, Digest, Document, Failure, Id, View } from "@starter/office-contract";
+import { ArtifactRef, Count, Digest, Document, Failure, Id, View } from "@highchat/office-contract";
 import { OwnerClaims, NativeReceiptKey, NativeReceiptBinding } from "../ports/index.ts";
 import { HostId, HostEpoch } from "./host-wire.ts";
 // Schema-only intra-package reuse; these modules have no Node runtime imports.

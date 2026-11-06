@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useAui, useAuiState } from "@assistant-ui/react";
-import { MAX_OFFICE_SEND_ATTACHMENTS } from "@starter/office-contract";
 import {
   $getRoot,
   $getSelection,
@@ -96,11 +95,6 @@ export function ReferenceEditorPlugin({
           const snapshot = editor.getEditorState().read($readReferenceEditor);
           const from = replace?.start ?? caret.current?.start ?? snapshot.selectionStart;
           const to = replace?.end ?? caret.current?.end ?? snapshot.selectionEnd;
-          if (
-            snapshot.inputs.filter((input) => input.start >= to || input.end <= from).length >=
-            MAX_OFFICE_SEND_ATTACHMENTS
-          )
-            throw new Error("A message can contain at most eight inline references.");
           const identity = JSON.stringify(snapshot.inputs);
           return (value) => {
             const current = editor.getEditorState().read($readReferenceEditor);

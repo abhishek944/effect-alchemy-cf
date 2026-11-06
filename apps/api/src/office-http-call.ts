@@ -1,11 +1,11 @@
 import type { WorkerEnvironment } from "alchemy/Cloudflare";
-import { reportEventEffect, requestDiagnosticContext } from "@starter/diagnostics";
+import { reportEventEffect, requestDiagnosticContext } from "@highchat/diagnostics";
 import type { RuntimeContext } from "alchemy";
 import { Cause, Effect, Option, Schema } from "effect";
 import type * as HttpServerResponse from "effect/http/HttpServerResponse";
-import { decodeWireSync, safeFailure } from "@starter/office-contract";
-import type { OfficeError } from "@starter/office-contract";
-import { HostOffice, HostOfficeRequest, hostEnvelope } from "@starter/office-server/native-remote";
+import { decodeWireSync, safeFailure } from "@highchat/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
+import { HostOffice, HostOfficeRequest, hostEnvelope } from "@highchat/office-server/native-remote";
 import { reportOfficeHttpFailure } from "./office-http-failure.ts";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import { officeHostName } from "./office-host-object.ts";
@@ -13,7 +13,6 @@ import { officeNativeRequest, officeWebResponse } from "./office-platform.ts";
 import type { makeOfficeHumanRegistrar } from "./office-host-object.ts";
 import type { OfficeNamespace } from "./office-private-bindings.ts";
 import {
-  OFFICE_HTTP_METADATA_BYTES,
   invalid,
   officeFailure,
   officeJson,
@@ -32,7 +31,6 @@ export type OfficeDispatch = {
 };
 /** Agreed private human API audience. The namespace is the only route to its OfficeHost. */
 const host = "http://office-api.internal";
-const replyBytes = 2 * OFFICE_HTTP_METADATA_BYTES;
 const ReplyPayload = Schema.Union(Object.values(HostOffice).map((method) => method.response));
 const Reply = hostEnvelope(ReplyPayload);
 
@@ -88,7 +86,6 @@ export const officeCommand = (key: keyof typeof HostOffice, input: unknown) =>
     try: () => {
       const command = decodeWireSync(HostOfficeRequest)({ method: HostOffice[key].method, input });
       const text = JSON.stringify(command);
-      if (new TextEncoder().encode(text).byteLength > OFFICE_HTTP_METADATA_BYTES) throw invalid();
       return { command, text };
     },
     catch: invalid,
@@ -149,7 +146,7 @@ export const officeCore = (
       body: encoded.text,
     });
     if (response.status !== 200) return officeFailure(safeFailure("UNAVAILABLE"));
-    const bytes = yield* readBounded(response, replyBytes);
+    const bytes = yield* readBounded(response);
     return yield* Effect.try({
       try: () => officeCommandResponse(key, invocationId, bytes),
       catch: unavailable,

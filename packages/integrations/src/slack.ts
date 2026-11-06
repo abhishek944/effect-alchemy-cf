@@ -24,4 +24,4 @@ export type SlackReceipt = typeof SlackReceipt.Type;
 export class Slack extends Context.Service<
   Slack,
   { readonly postMessage: (message: SlackMessage) => Effect.Effect<SlackReceipt, IntegrationError> }
->()("starter/integrations/Slack") {}
+>()("highchat/integrations/Slack") {}

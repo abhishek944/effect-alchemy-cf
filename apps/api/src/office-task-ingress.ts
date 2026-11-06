@@ -1,4 +1,4 @@
-import type { HostOfficeRequest, HostBytes } from "@starter/office-server/native-remote";
+import type { HostOfficeRequest, HostBytes } from "@highchat/office-server/native-remote";
 import type { NativePrivateFile } from "../../office/src/native-private-wire.ts";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";

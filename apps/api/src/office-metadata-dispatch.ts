@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import {
   decodeWire,
   OfficeErrors,
@@ -7,9 +7,9 @@ import {
   OfficeUnavailable,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
-import { HostMetadata } from "@starter/office-server/native-remote";
-import type { OfficeMetadata } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { HostMetadata } from "@highchat/office-server/native-remote";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import { writeOfficeMetadata } from "./office-metadata-write.ts";
 
 const methods = Object.values(HostMetadata);

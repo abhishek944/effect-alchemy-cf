@@ -1,8 +1,8 @@
 import { Effect } from "effect";
-import { createNativeStorage } from "@starter/office-cloudflare/native";
-import type { NativeFence, NativeScope } from "@starter/office-cloudflare/native";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import { createNativeStorage } from "@highchat/office-cloudflare/native";
+import type { NativeFence, NativeScope } from "@highchat/office-cloudflare/native";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficeHeldTurn } from "./office-private-turns.ts";
 import type { OfficeEditorHeld } from "./office-editor-grants.ts";
 import {

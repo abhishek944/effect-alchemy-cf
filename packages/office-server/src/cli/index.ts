@@ -4,7 +4,7 @@ import {
   OfficeInvalid,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type {
   ArtifactRef,
   Draft,
@@ -15,7 +15,7 @@ import type {
   DraftPage,
   ReviewPage,
   OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { OfficeService, TaskActor } from "../ports/index.ts";
 
 export type AcceptedCliFile = {

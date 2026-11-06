@@ -9,7 +9,7 @@
  * deleting state before any sweep deletion is awaited.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import { avatarObjectKey, deleteAvatarKeys } from "./profile-avatar.ts";
 import { READY_MAX_AGE_MS, RESERVED_MAX_AGE_MS, type ProfileObjects } from "./profile-objects.ts";

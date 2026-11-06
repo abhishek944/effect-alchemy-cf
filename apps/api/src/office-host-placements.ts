@@ -1,8 +1,8 @@
 import { Effect } from "effect";
-import { createCoordinatorControl } from "@starter/office-cloudflare/coordinator-control";
-import type { CoordinatorControl } from "@starter/office-cloudflare/coordinator-control";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { OfficeMetadata, OwnerScope } from "@starter/office-server/ports";
+import { createCoordinatorControl } from "@highchat/office-cloudflare/coordinator-control";
+import type { CoordinatorControl } from "@highchat/office-cloudflare/coordinator-control";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { OfficeMetadata, OwnerScope } from "@highchat/office-server/ports";
 import type * as cf from "@cloudflare/workers-types";
 import type { OfficeHostProcess } from "./office-host-process.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";
@@ -81,7 +81,7 @@ export function officeHostPlacements(
             body: JSON.stringify({ documentId: lease.value.documentId }),
             headers: { "content-type": "application/json" },
           });
-          await readOfficePrivateJson(response.body, signal, lease.value.until, 16 * 1024);
+          await readOfficePrivateJson(response.body, signal, lease.value.until, null);
           if (response.status !== 200) throw officeDenied();
           schedule(lease); // Only after the actual original renewal ACK. Never retry an unknown renewal.
           return undefined;

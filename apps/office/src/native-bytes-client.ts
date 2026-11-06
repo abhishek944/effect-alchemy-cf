@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { HostBytes, HostPolicy } from "@starter/office-server/native-remote";
-import type { OfficeBytes, OfficeDependencies } from "@starter/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostBytes, HostPolicy } from "@highchat/office-server/native-remote";
+import type { OfficeBytes, OfficeDependencies } from "@highchat/office-server/ports";
 import type { OfficeBinarySession } from "./native-transfer-types.ts";
 import type { OfficeControlSession } from "./native-channel.ts";
 import { adapterFailure, emptyBody, invalidBytes, watchBytes } from "./native-stream-io.ts";
@@ -12,27 +12,7 @@ export function createNativeBytesClient(
   manifest: OfficeControlSession,
   configuration: OfficeDependencies["policy"],
 ): OfficeBytes {
-  const policy = decodeWireSync(HostPolicy)(structuredClone(configuration));
-  const maximum = (kind: Parameters<OfficeBytes["put"]>[1]["kind"]) =>
-    kind === "upload"
-      ? policy.limits.uploadBytes
-      : kind === "code"
-        ? policy.limits.codeBytes
-        : kind === "native-proposal"
-          ? policy.limits.proposalBytes
-          : kind === "render"
-            ? policy.limits.renderBytes
-            : kind === "inspection"
-              ? policy.limits.responseBytes
-              : policy.limits.nativeBytes;
-  const responseLimit = Math.max(
-    policy.limits.uploadBytes,
-    policy.limits.codeBytes,
-    policy.limits.proposalBytes,
-    policy.limits.renderBytes,
-    policy.limits.responseBytes,
-    policy.limits.nativeBytes,
-  );
+  decodeWireSync(HostPolicy)(structuredClone(configuration));
   return {
     put: (owner, input) =>
       Effect.gen(function* () {
@@ -55,13 +35,7 @@ export function createNativeBytesClient(
         });
         return yield* Effect.acquireUseRelease(
           Effect.try({
-            try: () =>
-              watchBytes(
-                input.body,
-                header.declaredBytes,
-                maximum(header.kind),
-                header.expectedDigest,
-              ),
+            try: () => watchBytes(input.body, header.declaredBytes, null, header.expectedDigest),
             catch: adapterFailure,
           }),
           (watched) =>
@@ -110,7 +84,7 @@ export function createNativeBytesClient(
         const response = yield* binary.exchange(HostBytes.get, header, {
           body: null,
           requestBytes: 0,
-          responseLimit,
+          responseLimit: null,
           mutation: false,
         });
         const ref = response.value;
@@ -118,12 +92,12 @@ export function createNativeBytesClient(
           yield* Effect.tryPromise({ try: () => emptyBody(response.body), catch: adapterFailure });
           return null;
         }
-        if (ref.id !== header.id || ref.bytes > maximum(ref.kind)) {
+        if (ref.id !== header.id) {
           yield* Effect.promise(() => response.body.cancel());
           return yield* Effect.fail(invalidBytes());
         }
         const watched = yield* Effect.try({
-          try: () => watchBytes(response.body, ref.bytes, maximum(ref.kind), ref.digest),
+          try: () => watchBytes(response.body, ref.bytes, null, ref.digest),
           catch: adapterFailure,
         });
         return { ref: Object.freeze({ ...ref }), body: watched.body };

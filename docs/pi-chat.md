@@ -66,7 +66,8 @@ expansion or section buttons. Reads are serial, capped at 128 pages per message
 revision and the shared browser text budget. Failed reads and messages too large
 to fit show a notice; reload to retry rather than loop or hide missing text.
 Old native public user/assistant history remains readable after compaction.
-Entire snapshot/history/SSE frames are capped at 128 KiB; text pages at 32 KiB.
+Snapshot/history/SSE preserve complete metadata without a whole-frame byte quota.
+Text pages remain 32 KiB for progressive reading.
 The selected browser view retains at most 400 message identities and 2 MiB of
 accounted text, including retained prefix versions. Evicted ranges can be reread.
 Live text revisions can expire: refresh rather than combine mismatched chunks.
@@ -91,7 +92,7 @@ copy preserves original Markdown; code copy uses only the parsed code text.
 
 `@assistant-ui/react-pi` is a browser-safe adapter for the Node Pi coding-agent
 contract. Its supplied Node host cannot run as a durable Cloudflare backend.
-Pi Durable has different snapshot/event shapes and capabilities. This starter
+Pi Durable has different snapshot/event shapes and capabilities. highchat
 reuses `@assistant-ui/react`'s external-store runtime instead of building the full
 PiClient compatibility layer. No Pi/provider/infra client or credential enters
 the browser bundle.
@@ -130,7 +131,7 @@ Local Worker, auth and durable chat storage remain local. **Inference is always
 remote and billable**, even with localhost UI. Missing local gateway configuration
 must not attach a remote AI proxy silently; chat sending returns a clear setup
 error until configured. Review remote bindings before starting changed stacks.
-Local startup reads chat Gateway/model and billing catalog/account settings from
+Local startup reads chat Gateway/model settings from
 `.env.dev`, never `.env.prod`. Inherited chat settings are replaced.
 Blank/non-dev Gateway IDs disable inference; a missing model allowlist fails closed.
 Voice uses OpenRouter separately; its optional private development key profile

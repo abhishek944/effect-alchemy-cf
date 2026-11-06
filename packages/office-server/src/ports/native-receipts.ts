@@ -1,7 +1,7 @@
 import { Schema } from "effect";
-import { Count, Digest, Revision } from "@starter/office-contract";
+import { Count, Digest, Revision } from "@highchat/office-contract";
 import type { Effect } from "effect";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 import type { NativeTarget } from "./identity.ts";
 
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));

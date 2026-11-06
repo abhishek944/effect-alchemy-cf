@@ -1,6 +1,6 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as AlchemyTelemetry from "alchemy/Telemetry";
-import { failureRecord, reportFailure, type FailureContext } from "@starter/diagnostics";
+import { failureRecord, reportFailure, type FailureContext } from "@highchat/diagnostics";
 import {
   Cause,
   Config,

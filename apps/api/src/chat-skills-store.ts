@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
 import {
   MAX_ACTIVE_TEXT_BYTES,

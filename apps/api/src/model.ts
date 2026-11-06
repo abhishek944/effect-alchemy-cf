@@ -7,7 +7,7 @@ export const User = Schema.Struct({
 });
 
 export class CurrentUser extends Context.Service<CurrentUser, typeof User.Type>()(
-  "starter/CurrentUser",
+  "highchat/CurrentUser",
 ) {}
 
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()(

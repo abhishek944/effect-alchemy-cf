@@ -5,7 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { join, resolve } from "node:path";
 import { Schema } from "effect";
-import { createDockerExecutor } from "@starter/office-server/executor";
+import { createDockerExecutor } from "@highchat/office-server/executor";
 import { captureFoundationRun } from "./verify-run.ts";
 
 const artifactRoot = fileURLToPath(

@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
-import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import * as Office from "@highchat/office-contract";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import { officeLifecycle } from "./office-lifecycle.ts";
 import { officeJobResponseError, officeReadJobExit } from "./office-job-response.ts";
 import { officeJobRequest } from "./office-job-request.ts";
@@ -85,7 +85,7 @@ export function officePrivateJobs(
       if (failures.length)
         throw withCause(
           withDiagnostic(
-            new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")),
+            new Office.OfficeUnavailable(Office.safeFailure("OUTCOME_UNKNOWN")),
             "private-job-cleanup",
           ),
           new AggregateError(failures, "Private job cleanup failed"),
@@ -164,7 +164,7 @@ export function officePrivateJobs(
         event("output", { reason: "entered" });
         output = officePrivateStream(
           response.body,
-          32 * 1024 * 1024,
+          null,
           signal,
           claim.dispatch.deadlineAt,
           async () => {
@@ -181,9 +181,9 @@ export function officePrivateJobs(
           await close();
         } catch (cleanup) {
           throw withCause(
-            error instanceof OfficeForbidden
+            error instanceof Office.OfficeForbidden
               ? officeDenied()
-              : new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN")),
+              : new Office.OfficeUnavailable(Office.safeFailure("OUTCOME_UNKNOWN")),
             new AggregateError([error, cleanup], "Private job failed"),
           );
         }

@@ -1,7 +1,6 @@
 import { Schema } from "effect";
 import { Count, Id, decodeWireSync } from "./primitives.ts";
 import {
-  MAX_OFFICE_SEND_ATTACHMENTS,
   OfficeSendTarget,
   OfficeSheetSelection,
   freezeOfficeSendTarget,
@@ -25,7 +24,7 @@ export const OfficeDocTextSelection = Schema.Struct({
   ),
   startOffset: Count,
   endOffset: Count,
-  text: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
+  text: Schema.String.check(Schema.isMinLength(1)),
 }).check(
   Schema.makeFilter(
     (scope) =>
@@ -81,7 +80,6 @@ export const ChatReferenceInput = Schema.Union([
 export type ChatReferenceInput = typeof ChatReferenceInput.Type;
 
 export const ChatReferenceInputs = Schema.Array(ChatReferenceInput).check(
-  Schema.isMaxLength(MAX_OFFICE_SEND_ATTACHMENTS),
   Schema.makeFilter((inputs) => {
     if (new Set(inputs.map((input) => input.id)).size !== inputs.length) return false;
     const spans = inputs.toSorted((a, b) => a.start - b.start);

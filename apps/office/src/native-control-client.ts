@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { HostControl } from "@starter/office-server/native-remote";
-import type { DocumentAuthority, OfficeDependencies } from "@starter/office-server/ports";
+import { HostControl } from "@highchat/office-server/native-remote";
+import type { DocumentAuthority, OfficeDependencies } from "@highchat/office-server/ports";
 import type { OfficeControlCaller } from "./native-channel.ts";
 
 type ControlReads = Pick<OfficeDependencies, "verifyActor" | "observeNativeReceipt"> &

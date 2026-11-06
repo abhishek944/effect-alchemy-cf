@@ -1,4 +1,4 @@
-import type { HostNativeReads } from "@starter/office-server/native-remote";
+import type { HostNativeReads } from "@highchat/office-server/native-remote";
 import type { OfficeNativeHandle } from "./office-native-handles.ts";
 import { officeDenied, officeNativeContext } from "./office-private-authority.ts";
 

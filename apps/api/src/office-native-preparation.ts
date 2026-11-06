@@ -1,12 +1,12 @@
 import { Effect } from "effect";
-import { createNativeWritePreparation } from "@starter/office-cloudflare/coordinator-control";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { NativePublicationPreparation } from "@starter/office-cloudflare/native";
+import { createNativeWritePreparation } from "@highchat/office-cloudflare/coordinator-control";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { NativePublicationPreparation } from "@highchat/office-cloudflare/native";
 import type {
   NativeReceiptKey,
   OfficeMetadata,
   NativeWriteRecord,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { OfficeHeldTurn } from "./office-private-turns.ts";
 import { officeDenied, type OfficePrivateRequest } from "./office-private-authority.ts";
 

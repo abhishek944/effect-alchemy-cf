@@ -1,5 +1,5 @@
-import { withCause, withDiagnostic } from "@starter/diagnostics";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 
 /** One REAL fetch/upload/response-body lifetime, not an authority grant or an Effect completion hint. */
 export class OfficeBinaryResource {

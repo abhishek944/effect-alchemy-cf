@@ -1,5 +1,5 @@
-import type { DraftTarget } from "@starter/office-contract";
-import type { OperationRecord } from "@starter/office-server/ports";
+import type { DraftTarget } from "@highchat/office-contract";
+import type { OperationRecord } from "@highchat/office-server/ports";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
 import { confirmedOfficeTaskTargets } from "./office-task-lineage.ts";
 import { officeDenied } from "./office-private-authority.ts";

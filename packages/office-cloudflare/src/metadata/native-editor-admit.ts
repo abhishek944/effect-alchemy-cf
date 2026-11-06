@@ -1,4 +1,4 @@
-import type { ArtifactRef } from "@starter/office-contract";
+import type { ArtifactRef } from "@highchat/office-contract";
 import type { MetadataStore } from "./store.ts";
 import { canonical, conflict, sqlNow } from "./store.ts";
 import { artifactEdges, completeRefs } from "./artifacts.ts";
@@ -57,8 +57,7 @@ export async function admitEditor(
     head.placement_id !== c.placementId ||
     head.authority_epoch !== native.epoch ||
     head.authority_epoch !== channel.value.authorityEpoch ||
-    head.service_epoch !== channel.value.serviceEpoch ||
-    client.client.bytes > db.limits.nativeBytes
+    head.service_epoch !== channel.value.serviceEpoch
   )
     throw conflict("AUTHORITY_LOST");
   const authNotAfter = Math.min(c.notAfter, channel.value.until, basis.view.view.expiresAt);

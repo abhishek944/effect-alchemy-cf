@@ -1,11 +1,11 @@
 import { operationRecordSql } from "../legacy-failure.ts";
-import type { ArtifactRef } from "@starter/office-contract";
+import type { ArtifactRef } from "@highchat/office-contract";
 import type {
   IsolatedJob,
   JobRecord,
   OperationRecord,
   ViewRecord,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
 import { canonical, conflict, invalid, sqlNow } from "../store.ts";

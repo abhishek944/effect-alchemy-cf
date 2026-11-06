@@ -1,4 +1,4 @@
-import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@starter/office-contract";
+import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@highchat/office-contract";
 import { admitNativeReferences } from "./chat-reference-native-admission.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import { prepareCompactImageInput } from "./chat-image-input-preparation.ts";

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ISheetBlock, ISnapshot } from "@univerjs/protocol";
-import { decodeWireSync } from "@starter/office-contract";
-import { encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWireSync } from "@highchat/office-contract";
+import { encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { OfficeDependencies, WritePermit } from "../ports/index.ts";
 import { officeFailure } from "../core/failure.ts";
 import { NativeProducer } from "./wire.ts";
@@ -18,10 +18,7 @@ export function prepareSdkSnapshot(
   input: ISnapshot,
   sheetBlocks: readonly ISheetBlock[],
   expected: SnapshotIdentity,
-  maximum: number,
 ) {
-  if (!Number.isSafeInteger(maximum) || maximum < 1) throw officeFailure("LIMIT_EXCEEDED");
-  const limit = Math.min(maximum, 128 * 1024 * 1024);
   const snapshotBytes = encodeNativeFrame("snapshot", input);
   const snapshot = decodeSnapshot(snapshotBytes, expected);
   nativeId(snapshot.unitID);
@@ -35,16 +32,13 @@ export function prepareSdkSnapshot(
     for (const id of meta.blocks) {
       nativeId(id);
       if (required.has(id)) throw officeFailure("CONTENT_REQUIRED");
-      if (required.size >= 4096) throw officeFailure("LIMIT_EXCEEDED");
       required.add(id);
     }
   }
-  if (sheetBlocks.length !== required.size || sheetBlocks.length > 4096)
-    throw officeFailure("CONTENT_REQUIRED");
+  if (sheetBlocks.length !== required.size) throw officeFailure("CONTENT_REQUIRED");
   const identity = new TextEncoder().encode(
     JSON.stringify(["office-native-block-ids", 1, [...required].toSorted()]),
   );
-  if (identity.byteLength > 2 * 1024 * 1024) throw officeFailure("LIMIT_EXCEEDED");
   const snapshotHeader = decodeWireSync(HostValueHeader)({
     kind: "snapshot",
     unitID: snapshot.unitID,
@@ -54,7 +48,6 @@ export function prepareSdkSnapshot(
   });
   if (snapshotHeader.kind !== "snapshot") throw officeFailure("CONTENT_REQUIRED");
   let size = snapshotBytes.byteLength;
-  if (size > limit) throw officeFailure("LIMIT_EXCEEDED");
   const seen = new Set<string>();
   const blocks = sheetBlocks.map((block) => {
     nativeId(block.id);
@@ -70,7 +63,6 @@ export function prepareSdkSnapshot(
     });
     if (blockHeader.kind !== "block") throw officeFailure("CONTENT_REQUIRED");
     size += bytes.byteLength;
-    if (size > limit) throw officeFailure("LIMIT_EXCEEDED");
     return { id: block.id, bytes, blockHeader };
   });
   // Hash only binary frames and bounded native identities, never stringify a document model.

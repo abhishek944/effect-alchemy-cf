@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type { NativeWriteRecord, OfficeDependencies, OperationRecord } from "../../ports/index.ts";
 import { sameOwner } from "../claims.ts";
 import { operationTarget } from "../operation-caller.ts";

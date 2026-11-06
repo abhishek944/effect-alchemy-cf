@@ -48,7 +48,7 @@ export function ReferenceEditor({
   const session = workspace.session(chatId);
   if (!session.editor)
     session.editor = createEditor({
-      namespace: "starter-reference-composer",
+      namespace: "highchat-reference-composer",
       nodes: [ReferenceNode],
       onError: (error) => {
         throw error;

@@ -4,9 +4,9 @@ import {
   OfficeOriginalTarget,
   officeAttachmentIds,
   decodeWireSync,
-} from "@starter/office-contract";
-import type { Target } from "@starter/office-contract";
-import type { OwnerScope, Store } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import type { Target } from "@highchat/office-contract";
+import type { OwnerScope, Store } from "@highchat/office-server/ports";
 import type { OfficeProviderOptions } from "./store.ts";
 import { MetadataStore, canonical, conflict, invalid, storeEffect } from "./store.ts";
 import { OperationRow } from "./schemas.ts";

@@ -1,9 +1,9 @@
 import { Effect, Scope } from "effect";
-import { createOfficeMetadata } from "@starter/office-cloudflare/metadata";
+import { createOfficeMetadata } from "@highchat/office-cloudflare/metadata";
 import { initializeOfficeStorageSchema } from "./office-storage-schema.ts";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
 import type * as cf from "@cloudflare/workers-types";
-import type { OwnerScope } from "@starter/office-server/ports";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import type { OfficeInvocationRegistry } from "./office-invocations.ts";
 import type { OfficeNamespace } from "./office-private-bindings.ts";
 import { officeStorageLoopback } from "./office-loopback.ts";
@@ -71,7 +71,7 @@ export async function officeHostRuntime(
           stage: owner.stage,
           limits: policy.limits,
           workerId: actual.bootId,
-          editorTtlMs: 120_000, // Initial channel is still capped by the original 120s invocation.
+          editorTtlMs: 120_000, // Initial editor lease, separate from the active operation window.
         };
         const metadata = createOfficeMetadata(options);
         const stop = () => {

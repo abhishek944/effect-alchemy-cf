@@ -1,0 +1,42 @@
+@media (width <= 760px) {
+  div:where(.landing-workspace):not([data-mobile="A"]) .intro {
+    font-size: 0.9375rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workspace):not([data-mobile="A"]) h3 {
+    font-size: 1.5625rem;
+  }
+}
+@media (width <= 760px) {
+  div:where(.landing-workspace):not([data-mobile="A"]) .words p {
+    font-size: 0.9375rem;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) .deck-controls {
+    font-size: 0.6875rem;
+    display: flex;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-workspace) .deck-controls button {
+    width: 2.75rem;
+    min-width: 44px;
+    height: 2.75rem;
+    min-height: 44px;
+    font-size: 1.25rem;
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    div:where(.landing-workspace):not([data-mobile="A"]) h2 {
+      font-size: 2.25rem;
+    }
+  }
+}
+:is(.landing-workspace, .landing-workflow, .landing-closing) :is(h2, .intro, .closing-intro) {
+  text-shadow:
+    rgb(8, 9, 11) 0px 0px 1px,
+    rgb(8, 9, 11) 0px 0px 1px;
+}

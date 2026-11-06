@@ -60,7 +60,7 @@ export const markStaged = (
   ).rowsWritten;
 
 /** A failed PUT may have committed despite a lost acknowledgement, so the row
- * keeps a bounded purge deadline, holds quota until cleanup confirms deletion,
+ * keeps a bounded purge deadline and accounts for bytes until confirmed deletion,
  * and a same-UUID Retry before the deadline revives it safely. */
 export const markUploadFailed = (db: ChatSqlStorage, fileId: string, purgeAt: number): void => {
   db.exec(

@@ -25,7 +25,7 @@ import {
   ReviewPage,
   Target,
   View,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { hostMethod } from "./host-wire.ts";
 
 /** Finite PRIVATE application calls. Actor is supplied ONLY by T47's genuine original issuer. */

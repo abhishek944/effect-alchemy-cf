@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { Receipt, Target } from "@starter/office-contract";
+import type { Receipt, Target } from "@highchat/office-contract";
 import type {
   OfficeActionAdmission,
   OfficeEditorHandle,
   OfficeRuntime,
-} from "@starter/office-react";
+} from "@highchat/office-react";
 import { captureOfficeCheckpoint } from "@/lib/office-anchor";
 import {
   isOfficeExportArtifact,
@@ -131,8 +131,7 @@ function ExportControlSurface(props: OfficeExportControlsProps) {
             });
         }
         if (!resumed)
-          settled =
-            `${settled} Editor input could not be released; use Resume saved editor.`.trim();
+          settled = `${settled} Editing is paused. Choose Resume saved editor to continue.`.trim();
       }
     } catch {
       if (!active.signal.aborted)

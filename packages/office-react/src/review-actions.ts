@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Receipt } from "@starter/office-contract";
+import type { Receipt } from "@highchat/office-contract";
 import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 import { reviewBlocker, reviewIdentity, type ReviewEvidence } from "./review-data.ts";
 

@@ -6,10 +6,10 @@ import {
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { HostEditorLeaf, HostNativeWrites } from "@starter/office-server/native-remote";
-import type { prepareSdkEditorCommit } from "@starter/office-server/native-codec";
-import type { NativeEditorPermit, NativeEditorLeaf } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { HostEditorLeaf, HostNativeWrites } from "@highchat/office-server/native-remote";
+import type { prepareSdkEditorCommit } from "@highchat/office-server/native-codec";
+import type { NativeEditorPermit, NativeEditorLeaf } from "@highchat/office-server/ports";
 import type { OfficeEditorClient } from "./native-editor-client.ts";
 
 export type EditorPublication = {

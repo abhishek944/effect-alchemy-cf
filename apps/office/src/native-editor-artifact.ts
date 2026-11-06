@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { Effect } from "effect";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { encodeNativeFrame } from "@starter/office-contract/native-wire";
-import type { OfficeBytes, OwnerScope } from "@starter/office-server/ports";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import { encodeNativeFrame } from "@highchat/office-contract/native-wire";
+import type { OfficeBytes, OwnerScope } from "@highchat/office-server/ports";
 
 /** Native values stay in an immutable binary artifact, never the control/receipt JSON. */
 export const stageEditorArtifact = Effect.fn("Office.stageEditorArtifact")(function* (
@@ -10,11 +10,8 @@ export const stageEditorArtifact = Effect.fn("Office.stageEditorArtifact")(funct
   owner: OwnerScope,
   id: string,
   value: unknown,
-  maximum: number,
 ) {
   const bytes = encodeNativeFrame("proposal", value);
-  if (bytes.byteLength > Math.min(maximum, 128 * 1024 * 1024))
-    return yield* Effect.fail(new OfficeUnavailable(safeFailure("LIMIT_EXCEEDED")));
   const digest = createHash("sha256").update(bytes).digest("hex");
   const mediaType = "application/vnd.office-native.msgpack";
   const ref = yield* store.put(owner, {

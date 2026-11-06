@@ -1,6 +1,6 @@
-import { withDiagnostic } from "@starter/diagnostics";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import type { ViewRecord } from "@starter/office-server/ports";
+import { withDiagnostic } from "@highchat/diagnostics";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import type { ViewRecord } from "@highchat/office-server/ports";
 
 export const officeDenied = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
 /** Fixed diagnostics only; never a catch callback receiving foreign error text. */

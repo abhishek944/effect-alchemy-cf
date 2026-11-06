@@ -1,5 +1,5 @@
-import { NativeReceiptBinding } from "@starter/office-server/ports";
-import type { NativeEditorPermit } from "@starter/office-server/ports";
+import { NativeReceiptBinding } from "@highchat/office-server/ports";
+import type { NativeEditorPermit } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { conflict } from "./store.ts";
 import { completeRefs } from "./artifacts.ts";

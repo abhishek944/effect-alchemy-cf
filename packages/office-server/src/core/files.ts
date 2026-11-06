@@ -1,5 +1,5 @@
 import { Clock, Effect, Schema } from "effect";
-import { Count, Digest, Id, Label, decodeWire } from "@starter/office-contract";
+import { Count, Digest, Id, Label, decodeWire } from "@highchat/office-contract";
 import type { Actor, OfficeDependencies, UploadInput } from "../ports/index.ts";
 import { authorize } from "./claims.ts";
 import { byteStream, collectBytes } from "./bytes.ts";
@@ -53,14 +53,12 @@ export const makeOfficeFiles = (deps: OfficeDependencies) => {
         expectedDigest: input.expectedDigest,
       }).pipe(Effect.mapError(() => officeFailure("INVALID_INPUT")));
       const claims = yield* authorize(deps, actor, "stage", null, header.operationId);
-      const maximum =
-        header.kind === "code" ? deps.policy.limits.codeBytes : deps.policy.limits.uploadBytes;
-      if (header.declaredBytes < 1 || header.declaredBytes > maximum)
+      if (header.declaredBytes < 1)
         return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", header.operationId));
       let body = input.body;
       let expectedDigest = header.expectedDigest;
       if (header.kind === "code") {
-        const bytes = yield* collectBytes(body, header.declaredBytes, maximum);
+        const bytes = yield* collectBytes(body, header.declaredBytes);
         yield* Effect.try({
           try: () => new TextDecoder("utf-8", { fatal: true }).decode(bytes),
           catch: () => officeFailure("INVALID_INPUT", header.operationId),

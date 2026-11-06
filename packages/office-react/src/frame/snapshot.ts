@@ -1,5 +1,5 @@
 import type { ISnapshotServerService } from "@univerjs-pro/collaboration";
-import type { View } from "@starter/office-contract";
+import type { View } from "@highchat/office-contract";
 
 const deny = () => Promise.reject(new Error("Frozen Office view is read-only."));
 /** Real public SDK wire transport, scoped to one frozen view; never a fake snapshot implementation. */

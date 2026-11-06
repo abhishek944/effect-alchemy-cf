@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { Schema } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { decodeNativeFrame, encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWireSync } from "@highchat/office-contract";
+import { decodeNativeFrame, encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import {
   decodeJobInput,
   decodeMutationCandidate,
   validateMutationCandidate,
-} from "@starter/office-server/jobs";
+} from "@highchat/office-server/jobs";
 import { UnitSnapshotMaterializer } from "@univerjs-pro/collaboration-service";
 import {
   exportToBuffer,

@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ArtifactRef, Count, Cursor, DocumentEvent, Editor, Id } from "@starter/office-contract";
+import { ArtifactRef, Count, Cursor, DocumentEvent, Editor, Id } from "@highchat/office-contract";
 import { OwnerClaims } from "../ports/index.ts";
 import {
   HostDocumentRecord,
@@ -51,11 +51,7 @@ export const HostMetadataReads = Object.freeze({
     Schema.Struct({ ...owner, editorId: Id }),
     Schema.NullOr(Editor),
   ),
-  editors: hostMethod(
-    "metadata.editors",
-    document,
-    Schema.Array(Editor).check(Schema.isMaxLength(100)),
-  ),
+  editors: hostMethod("metadata.editors", document, Schema.Array(Editor)),
   job: hostMethod(
     "metadata.job",
     Schema.Struct({ ...owner, jobId: Id }),

@@ -1,10 +1,10 @@
-import { decodeWireSync, OfficeForbidden, safeFailure } from "@starter/office-contract";
+import { decodeWireSync, OfficeForbidden, safeFailure } from "@highchat/office-contract";
 import {
   HostNativeReads,
   HostNativeWrites,
   HostUnitRecord,
-} from "@starter/office-server/native-remote";
-import type { NativeAdapters } from "@starter/office-server/ports";
+} from "@highchat/office-server/native-remote";
+import type { NativeAdapters } from "@highchat/office-server/ports";
 import type { NativeSession } from "./native-client.ts";
 import type { NativeValues } from "./native-values.ts";
 import { requireCommitted, stageSdkCommit, stageSdkSnapshot } from "./native-writes.ts";

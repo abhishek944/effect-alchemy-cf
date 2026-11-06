@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { safeFailure, type ArtifactRef, type OfficeError } from "@starter/office-contract";
+import { safeFailure, type ArtifactRef, type OfficeError } from "@highchat/office-contract";
 import type {
   Actor,
   NativeTarget,

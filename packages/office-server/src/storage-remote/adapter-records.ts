@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, Revision } from "@starter/office-contract";
+import { Count, Revision } from "@highchat/office-contract";
 import { HostId } from "./host-wire.ts";
 
 export const HostNativeType = Schema.Literals([1, 2, 3]);

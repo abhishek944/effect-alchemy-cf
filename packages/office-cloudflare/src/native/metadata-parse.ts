@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { Array as Arr, Predicate, Schema } from "effect";
 import { NativeStorageError } from "./types.ts";
 
@@ -33,12 +33,8 @@ export function objectFields(input: unknown, allowed: readonly string[]): Record
   }
   return input;
 }
-export function boundedArray(input: unknown, maximum: number): readonly unknown[] {
-  if (
-    !Arr.isArray(input) ||
-    input.length > maximum ||
-    Reflect.ownKeys(input).length !== input.length + 1
-  ) {
+export function boundedArray(input: unknown): readonly unknown[] {
+  if (!Arr.isArray(input) || Reflect.ownKeys(input).length !== input.length + 1) {
     throw new NativeStorageError("LIMIT", "Invalid native metadata array");
   }
   for (let index = 0; index < input.length; index++) {

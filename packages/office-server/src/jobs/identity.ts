@@ -3,7 +3,7 @@ import {
   OfficeConflict,
   OfficeInvalid,
   safeFailure,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { IsolatedJob, JobRecord, JobState, OwnerScope } from "../ports/index.ts";
 import { artifactKey } from "./artifacts.ts";
 import { bindingKey, ownerDigest } from "./frames.ts";

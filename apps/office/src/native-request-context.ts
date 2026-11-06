@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Effect } from "effect";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
-import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
+import { OfficeForbidden, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import type { OfficeControlChannel, OfficeControlSession } from "./native-channel.ts";
 import type { OfficeBinaryChannel, OfficeBinarySession } from "./native-transfer-types.ts";
 import { OfficeEditorPublication } from "./native-editor-publication.ts";

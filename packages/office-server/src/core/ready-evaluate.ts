@@ -1,5 +1,4 @@
-import { decodeWireSync } from "@starter/office-contract";
-import type { OfficeDependencies } from "../ports/index.ts";
+import { decodeWireSync } from "@highchat/office-contract";
 import { SnapshotWithBlocksSchema } from "../jobs/snapshot-schema.ts";
 import { prepareSdkSnapshot } from "../storage-remote/producer.ts";
 import type { NativeServices } from "./native-services.ts";
@@ -9,7 +8,6 @@ import { officeFailure } from "./failure.ts";
 
 /** Owning public SDK computes OT preview. No generated source, replacement snapshot submit or custom merge. */
 export async function evaluateReady(
-  deps: OfficeDependencies,
   services: NativeServices,
   userID: string,
   capture: ReadyCapture,
@@ -26,12 +24,11 @@ export async function evaluateReady(
       snapshot: result.preview.snapshot,
       sheetBlocks: [...(result.preview.sheetBlocks ?? [])],
     });
-    prepareSdkSnapshot(
-      native.snapshot,
-      native.sheetBlocks,
-      { unitID: capture.unitId, type: nativeTypes[capture.kind], revision: native.snapshot.rev },
-      deps.policy.limits.nativeBytes,
-    );
+    prepareSdkSnapshot(native.snapshot, native.sheetBlocks, {
+      unitID: capture.unitId,
+      type: nativeTypes[capture.kind],
+      revision: native.snapshot.rev,
+    });
     return { ...capture, result: native, state: "complete", fidelity: "snapshot" };
   }
   if (result.status === "not-behind") {
@@ -47,8 +44,6 @@ export async function evaluateReady(
       },
       { userID },
     );
-    if (history.changesets.length > deps.policy.limits.historyScanRevisions)
-      throw officeFailure("LIMIT_EXCEEDED");
     let head = capture.baselineRevision;
     for (const change of history.changesets) {
       if (

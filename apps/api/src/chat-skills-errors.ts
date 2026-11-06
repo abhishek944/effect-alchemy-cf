@@ -1,5 +1,5 @@
 /** Typed skill failures shared by the attempt lifecycle and request facade. */
-import { reportFailure, withCause, withDiagnostic } from "@starter/diagnostics";
+import { reportFailure, withCause, withDiagnostic } from "@highchat/diagnostics";
 import { SkillDocumentError } from "./chat-skills-document.ts";
 import { SkillLibraryError } from "./chat-skills-library.ts";
 

@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Schema } from "effect";
-import { Kind, decodeWireSync } from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+import { Kind, decodeWireSync } from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import { SnapshotWithBlocksSchema } from "../../../packages/office-server/src/jobs/snapshot-schema.ts";
 import { executionInput } from "./verify-job-input.ts";
 import { jobVerificationDirectory, withJobVerification } from "./verify-job-driver.ts";

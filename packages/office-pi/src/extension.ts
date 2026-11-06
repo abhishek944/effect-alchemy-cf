@@ -1,16 +1,14 @@
 import { defineExtension, defineTool } from "@earendil-works/pi-durable";
-import type { Extension, ToolExecutionResult } from "@earendil-works/pi-durable";
-import { Option, Schema } from "effect";
-import { reportFailure } from "@starter/diagnostics";
-import { Id, OfficeErrors, type Target, decodeWireSync } from "@starter/office-contract";
+import type { Extension } from "@earendil-works/pi-durable";
+import { Schema } from "effect";
+import { reportEvent } from "@highchat/diagnostics";
+import { type Target, decodeWireSync } from "@highchat/office-contract";
 import { OFFICE_GUIDANCE } from "./guidance.ts";
-import { OfficeStagingFailure, stagingFailureDetail } from "./staging-failure.ts";
 import { OfficePanelRequest, UniverCliRequest, officeToolParameters } from "./parameters.ts";
 import { attachmentListTool } from "./attachment-tool.ts";
-import { failedResult, failureCode } from "./results.ts";
+import { failedResult, toolFailure, OFFICE_TOOL_OUTPUT_LIMITS } from "./results.ts";
 import { executeUniverCli } from "./cli-execute.ts";
-import { referenceTarget } from "./reference.ts";
-import { attachmentDraft } from "./attachment.ts";
+import { sourceTarget } from "./reference.ts";
 import { officeWorkflow } from "./workflow.ts";
 import type { OfficePiHost } from "./types.ts";
 
@@ -18,45 +16,6 @@ export const OFFICE_EXTENSION_NAME = "office";
 export const OFFICE_TOOL_NAME = "univer_cli";
 export const OFFICE_PANEL_TOOL_NAME = "open_in_panel";
 const panelSchema = Schema.toJsonSchemaDocument(OfficePanelRequest, { onExcessProperty: "error" });
-const failure = (error: unknown, taskId: number, callId: string): ToolExecutionResult => {
-  const operationId =
-    error instanceof OfficeStagingFailure
-      ? error.operationId
-      : error instanceof Error && OfficeErrors.some((Type) => error instanceof Type)
-        ? Option.getOrElse(
-            Schema.decodeUnknownOption(Id)(Reflect.get(error, "operationId")),
-            () => null,
-          )
-        : null;
-  reportFailure(error, {
-    component: "office.tool",
-    operation: "execute",
-    taskId,
-    callId,
-    operationId: operationId ?? undefined,
-  });
-  if (error instanceof OfficeStagingFailure)
-    return {
-      isError: true,
-      content: [
-        { type: "text", text: JSON.stringify({ ok: false, error: stagingFailureDetail(error) }) },
-      ],
-    };
-  if (error instanceof Error && "code" in error && error.code === "UNSUPPORTED_PREVIEW")
-    return {
-      isError: true,
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            ok: false,
-            error: { code: "UNSUPPORTED_PREVIEW", message: error.message },
-          }),
-        },
-      ],
-    };
-  return failedResult(failureCode(error), operationId);
-};
 
 /** One server-connected CLI and a separate display action. Legacy office tools are not installed. */
 export const makeOfficeExtension = (
@@ -70,24 +29,45 @@ export const makeOfficeExtension = (
       defineTool({
         name: OFFICE_TOOL_NAME,
         description:
-          "Run the Univer CLI with attachmentId for saved originals or referenceId for a native reference in the current accepted input. " +
-          "command is an argv array, not a shell string. Import once with ['import']; use ['--help'] for syntax. " +
-          "The server resolves Unit/worktree IDs. No owner, path, credentials, approve or merge commands.",
+          "Run the Univer CLI with attachmentId for Main, plus worktreeId for a specific working draft. " +
+          "New originals MUST follow ['import'] -> confirmed worktreeId -> ['inspect', ...] with that worktreeId. Never inspect a new upload first. " +
+          "Commands are argv arrays, not shell strings; use ['--help'] for syntax. " +
+          "Edits require worktreeId. Import/worktree create returns it. The server opens the latest revision and fences writes. No approve or merge commands.",
         parameters: officeToolParameters,
+        outputLimits: OFFICE_TOOL_OUTPUT_LIMITS,
         replay: "unsafe",
         executionMode: "sequential",
         execute: async (raw, api, context) => {
+          const diagnostic = {
+            component: "office.tool",
+            operation: OFFICE_TOOL_NAME,
+            taskId: api.taskId,
+            callId: api.callId,
+            toolArguments: raw,
+          };
+          reportEvent({ ...diagnostic, phase: "arguments-received" });
           let request: UniverCliRequest;
           try {
             request = decodeWireSync(UniverCliRequest)(raw);
           } catch {
+            reportEvent({
+              ...diagnostic,
+              event: "application.denial",
+              reason: "argument-schema-invalid",
+            });
             return failedResult("INVALID_INPUT", null);
           }
           try {
-            return await executeUniverCli(request, api, context, host);
+            const result = await executeUniverCli(request, api, context, host);
+            reportEvent({
+              ...diagnostic,
+              event: "application.complete",
+              outcome: result.isError ? "failed" : "confirmed",
+            });
+            return result;
           } catch (error) {
             context.abortSignal?.throwIfAborted();
-            return failure(error, api.taskId, api.callId);
+            return toolFailure(error, diagnostic);
           }
         },
       }),
@@ -96,35 +76,56 @@ export const makeOfficeExtension = (
             defineTool({
               name: OFFICE_PANEL_TOOL_NAME,
               description:
-                "Request the right-panel Univer editor for the same imported attachment. " +
-                "Use attachmentId after import, or referenceId for a native reference in this accepted input. " +
+                "Open attachmentId Main, or attachmentId plus worktreeId for that specific working draft, at its latest saved revision. " +
                 "Unsupported previews leave the panel unchanged. This does not prove rendering.",
               parameters: { ...panelSchema.schema, $defs: panelSchema.definitions },
+              outputLimits: OFFICE_TOOL_OUTPUT_LIMITS,
               replay: "unsafe",
               executionMode: "sequential",
               execute: async (raw, api, context) => {
+                const diagnostic = {
+                  component: "office.tool",
+                  operation: OFFICE_PANEL_TOOL_NAME,
+                  taskId: api.taskId,
+                  callId: api.callId,
+                  toolArguments: raw,
+                };
+                reportEvent({ ...diagnostic, phase: "arguments-received" });
                 let request: typeof OfficePanelRequest.Type;
                 try {
                   request = decodeWireSync(OfficePanelRequest)(raw);
                 } catch {
+                  reportEvent({
+                    ...diagnostic,
+                    event: "application.denial",
+                    reason: "argument-schema-invalid",
+                  });
                   return failedResult("INVALID_INPUT", null);
                 }
                 try {
                   const workflow = officeWorkflow(request, request, api, context, host);
-                  const resolved =
-                    "referenceId" in request
-                      ? { target: await referenceTarget(workflow), receipt: null }
-                      : await attachmentDraft(workflow);
+                  const resolved = await sourceTarget(workflow, request);
                   context.abortSignal?.throwIfAborted();
-                  if (resolved.target === null)
-                    return failedResult("OUTCOME_UNKNOWN", resolved.receipt?.operationId ?? null);
                   // Prove the exact target through the native host before emitting navigation.
                   const opened = await workflow.run(
                     { command: "open", input: resolved.target },
                     "panel-open",
                   );
-                  if (opened.kind !== "view") return failedResult("UNAVAILABLE", null);
+                  if (opened.kind !== "view") {
+                    reportEvent({
+                      ...diagnostic,
+                      event: "application.complete",
+                      reason: "panel-view-missing",
+                      outcome: "failed",
+                    });
+                    return failedResult("UNAVAILABLE", null);
+                  }
                   display(resolved.target);
+                  reportEvent({
+                    ...diagnostic,
+                    event: "application.complete",
+                    outcome: "confirmed",
+                  });
                   return {
                     content: [
                       {
@@ -133,13 +134,15 @@ export const makeOfficeExtension = (
                           ok: true,
                           requested: true,
                           ...request,
+                          scope: request.worktreeId === undefined ? "main" : "worktree",
+                          revision: opened.value.revision,
                         }),
                       },
                     ],
                   };
                 } catch (error) {
                   context.abortSignal?.throwIfAborted();
-                  return failure(error, api.taskId, api.callId);
+                  return toolFailure(error, diagnostic);
                 }
               },
             }),

@@ -1,5 +1,5 @@
 import { useCallback, type RefObject } from "react";
-import type { OfficeSendTarget } from "@starter/office-contract";
+import type { OfficeSendTarget } from "@highchat/office-contract";
 import { ACCOUNT_COMMAND, panelKey } from "./workspace-office-scope";
 
 export type OfficePanelGuard = {

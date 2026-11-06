@@ -1,6 +1,6 @@
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { Effect, type Schema } from "effect";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import {
   OfficeConflict,
   OfficeForbidden,
@@ -13,11 +13,11 @@ import {
   OfficeLimits,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import type { ErrorCode, OfficeError } from "@starter/office-contract";
+} from "@highchat/office-contract";
+import type { ErrorCode, OfficeError } from "@highchat/office-contract";
 import { readLegacyFailureMetadata } from "./legacy-failure.ts";
-import { OwnerClaims } from "@starter/office-server/ports";
-import type { OwnerScope, Store } from "@starter/office-server/ports";
+import { OwnerClaims } from "@highchat/office-server/ports";
+import type { OwnerScope, Store } from "@highchat/office-server/ports";
 
 export interface OfficeProviderOptions {
   readonly database: D1Database;
@@ -78,12 +78,12 @@ export class MetadataStore {
   encode(schema: Schema.ConstraintDecoder<unknown>, value: unknown): string {
     const parsed = decodeWireSync(schema)(value);
     const text = canonical(parsed);
-    if (new TextEncoder().encode(text).length > this.limits.metadataBytes)
+    if (new TextEncoder().encode(text).length > 2_000_000)
       throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
     return text;
   }
   decode<S extends Schema.ConstraintDecoder<unknown>>(schema: S, text: string): S["Type"] {
-    if (new TextEncoder().encode(text).length > this.limits.metadataBytes)
+    if (new TextEncoder().encode(text).length > 2_000_000)
       throw new OfficeUnavailable(safeFailure("CONTENT_REQUIRED"));
     try {
       return decodeWireSync(schema)(readLegacyFailureMetadata(JSON.parse(text)));

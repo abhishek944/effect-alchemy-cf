@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { OfficeChannel, View } from "@starter/office-contract";
+import type { OfficeChannel, View } from "@highchat/office-contract";
 import { OfficeNativeEditor } from "./editor.tsx";
 import type { NativeTheme, NativeUser } from "./frame/messages.ts";
 import type { OfficeRuntime } from "./runtime.ts";

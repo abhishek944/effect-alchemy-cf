@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { Receipt, decodeWire } from "@starter/office-contract";
+import { Receipt, decodeWire } from "@highchat/office-contract";
 import type {
   ActorClaims,
   DocumentRecord,
@@ -9,7 +9,7 @@ import type {
   OperationRecord,
 } from "../ports/index.ts";
 import { StoredOperation } from "./record-schemas.ts";
-import { boundedMetadataDigest } from "./control-identity.ts";
+import { metadataDigestEffect } from "./control-identity.ts";
 import { officeFailure } from "./failure.ts";
 import { prepareOperation, type PreparedOperation } from "./operation-prepare.ts";
 
@@ -55,7 +55,7 @@ export const createOperationRecord = Effect.fn("Office.createOperationRecord")(f
   const normalized = yield* decodeWire(StoredOperation)(record).pipe(
     Effect.mapError(() => officeFailure("INVALID_INPUT")),
   );
-  yield* boundedMetadataDigest(normalized, deps.policy.limits.metadataBytes);
+  yield* metadataDigestEffect(normalized);
   return normalized;
 });
 

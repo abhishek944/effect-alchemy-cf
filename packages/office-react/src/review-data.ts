@@ -1,4 +1,4 @@
-import type { ReviewPage, View } from "@starter/office-contract";
+import type { ReviewPage, View } from "@highchat/office-contract";
 
 export type ReviewChange = ReviewPage["changes"]["items"][number];
 export type ReviewEvidence = {
@@ -63,8 +63,6 @@ export function appendReviewPage(current: ReviewEvidence, page: ReviewPage): Rev
   )
     throw new Error("Review identity changed while loading exact changes.");
   const changes = [...current.changes, ...page.changes.items];
-  if (changes.length > 5000)
-    throw new Error("Review exceeds the supported browser comparison budget.");
   if (
     new Set(changes.map((change) => change.id)).size !== changes.length ||
     changes.length > page.totalChanges

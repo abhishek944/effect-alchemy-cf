@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { withCause } from "@starter/diagnostics";
-import { ErrorCode, Id, OfficeErrors, safeFailure } from "@starter/office-contract";
+import { withCause } from "@highchat/diagnostics";
+import { ErrorCode, Id, OfficeErrors, safeFailure } from "@highchat/office-contract";
 
 const Stage = Schema.Literals([
   "stage-admission",

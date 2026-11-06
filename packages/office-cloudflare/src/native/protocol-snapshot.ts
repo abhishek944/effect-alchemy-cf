@@ -8,7 +8,7 @@ import {
   objectFields,
   parseMetadata,
 } from "./metadata-parse.ts";
-import { NativeStorageError, nativeLimits } from "./types.ts";
+import { NativeStorageError } from "./types.ts";
 const Envelope = Schema.Struct({
   unitID: NativeName,
   type: NativeType,
@@ -16,7 +16,7 @@ const Envelope = Schema.Struct({
 });
 const Identity = Schema.Struct({ unitID: NativeName, rev: Natural });
 const BlockMeta = Schema.Struct({
-  blocks: Schema.Array(NativeName).check(Schema.isMaxLength(nativeLimits.blocks)),
+  blocks: Schema.Array(NativeName),
 });
 function nativeRecord(input: unknown): Record<string, unknown> {
   if (!Predicate.isObject(input))
@@ -44,7 +44,7 @@ function checkSnapshot(input: unknown): void {
   parseMetadata(Schema.Uint8Array, meta.originalMeta);
   represented(Schema.String, meta.creator);
   represented(Schema.String, meta.name);
-  if (meta.resources !== undefined) boundedArray(meta.resources, 100000);
+  if (meta.resources !== undefined) boundedArray(meta.resources);
   if (
     active === "slide" &&
     meta.id !== undefined &&
@@ -54,7 +54,7 @@ function checkSnapshot(input: unknown): void {
   if (active !== "workbook") return;
   const sheets = nativeRecord(meta.sheets),
     blocks = nativeRecord(meta.blockMeta);
-  for (const id of boundedArray(meta.sheetOrder, 4096)) {
+  for (const id of boundedArray(meta.sheetOrder)) {
     const sheetId = parseMetadata(NativeName, id),
       sheet = nativeRecord(sheets[sheetId]);
     if (parseMetadata(NativeName, sheet.id) !== sheetId)

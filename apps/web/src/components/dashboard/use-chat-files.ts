@@ -1,14 +1,12 @@
 /**
  * Public staged-file owner. Upload, acceptance and discard are scoped to the
  * exact frozen IDs, so a later draft can neither be uploaded nor cleared by an
- * older operation. Aggregate byte budgets and preview reservations live in the
- * staging hook, which stays one account-wide map: a retained chat reuses its
- * rows instead of getting a second budget.
+ * older operation. The staging hook keeps one account-wide map: a retained chat
+ * reuses its rows and preview ownership.
  */
 import { useCallback, useRef } from "react";
 import { deleteChatAttachment } from "@/lib/chat-capability-api";
-import { MAX_MESSAGE_ATTACHMENT_BYTES } from "@/lib/chat-capability-file-types";
-import { formatFileSize, type LocalFile } from "@/lib/chat-file-local";
+import type { LocalFile } from "@/lib/chat-file-local";
 import type { ChatFilesControls, UploadOutcome } from "@/lib/chat-store-context";
 import { uploadStagedFiles } from "./chat-file-uploads";
 import { useChatFileStaging } from "./use-chat-file-staging";
@@ -18,9 +16,6 @@ function rowReason(files: readonly LocalFile[]): string | null {
     return "Wait for the added files to finish preparing.";
   const rejected = files.find((file) => file.state === "unsupported" || file.state === "failed");
   if (rejected) return `Remove "${rejected.name}" and attach it again before sending.`;
-  const bytes = files.reduce((sum, file) => sum + file.byteSize, 0);
-  if (bytes > MAX_MESSAGE_ATTACHMENT_BYTES)
-    return `Files for one message can total at most ${formatFileSize(MAX_MESSAGE_ATTACHMENT_BYTES)}.`;
   return null;
 }
 

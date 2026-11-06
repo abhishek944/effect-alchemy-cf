@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { freezeOfficeSendTarget, type ChatReferenceInputs } from "@starter/office-contract";
+import { freezeOfficeSendTarget, type ChatReferenceInputs } from "@highchat/office-contract";
 import { freezeSendDraft, normalizeReferenceCaption } from "./reference-send";
 import { newOperationId } from "@/lib/chat-api";
 import type { ChatSendOptions } from "./chat-send-options";
@@ -13,7 +13,7 @@ import { dispatchSend } from "./chat-dispatch";
 import { useWorkspaceOffice } from "./workspace-office-context";
 import { useReferenceWorkspace } from "./reference-workspace";
 import { useChatSendRecovery } from "./use-chat-send-recovery";
-import { sendBlockReason, textTooLong } from "./chat-send-policy";
+import { sendBlockReason } from "./chat-send-policy";
 const STOPPING = "An answer is being stopped. Try again once it is acknowledged.";
 
 export function useChatSend({
@@ -90,11 +90,6 @@ export function useChatSend({
         return blocked(error instanceof Error ? error.message : "Reference invalid.");
       }
       const trimmed = caption.text;
-      const long = textTooLong(trimmed);
-      if (long) {
-        setActionError(long);
-        return blocked(long);
-      }
       const reason = sendBlockReason({
         pending: pendingRef.current,
         inFlight: Boolean(inFlightRef.current) || preparing.current,
@@ -172,7 +167,6 @@ export function useChatSend({
       readFiles,
       selection,
       selectionReady,
-      setActionError,
       setPendingSend,
       snapshotRef,
       stoppingRef,

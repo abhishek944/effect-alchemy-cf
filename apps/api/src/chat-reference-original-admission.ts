@@ -1,4 +1,4 @@
-import type { ChatReferenceInputs } from "@starter/office-contract";
+import type { ChatReferenceInputs } from "@highchat/office-contract";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ChatCatalogStub } from "./chat-bindings.ts";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";

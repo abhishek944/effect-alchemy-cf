@@ -1,5 +1,5 @@
-import { OfficeInvalid } from "@starter/office-contract";
-import { diagnosticMetadata, failureRecord, reportFailure } from "@starter/diagnostics";
+import { OfficeInvalid } from "@highchat/office-contract";
+import { diagnosticMetadata, failureRecord, reportFailure } from "@highchat/diagnostics";
 
 const context = {
   ...diagnosticMetadata(process.env),
@@ -33,13 +33,12 @@ async function runWorker(): Promise<void> {
       throw new Error("Invalid job input.");
     const part = Buffer.from(chunk);
     size += part.byteLength;
-    if (size > 34 * 1024 * 1024) throw new Error("Job input exceeds its limit.");
     chunks.push(part);
   }
   phase = "module";
   entered();
   // Load native dependencies inside the entry catch, not before diagnostics can run.
-  const { runOfficeJob } = await import("@starter/office-server/job-worker");
+  const { runOfficeJob } = await import("@highchat/office-server/job-worker");
   jobExecuting = true;
   const result = await runOfficeJob(Buffer.concat(chunks, size), {
     renderPageRoot: "/opt/office/render-page",

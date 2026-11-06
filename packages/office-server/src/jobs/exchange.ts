@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { withDiagnostic } from "@starter/diagnostics";
+import { withDiagnostic } from "@highchat/diagnostics";
 import {
   CsvTypeInferenceMode,
   DocxCompatibilityMode,

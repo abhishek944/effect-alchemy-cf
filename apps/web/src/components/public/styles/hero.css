@@ -1,0 +1,173 @@
+:where(.landing-hero)[class] {
+  color: rgb(245, 242, 233);
+  font-synthesis: none;
+  --lightningcss-light: ;
+  --lightningcss-dark: initial;
+  color-scheme: dark;
+  background: rgb(8, 9, 11);
+  font-family: "DM Sans", sans-serif;
+}
+:where(.landing-hero) * {
+  box-sizing: border-box;
+}
+div:where(.landing-hero) {
+  margin: 0px;
+}
+:where(.landing-hero) a {
+  -webkit-tap-highlight-color: transparent;
+}
+:where(.landing-hero) a {
+  color: inherit;
+  text-decoration: none;
+}
+:where(.landing-hero) a:focus-visible {
+  outline-offset: 6px;
+  outline: rgb(131, 216, 222) solid 2px;
+}
+:where(.landing-hero) .hero {
+  isolation: isolate;
+  background: rgb(8, 9, 11);
+  height: max(900px, 100svh);
+  min-height: 760px;
+  position: relative;
+  overflow: hidden;
+}
+:where(.landing-hero) header {
+  z-index: 5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.137);
+  justify-content: space-between;
+  align-items: center;
+  height: 110px;
+  margin: 0px 64px;
+  display: flex;
+  position: relative;
+}
+:where(.landing-hero) .brand {
+  letter-spacing: -0.5px;
+  align-items: center;
+  gap: 13px;
+  font-size: 19px;
+  font-weight: 550;
+  display: flex;
+}
+:where(.landing-hero) nav {
+  align-items: center;
+  gap: 38px;
+  display: flex;
+}
+:where(.landing-hero) nav :is(button, a) {
+  background: 0px 0px;
+  border: 0px;
+  padding: 10px 0px;
+  font-size: 14px;
+}
+:where(.landing-hero) nav .sign-in {
+  border-bottom: 1px solid rgba(245, 242, 233, 0.44);
+}
+:where(.landing-hero) nav .sign-in span {
+  margin-left: 22px;
+}
+:where(.landing-hero) .content {
+  z-index: 3;
+  position: relative;
+}
+:where(.landing-hero) .eyebrow {
+  letter-spacing: 0.13em;
+  align-items: center;
+  gap: 12px;
+  margin: 0px 0px 30px;
+  font:
+    11px ui-monospace,
+    monospace;
+  display: flex;
+}
+:where(.landing-hero) .eyebrow i {
+  background: rgb(255, 167, 101);
+  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+}
+:where(.landing-hero) h1 {
+  letter-spacing: -0.065em;
+  margin: 0px;
+  font-size: 130px;
+  font-weight: 500;
+  line-height: 0.92;
+}
+:where(.landing-hero) h1 span {
+  display: block;
+}
+:where(.landing-hero) .description {
+  color: rgb(195, 195, 197);
+  letter-spacing: -0.25px;
+  margin: 28px 0px;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+:where(.landing-hero) .actions {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 26px;
+  display: flex;
+}
+:where(.landing-hero) .actions :is(button, a) {
+  border: 0px;
+  height: 51px;
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+:where(.landing-hero) .actions .primary {
+  color: rgb(17, 17, 19);
+  background: rgb(244, 240, 231);
+  border-radius: 4px;
+  align-items: center;
+  gap: 30px;
+  padding: 0px 22px;
+  display: flex;
+}
+:where(.landing-hero) .primary:hover {
+  background: rgb(255, 207, 176);
+  transform: translateY(-2px);
+}
+:where(.landing-hero) .primary span {
+  font-size: 23px;
+}
+:where(.landing-hero) .actions .secondary {
+  background: 0px 0px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.263);
+  border-radius: 0px;
+  padding: 0px;
+}
+:where(.landing-hero) .secondary span {
+  margin-left: 13px;
+}
+:where(.landing-hero) .visual {
+  z-index: 1;
+  background: rgb(8, 9, 11);
+  position: absolute;
+  overflow: hidden;
+}
+:where(.landing-hero) .shader {
+  position: absolute;
+  inset: 0px;
+}
+:where(.landing-hero) .shader-error {
+  color: rgb(255, 193, 160);
+  font-size: 12px;
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+}
+:where(.landing-hero) .visual-shade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+}
+:where(.landing-hero) .orbital-line {
+  display: none;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Draft, Editor, Receipt } from "@starter/office-contract";
+import type { Draft, Editor, Receipt } from "@highchat/office-contract";
 import type { OfficeSave } from "./connection.ts";
 import type { OfficeRuntime, OfficeActionAdmission } from "./runtime.ts";
 

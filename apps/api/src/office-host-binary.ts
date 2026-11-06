@@ -1,5 +1,5 @@
-import { reportFailure, withCause } from "@starter/diagnostics";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { reportFailure, withCause } from "@highchat/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import { officePrivateBinary } from "./office-private-binary.ts";
 import type { OfficePrivateIO } from "./office-private-authority.ts";
 import type { OfficeHostEntry, OfficeHostRuntime } from "./office-host-state.ts";
@@ -23,13 +23,7 @@ export async function officeHostBinary(
   let responded = false;
   try {
     const active = await root.active();
-    const response = await officePrivateBinary(
-      body,
-      request,
-      entry.backend,
-      active.metadata,
-      root.policy.limits,
-    );
+    const response = await officePrivateBinary(body, request, entry.backend, active.metadata);
     responded = true;
     return response;
   } finally {

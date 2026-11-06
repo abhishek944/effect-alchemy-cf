@@ -1,11 +1,11 @@
 import { LiveDoc } from "@earendil-works/pi-durable";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import {
   AttachmentListRequest,
   OFFICE_ATTACHMENTS_TOOL_NAME,
   type OfficeAttachmentPage,
   type OfficeAttachmentsRequest,
-} from "@starter/office-pi";
+} from "@highchat/office-pi";
 import { requireAcceptedInputAccess, resolveAcceptedInput } from "./chat-accepted-input.ts";
 import type { AcceptedInputAccess } from "./chat-accepted-input.ts";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";

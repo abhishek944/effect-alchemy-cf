@@ -1,0 +1,132 @@
+/* Preserve normal selected geometry while allowing actual text enlargement. */
+:where(.public-auth) header {
+  height: auto;
+  min-height: 110px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 0;
+}
+:where(.public-auth) .brand {
+  min-width: 0;
+}
+:where(.public-auth) .brand span {
+  overflow-wrap: anywhere;
+}
+:where(.public-auth) main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-content: center;
+}
+:where(.public-auth) .intro {
+  flex: 1 1 38rem;
+  min-width: 0;
+  max-width: 45rem;
+}
+:where(.public-auth) .account {
+  flex: 0 1 26.25rem;
+  min-width: 0;
+}
+:where(.public-auth) h1,
+:where(.public-auth) h2,
+:where(.public-auth) .account-intro,
+:where(.public-auth) .support,
+:where(.public-auth) .switch {
+  overflow-wrap: anywhere;
+}
+:where(.public-auth) input {
+  height: 3.25rem;
+  min-height: 52px;
+}
+:where(.public-auth) .primary {
+  min-height: 3.375rem;
+}
+:where(.public-auth) .feedback,
+:where(.public-auth) .success {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 0 0 24px;
+  padding: 12px 14px;
+  border: 1px solid #9d5b55;
+  border-radius: 3px;
+  color: #f0b1a7;
+  background: #27191a;
+  overflow-wrap: anywhere;
+}
+:where(.public-auth) .success {
+  color: #b9d9c1;
+  border-color: #557c60;
+  background: #18271c;
+}
+:where(.public-auth) .session-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #c0c1c6;
+}
+:where(.public-auth) .spinner {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: public-spin 1s linear infinite;
+}
+@keyframes public-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+:where(.public-auth) input:disabled,
+:where(.public-auth) .primary:disabled,
+:where(.public-auth) .switch button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+:where(.public-auth) .primary:disabled:hover {
+  background: #f3f0e7;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.public-auth) .spinner {
+    animation: none;
+  }
+}
+@media (max-width: 1370px) and (min-width: 761px) {
+  :where(.public-auth) .account {
+    flex-basis: 23.75rem;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) header {
+    min-height: 86px;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) main {
+    flex-wrap: nowrap;
+  }
+}
+@media (max-width: 760px) {
+  :where(.public-auth) .intro,
+  :where(.public-auth) .account {
+    flex: initial;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+:where(.public-auth) .switch button {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: inherit;
+}
+:where(.public-auth) .switch button:hover {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}

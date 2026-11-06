@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { View } from "@starter/office-contract";
+import type { View } from "@highchat/office-contract";
 import { ReviewNative } from "./review-native.tsx";
 import type { OfficeRuntime } from "./runtime.ts";
 import { OfficeChanges } from "./changes.tsx";

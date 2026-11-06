@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { HostMetadata } from "@starter/office-server/native-remote";
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import { HostMetadata } from "@highchat/office-server/native-remote";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficeControlCaller } from "./native-channel.ts";
 
 /** Explicit finite mappings; the Worker independently validates original authority on every call. */

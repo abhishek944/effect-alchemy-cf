@@ -7,11 +7,11 @@
  * a bucket key or a copy for AI.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { Auth } from "@starter/auth";
+import { Auth } from "@highchat/auth";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { RuntimeContext } from "alchemy";
 import { Cause, Effect, Schema } from "effect";
-import { reportFailureEffect } from "@starter/diagnostics";
+import { reportFailureEffect } from "@highchat/diagnostics";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall } from "./chat-bindings.ts";

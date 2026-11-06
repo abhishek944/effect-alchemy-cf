@@ -4,7 +4,7 @@ import { Cause, Effect, Layer, Schema } from "effect";
 import * as HttpRouter from "effect/http/HttpRouter";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
 import { OfficeAuthentication } from "./office-authentication.ts";
 import type { OfficeDispatch } from "./office-http-call.ts";
 import { dispatchOffice } from "./office-http-dispatch.ts";

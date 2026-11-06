@@ -1,8 +1,8 @@
 import { toRpcAsync } from "alchemy/Cloudflare/Bridge";
-import type { OfficeSessionBinding } from "@starter/auth/office-session";
-import type { ChatReferenceInputs } from "@starter/office-contract";
+import type { OfficeSessionBinding } from "@highchat/auth/office-session";
+import type { ChatReferenceInputs } from "@highchat/office-contract";
 import { Schema } from "effect";
-import { decodeWireSync, OfficeForbidden } from "@starter/office-contract";
+import { decodeWireSync, OfficeForbidden } from "@highchat/office-contract";
 import type { OfficeTaskEnvironment } from "./chat-office-transport.ts";
 import { type OfficeHost, officeHostName } from "./office-host-object.ts";
 import { ImageInputError } from "./chat-image-input-types.ts";

@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { OwnerClaims } from "@starter/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
+import { OwnerClaims } from "@highchat/office-server/ports";
 import { makeNativeApplication, type NativeApplicationOptions } from "./native-app.ts";
 import { makeOfficeProtocolPool } from "./native-protocol-pool.ts";
 import { OfficeProtocolTasks } from "./native-protocol-tasks.ts";

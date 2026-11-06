@@ -1,11 +1,11 @@
 import type { Effect } from "effect";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 import type { OfficeRemoteMethod } from "./native-channel.ts";
 
 export type OfficeBinaryInput = {
   readonly body: ReadableStream<Uint8Array> | null;
   readonly requestBytes: number;
-  readonly responseLimit: number;
+  readonly responseLimit: number | null;
   readonly mutation: boolean;
 };
 /**

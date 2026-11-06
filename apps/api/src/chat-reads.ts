@@ -1,10 +1,4 @@
-import {
-  FRAME_BYTES,
-  HISTORY_MAX_LIMIT,
-  decodeHistoryCursor,
-  decodeTextCursor,
-  encodedBytes,
-} from "./chat-contract.ts";
+import { HISTORY_MAX_LIMIT, decodeHistoryCursor, decodeTextCursor } from "./chat-contract.ts";
 import {
   ConversationHistoryBody,
   ConversationReceiptBody,
@@ -53,10 +47,8 @@ export const readChat = async (
         (entry) => runtime.publicInput(entry),
         undefined,
         undefined,
-        undefined,
         hasGeneratedFiles,
       );
-      if (encodedBytes(page) > FRAME_BYTES) throw new Error("History budget exceeded");
       return json(page);
     } catch (error) {
       if (error instanceof InvalidCursor) return json({ message: "Invalid cursor" }, 400);

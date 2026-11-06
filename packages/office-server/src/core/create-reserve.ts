@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire, type CreateDocument, type CreateDraft } from "@starter/office-contract";
+import { decodeWire, type CreateDocument, type CreateDraft } from "@highchat/office-contract";
 import type {
   ActorClaims,
   DocumentRecord,
@@ -13,10 +13,13 @@ import { officeFailure } from "./failure.ts";
 
 const creationIds = (actor: ActorClaims, operationId: string) => {
   // Opaque assigned IDs, not authority and not application/native aliases. Reservation makes them canonical.
-  const key = metadataDigest(
-    ["office-create-ids", 1, actor.owner.stage, actor.owner.ownerId, operationId],
-    4096,
-  );
+  const key = metadataDigest([
+    "office-create-ids",
+    1,
+    actor.owner.stage,
+    actor.owner.ownerId,
+    operationId,
+  ]);
   return {
     documentId: `doc_${key}`,
     unitId: `unit_${key}`,

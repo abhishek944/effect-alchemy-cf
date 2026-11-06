@@ -1,4 +1,4 @@
-import { MAX_OFFICE_SEND_RANGES, OfficeSheetSelection } from "@starter/office-contract";
+import { OfficeSheetSelection } from "@highchat/office-contract";
 import { Schema } from "effect";
 import type { NativeApplication } from "./native.ts";
 
@@ -22,7 +22,7 @@ export function captureSheetSelection(
     const sheet = workbook.getActiveSheet();
     if (!sheet) return null;
     const selected = sheet.getSelection()?.getActiveRangeList() ?? [];
-    if (!selected.length || selected.length > MAX_OFFICE_SEND_RANGES) return null;
+    if (!selected.length) return null;
     const ranges = selected.map((item) => {
       const { startRow, startColumn, endRow, endColumn } = item.getRange();
       if (

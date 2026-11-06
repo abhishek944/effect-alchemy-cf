@@ -1,21 +1,20 @@
 import { createHash } from "node:crypto";
 import { Effect } from "effect";
-import { nativeFailure, officeFailure } from "./failure.ts";
+import { nativeFailure } from "./failure.ts";
 import type { ActorClaims, OperationIntent } from "../ports/index.ts";
-import type { ImportOptions, ExportOptions, RenderSelection } from "@starter/office-contract";
+import type { ImportOptions, ExportOptions, RenderSelection } from "@highchat/office-contract";
 import { mergeIntentTuple } from "../storage-remote/operation-identity.ts";
 
 export const sha256 = (bytes: Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
-export function metadataDigest(value: object, limit: number): string {
+export function metadataDigest(value: object): string {
   const text = JSON.stringify(value);
   const bytes = new TextEncoder().encode(text);
-  if (bytes.byteLength > limit) throw officeFailure("LIMIT_EXCEEDED");
   return sha256(bytes);
 }
-export const boundedMetadataDigest = (value: object, limit: number) =>
+export const metadataDigestEffect = (value: object) =>
   Effect.try({
-    try: () => metadataDigest(value, limit),
+    try: () => metadataDigest(value),
     catch: nativeFailure,
   });
 

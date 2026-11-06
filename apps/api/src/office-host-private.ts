@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
+import { decodeWireSync } from "@highchat/office-contract";
 import {
   NativePrivateFinished,
   NativePrivateMember,
@@ -45,17 +45,7 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
       await root.process.peer(boot, true);
     };
     const json = (value: unknown) =>
-      officePrivateResponse(
-        value,
-        16 * 1024,
-        frame.io,
-        signal,
-        deadline,
-        cleanup,
-        peer,
-        200,
-        frame.request.charge,
-      );
+      officePrivateResponse(value, null, frame.io, signal, deadline, cleanup, peer, 200);
     return yield* Effect.tryPromise({
       catch: officeCaught,
       try: () =>
@@ -72,7 +62,7 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
             if (request.body === null) throw officeDenied();
             const input = officePrivateStream(
               request.body,
-              root.policy.limits.nativeBytes + root.policy.limits.codeBytes + 16 * 1024,
+              null,
               frame.work.signal,
               entry.resolution.deadline,
               peer,
@@ -82,7 +72,7 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
             const body = await entry.backend.jobs.run(input.body);
             const resource = officePrivateStream(
               body,
-              root.policy.limits.nativeBytes,
+              null,
               frame.work.signal,
               entry.resolution.deadline,
               () => entry.backend.jobs.close(),
@@ -93,13 +83,7 @@ export const officeHostPrivate = (root: OfficeHostRuntime, request: Request) =>
               headers: { "content-type": "application/octet-stream" },
             });
           }
-          const body = await readOfficePrivateJson(
-            request.body,
-            signal,
-            deadline,
-            16 * 1024,
-            frame.request.charge,
-          );
+          const body = await readOfficePrivateJson(request.body, signal, deadline, null);
           if (role === "resolve") {
             decodeWireSync(Empty)(body);
             const active = await root.active();
@@ -148,7 +132,7 @@ export const officeHostBootstrap = (root: OfficeHostRuntime, request: Request) =
             request.body,
             request.signal,
             Date.now() + 10_000,
-            16 * 1024,
+            null,
           );
           if (path === "/bootstrap/ready") await root.process.ready(boot, payload);
           else {
@@ -158,7 +142,7 @@ export const officeHostBootstrap = (root: OfficeHostRuntime, request: Request) =
           }
           return officePrivateResponse(
             null,
-            16 * 1024,
+            null,
             root.bootIO,
             request.signal,
             Date.now() + 10_000,

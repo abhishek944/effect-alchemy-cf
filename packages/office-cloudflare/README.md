@@ -1,6 +1,6 @@
 # Office Cloudflare native storage
 
-`@starter/office-cloudflare/native` implements the **public 1.0.3** asynchronous
+`@highchat/office-cloudflare/native` implements the **public 1.0.3** asynchronous
 `IDatabaseAdapter` and `IWorktreeDatabaseAdapter`. It imports SDK **types only**;
 no Node SDK service, native addon, application ports or neighboring checkout enters
 its Worker graph. SDK services still own validation, OT, materialization and merge.
@@ -8,10 +8,10 @@ its Worker graph. SDK services still own validation, OT, materialization and mer
 ## Trusted composition
 
 ```ts
-import { createNativeStorage, initializeNativeSchema } from "@starter/office-cloudflare/native";
+import * as Native from "@highchat/office-cloudflare/native";
 
-await initializeNativeSchema(env.OFFICE_D1);
-const store = createNativeStorage(
+await Native.initializeNativeSchema(env.OFFICE_D1);
+const store = Native.createNativeStorage(
   { database: env.OFFICE_D1, bucket: env.OFFICE_R2 },
   { stage, ownerID, documentID, unitID },
 );
@@ -57,7 +57,7 @@ Epoch invalidation cannot retract returned bytes. Piece loads check exact publis
 snapshot/seed/Ready-artifact/changeset membership before and after R2 loading;
 completed/staging bytes alone grant nothing. Draft grants cap BOTH SDK and ref-only
 main reads at their actual trunk baseline; newer main needs separate authorization.
-`@starter/office-cloudflare/native-doc-read` exports `createDocReadSession` for finite
+`@highchat/office-cloudflare/native-doc-read` exports `createDocReadSession` for finite
 main-Doc control/piece reads. It requires matching native scope, live authorization,
 original signal, revision ceiling, private association, budgets and awaited disposal.
 This source-only adapter mounts no host and supplies no session/View/placement
@@ -109,7 +109,7 @@ invent application approval tables or claim an R2+D1+DO transaction.
 ## Immutable bytes and large native inputs
 
 R2 holds versioned MessagePack native snapshots, blocks and changesets. The thin
-storage codec delegates to `@starter/office-contract/native-wire`: format
+storage codec delegates to `@highchat/office-contract/native-wire`: format
 `office-native-msgpack`, version `1`, explicit undefined extension `1`; value refs
 use `codec: "office-native-msgpack-v1"`. Known snapshot/block/changeset kinds are
 required on encode/decode. Node uses the SAME portable codec without importing
@@ -194,7 +194,7 @@ for this package's scoped type/build checks.
 
 ## Office metadata
 
-`@starter/office-cloudflare/metadata` exports `createOfficeMetadata(options)` and
+`@highchat/office-cloudflare/metadata` exports `createOfficeMetadata(options)` and
 `initializeOfficeMetadataSchema(database)` for the same Office D1/R2. Its sole
 initializer composes catalog, journal, review, View/editor, job and byte DDL.
 Host owns stage/worker identity and native schema setup; see [trusted control](COORDINATOR.md).

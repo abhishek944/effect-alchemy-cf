@@ -1,5 +1,5 @@
-import { Count, Id, decodeWireSync } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+import { Count, Id, decodeWireSync } from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import { sqlNow } from "../metadata/store.ts";
 import { MAX_ATTEMPTS, assertKey, unknownOutcome } from "./data.ts";
 import type { ByteStore } from "./store.ts";

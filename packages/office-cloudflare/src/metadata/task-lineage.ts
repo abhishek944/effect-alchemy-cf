@@ -1,7 +1,6 @@
 import { Schema } from "effect";
-import { OfficeLimited, safeFailure } from "@starter/office-contract";
-import { OriginalActorClaims } from "@starter/office-server/ports";
-import type { OperationRecord, Store, TaskActor } from "@starter/office-server/ports";
+import { OriginalActorClaims } from "@highchat/office-server/ports";
+import type { OperationRecord, Store, TaskActor } from "@highchat/office-server/ports";
 import type { OfficeProviderOptions } from "./store.ts";
 import { MetadataStore, canonical, invalid, storeEffect } from "./store.ts";
 import { OperationRow } from "./schemas.ts";
@@ -38,7 +37,7 @@ export function readConfirmedTaskOperations(
       AND json_extract(record,'$.actor.acceptedInput.submissionId')=?
       AND json_extract(record,'$.actor.acceptedInput.conversationId')=?
       AND json_extract(record,'$.actor.acceptedInput.digest')=?
-      ORDER BY id LIMIT 129`,
+      ORDER BY id`,
       [
         owner,
         selected.principalId,
@@ -49,7 +48,6 @@ export function readConfirmedTaskOperations(
         accepted.digest,
       ],
     );
-    if (rows.length > 128) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
     return rows.map((row) => {
       const record = db.decode(OperationRow, row.record);
       validateOperation(record);

@@ -4,7 +4,7 @@
  * Concurrent delivery returns the original receipt; claimed/expired input is refused.
  */
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { skillFilenameKey, skillManifestDigest } from "./skills-manifest.ts";
 import {
   MAX_SKILLS,

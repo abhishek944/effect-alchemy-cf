@@ -1,5 +1,5 @@
 import type { D1Database } from "@cloudflare/workers-types";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import type { RuntimeContext } from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Context, Effect, Layer, Schema } from "effect";
@@ -40,7 +40,7 @@ export class OfficeSessionEpochs extends Context.Service<
       sessionId: string,
     ) => Effect.Effect<number | null, OfficeSessionUnavailable, RuntimeContext>;
   }
->()("starter/OfficeSessionEpochs") {
+>()("highchat/OfficeSessionEpochs") {
   static readonly layer = Layer.effect(
     OfficeSessionEpochs,
     Effect.gen(function* () {

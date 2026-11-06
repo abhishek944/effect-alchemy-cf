@@ -3,7 +3,7 @@ import {
   UniverCollabWorktreeService,
   type BaseWorktreeMiddlewareContext,
 } from "@univerjs-pro/collaboration-worktree-service";
-import type { OfficeLimits } from "@starter/office-contract";
+import type { OfficeLimits } from "@highchat/office-contract";
 import { createCoreDispatch, createWorktreeDispatch } from "./native-dispatch.ts";
 import type { NativeLeaseContext } from "./native-lease.ts";
 import { checkNativePermissions } from "./native-policy.ts";

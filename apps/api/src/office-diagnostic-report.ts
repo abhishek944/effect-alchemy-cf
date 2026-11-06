@@ -5,13 +5,13 @@ import {
   reportFailure,
   reportFailureEffect,
   type FailureContext,
-} from "@starter/diagnostics";
+} from "@highchat/diagnostics";
 import {
   OfficeErrors,
   OfficeUnavailable,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { officeDenied } from "./office-private-authority.ts";
 
 /** Application-owned classification of one Office failure, never derived from foreign text. */

@@ -4,7 +4,7 @@ import {
   withCause,
   withDiagnostic,
   type FailureContext,
-} from "@starter/diagnostics";
+} from "@highchat/diagnostics";
 import { ChatUnavailable } from "./chat-model.ts";
 
 /**

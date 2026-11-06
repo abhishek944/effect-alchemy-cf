@@ -1,10 +1,10 @@
 import { finished } from "node:stream/promises";
 import { Effect, Schema } from "effect";
-import { diagnosticMetadata, reportEvent, withCause } from "@starter/diagnostics";
-import { OfficeForbidden, decodeWireSync, safeFailure } from "@starter/office-contract";
-import { HostPolicy } from "@starter/office-server/native-remote";
-import { OwnerClaims } from "@starter/office-server/ports";
-import { makeIsolatedJobs } from "@starter/office-server/jobs";
+import { diagnosticMetadata, reportEvent, withCause } from "@highchat/diagnostics";
+import { OfficeForbidden, decodeWireSync, safeFailure } from "@highchat/office-contract";
+import { HostPolicy } from "@highchat/office-server/native-remote";
+import { OwnerClaims } from "@highchat/office-server/ports";
+import { makeIsolatedJobs } from "@highchat/office-server/jobs";
 import { makeNativeOfficeHost } from "./native-main.ts";
 import { makeOfficeNodeServer } from "./native-server.ts";
 import { OfficeRequestContext } from "./native-request-context.ts";
@@ -59,7 +59,7 @@ export const nativeBootstrap = Effect.gen(function* () {
       placement: nativeJobPlacement(invocations, policy.imageDigest),
       policyVersion: policy.version,
       workerId: connection.bootId,
-      jobSeconds: 60,
+      jobSeconds: policy.limits.jobSeconds,
       maxActive: 1,
     }),
   };
@@ -102,7 +102,7 @@ export const nativeBootstrap = Effect.gen(function* () {
     maxHeaderBytes: 16 * 1024,
     maxHeadersCount: 64,
     headersTimeoutMs: 10_000,
-    requestTimeoutMs: 180_000,
+    requestTimeoutMs: policy.limits.jobSeconds * 1000,
     handlers: {
       request: async (request, response, signal) => {
         if (request.url === "/__office/shutdown" && request.method === "POST") {

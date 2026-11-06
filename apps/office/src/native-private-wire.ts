@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { Count, Digest, Id, Label } from "@starter/office-contract";
-import { OriginalActorClaims } from "@starter/office-server/ports";
+import { Count, Digest, Id, Label } from "@highchat/office-contract";
+import { OriginalActorClaims } from "@highchat/office-server/ports";
 import {
   HostEpoch,
   HostId,
@@ -8,7 +8,7 @@ import {
   HostUnitRecord,
   HostViewRecord,
   hostMethod,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-server/native-remote";
 
 /** Actual public binary metadata the ORIGINAL private frame selected; Node headers never choose it. */
 export const NativePrivateFile = Schema.Union([

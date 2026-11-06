@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { OfficeInvalid, safeFailure } from "@starter/office-contract";
-import { runOfficeCommand, type ResolveOfficeCli } from "@starter/office-server/cli";
+import { OfficeInvalid, safeFailure } from "@highchat/office-contract";
+import { runOfficeCommand, type ResolveOfficeCli } from "@highchat/office-server/cli";
 
 /** Standalone stdin/stdout composition. Host injects accepted-input proof/resources, never env credentials. */
 export async function runOfficeCli(resolve: ResolveOfficeCli): Promise<void> {

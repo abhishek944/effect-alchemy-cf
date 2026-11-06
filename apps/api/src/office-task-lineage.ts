@@ -1,5 +1,5 @@
-import { DraftTarget, decodeWireSync } from "@starter/office-contract";
-import type { OperationRecord } from "@starter/office-server/ports";
+import { DraftTarget, decodeWireSync } from "@highchat/office-contract";
+import type { OperationRecord } from "@highchat/office-server/ports";
 import type { OfficeTaskProof } from "./office-task-proof.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 
@@ -27,7 +27,6 @@ export function confirmedOfficeTaskTargets(
   proof: OfficeTaskProof,
   operations: readonly OperationRecord[],
 ): readonly DraftTarget[] {
-  if (operations.length > 128) throw officeDenied();
   const targets = new Map<string, DraftTarget>();
   const add = (input: DraftTarget) => {
     const target = Object.freeze(decodeWireSync(DraftTarget)(input));
@@ -71,7 +70,7 @@ export function confirmedOfficeTaskTargets(
         throw officeDenied();
       let revision = receipt.acceptedRevision;
       if (intent.kind === "create-draft") {
-        const captured = proof.association.target;
+        const captured = proof.association.intent.mainView ?? proof.association.target;
         if (
           captured?.kind !== "main" ||
           captured.documentId !== operation.documentId ||

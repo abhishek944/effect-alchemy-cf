@@ -1,0 +1,183 @@
+:where(.landing-closing)[class] {
+  --lightningcss-light: ;
+  --lightningcss-dark: initial;
+  color-scheme: dark;
+  color: rgb(245, 242, 233);
+  font-synthesis: none;
+  background: rgb(8, 9, 11);
+  font-family: "DM Sans", sans-serif;
+}
+:where(.landing-closing) * {
+  box-sizing: border-box;
+}
+div:where(.landing-closing) {
+  margin: 0px;
+}
+:where(.landing-closing) .section {
+  min-height: 820px;
+  padding: 65px 64px 80px;
+  position: relative;
+  overflow: hidden;
+}
+:where(.landing-closing) .eyebrow {
+  letter-spacing: 0.13em;
+  align-items: center;
+  gap: 11px;
+  margin: 0px 0px 22px;
+  font:
+    10px ui-monospace,
+    monospace;
+  display: flex;
+}
+:where(.landing-closing) .eyebrow i {
+  background: rgb(255, 167, 101);
+  border-radius: 50%;
+  width: 5px;
+  height: 5px;
+}
+:where(.landing-closing) h2 {
+  letter-spacing: -0.06em;
+  margin: 0px;
+  font-size: 76px;
+  font-weight: 500;
+  line-height: 0.97;
+}
+@media (width <= 760px) {
+  :where(.landing-closing) .section {
+    min-height: calc(-60px + 100svh);
+    padding: 48px 24px 70px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-closing) h2 {
+    font-size: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.landing-closing) * {
+    scroll-behavior: auto !important;
+    animation: auto ease 0s 1 normal none running none !important;
+  }
+}
+:where(.landing-closing) .section {
+  isolation: isolate;
+}
+:where(.landing-closing) .shader-root {
+  display: contents;
+}
+:where(.landing-closing) .shader-field {
+  z-index: 0;
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+  overflow: hidden;
+}
+:where(.landing-closing) .shader-shade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+}
+:where(.landing-closing) .shader-error {
+  color: rgb(255, 193, 160);
+  font-size: 13px;
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+}
+:where(.landing-closing)[data-shader="D"] .shader-field {
+  height: 350px;
+  bottom: auto;
+}
+:where(.landing-closing)[data-shader="D"] .shader-shade {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0) 25%, rgb(8, 9, 11)),
+    linear-gradient(90deg, rgba(8, 9, 11, 0.74), rgba(8, 9, 11, 0.267));
+}
+:where(.landing-closing) .closing {
+  isolation: isolate;
+  min-height: 900px;
+  padding: 120px 64px 200px;
+}
+:where(.landing-closing) .invite {
+  z-index: 2;
+  position: relative;
+}
+:where(.landing-closing) .invite h2 {
+  letter-spacing: -0.065em;
+  margin: 0px;
+  font-size: 112px;
+  font-weight: 500;
+  line-height: 0.98;
+}
+:where(.landing-closing) .invite .eyebrow {
+  margin-bottom: 30px;
+}
+:where(.landing-closing) .closing-intro {
+  color: rgb(197, 198, 204);
+  margin: 30px 0px;
+  font-size: 18px;
+  line-height: 1.6;
+}
+:where(.landing-closing) .closing-actions {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 26px;
+  display: flex;
+}
+:where(.landing-closing) .closing a {
+  color: inherit;
+  text-decoration: none;
+}
+:where(.landing-closing) .closing-actions .primary {
+  color: rgb(17, 17, 19);
+  background: rgb(244, 240, 231);
+  border-radius: 4px;
+  align-items: center;
+  gap: 30px;
+  min-height: 54px;
+  padding: 0px 22px;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+}
+:where(.landing-closing) .primary:hover {
+  background: rgb(255, 207, 176);
+}
+:where(.landing-closing) .secondary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.263);
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 15px;
+  display: flex;
+}
+:where(.landing-closing) .closing a:focus-visible {
+  outline-offset: 6px;
+  outline: rgb(147, 203, 208) solid 2px;
+}
+:where(.landing-closing) .closing-footer {
+  z-index: 2;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding-top: 27px;
+  display: flex;
+  position: absolute;
+  bottom: 96px;
+  left: 64px;
+  right: 64px;
+}
+:where(.landing-closing) .closing-footer a {
+  color: rgb(183, 185, 191);
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  display: inline-flex;
+}
+:where(.landing-closing) .closing-footer .brand {
+  color: rgb(245, 242, 233);
+  letter-spacing: -0.6px;
+  font-size: 19px;
+  font-weight: 500;
+}

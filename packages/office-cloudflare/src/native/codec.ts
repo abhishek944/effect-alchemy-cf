@@ -2,7 +2,7 @@ import {
   decodeNativeFrame,
   encodeNativeFrame,
   NativeWireError,
-} from "@starter/office-contract/native-wire";
+} from "@highchat/office-contract/native-wire";
 import { NativeStorageError } from "./types.ts";
 import type { NativePayloadKind } from "./types.ts";
 

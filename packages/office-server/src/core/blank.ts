@@ -1,6 +1,6 @@
 import { UniverType } from "@univerjs/protocol";
 import type { CreateUnitFromDataInput } from "@univerjs-pro/collaboration-service";
-import type { Kind } from "@starter/office-contract";
+import type { Kind } from "@highchat/office-contract";
 import { createOfficeHeadless, OFFICE_NATIVE_TYPES } from "../jobs/runtime-factory.ts";
 
 /** SDK Facade generates defaults. This is not a hand-built workbook/document repository. */

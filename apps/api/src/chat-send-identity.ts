@@ -1,5 +1,5 @@
 import type { SendMessage } from "./chat-model.ts";
-import { chatReferenceInputsIdentity, officeSendTargetIdentity } from "@starter/office-contract";
+import { chatReferenceInputsIdentity, officeSendTargetIdentity } from "@highchat/office-contract";
 
 /** Bind retries to the complete immutable send, not today's preferences. */
 export const sendIdentity = (input: typeof SendMessage.Type): string =>

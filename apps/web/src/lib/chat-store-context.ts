@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
 import type { CapabilityLoadState } from "@/lib/chat-capability-api";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import type {

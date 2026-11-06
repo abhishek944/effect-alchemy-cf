@@ -16,8 +16,8 @@ router guard or generated-code execution runtime is included.
 - `OfficeDraftControls`: native hold → acknowledged editor drain → Ready.
 - `OfficeRuntime` / `OfficeRunner`: injected authenticated client and Effect runner.
 - `NativeUser`, `NativeTheme`, `FrameStatus`, component prop and save result types.
-- `@starter/office-react/frame`: `mountOfficeFrame` for the separate native bundle.
-- `@starter/office-react/styles.css`: scoped review/editor chrome using host tokens.
+- `@highchat/office-react/frame`: `mountOfficeFrame` for the separate native bundle.
+- `@highchat/office-react/styles.css`: scoped review/editor chrome using host tokens.
 
 ```tsx
 import { useRef } from "react";
@@ -25,8 +25,8 @@ import {
   OfficeNativeEditor,
   type OfficeEditorHandle,
   type OfficeNativeEditorProps,
-} from "@starter/office-react";
-import "@starter/office-react/styles.css";
+} from "@highchat/office-react";
+import "@highchat/office-react/styles.css";
 
 // Host supplies immutable View, real opaque channel, descriptive user and theme.
 function SelectedTool(props: Omit<OfficeNativeEditorProps, "ref">) {

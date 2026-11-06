@@ -1,4 +1,4 @@
-import type { ViewRecord } from "@starter/office-server/ports";
+import type { ViewRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
 import { canonical, invalid, sqlNow } from "../store.ts";

@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, officeImportOptions } from "@starter/office-contract";
+import { Count, officeImportOptions } from "@highchat/office-contract";
 import { AcceptedInputDigest, type AcceptedOriginalBinding } from "./chat-accepted-input-schema.ts";
 import { FileMediaType, FileName } from "./chat-attachment-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";

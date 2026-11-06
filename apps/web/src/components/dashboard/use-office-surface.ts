@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { Receipt } from "@starter/office-contract";
-import type { OfficeEditorHandle, OfficeRuntime } from "@starter/office-react";
+import type { Receipt } from "@highchat/office-contract";
+import type { OfficeEditorHandle, OfficeRuntime } from "@highchat/office-react";
 import { openOffice, type OpenOffice } from "@/lib/office-runtime";
 import { prepareOfficeSendTarget } from "@/lib/office-anchor";
 import type { OfficeSelection } from "./workspace-preview-model";
@@ -47,8 +47,7 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
         return undefined;
       })
       .catch(() => {
-        if (!active.signal.aborted)
-          setError("Office could not be opened. No editor save is claimed.");
+        if (!active.signal.aborted) setError("Unable to open this document. Please try again.");
       });
     return () => {
       active.abort();
@@ -113,8 +112,8 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
     } catch {
       setError(
         reacquire
-          ? "Editor reacquisition is unconfirmed. Keep this saved tab open; retry or reopen it from Files."
-          : "Native save or server drain is unconfirmed. Keep this editor mounted and retry.",
+          ? "We couldn’t resume editing. Keep this document open and try again, or reopen it from Files."
+          : "We couldn’t confirm your changes were saved. Keep this document open and try again.",
       );
     } finally {
       command.current = false;
@@ -135,7 +134,7 @@ export function useOfficeSurface(chatId: string, id: string, selection: OfficeSe
   };
   const onReceipt = (result: Receipt) => {
     if (result.operationId !== pending.current?.id) {
-      setError("Office receipt identity mismatch.");
+      setError("We couldn’t confirm this action. Keep this document open and check its status.");
       return;
     }
     setReceipt(result);

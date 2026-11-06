@@ -6,7 +6,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import type { AgentContext } from "agents";
 import { Schema } from "effect";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { avatarObjectPrefix, deleteAvatarKeys } from "./profile-avatar.ts";

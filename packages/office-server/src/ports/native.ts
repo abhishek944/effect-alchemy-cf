@@ -1,7 +1,7 @@
 import type { Effect, Scope } from "effect";
 import type { IDatabaseAdapter } from "@univerjs-pro/collaboration-service";
 import type { IWorktreeDatabaseAdapter } from "@univerjs-pro/collaboration-worktree-service";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 import type { NativeTarget, WritePermit } from "./identity.ts";
 import type { NativeEditorPermit } from "./native-editor.ts";
 

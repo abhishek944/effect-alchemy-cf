@@ -1,12 +1,12 @@
 import { Effect, Schema, Stream } from "effect";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import {
   OfficeForbidden,
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { readOfficePrivateJson } from "./office-private-json.ts";
 import type { OfficeJobRole } from "./office-job-object.ts";
 
@@ -56,8 +56,7 @@ export const officeJobHttp = (role: OfficeJobRole, request: Request) =>
     }
     if (url.pathname !== "/status") return yield* Effect.fail(denied());
     const payload = yield* Effect.tryPromise({
-      try: () =>
-        readOfficePrivateJson(request.body, request.signal, Date.now() + 10_000, 16 * 1024),
+      try: () => readOfficePrivateJson(request.body, request.signal, Date.now() + 10_000, null),
       catch: (cause) => withCause(withDiagnostic(denied(), "job-status-body"), cause),
     });
     const input = yield* Effect.try({

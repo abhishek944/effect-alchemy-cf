@@ -1,13 +1,13 @@
 import { Cause, Effect, Exit } from "effect";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import {
   OfficeForbidden,
   decodeWireSync,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
-import { HostOffice, type HostOfficeRequest } from "@starter/office-server/native-remote";
-import type { Actor, OfficeService } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { HostOffice, type HostOfficeRequest } from "@highchat/office-server/native-remote";
+import type { Actor, OfficeService } from "@highchat/office-server/ports";
 import type { OfficeRemoteMethod } from "./native-channel.ts";
 import { officeChannelError } from "./native-channel-errors.ts";
 

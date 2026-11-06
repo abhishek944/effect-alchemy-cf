@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
-import { decodeWireSync, type OfficeLimits } from "@starter/office-contract";
-import { HostBytes, HostNativePieces, hostEnvelope } from "@starter/office-server/native-remote";
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostBytes, HostNativePieces, hostEnvelope } from "@highchat/office-server/native-remote";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficePrivateBackend } from "./office-private-backend.ts";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeBinaryInput } from "./office-private-binary-input.ts";
@@ -22,7 +22,6 @@ export async function officePrivateBinary(
   request: OfficePrivateRequest,
   backend: OfficePrivateBackend,
   metadata: OfficeMetadata,
-  limits: OfficeLimits,
 ) {
   // The private route authenticated the peer/frame before handing over this body.
   const input = officeBinaryInput(body, request);
@@ -67,21 +66,6 @@ export async function officePrivateBinary(
         (request.file !== null || kind === "upload" || kind === "code")
       )
         assertOfficeTaskUploadPut(request, call.input);
-      const maximum =
-        kind === "code"
-          ? limits.codeBytes
-          : kind === "upload"
-            ? limits.uploadBytes
-            : kind === "native-proposal"
-              ? limits.proposalBytes
-              : kind === "render"
-                ? limits.renderBytes
-                : kind === "export"
-                  ? 10 * 1024 * 1024
-                  : kind === "inspection"
-                    ? limits.responseBytes
-                    : limits.nativeBytes;
-      if (call.input.declaredBytes > maximum) throw officeDenied();
       // REAL provider hashes/counts the complete opaque source before returning any immutable ref ACK.
       const value = await Effect.runPromise(
         backend.bytes.put(call.input.owner, {

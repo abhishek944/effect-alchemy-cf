@@ -3,7 +3,6 @@ import type { ImageHost } from "@abhishek944/pi-image-gen/core";
 import { Schema } from "effect";
 import { decodeOption } from "./chat-internal.ts";
 import { SavedFile } from "./chat-library-schema.ts";
-import { MAX_IMAGE_BYTES } from "./chat-attachment-schema.ts";
 import {
   type ImageCallKey,
   type ImageReservation,
@@ -139,7 +138,6 @@ export const createChatGeneratedClient = (
       const bytes = new Uint8Array(buffer, output.bytes.byteOffset, output.bytes.byteLength);
       if (
         bytes.byteLength === 0 ||
-        bytes.byteLength > MAX_IMAGE_BYTES ||
         context.descriptor.index !== index ||
         context.descriptor.bytes !== bytes.byteLength ||
         context.descriptor.mimeType !== output.mimeType

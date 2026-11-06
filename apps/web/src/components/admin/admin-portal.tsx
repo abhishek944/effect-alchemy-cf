@@ -100,12 +100,12 @@ export default function AdminPortal() {
     try {
       const { error } = await authClient.signOut();
       if (error) {
-        setActionError(error.message || "Unable to sign out. Please try again.");
+        setActionError("Unable to sign out. Please try again.");
         return;
       }
       refreshAccess();
-    } catch (caught) {
-      setActionError(adminErrorMessage(caught));
+    } catch {
+      setActionError("Unable to sign out. Please try again.");
     } finally {
       setSignOutPending(false);
     }

@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { HostNativePieces, HostBytes } from "@starter/office-server/native-remote";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostNativePieces, HostBytes } from "@highchat/office-server/native-remote";
 import {
   metadataRequest,
   readRequest,
@@ -11,9 +11,9 @@ import {
   OfficePrivateReply,
   cleanupMethods,
 } from "./office-private-methods.ts";
-import type { OfficeMetadata } from "@starter/office-server/ports";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import { createOfficeBytes } from "@starter/office-cloudflare/bytes";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import { createOfficeBytes } from "@highchat/office-cloudflare/bytes";
 import type { OfficeNamespace } from "./office-private-bindings.ts";
 import {
   NativeChannelMember,

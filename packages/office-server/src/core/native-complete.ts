@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { safeFailure, type Receipt } from "@starter/office-contract";
+import { safeFailure, type Receipt } from "@highchat/office-contract";
 import type {
   NativeWriteRecord,
   OfficeDependencies,

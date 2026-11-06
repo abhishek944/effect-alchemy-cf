@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import type { D1DatabaseSession, D1PreparedStatement } from "@cloudflare/workers-types";
 import { prepareNativePublication } from "./prepared-publication.ts";
 import {

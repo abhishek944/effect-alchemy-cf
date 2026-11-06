@@ -1,5 +1,5 @@
-import type { OperationRecord } from "@starter/office-server/ports";
-import type { OperationPhase } from "@starter/office-contract";
+import type { OperationRecord } from "@highchat/office-server/ports";
+import type { OperationPhase } from "@highchat/office-contract";
 import { canonical, conflict, invalid } from "./store.ts";
 
 const transitions: Readonly<Record<OperationPhase, readonly OperationPhase[]>> = {

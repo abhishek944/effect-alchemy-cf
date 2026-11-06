@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Effect } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import { decodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWireSync } from "@highchat/office-contract";
+import { decodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { IsolatedJob, JobState, OfficeDependencies, OperationRecord } from "../ports/index.ts";
 import type { OfficeNativeRuntime } from "./native-runtime.ts";
 import { importIntoInput } from "./import-into-input.ts";
 import { readArtifact, stageNativeArtifact } from "./bytes.ts";
 import { ImportedOutputSchema } from "../jobs/output.ts";
-import { JOB_OUTPUT_LIMITS, requireBinding, requireSnapshot } from "../jobs/frames.ts";
+import { requireBinding, requireSnapshot } from "../jobs/frames.ts";
 import { prepareSheetInsertions } from "../jobs/sheet-insert.ts";
 import { replayMutationCandidate } from "../jobs/replay.ts";
 import { nativeCall, officeFailure } from "./failure.ts";
@@ -33,11 +33,11 @@ export const stageImportIntoProposal = Effect.fn("Office.stageImportIntoProposal
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT"));
   const action = original.intent.input;
   yield* verifyOperation(deps, original, yield* operationTarget(deps, original), phase);
-  const wire = yield* readArtifact(deps, original.owner, state.output, JOB_OUTPUT_LIMITS.maxBytes);
+  const wire = yield* readArtifact(deps, original.owner, state.output);
   const source = yield* Effect.try({
     try: () => {
       const output = decodeWireSync(ImportedOutputSchema)(
-        decodeNativeFrame(wire, "job-output", JOB_OUTPUT_LIMITS).payload,
+        decodeNativeFrame(wire, "job-output").payload,
       );
       requireBinding(output.binding, job.binding);
       requireSnapshot(output.native, job.binding);
@@ -63,8 +63,6 @@ export const stageImportIntoProposal = Effect.fn("Office.stageImportIntoProposal
     };
   yield* verifyOperation(deps, record, yield* operationTarget(deps, record), phase);
   const mutations = yield* nativeCall(() => prepareSheetInsertions(source, pinned.frame, action));
-  if (mutations.length > deps.policy.limits.mutationCount)
-    return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED"));
   const proposal = yield* nativeCall(() =>
     replayMutationCandidate(
       pinned.frame,
@@ -84,7 +82,6 @@ export const stageImportIntoProposal = Effect.fn("Office.stageImportIntoProposal
     "native-proposal",
     "proposal",
     proposal,
-    deps.policy.limits.proposalBytes,
   );
   const current = yield* operationRecord(deps, record.owner, action.operationId);
   if (current === null) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));

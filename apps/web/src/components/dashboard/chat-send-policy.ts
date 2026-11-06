@@ -5,14 +5,6 @@ import type { ChatFilesControls, PendingSend, StopTarget } from "@/lib/chat-stor
 const BUSY = "Another send is waiting for Retry or Discard before a new message can be sent.";
 const STOPPING = "An answer is being stopped. Try again once it is acknowledged.";
 const NO_SETTINGS = "This chat's model settings are still loading. Try again when they are ready.";
-export const MAX_TEXT = 16000;
-
-/** Overlong drafts keep the composer content and explain the exact limit. */
-export function textTooLong(text: string): string | null {
-  return text.length > MAX_TEXT
-    ? `Messages can be at most ${MAX_TEXT} characters; this draft has ${text.length}. It has been kept in the composer.`
-    : null;
-}
 
 /**
  * Admission rules for one direct Send. A busy or stopped chat is rejected

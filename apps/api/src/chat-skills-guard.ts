@@ -23,12 +23,6 @@ import type { Models } from "@earendil-works/pi-ai/models";
 import { blocked, blockedStream } from "./chat-guard-blocked.ts";
 import { effectiveGenerationOutputTokens } from "./chat-generation-output-budget.ts";
 
-export {
-  MAX_FINAL_REQUEST_BYTES,
-  requestBudgetBytes,
-  requestTextBytes as contextBytes,
-} from "./chat-request-budget.ts";
-
 export type GuardedRequest =
   | {
       readonly ok: true;
@@ -120,20 +114,23 @@ export const installSkillModelsGuard = (
       };
       const scope = await captureScope();
       try {
-        const maxTokens = effectiveGenerationOutputTokens(
-          model.contextWindow,
-          model.maxTokens,
-          options?.maxTokens,
-        );
-        // Installed Responses transport raises smaller limits to 16; never silently exceed a cap.
-        if (model.api === "openai-responses" && maxTokens < 16)
-          return blockedStream(model, "The output limit is below this model's transport minimum.");
         const prepared = await deps.guard.prepare(model, context, options?.signal);
         if (!prepared.ok) return blockedStream(model, prepared.message);
         cleanup = prepared.cleanup;
         if (options?.signal?.aborted || prepared.transportSignal?.aborted) {
           finish();
           return blockedStream(model, "This answer was stopped; it may be incomplete.");
+        }
+        const maxTokens = effectiveGenerationOutputTokens(
+          model.contextWindow,
+          model.maxTokens,
+          prepared.context,
+          options?.maxTokens,
+        );
+        // Installed Responses transport raises smaller limits to 16; never exceed remaining context.
+        if (model.api === "openai-responses" && maxTokens < 16) {
+          finish();
+          return blockedStream(model, "The output limit is below this model's transport minimum.");
         }
         const stream = rawStream(
           // Cap AFTER proof checks; Anthropic thinking must not expand the requested ceiling.

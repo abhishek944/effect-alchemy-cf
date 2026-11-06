@@ -11,5 +11,5 @@ const AllowedRequest = Schema.Struct({
   ),
 });
 export const BatchAllowed = Schema.Struct({
-  requests: Schema.Array(AllowedRequest).check(Schema.isMinLength(1), Schema.isMaxLength(64)),
+  requests: Schema.Array(AllowedRequest).check(Schema.isMinLength(1)),
 });

@@ -1,12 +1,12 @@
 import { Cause } from "effect";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import {
   OfficeErrors,
   OfficeInvalid,
   OfficeUnavailable,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 
 export function adapterFailure(cause: unknown): OfficeError {
   for (const Type of OfficeErrors) if (cause instanceof Type) return cause;

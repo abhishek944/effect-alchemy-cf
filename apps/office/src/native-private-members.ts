@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import type { OfficeProtocolAuthority } from "@starter/office-server/native-protocol";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import type { OfficeProtocolAuthority } from "@highchat/office-server/native-protocol";
 import type { CollabMemberContext } from "@univerjs-pro/collaboration-service";
 import { NativeChannelMember } from "./native-private-wire.ts";
 import type {

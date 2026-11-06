@@ -4,7 +4,7 @@ import type { chatObjectsEntryPlugin } from "./chat-objects-entry.ts";
 
 /** Shared provider emits the static import as a real Worker CompiledWasm module. */
 export const profileWebpPlugin = (): ReturnType<typeof chatObjectsEntryPlugin> => ({
-  name: "starter:profile-webp",
+  name: "highchat:profile-webp",
   resolveId(source: string) {
     return source === "./profile-webp.wasm" ? { id: "./profile-webp.wasm", external: true } : null;
   },

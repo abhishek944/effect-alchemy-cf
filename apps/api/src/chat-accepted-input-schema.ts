@@ -1,13 +1,6 @@
 import { Schema } from "effect";
-import type { ChatReferenceInputs, OfficeSendTarget } from "@starter/office-contract";
-import {
-  FileMediaType,
-  FileName,
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
-  MAX_OFFICE_BYTES,
-  MAX_TEXT_FILE_BYTES,
-} from "./chat-attachment-schema.ts";
+import type { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
+import { FileMediaType, FileName } from "./chat-attachment-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { isOfficeMediaType } from "./chat-office-media.ts";
 
@@ -69,24 +62,12 @@ export const AcceptedOriginalBinding = Schema.Struct({
       return (
         !file.mediaType.startsWith("image/") &&
         !isOfficeMediaType(file.mediaType) &&
-        file.byteSize <= MAX_TEXT_FILE_BYTES &&
         file.width === null &&
         file.height === null
       );
     if (file.kind === "office")
-      return (
-        isOfficeMediaType(file.mediaType) &&
-        file.byteSize <= MAX_OFFICE_BYTES &&
-        file.width === null &&
-        file.height === null
-      );
-    return (
-      file.mediaType.startsWith("image/") &&
-      file.byteSize <= MAX_IMAGE_BYTES &&
-      file.width !== null &&
-      file.height !== null &&
-      file.width * file.height <= MAX_IMAGE_PIXELS
-    );
+      return isOfficeMediaType(file.mediaType) && file.width === null && file.height === null;
+    return file.mediaType.startsWith("image/") && file.width !== null && file.height !== null;
   }),
 );
 export type AcceptedOriginalBinding = typeof AcceptedOriginalBinding.Type;

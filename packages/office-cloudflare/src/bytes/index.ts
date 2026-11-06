@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { OfficeBytes } from "@starter/office-server/ports";
+import type { OfficeBytes } from "@highchat/office-server/ports";
 import type { OfficeProviderOptions } from "../metadata/store.ts";
 import { failure } from "../metadata/store.ts";
 import { ByteStore } from "./store.ts";

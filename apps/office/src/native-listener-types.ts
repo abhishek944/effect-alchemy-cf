@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 import type { Effect, Scope } from "effect";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 
 /** Actual17-owned handlers. No auth/default provider, generic RPC or SDK serializer lives in listener15. */
 export type OfficeNodeHandlers = {

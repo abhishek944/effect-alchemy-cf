@@ -1,5 +1,5 @@
 import { Cause, Effect, Schema } from "effect";
-import type { OfficeError } from "@starter/office-contract";
+import type { OfficeError } from "@highchat/office-contract";
 import {
   Failure,
   OfficeOriginalRequest,
@@ -8,8 +8,12 @@ import {
   OfficeSourceRequest,
   type OfficeSourceReadRequest,
   decodeWireSync,
-} from "@starter/office-contract";
-import { reportedFailure, reportEventEffect, requestDiagnosticContext } from "@starter/diagnostics";
+} from "@highchat/office-contract";
+import {
+  reportedFailure,
+  reportEventEffect,
+  requestDiagnosticContext,
+} from "@highchat/diagnostics";
 import { reportOfficeHttpFailure } from "./office-http-failure.ts";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import { officeHostFetch, officeInvocation, type OfficeDispatch } from "./office-http-call.ts";
@@ -41,7 +45,7 @@ const sourceReply = (dispatch: OfficeDispatch, input: typeof OfficeSourceReadReq
       body: JSON.stringify(input),
     });
     // Join the bounded body even for errors; local transport/body/decode failures remain reportable.
-    const bytes = yield* readBounded(response, 12 * 1024);
+    const bytes = yield* readBounded(response, null);
     const body = yield* Effect.try({
       try: (): unknown =>
         JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes)),

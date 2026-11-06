@@ -2,7 +2,7 @@ import type { WorkerEnvironment } from "alchemy/Cloudflare";
 import type { RuntimeContext } from "alchemy";
 import { Effect } from "effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
-import { safeFailure } from "@starter/office-contract";
+import { safeFailure } from "@highchat/office-contract";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import { officeHostFetch, officeHostRequest, officeInvocation } from "./office-http-call.ts";
 import type { OfficeDispatch } from "./office-http-call.ts";
@@ -27,7 +27,6 @@ type OfficeResponse = Effect.Effect<
   never,
   CurrentOfficeSession | RuntimeContext | WorkerEnvironment
 >;
-const smallReply = 64 * 1024;
 const gone = () => officeFailure(safeFailure("UNAVAILABLE"));
 
 /** Public PUT upload: opaque streamed bytes plus fixed metadata; ACK must match the source. */
@@ -59,7 +58,7 @@ export const upload = (
       body: request.body,
     });
     if (response.status !== 200) return gone();
-    const value = officeJsonValue(yield* officeReadBytes(response, smallReply));
+    const value = officeJsonValue(yield* officeReadBytes(response));
     const ref = officeUploadReply(metadata.upload, value);
     return ref === null ? gone() : officeJson(ref);
   }).pipe(Effect.catch(() => Effect.succeed(gone())));
@@ -78,7 +77,7 @@ export const artifact = (dispatch: OfficeDispatch, pathname: string): OfficeResp
       { method: "POST", headers: { accept: "application/json" } },
     );
     if (response.status !== 200) return gone();
-    const ref = officeArtifact(officeJsonValue(yield* officeReadBytes(response, smallReply)));
+    const ref = officeArtifact(officeJsonValue(yield* officeReadBytes(response)));
     return ref === null || ref.id !== artifactId ? gone() : officeJson(ref);
   }).pipe(Effect.catch(() => Effect.succeed(gone())));
 
@@ -111,7 +110,7 @@ export const channel = (
 ): OfficeResponse =>
   Effect.gen(function* () {
     const session = yield* CurrentOfficeSession;
-    const input = officeChannelRequest(yield* officeReadJson(body, 4096));
+    const input = officeChannelRequest(yield* officeReadJson(body));
     if (input === null) return officeInvalid();
     const invocationId = yield* officeInvocation(dispatch, "channel");
     const response = yield* officeHostFetch(dispatch, session, `/channel/${invocationId}`, {
@@ -120,7 +119,7 @@ export const channel = (
       body: JSON.stringify(input),
     });
     if (response.status !== 200) return gone();
-    const reply = officeChannelReply(officeJsonValue(yield* officeReadBytes(response, 4096)));
+    const reply = officeChannelReply(officeJsonValue(yield* officeReadBytes(response)));
     if (reply === null || reply.expiresAt <= Date.now()) return gone();
     return officeJson(reply);
   }).pipe(Effect.catch(() => Effect.succeed(gone())));

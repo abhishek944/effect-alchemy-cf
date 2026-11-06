@@ -1,6 +1,6 @@
-import { nativeValueDigest } from "@starter/office-server/native-remote";
-import type { NativePartRequest, PublishedOrigin } from "@starter/office-server/native-remote";
-import type { NativeValueRef } from "@starter/office-cloudflare/native";
+import { nativeValueDigest } from "@highchat/office-server/native-remote";
+import type { NativePartRequest, PublishedOrigin } from "@highchat/office-server/native-remote";
+import type { NativeValueRef } from "@highchat/office-cloudflare/native";
 import type { OfficeNativeHandle } from "./office-native-handle.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 

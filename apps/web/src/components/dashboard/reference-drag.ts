@@ -1,5 +1,5 @@
 /** Internal drag transports a lookup key only, never document authority or a captured payload. */
-export const REFERENCE_DRAG_TYPE = "application/x-starter-reference-source";
+export const REFERENCE_DRAG_TYPE = "application/x-highchat-reference-source";
 export function writeReferenceDrag(
   transfer: DataTransfer,
   source: Readonly<{ chatId: string; key: string }>,

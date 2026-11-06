@@ -1,10 +1,10 @@
-import { Id, decodeWireSync } from "@starter/office-contract";
+import { Id, decodeWireSync } from "@highchat/office-contract";
 import type {
   NativeWriteRecord,
   NativeReceiptBinding,
   OwnerScope,
   WritePermit,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import type { PredicateSQL } from "./native-fence.ts";
 import { canonical, invalid } from "./store.ts";

@@ -1,6 +1,5 @@
 import { Option, Schema } from "effect";
 
-export const CALL_EVIDENCE_BYTES = 262_144;
 export const CALL_STATE_BYTES = 65_536;
 export const CALL_SUMMARY_BYTES = 131_072;
 export const CallDigest = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
@@ -102,14 +101,14 @@ function sorted(value: unknown): unknown {
     );
   return value;
 }
-export function callJson(value: unknown, max: number): string {
-  if (!visit(value, { left: max }, 0)) throw new ImageCallError("invalid_input");
+export function callJson(value: unknown, max: number | null): string {
+  if (max !== null && !visit(value, { left: max }, 0)) throw new ImageCallError("invalid_input");
   const json = JSON.stringify(sorted(value));
-  if (typeof json !== "string" || new TextEncoder().encode(json).byteLength > max)
+  if (typeof json !== "string" || (max !== null && new TextEncoder().encode(json).byteLength > max))
     throw new ImageCallError("invalid_input");
   return json;
 }
-export function callFitsJson(value: unknown, max: number): boolean {
+export function callFitsJson(value: unknown, max: number | null): boolean {
   try {
     callJson(value, max);
     return true;
@@ -117,11 +116,10 @@ export function callFitsJson(value: unknown, max: number): boolean {
     return false;
   }
 }
-export function callParse(text: string, max: number): unknown {
+export function callParse(text: string, max: number | null): unknown {
   if (
     typeof text !== "string" ||
-    text.length > max ||
-    new TextEncoder().encode(text).byteLength > max
+    (max !== null && (text.length > max || new TextEncoder().encode(text).byteLength > max))
   )
     throw new ImageCallError("corrupt");
   try {

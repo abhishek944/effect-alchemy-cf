@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { safeFailure } from "@starter/office-contract";
+import { safeFailure } from "@highchat/office-contract";
 import type { IsolatedJob, JobState, OfficeDependencies, OperationRecord } from "../ports/index.ts";
 import { advanceOperation, terminalReceipt } from "./operations.ts";
 import { operationRecord } from "./operation-read.ts";

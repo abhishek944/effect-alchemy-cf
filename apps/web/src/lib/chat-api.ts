@@ -1,9 +1,13 @@
-import type { ChatReferenceInputs, OfficeSendTarget, Target } from "@starter/office-contract";
+import type { ChatReferenceInputs, OfficeSendTarget, Target } from "@highchat/office-contract";
 import type { ChatSelection } from "@/lib/chat-capability-types";
 import type { ChatMessage } from "@/lib/chat-message-types";
 export type { ChatMessage } from "@/lib/chat-message-types";
 import { rejectionOf, type NoAdmissionRejection } from "@/lib/chat-api-rejection";
-import { readResponseRequestId, serverReference, withReference } from "@/lib/browser-diagnostics";
+import {
+  OfficeRuntimeError,
+  readResponseRequestId,
+  serverReference,
+} from "@/lib/browser-diagnostics";
 import type { Coverage } from "@/lib/chat-history-types";
 import type { SkillRecovery } from "@/lib/chat-skills-api";
 import {
@@ -41,6 +45,7 @@ export class ChatApiError extends Error {
   readonly status: number;
   readonly rejection: NoAdmissionRejection | null;
   readonly requestId: string | null;
+  readonly reference: string;
   constructor(
     status: number,
     message: string,
@@ -49,7 +54,8 @@ export class ChatApiError extends Error {
     operation = "chat.request",
     responseStatus = status,
   ) {
-    super(withReference(message, serverReference(operation, responseStatus, requestId)));
+    super(message);
+    this.reference = serverReference(operation, responseStatus, requestId);
     this.name = "ChatApiError";
     this.status = status;
     this.rejection = rejection;
@@ -68,19 +74,16 @@ const statusMessages: Record<number, string> = {
 export function newOperationId(): string {
   return crypto.randomUUID();
 }
-
 export function errorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === "AbortError") {
     return "The request was cancelled.";
   }
-  if (error instanceof ChatApiError) return error.message;
+  if (error instanceof ChatApiError || error instanceof OfficeRuntimeError) return error.message;
   if (error instanceof TypeError) {
     return "Could not reach the server. Check your connection and try again.";
   }
-  if (error instanceof Error && error.message) return error.message;
   return "Something went wrong. Please try again.";
 }
-
 /** Per-response metadata only; never shared between requests. */
 export type JsonResponse = { body: unknown; requestId: string | null; status: number };
 export async function requestJson(
@@ -95,7 +98,8 @@ export async function requestJson(
   });
   const requestId = readResponseRequestId(response);
   if (!response.ok) {
-    const message = statusMessages[response.status] ?? `Request failed (${response.status}).`;
+    const message =
+      statusMessages[response.status] ?? "Unable to complete your request. Please try again.";
     let rejection: NoAdmissionRejection | null = null;
     try {
       const body: unknown = await response.json();
@@ -114,7 +118,6 @@ export async function requestJson(
     throw unexpectedResponse(requestId, operation, response.status);
   }
 }
-
 export const request = (path: string, init?: RequestInit): Promise<unknown> =>
   requestJson(path, "chat.request", init).then((seen) => seen.body);
 const json = (body: unknown): RequestInit => ({
@@ -131,7 +134,7 @@ export const unexpectedResponse = (
 ): ChatApiError =>
   new ChatApiError(
     502,
-    "The server returned an unexpected response.",
+    "Unable to complete your request. Please try again.",
     null,
     requestId,
     operation,
@@ -159,7 +162,6 @@ export async function updateChat(id: string, patch: ChatPatch): Promise<Chat> {
     method: "PATCH",
   });
 }
-
 export async function getSnapshot(id: string, signal: AbortSignal): Promise<ChatSnapshot> {
   const path = `/api/chats/${encodeURIComponent(id)}`;
   return requestDecoded(path, "chat.snapshot", parseSnapshotValue, { signal });
@@ -184,7 +186,6 @@ export async function sendMessage(
     json(input),
   ).then((accepted) => ({ accepted }));
 }
-
 export async function stopChat(id: string, operationId: string): Promise<{ ok: true }> {
   await requestDecoded(
     `/api/chats/${encodeURIComponent(id)}/stop`,
@@ -194,7 +195,6 @@ export async function stopChat(id: string, operationId: string): Promise<{ ok: t
   );
   return { ok: true };
 }
-
 export function eventsUrl(id: string): string {
   return `/api/chats/${encodeURIComponent(id)}/events`;
 }

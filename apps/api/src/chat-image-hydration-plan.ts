@@ -2,10 +2,6 @@ import type { ImageContent, UserMessage } from "@earendil-works/pi-ai";
 import type { InputOccurrence } from "./chat-image-request-types.ts";
 import { legacyHydrationByteSize } from "./chat-image-hydration-codec.ts";
 import {
-  assertHydrationTextBudget,
-  measureHydrationContext,
-} from "./chat-image-hydration-budget.ts";
-import {
   hydrationFailure,
   hydrationSignal,
   type ImageHydrationInput,
@@ -60,7 +56,5 @@ export const planImageHydration = (input: ImageHydrationInput): ImageHydrationPl
       legacy.push({ block, byteSize });
     }
   }
-  const size = measureHydrationContext(input.context);
-  assertHydrationTextBudget(size, input.model);
   return { occurrences, legacy };
 };

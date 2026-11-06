@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type RefObject } from "react";
-import type { OfficeEditorHandle, OfficeSave } from "@starter/office-react";
+import type { OfficeEditorHandle, OfficeSave } from "@highchat/office-react";
 import type { OpenOffice } from "@/lib/office-runtime";
 
 type Lease = {
@@ -42,14 +42,16 @@ export function useOfficeSave({
       try {
         const saved = await handle?.prepareToLeave();
         if (saved === undefined || saved.viewId !== opened.view.id)
-          throw new Error("Native save acknowledgement is unavailable or changed.");
+          throw new Error(
+            "We couldn’t confirm your changes were saved. Keep this document open and try again.",
+          );
         ack.current = saved;
         phaseTo(opened.editor.state === "drained" ? "drained" : "held");
         return saved;
       } catch (error) {
         phaseTo("uncertain");
         report(
-          "Native input or save is unconfirmed. Keep this editor open and retry confirmation.",
+          "We couldn’t confirm your changes were saved. Keep this document open and try again.",
         );
         throw error;
       }
@@ -64,7 +66,7 @@ export function useOfficeSave({
     const current = lease.current();
     if (retired.current || current === null || current.editor === null) return;
     if (ack.current === null || state.current === "uncertain")
-      throw new Error("Office save must be confirmed before drain.");
+      throw new Error("Confirm your changes are saved before closing this document.");
     try {
       await lease.drain(ack.current);
       phaseTo("drained");
@@ -76,31 +78,27 @@ export function useOfficeSave({
   };
   const cancel = async () => {
     if (state.current === "drained") {
-      report(
-        "This editor was saved and paused. Choose Resume editor to acquire fresh authorization.",
-      );
+      report("Your changes are saved and editing is paused. Choose Resume editor to continue.");
       return;
     }
     if (state.current !== "held") return;
     if (!lease.canResume() || handle === null) {
       phaseTo("uncertain");
-      report(
-        "The saved hold cannot safely resume. Keep this editor open; authorization is unconfirmed.",
-      );
+      report("We couldn’t resume editing. Keep this document open and try again.");
       return;
     }
     try {
       await handle.resume();
       if (!lease.canResume()) {
         handle.stopInput();
-        throw new Error("Office authorization changed while resuming.");
+        throw new Error("We couldn’t resume editing. Keep this document open and try again.");
       }
       ack.current = null;
       phaseTo("editing");
       report("");
     } catch {
       phaseTo("uncertain");
-      report("Input could not be resumed. Keep this editor open and retry confirmation.");
+      report("We couldn’t resume editing. Keep this document open and try again.");
     }
   };
   const reset = () => {

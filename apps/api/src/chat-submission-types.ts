@@ -1,6 +1,6 @@
 import type { UserInput } from "@earendil-works/pi-durable";
 import type { PiHarness } from "agents/harness/pi";
-import type { OfficeSessionBinding } from "@starter/auth/office-session";
+import type { OfficeSessionBinding } from "@highchat/auth/office-session";
 import type { ChatAdmissionFence } from "./chat-admission-fence.ts";
 import type { AccountOperationRecord } from "./chat-account-operations.ts";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";

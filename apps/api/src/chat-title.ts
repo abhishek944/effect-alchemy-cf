@@ -6,7 +6,7 @@ import {
   type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
 import { createAI } from "agents/models/pi-ai";
-import { reportFailure, withDiagnostic } from "@starter/diagnostics";
+import { reportFailure, withDiagnostic } from "@highchat/diagnostics";
 import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
 import { guardTitlePayload, titleReasoning, TITLE_MAX_TOKENS } from "./chat-title-policy.ts";

@@ -3,23 +3,22 @@
 ## Scope and ownership
 
 `packages/integrations` is an opt-in, server-only workspace package. It sends
-email through Cloudflare's native binding or Resend, and messages through Slack's Web API. Optional
-Dodo/Polar [billing adapters](billing.md) and [setup](billing-setup.md) are documented separately.
+email through Cloudflare's native binding or Resend, and messages through Slack's Web API.
 It does not provision resources, change auth flows, expose HTTP endpoints, or
-send anything on import. Consumers add `@starter/integrations: workspace:*` to
+send anything on import. Consumers add `@highchat/integrations: workspace:*` to
 their backend package and run `pnpm install` before importing its entry points.
 Browser imports by package name or relative source path are forbidden by lint.
 
 ## Components and interfaces
 
-| Entry point                              | Contract or implementation                      |
-| ---------------------------------------- | ----------------------------------------------- |
-| `@starter/integrations/email`            | `Email`, `EmailMessage`, `EmailReceipt`         |
-| `@starter/integrations/slack`            | `Slack`, `SlackMessage`, `SlackReceipt`         |
-| `@starter/integrations/error`            | `IntegrationError` and error/provider types     |
-| `@starter/integrations/resend`           | `ResendEmail.layer({ apiKey })`, `.layerConfig` |
-| `@starter/integrations/cloudflare-email` | `CloudflareEmail.layer({ binding })`            |
-| `@starter/integrations/slack-api`        | `SlackApi.layer({ botToken })`, `.layerConfig`  |
+| Entry point                               | Contract or implementation                      |
+| ----------------------------------------- | ----------------------------------------------- |
+| `@highchat/integrations/email`            | `Email`, `EmailMessage`, `EmailReceipt`         |
+| `@highchat/integrations/slack`            | `Slack`, `SlackMessage`, `SlackReceipt`         |
+| `@highchat/integrations/error`            | `IntegrationError` and error/provider types     |
+| `@highchat/integrations/resend`           | `ResendEmail.layer({ apiKey })`, `.layerConfig` |
+| `@highchat/integrations/cloudflare-email` | `CloudflareEmail.layer({ binding })`            |
+| `@highchat/integrations/slack-api`        | `SlackApi.layer({ botToken })`, `.layerConfig`  |
 
 Business code requires `Email` or `Slack`, never a provider client or credential.
 `Email.send(message)` returns `Effect<EmailReceipt, IntegrationError>`.
@@ -35,7 +34,7 @@ Replacement implementations use `Layer.succeed(Email, Email.of({ send }))` or
 `Layer.succeed(Slack, Slack.of({ postMessage }))`. No adapter subclass, global
 registry, provider SDK, custom runtime, or dependency injection framework is needed.
 Each provider can be composed independently. Effect and its HTTP client are the
-only messaging runtime dependency; billing uses pinned official provider SDKs.
+only messaging runtime dependency.
 The direct Effect version is pinned to `4.0.1`.
 
 ## Request and response schemas
@@ -128,10 +127,10 @@ The Config example reads secrets from an application-owned ConfigProvider.
 ```ts
 import { Effect, Layer } from "effect";
 import * as FetchHttpClient from "effect/http/FetchHttpClient";
-import { Email } from "@starter/integrations/email";
-import { Slack } from "@starter/integrations/slack";
-import { ResendEmail } from "@starter/integrations/resend";
-import { SlackApi } from "@starter/integrations/slack-api";
+import { Email } from "@highchat/integrations/email";
+import { Slack } from "@highchat/integrations/slack";
+import { ResendEmail } from "@highchat/integrations/resend";
+import { SlackApi } from "@highchat/integrations/slack-api";
 
 const IntegrationsLive = Layer.mergeAll(ResendEmail.layerConfig, SlackApi.layerConfig).pipe(
   Layer.provide(FetchHttpClient.layer),

@@ -1,4 +1,4 @@
-import { reportFailure, withCause } from "@starter/diagnostics";
+import { reportFailure, withCause } from "@highchat/diagnostics";
 import type { ImageIOTracker } from "./chat-image-io.ts";
 import {
   checkImageIOSignal,
@@ -10,7 +10,6 @@ import {
 export type ImageResponseBodyInput = {
   readonly response: Response;
   readonly track: ImageIOTracker;
-  readonly responseBytes: number;
   readonly operationId?: string;
   readonly signal?: AbortSignal;
 };
@@ -23,15 +22,11 @@ export type ImageResponseBodyInput = {
 export const retainImageResponseBody = async (input: ImageResponseBodyInput): Promise<Response> => {
   const { response, track, signal } = input;
   const body = response.body;
-  const limit = input.responseBytes;
   try {
     checkImageIOSignal(signal);
     if (body === null) return response;
-    if (response.bodyUsed || body.locked || limit < 1)
+    if (response.bodyUsed || body.locked)
       throw new ImageIOError("stream_limit", "The image response body cannot be admitted.");
-    const length = response.headers.get("content-length");
-    if (length !== null && (!/^[0-9]{1,16}$/.test(length) || Number(length) > limit))
-      throw new ImageIOError("stream_limit", "The image response exceeds its byte limit.");
   } catch (error) {
     let cleanup: unknown;
     try {
@@ -110,7 +105,6 @@ export const retainImageResponseBody = async (input: ImageResponseBodyInput): Pr
     controller?.error(imageIOCancelled());
     void stop();
   };
-  let used = 0;
   try {
     const trackedBody = new ReadableStream<Uint8Array>(
       {
@@ -131,9 +125,8 @@ export const retainImageResponseBody = async (input: ImageResponseBodyInput): Pr
               finish();
               return;
             }
-            if (!(part.value instanceof Uint8Array) || part.value.byteLength > limit - used)
-              throw new ImageIOError("stream_limit", "The image response exceeds its byte limit.");
-            used += part.value.byteLength;
+            if (!(part.value instanceof Uint8Array))
+              throw new ImageIOError("stream_limit", "The image response contains invalid bytes.");
             next.enqueue(part.value);
           } catch (error) {
             const failure = safeImageIOError(error);

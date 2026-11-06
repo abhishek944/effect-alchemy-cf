@@ -4,12 +4,6 @@ import { authClient } from "@/lib/auth-client";
 
 type Props = { name: string; email: string };
 
-function errorMessage(error: unknown) {
-  return error instanceof Error && error.message
-    ? error.message
-    : "Something went wrong. Please try again.";
-}
-
 export default function AccountSession({ name, email }: Props) {
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -18,9 +12,9 @@ export default function AccountSession({ name, email }: Props) {
     setPending(true);
     try {
       const { error } = await authClient.signOut();
-      if (error) setFeedback(error.message || "Unable to sign out. Please try again.");
-    } catch (error) {
-      setFeedback(errorMessage(error));
+      if (error) setFeedback("Unable to sign out. Please try again.");
+    } catch {
+      setFeedback("Unable to sign out. Please try again.");
     } finally {
       setPending(false);
     }

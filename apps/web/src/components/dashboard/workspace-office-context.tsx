@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
-import type { OfficeSendTarget } from "@starter/office-contract";
-import type { OfficeRuntime, NativeUser } from "@starter/office-react";
+import type { OfficeSendTarget } from "@highchat/office-contract";
+import type { OfficeRuntime, NativeUser } from "@highchat/office-react";
 import { createOfficeRuntime } from "@/lib/office-runtime";
 import { WorkspaceNavigationContext, useWorkspaceNavigation } from "./workspace-navigation";
 import { useOfficeBarriers, type OfficePanelGuard } from "./workspace-office-barriers";

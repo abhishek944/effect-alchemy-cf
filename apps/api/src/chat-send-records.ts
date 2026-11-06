@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
-import type { OfficeSessionBinding } from "@starter/auth/office-session";
+import type { OfficeSessionBinding } from "@highchat/auth/office-session";
 import { decodeChatOfficeSession } from "./chat-office-session.ts";
 import { ChatSelection } from "./chat-capabilities.ts";
 import { FileDescriptor } from "./chat-attachment-schema.ts";
@@ -14,8 +14,10 @@ import {
 
 const SendRecord = Schema.Struct({
   selection: ChatSelection,
-  textLength: Schema.Number.check(Schema.isInt(), Schema.isBetween({ minimum: 0, maximum: 16000 })),
-  files: Schema.Array(FileDescriptor).check(Schema.isMaxLength(5)),
+  textLength: Schema.Number.check(
+    Schema.makeFilter((value) => Number.isSafeInteger(value) && value >= 0),
+  ),
+  files: Schema.Array(FileDescriptor),
 });
 type SendRecord = typeof SendRecord.Type;
 export type SendEra = "featured" | "legacy" | "unknown";

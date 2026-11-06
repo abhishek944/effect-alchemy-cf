@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type { OfficeDependencies, OperationRecord, WritePermit } from "../ports/index.ts";
 import type { NativeServices } from "./native-services.ts";
 import { ReadyCapture } from "./review-bundle.ts";
@@ -77,7 +77,6 @@ export const captureReady = Effect.fn("Office.captureReady")(function* (
           worktree,
           kind,
           revision,
-          deps.policy.limits,
         ),
       );
     const draft = yield* materialize(worktreeID, unit.readyDraftHeadRevision);
@@ -124,9 +123,7 @@ export const captureReady = Effect.fn("Office.captureReady")(function* (
     capture.readyRevision !== unit.readyDraftHeadRevision
   )
     return yield* Effect.fail(officeFailure("STALE_REVIEW", record.receipt.operationId));
-  const evaluated = yield* nativeCall(() =>
-    evaluateReady(deps, services, record.owner.ownerId, capture),
-  );
+  const evaluated = yield* nativeCall(() => evaluateReady(services, record.owner.ownerId, capture));
   const ref = yield* stageNativeArtifact(
     deps,
     record.owner,

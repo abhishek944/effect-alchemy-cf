@@ -14,7 +14,6 @@ import { MAX_SKILLS, MAX_SKILL_BYTES } from "./skills-model.ts";
 export const MAX_SKILL_CATALOG_BYTES = 32 * 1024;
 export const MAX_SKILL_CONTEXT_BYTES = 56 * 1024;
 export const MAX_ACTIVE_TEXT_BYTES = 56 * 1024;
-export const MAX_STORED_CONTENT_BYTES = 1_835_008;
 const MAX_DESCRIPTION_CHARS = 160;
 
 /** Immutable standing-guidance authority; historical turns do not activate skills. */

@@ -1,5 +1,5 @@
 /** Safe host I/O failures. Never include private keys, URLs or foreign error bodies. */
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 
 export type ImageIOCode =
   | "cancelled"

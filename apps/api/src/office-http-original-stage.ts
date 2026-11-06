@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import { WorkerEnvironment } from "alchemy/Cloudflare";
 import { Effect, Schema } from "effect";
-import { officeAttachmentIds, officeImportOptions, safeFailure } from "@starter/office-contract";
+import { officeAttachmentIds, officeImportOptions, safeFailure } from "@highchat/office-contract";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import { ChatNamespaces, ChatNamespacesLive, doCall } from "./chat-bindings.ts";
 import { requireOwnedChat } from "./chat-http-read.ts";
@@ -116,7 +116,7 @@ export const stageOfficeOriginal = (
             body: held.body,
             signal,
           });
-          const raw = officeJsonValue(yield* officeReadBytes(response, 64 * 1024));
+          const raw = officeJsonValue(yield* officeReadBytes(response, null));
           const ref = officeUploadReply(upload, raw);
           if (response.status !== 200 || ref === null || ref.id !== upload.operationId)
             return yield* Effect.fail(unavailable());

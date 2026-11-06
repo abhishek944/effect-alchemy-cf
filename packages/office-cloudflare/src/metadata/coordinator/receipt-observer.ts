@@ -1,7 +1,7 @@
 import { Schema } from "effect";
-import { Digest, Id } from "@starter/office-contract";
-import { NativeReceiptBinding, NativeReceiptKey } from "@starter/office-server/ports";
-import type { ObserveNativeReceipt, NativeReceiptObservation } from "@starter/office-server/ports";
+import { Digest, Id } from "@highchat/office-contract";
+import { NativeReceiptBinding, NativeReceiptKey } from "@highchat/office-server/ports";
+import type { ObserveNativeReceipt, NativeReceiptObservation } from "@highchat/office-server/ports";
 import type { OfficeProviderOptions } from "../store.ts";
 import { MetadataStore, canonical, conflict, sqlNow, storeEffect } from "../store.ts";
 import { Permit, NativeId } from "../schemas.ts";

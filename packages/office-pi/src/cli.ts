@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import { InspectQuery, ExportOptions, decodeWireSync } from "@starter/office-contract";
-import type { InspectQuery as Query, ExportOptions as Export } from "@starter/office-contract";
+import { InspectQuery, ExportOptions, decodeWireSync } from "@highchat/office-contract";
+import type { InspectQuery as Query, ExportOptions as Export } from "@highchat/office-contract";
 
 export type UniverAction =
   | { kind: "import" | "status" | "ready" | "reopen" }
@@ -8,6 +8,8 @@ export type UniverAction =
   | { kind: "inspect"; query: Query; cursor: string | null }
   | { kind: "export"; options: Export }
   | { kind: "operation"; id: string }
+  | { kind: "worktree-create" }
+  | { kind: "worktree-list"; cursor: string | null }
   | { kind: "help"; text: string };
 
 /** Application CLI over the shared server. argv is never passed to a shell or a local-file CLI. */
@@ -86,6 +88,18 @@ export async function parseUniverCommand(argv: readonly string[]): Promise<Unive
   const worktree = program
     .command("worktree")
     .description("Working draft lifecycle; never merge or approve");
+  worktree
+    .command("create")
+    .description("Explicitly create a working draft from current Main")
+    .action(() => {
+      action = { kind: "worktree-create" };
+    });
+  worktree
+    .command("list")
+    .option("--cursor <cursor>")
+    .action((options: { cursor?: string }) => {
+      action = { kind: "worktree-list", cursor: options.cursor ?? null };
+    });
   for (const kind of ["ready", "reopen"] as const)
     worktree.command(kind).action(() => {
       action = { kind };

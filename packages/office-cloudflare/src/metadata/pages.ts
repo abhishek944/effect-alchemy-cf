@@ -1,4 +1,4 @@
-import { OfficeLimited, safeFailure } from "@starter/office-contract";
+import { OfficeLimited, safeFailure } from "@highchat/office-contract";
 /** Leave room below Core's 12 KiB public page budget for projection and cursor framing. */
 export const discoveryPageBytes = 8 * 1024;
 export function requirePageProgress(fetched: number, emitted: number): void {

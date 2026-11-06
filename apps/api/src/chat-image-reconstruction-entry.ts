@@ -1,8 +1,4 @@
 import { UserEntry, type Storage } from "@earendil-works/pi-durable";
-import {
-  MAX_ATTACHMENTS_PER_MESSAGE,
-  MAX_MESSAGE_ATTACHMENT_BYTES,
-} from "./chat-attachment-schema.ts";
 import { matchingCompactReferenceInput } from "./chat-reference-integrity.ts";
 import { digestCompactImageInput } from "./chat-image-response-digest.ts";
 import type { ImageAcceptedBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
@@ -35,10 +31,7 @@ function requireCandidate(
   if (
     candidate.ownerId !== access.ownerId ||
     candidate.chatId !== access.chatId ||
-    candidate.conversationId !== String(access.conversationId) ||
-    candidate.originals.length > MAX_ATTACHMENTS_PER_MESSAGE ||
-    candidate.originals.reduce((total, file) => total + file.byteSize, 0) >
-      MAX_MESSAGE_ATTACHMENT_BYTES
+    candidate.conversationId !== String(access.conversationId)
   )
     throw new ImageInputError("corrupt");
 }

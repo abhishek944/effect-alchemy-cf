@@ -1,4 +1,4 @@
-import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@starter/office-contract";
+import { freezeChatReferenceInputs, freezeOfficeSendTarget } from "@highchat/office-contract";
 import type { ReferenceObservation, ReferenceSource, ReferenceValue } from "./reference-types";
 
 const column = (value: number): string => {

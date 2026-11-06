@@ -4,8 +4,8 @@ import {
   decodeNativeFrame,
   encodeNativeFrame,
   type NativeFrameKind,
-} from "@starter/office-contract/native-wire";
-import type { ArtifactRef } from "@starter/office-contract";
+} from "@highchat/office-contract/native-wire";
+import type { ArtifactRef } from "@highchat/office-contract";
 import type { OfficeDependencies, OwnerScope } from "../ports/index.ts";
 import { nativeCall, nativeFailure, officeFailure } from "./failure.ts";
 import { sha256 } from "./operations.ts";
@@ -20,9 +20,8 @@ export const byteStream = (bytes: Uint8Array): ReadableStream<Uint8Array> =>
 export const collectBytes = Effect.fn("Office.collectBytes")(function* (
   stream: ReadableStream<Uint8Array>,
   expected: number,
-  maximum: number,
 ) {
-  if (!Number.isSafeInteger(expected) || expected < 0 || expected > maximum)
+  if (!Number.isSafeInteger(expected) || expected < 0)
     return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED"));
   return yield* Effect.tryPromise({
     try: async (signal) => {
@@ -40,7 +39,7 @@ export const collectBytes = Effect.fn("Office.collectBytes")(function* (
           signal.throwIfAborted();
           if (part.done) break;
           size += part.value.byteLength;
-          if (size > expected || size > maximum) throw officeFailure("LIMIT_EXCEEDED");
+          if (size > expected) throw officeFailure("LIMIT_EXCEEDED");
           chunks.push(part.value);
         }
       } finally {
@@ -64,9 +63,7 @@ export const readArtifact = Effect.fn("Office.readArtifact")(function* (
   deps: OfficeDependencies,
   owner: OwnerScope,
   ref: ArtifactRef,
-  maximum: number,
 ) {
-  if (ref.bytes > maximum) return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED"));
   const stored = yield* deps.bytes.get(owner, ref.id);
   if (stored === null) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
   if (
@@ -78,7 +75,7 @@ export const readArtifact = Effect.fn("Office.readArtifact")(function* (
     yield* nativeCall(() => stored.body.cancel());
     return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
   }
-  const bytes = yield* collectBytes(stored.body, ref.bytes, maximum);
+  const bytes = yield* collectBytes(stored.body, ref.bytes);
   if (sha256(bytes) !== ref.digest) return yield* Effect.fail(officeFailure("CONTENT_REQUIRED"));
   return bytes;
 });
@@ -88,13 +85,11 @@ export const stageNativeArtifact = Effect.fn("Office.stageNativeArtifact")(funct
   kind: ArtifactRef["kind"],
   frameKind: NativeFrameKind,
   value: unknown,
-  maximum = deps.policy.limits.nativeBytes,
 ) {
   const bytes = yield* Effect.try({
     try: () => encodeNativeFrame(frameKind, value),
     catch: () => officeFailure("LIMIT_EXCEEDED"),
   });
-  if (bytes.byteLength > maximum) return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED"));
   return yield* deps.bytes.put(owner, {
     id: randomUUID(),
     kind,
@@ -110,7 +105,7 @@ export const loadNativeArtifact = Effect.fn("Office.loadNativeArtifact")(functio
   ref: ArtifactRef,
   kind: NativeFrameKind,
 ) {
-  const bytes = yield* readArtifact(deps, owner, ref, deps.policy.limits.nativeBytes);
+  const bytes = yield* readArtifact(deps, owner, ref);
   return yield* Effect.try({
     try: () => decodeNativeFrame(bytes, kind).payload,
     catch: () => officeFailure("CONTENT_REQUIRED"),

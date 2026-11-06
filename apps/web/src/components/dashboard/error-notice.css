@@ -67,14 +67,6 @@
 [data-dashboard] [data-cx="sidebar-navigation"] > [data-cx="error-notice"] {
   margin: 12px 0;
 }
-[data-dashboard] [data-cx="billing-error-host"] {
-  padding: 16px 22px;
-}
 [data-dashboard] [data-cx="account-error-host"] {
   margin: 6px 4px 2px;
-}
-@media (max-width: 760px) {
-  [data-dashboard] [data-cx="billing-error-host"] {
-    padding-inline: 16px;
-  }
 }

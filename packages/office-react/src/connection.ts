@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { View, type OfficeSheetSelection } from "@starter/office-contract";
+import { View, type OfficeSheetSelection } from "@highchat/office-contract";
 import {
   FrameInit,
   HOST_MESSAGES,

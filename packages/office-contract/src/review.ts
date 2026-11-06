@@ -17,14 +17,14 @@ export const Change = Schema.Struct({
   entityType: Label,
   kind: Schema.Literals(["insert", "delete", "update"]),
   moved: Schema.Boolean,
-  path: Schema.Array(Label).check(Schema.isMaxLength(32)),
+  path: Schema.Array(Label),
   leaves: Schema.Array(
     Schema.Struct({
-      path: Schema.Array(Label).check(Schema.isMaxLength(32)),
+      path: Schema.Array(Label),
       before: LeafValue,
       after: LeafValue,
     }),
-  ).check(Schema.isMaxLength(100)),
+  ),
 });
 export const ReviewPage = Schema.Struct({
   reviewId: Id,
@@ -36,7 +36,7 @@ export const ReviewPage = Schema.Struct({
   result: Schema.NullOr(View),
   fidelity: Schema.Literals(["history", "snapshot"]),
   readiness: Schema.Literals(["ready", "degraded"]),
-  diagnostics: Schema.Array(Label).check(Schema.isMaxLength(32)),
+  diagnostics: Schema.Array(Label),
   totalChanges: Count,
   changes: Schema.Struct({
     items: Schema.Array(Change).check(Schema.isMaxLength(100)),

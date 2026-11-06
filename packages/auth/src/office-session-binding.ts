@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { Clock, Effect, Schema } from "effect";
 import { Auth } from "./auth.ts";
 import {

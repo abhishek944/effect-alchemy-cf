@@ -5,13 +5,13 @@ import {
   decodeWireSync,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import {
   HostNativeAccess,
   HostNativeHandles,
   HostPolicy,
-} from "@starter/office-server/native-remote";
-import type { NativeAccess, NativeTarget, OfficeDependencies } from "@starter/office-server/ports";
+} from "@highchat/office-server/native-remote";
+import type { NativeAccess, NativeTarget, OfficeDependencies } from "@highchat/office-server/ports";
 import type { OfficeControlSession, OfficeRemoteMethod } from "./native-channel.ts";
 import type { OfficeBinarySession, OfficeBinaryInput } from "./native-transfer-types.ts";
 import { createNativeCoreAdapter } from "./native-core-adapter.ts";

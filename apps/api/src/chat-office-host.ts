@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import { officeStagingFailure, type OfficePiHost } from "@starter/office-pi";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import { officeStagingFailure, type OfficePiHost } from "@highchat/office-pi";
 import { officeStageObserver } from "./chat-office-stage-observation.ts";
 import type { AcceptedInputAccess } from "./chat-accepted-input.ts";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";
@@ -31,6 +31,7 @@ export function createOfficePiHost(
         throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
       const observeStaged = officeStageObserver(resolution, broker, proof.lease, transport.proof);
       return {
+        source: transport.source,
         ...(original === undefined
           ? {}
           : {

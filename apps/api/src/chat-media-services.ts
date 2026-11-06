@@ -1,5 +1,5 @@
 import type * as cf from "@cloudflare/workers-types";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { type Context, Schema } from "effect";
 import type { ChatNamespaces } from "./chat-bindings.ts";
 import { SpeechClaimResult } from "./chat-catalog-speech.ts";

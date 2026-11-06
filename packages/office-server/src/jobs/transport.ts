@@ -1,10 +1,9 @@
-import { decodeWireSync, OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { decodeWireSync, OfficeInvalid, safeFailure } from "@highchat/office-contract";
 import type { IsolatedJob } from "../ports/jobs.ts";
 import { IsolatedJobSchema } from "./schemas.ts";
 import { digestBytes } from "./frames.ts";
 
 const magic = new Uint8Array([79, 74, 79, 66]);
-export const JOB_TRANSPORT_MAX = 34 * 1024 * 1024;
 export type JobRequest = {
   readonly job: IsolatedJob;
   readonly input: Uint8Array;
@@ -16,9 +15,9 @@ export function encodeJobRequest(request: JobRequest): Uint8Array {
     JSON.stringify(decodeWireSync(IsolatedJobSchema)(request.job)),
   );
   if (
-    header.byteLength > 16 * 1024 ||
-    request.input.byteLength > 32 * 1024 * 1024 ||
-    request.code.byteLength > 32 * 1024
+    header.byteLength >= 0x100000000 ||
+    request.input.byteLength >= 0x100000000 ||
+    request.code.byteLength >= 0x100000000
   )
     throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
   const bytes = new Uint8Array(
@@ -35,22 +34,13 @@ export function encodeJobRequest(request: JobRequest): Uint8Array {
   return bytes;
 }
 export function decodeJobRequest(bytes: Uint8Array): JobRequest {
-  if (
-    bytes.byteLength < 16 ||
-    bytes.byteLength > JOB_TRANSPORT_MAX ||
-    !magic.every((byte, index) => bytes[index] === byte)
-  )
+  if (bytes.byteLength < 16 || !magic.every((byte, index) => bytes[index] === byte))
     throw new OfficeInvalid(safeFailure("INVALID_INPUT"));
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const header = view.getUint32(4),
     input = view.getUint32(8),
     code = view.getUint32(12);
-  if (
-    header > 16 * 1024 ||
-    input > 32 * 1024 * 1024 ||
-    code > 32 * 1024 ||
-    16 + header + input + code !== bytes.byteLength
-  )
+  if (16 + header + input + code !== bytes.byteLength)
     throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
   const job = decodeWireSync(IsolatedJobSchema)(
     JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(16, 16 + header))),

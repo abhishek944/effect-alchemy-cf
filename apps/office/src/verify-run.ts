@@ -4,7 +4,7 @@ import {
   DockerExecutorError,
   type DockerExecutor,
   type DockerExecutionResult,
-} from "@starter/office-server/executor";
+} from "@highchat/office-server/executor";
 
 function failure(error: unknown) {
   return error instanceof DockerExecutorError

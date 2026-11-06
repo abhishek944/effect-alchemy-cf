@@ -8,23 +8,30 @@ import {
   nativeValueDigest,
   validateNativeValueRef,
   type DocReadRequest,
-  type DocReadBudget,
   type NativePartRequest,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-server/native-remote";
 import type { NativeStorage, NativeReadAccess, NativeScope } from "./native/index.ts";
 
 type Guard = () => Promise<void>;
+function valueRef(input: unknown, kind: "snapshot" | "changeset") {
+  let value;
+  try {
+    value = validateNativeValueRef(input);
+  } catch {
+    throw docReadError("CONTENT_REQUIRED");
+  }
+  if (value.kind !== kind) throw docReadError("CONTENT_REQUIRED");
+  return value;
+}
 /** Ref metadata only; no native document decoder, SQL or writer capability escapes. */
 export async function openDocReadData(
   native: Pick<NativeStorage, "readInvocation" | "readReferences">,
   scope: NativeScope,
   access: NativeReadAccess,
   ceiling: number,
-  { maxValueBytes, maxHistoryRevisions }: DocReadBudget,
   check: Guard,
 ) {
   const acquired: { dispose(): Promise<void> }[] = [];
-  const seen = new Set<number>();
   let disposed = false;
   const close = async () => {
     disposed = true;
@@ -63,17 +70,6 @@ export async function openDocReadData(
       if (parsed.unitID !== scope.unitID) throw docReadError("CONTENT_REQUIRED");
       return parsed;
     };
-    const valueRef = (input: unknown, kind: "snapshot" | "changeset") => {
-      let value;
-      try {
-        value = validateNativeValueRef(input);
-      } catch {
-        throw docReadError("CONTENT_REQUIRED");
-      }
-      if (value.kind !== kind) throw docReadError("CONTENT_REQUIRED");
-      if (value.bytes > maxValueBytes) throw docReadError("LIMIT_EXCEEDED");
-      return value;
-    };
     const snapshot = async (revision: number, guard: Guard) => {
       const raw = await io(guard, () => refs.reads.snapshot(revision));
       if (raw === null) return null;
@@ -91,15 +87,7 @@ export async function openDocReadData(
     };
     const admitHistory = (after: number, to: number) => {
       if (after > to || to > ceiling) throw docReadError("FORBIDDEN");
-      if (to - after > maxHistoryRevisions) throw docReadError("LIMIT_EXCEEDED");
       const count = Math.min(to - after, DOC_READ_LIMITS.historyPage);
-      const revisions = Array.from({ length: count }, (_, index) => after + index + 1);
-      if (
-        seen.size + revisions.filter((revision) => !seen.has(revision)).length >
-        maxHistoryRevisions
-      )
-        throw docReadError("LIMIT_EXCEEDED");
-      revisions.forEach((revision) => seen.add(revision));
       return count;
     };
     const history = async (after: number, to: number, guard: Guard) => {
@@ -135,7 +123,7 @@ export async function openDocReadData(
           rows: await history(request.after, request.to, guard),
         });
       },
-      part: async (request: NativePartRequest, guard: Guard, admit: (bytes: number) => void) => {
+      part: async (request: NativePartRequest, guard: Guard) => {
         const origin = request.origin;
         if (
           (origin.kind !== "snapshot" && origin.kind !== "changeset") ||
@@ -159,7 +147,6 @@ export async function openDocReadData(
         const piece = value.parts[request.part];
         if (digest !== request.valueDigest || !piece) throw docReadError("FORBIDDEN");
         if (piece.bytes > DOC_READ_LIMITS.pieceBytes) throw docReadError("LIMIT_EXCEEDED");
-        admit(piece.bytes);
         const bytes = await io(guard, () => refs.loadPiece(origin, piece));
         if (bytes.byteLength !== piece.bytes) throw docReadError("CONTENT_REQUIRED");
         return bytes;

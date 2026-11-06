@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type {
   NativePieceRef,
   NativeValueRef,
@@ -27,10 +27,7 @@ export const Piece = Schema.Struct({
 export const Value = Schema.Struct({
   codec: Schema.Literal(NATIVE_WIRE_CODEC),
   kind: Schema.Literals(["snapshot", "block", "changeset"]),
-  bytes: Natural.check(
-    Schema.isGreaterThanOrEqualTo(1),
-    Schema.isLessThanOrEqualTo(nativeLimits.aggregateBytes),
-  ),
+  bytes: Natural.check(Schema.isGreaterThanOrEqualTo(1)),
   parts: Schema.Array(Piece),
 });
 export const Snapshot = Schema.Struct({
@@ -56,7 +53,7 @@ export function readValue(input: unknown): NativeValueRef {
   const object = objectFields(input, ["codec", "kind", "bytes", "parts"]);
   if (object.codec !== NATIVE_WIRE_CODEC)
     throw new NativeStorageError("VERSION", "Incompatible native value codec");
-  const parts = boundedArray(object.parts, nativeLimits.parts).map(readPiece);
+  const parts = boundedArray(object.parts).map(readPiece);
   const value = parseMetadata(Value, {
     codec: object.codec,
     kind: object.kind,
@@ -75,13 +72,9 @@ export function readValue(input: unknown): NativeValueRef {
 export function readSnapshotRefs(input: unknown): NativeSnapshotRefs {
   const object = objectFields(input, ["unitID", "type", "revision", "snapshot", "blocks"]);
   const snapshot = readValue(object.snapshot);
-  let bytes = snapshot.bytes;
-  const blocks = boundedArray(object.blocks, nativeLimits.blocks).map((inputBlock) => {
+  const blocks = boundedArray(object.blocks).map((inputBlock) => {
     const block = objectFields(inputBlock, ["blockID", "value"]);
     const value = readValue(block.value);
-    bytes += value.bytes;
-    if (bytes > nativeLimits.aggregateBytes)
-      throw new NativeStorageError("LIMIT", "Native aggregate exceeds its limit");
     return { blockID: parseMetadata(NativeName, block.blockID), value };
   });
   return parseMetadata(Snapshot, {

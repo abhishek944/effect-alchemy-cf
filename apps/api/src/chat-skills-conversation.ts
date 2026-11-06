@@ -6,11 +6,11 @@
  * authenticated internal endpoint dispatch. No browser or model argument can
  * choose the owner scope.
  */
-import type { Target } from "@starter/office-contract";
+import type { Target } from "@highchat/office-contract";
 import type { Registry, Storage } from "@earendil-works/pi-durable";
 import { Harness, createRegistry } from "@earendil-works/pi-durable";
 import { createModels } from "@earendil-works/pi-ai/models";
-import { makeOfficeExtension, type OfficePiHost } from "@starter/office-pi";
+import { makeOfficeExtension, type OfficePiHost } from "@highchat/office-pi";
 import type { MutableModels } from "@earendil-works/pi-ai/models";
 import type { PiHarnessFactory } from "agents/harness/pi";
 import type { ChatAccounting } from "./chat-accounting.ts";

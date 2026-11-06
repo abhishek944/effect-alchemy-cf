@@ -5,15 +5,14 @@ import { invalidBytes, streamFailure } from "./native-stream-failure.ts";
 export function watchBytes(
   source: ReadableStream<Uint8Array>,
   length: number,
-  maximum: number,
+  maximum: number | null,
   expected: string | null,
 ) {
   if (
     !Number.isSafeInteger(length) ||
-    !Number.isSafeInteger(maximum) ||
-    maximum < 0 ||
+    (maximum !== null && (!Number.isSafeInteger(maximum) || maximum < 0)) ||
     length < 0 ||
-    length > maximum
+    (maximum !== null && length > maximum)
   )
     throw invalidBytes();
   const reader = source.getReader(),
@@ -99,8 +98,7 @@ export function watchBytes(
               controller.close();
             } else {
               if (!(item.value instanceof Uint8Array)) throw invalidBytes();
-              if (item.value.byteLength > length - bytes || item.value.byteLength > maximum - bytes)
-                throw invalidBytes();
+              if (item.value.byteLength > length - bytes) throw invalidBytes();
               const chunk = item.value.slice();
               bytes += chunk.byteLength;
               hash.update(chunk);

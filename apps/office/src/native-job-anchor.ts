@@ -1,4 +1,4 @@
-import { diagnosticMetadata, reportEvent, reportFailure } from "@starter/diagnostics";
+import { diagnosticMetadata, reportEvent, reportFailure } from "@highchat/diagnostics";
 
 /** Fixed PID1 idle role for a FRESH no-egress job box, never the document host.
  * Supervisor still owns destroy and every physical IO join. This role has no job IDs;
@@ -19,8 +19,7 @@ try {
   const parsed = Number(raw);
   if (Number.isSafeInteger(parsed)) deadline = parsed;
   const remaining = parsed - Date.now();
-  if (deadline === undefined || remaining <= 0 || remaining > 120_000)
-    throw new Error("Invalid original job deadline");
+  if (deadline === undefined || remaining <= 0) throw new Error("Invalid original job deadline");
   reportEvent({ ...context, phase: "armed", deadlineAt: deadline });
   const expiry = setTimeout(() => {
     reportFailure(undefined, {

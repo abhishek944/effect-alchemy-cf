@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { Id, OfficeSourceLink, OfficeSourcePage, decodeWireSync } from "@starter/office-contract";
-import type { OwnerScope, Store } from "@starter/office-server/ports";
+import { Id, OfficeSourceLink, OfficeSourcePage, decodeWireSync } from "@highchat/office-contract";
+import type { OwnerScope, Store } from "@highchat/office-server/ports";
 import type { OfficeProviderOptions } from "./store.ts";
 import { MetadataStore, canonical, invalid, storeEffect } from "./store.ts";
 import { DocumentRow, OperationRow } from "./schemas.ts";

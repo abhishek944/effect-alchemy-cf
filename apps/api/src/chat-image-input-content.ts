@@ -5,10 +5,10 @@ import {
   officeSendTargetIdentity,
   type OfficeSendTarget,
   type ChatReferenceInputs,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { ROOT_CONVERSATION_ID, type UserInput } from "@earendil-works/pi-durable";
 import { boundOwner } from "./chat-account-preparation.ts";
-import { AttachmentReferences, MAX_MESSAGE_ATTACHMENT_BYTES } from "./chat-attachment-schema.ts";
+import { AttachmentReferences } from "./chat-attachment-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { responseValue } from "./chat-image-response-codec.ts";
 import {
@@ -61,7 +61,6 @@ export function requireImageInputRequest(input: ImageInputRequest): void {
   requireReferenceCaption(input.text, input.referenceInputs ?? []);
   if (
     input.text !== input.text.trim() ||
-    input.text.length > 16000 ||
     (input.text.length === 0 && input.sources.length === 0) ||
     input.sources.some((source) => source.source !== "upload" && source.source !== "saved")
   )
@@ -103,8 +102,6 @@ export function compactImageInput(
     AttachmentReferences,
     originals.map((file) => file.fileId),
   );
-  if (originals.reduce((total, file) => total + file.byteSize, 0) > MAX_MESSAGE_ATTACHMENT_BYTES)
-    throw new ImageInputError("invalid_input");
   requireReferenceCaption(text, referenceInputs ?? []);
   requireReferenceOriginals(referenceInputs ?? [], originals);
   const blocks: TextContent[] = [{ type: "text", text }];

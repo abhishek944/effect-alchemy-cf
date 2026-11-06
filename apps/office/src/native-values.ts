@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ISnapshot, ISheetBlock } from "@univerjs/protocol";
-import { decodeWireSync, OfficeForbidden, safeFailure } from "@starter/office-contract";
+import { decodeWireSync, OfficeForbidden, safeFailure } from "@highchat/office-contract";
 import {
   NativeSnapshot,
   HostNativePieces,
@@ -11,25 +11,23 @@ import {
   type HostValueHeader,
   type HostNativeProducer,
   type NativeProducer,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-server/native-remote";
 import {
   decodeSnapshot,
   decodeBlock,
   requireNativeProducer,
   type SnapshotIdentity,
-} from "@starter/office-server/native-codec";
+} from "@highchat/office-server/native-codec";
 import { readNativeHistory } from "./native-history.ts";
 import type { NativeSession } from "./native-client.ts";
 import { readBytes, invalidBytes, nativeId } from "./native-stream-io.ts";
 
 /** Values remain bound to the ORIGINAL handle/access; no fake read tag or arbitrary key loader. */
 export class NativeValues {
-  readonly maximum: number;
   private readonly blocks = new Map<string, { origin: PublishedOrigin; value: NativeValue }>();
   readonly session: NativeSession;
   constructor(session: NativeSession) {
     this.session = session;
-    this.maximum = Math.min(session.policy.limits.nativeBytes, 128 * 1024 * 1024);
   }
   private origin(origin: PublishedOrigin): void {
     const s = this.session;
@@ -52,7 +50,6 @@ export class NativeValues {
     return this.session.task(async () => {
       this.origin(source);
       const ref = validateNativeValueRef(structuredClone(input));
-      if (ref.bytes > this.maximum || ref.parts.length > 32) throw invalidBytes();
       const digest = await nativeValueDigest(ref),
         bytes = new Uint8Array(ref.bytes);
       let offset = 0;
@@ -112,7 +109,7 @@ export class NativeValues {
   ): Promise<NativeValue> {
     return this.session.task(async () => {
       this.session.write();
-      if (bytes.byteLength < 1 || bytes.byteLength > this.maximum) throw invalidBytes();
+      if (bytes.byteLength < 1) throw invalidBytes();
       const parts: NativeValue["parts"][number][] = [];
       for (let offset = 0; offset < bytes.byteLength; offset += 4 * 1024 * 1024) {
         const part = bytes.slice(offset, offset + 4 * 1024 * 1024);
@@ -157,12 +154,7 @@ export class NativeValues {
     return this.session.task(async () => {
       const ref = decodeWireSync(NativeSnapshot)(structuredClone(input));
       this.session.check(undefined, ref.unitID);
-      if (
-        ref.snapshot.kind !== "snapshot" ||
-        ref.blocks.some((b) => b.value.kind !== "block") ||
-        ref.blocks.length > Math.min(4096, this.session.policy.limits.blockCount) ||
-        ref.snapshot.bytes + ref.blocks.reduce((n, b) => n + b.value.bytes, 0) > this.maximum
-      )
+      if (ref.snapshot.kind !== "snapshot" || ref.blocks.some((b) => b.value.kind !== "block"))
         throw invalidBytes();
       const snapshot = decodeSnapshot(await this.load(origin, ref.snapshot), {
         unitID: ref.unitID,
@@ -181,8 +173,6 @@ export class NativeValues {
           previous &&
           (await nativeValueDigest(previous.value)) !== (await nativeValueDigest(block.value))
         )
-          throw invalidBytes();
-        if (!previous && this.blocks.size >= Math.min(4096, this.session.policy.limits.blockCount))
           throw invalidBytes();
         if (!previous) this.blocks.set(block.blockID, { origin, value: block.value });
       }

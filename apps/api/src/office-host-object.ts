@@ -1,16 +1,16 @@
-import { diagnosticMetadata, withCause } from "@starter/diagnostics";
-import { Auth } from "@starter/auth";
+import { diagnosticMetadata, withCause } from "@highchat/diagnostics";
+import { Auth } from "@highchat/auth";
 import type { RuntimeContext } from "alchemy";
-import { AuthLive } from "@starter/auth/cloudflare";
-import { OfficeSessionEpochs, type OfficeSessionBinding } from "@starter/auth/office-session";
+import { AuthLive } from "@highchat/auth/cloudflare";
+import { OfficeSessionEpochs, type OfficeSessionBinding } from "@highchat/auth/office-session";
 import {
   OfficeErrors,
   OfficeForbidden,
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { OwnerClaims } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { OwnerClaims } from "@highchat/office-server/ports";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Config, Effect, Schema } from "effect";
 import type { Scope } from "effect";
@@ -18,14 +18,19 @@ import type { HttpServerResponse } from "effect/http/HttpServerResponse";
 import { officeApplicationBinding } from "./office-container.ts";
 import { OfficeHostRole } from "./office-host-role.ts";
 import { officeHostFetch } from "./office-host-fetch.ts";
-import type { DraftTarget, OfficeError, Receipt } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+import type {
+  DraftTarget,
+  OfficeError,
+  OfficeSourceDescriptor,
+  Receipt,
+} from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import { OfficeInvocationRegistry, type OfficeHumanPurpose } from "./office-invocations.ts";
 import { officeDeny, officeReportCause } from "./office-diagnostic-report.ts";
 import { CurrentOfficeSession } from "./office-authentication.ts";
 import type { OfficeTaskSelector } from "./office-task-proof.ts";
 import { officeCaught } from "./office-private-authority.ts";
-import type { ChatReferenceInputs } from "@starter/office-contract";
+import type { ChatReferenceInputs } from "@highchat/office-contract";
 import { validateOfficeReferenceTargets } from "./office-reference-validation.ts";
 
 export const officeHostName = (owner: OwnerScope): string =>
@@ -46,6 +51,7 @@ type OfficeHostShape = {
       readonly invocationId: string;
       readonly deadline: number;
       readonly attachmentReceipt: Receipt | null;
+      readonly source: OfficeSourceDescriptor | null;
       readonly referenceBasis?: DraftTarget;
     },
     OfficeError,
@@ -138,6 +144,7 @@ export default OfficeHost.make(
               invocationId: actor.invocationId,
               deadline,
               attachmentReceipt: task.binding.attachment?.operation.receipt ?? null,
+              source: task.binding.source ?? null,
               ...(task.binding.referenceBasis === undefined
                 ? {}
                 : { referenceBasis: task.binding.referenceBasis }),

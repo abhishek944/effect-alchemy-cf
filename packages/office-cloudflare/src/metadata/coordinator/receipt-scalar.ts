@@ -1,5 +1,5 @@
-import { Revision, decodeWireSync } from "@starter/office-contract";
-import type { NativeWriteRecord, OwnerScope } from "@starter/office-server/ports";
+import { Revision, decodeWireSync } from "@highchat/office-contract";
+import type { NativeWriteRecord, OwnerScope } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { conflict } from "../store.ts";
 import { nativeReceiptAction } from "../native-actions.ts";

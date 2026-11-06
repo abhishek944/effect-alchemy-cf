@@ -1,8 +1,8 @@
 import { officePrivateStream } from "./office-private-stream.ts";
 import { Schema } from "effect";
-import { reportFailure } from "@starter/diagnostics";
-import { decodeWireSync } from "@starter/office-contract";
-import { HostOffice, hostEnvelope } from "@starter/office-server/native-remote";
+import { reportFailure } from "@highchat/diagnostics";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostOffice, hostEnvelope } from "@highchat/office-server/native-remote";
 import { readOfficePrivateJson } from "./office-private-json.ts";
 import { closeOfficeHostEntry } from "./office-host-entry.ts";
 import { officeDenied } from "./office-private-authority.ts";
@@ -18,7 +18,7 @@ export async function forwardOfficeHost(
   incoming: Request,
   path: string,
   body: ReadableStream<Uint8Array> | string | null,
-  maximum: number,
+  maximum: number | null,
   protocol: boolean,
   callId: string | null = null,
 ) {
@@ -70,7 +70,7 @@ export async function forwardOfficeHost(
           response.body,
           entry.frame.work.signal,
           entry.frame.deadline,
-          16 * 1024,
+          null,
         ),
       );
       if (

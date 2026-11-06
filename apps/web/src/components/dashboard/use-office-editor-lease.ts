@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { Schema } from "effect";
-import { View } from "@starter/office-contract";
-import type { OfficeEditorHandle, OfficeRuntime, OfficeSave } from "@starter/office-react";
+import { View } from "@highchat/office-contract";
+import type { OfficeEditorHandle, OfficeRuntime, OfficeSave } from "@highchat/office-react";
 import { drainOffice, type OpenOffice } from "@/lib/office-runtime";
 
 const sameView = Schema.toEquivalence(View);

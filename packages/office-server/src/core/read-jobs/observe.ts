@@ -6,7 +6,7 @@ import { verifyOperation } from "../claims.ts";
 import { officeFailure } from "../failure.ts";
 import { storeJobState } from "../job-state.ts";
 import { operationCaller, operationTarget } from "../operation-caller.ts";
-import { boundedMetadataDigest, terminalReceipt } from "../operations.ts";
+import { metadataDigestEffect, terminalReceipt } from "../operations.ts";
 import { requireIntent } from "../operation-read.ts";
 import { finishReadOutput } from "./publish.ts";
 
@@ -50,10 +50,7 @@ const originalJob = Effect.fn("Office.readJobs.originalJob")(function* (
     job.kind === "render"
       ? { kind: "render", selection: job.selection }
       : { kind: "export", options: job.options };
-  if (
-    (yield* boundedMetadataDigest(expected, deps.policy.limits.metadataBytes)) !==
-    (yield* boundedMetadataDigest(actual, deps.policy.limits.metadataBytes))
-  )
+  if ((yield* metadataDigestEffect(expected)) !== (yield* metadataDigestEffect(actual)))
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", record.receipt.operationId));
   return job;
 });
@@ -69,7 +66,7 @@ export const observeReadOutput = Effect.fn("Office.readJobs.observeOutput")(func
   const context = yield* operationCaller(deps, actor, original.receipt.operationId, "receipt");
   const record = context.record;
   if (record === null) return yield* Effect.fail(officeFailure("NOT_FOUND"));
-  yield* requireIntent(deps, record, original.intent);
+  yield* requireIntent(record, original.intent);
   if (terminalReceipt(record.receipt.phase)) return record.receipt;
   const target = yield* operationTarget(deps, record);
   const revalidate = () => verifyOperation(deps, record, target, "recovery-observe");

@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Schema } from "effect";
-import { Kind, decodeWireSync } from "@starter/office-contract";
-import { decodeNativeFrame, encodeNativeFrame } from "@starter/office-contract/native-wire";
-import type { IsolatedJob } from "@starter/office-server/ports";
+import { Kind, decodeWireSync } from "@highchat/office-contract";
+import { decodeNativeFrame, encodeNativeFrame } from "@highchat/office-contract/native-wire";
+import type { IsolatedJob } from "@highchat/office-server/ports";
 import { SnapshotWithBlocksSchema } from "../../../packages/office-server/src/jobs/snapshot-schema.ts";
 import { encodeJobRequest } from "../../../packages/office-server/src/jobs/transport.ts";
 import {

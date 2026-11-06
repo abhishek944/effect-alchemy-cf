@@ -5,11 +5,7 @@ import { generationUserPositions } from "./chat-image-generation-remap.ts";
 import { assertLegacyTextMessages } from "./chat-image-request-legacy.ts";
 import type { LegacyGenerationRequestProof } from "./chat-image-request-types.ts";
 import { imageProofFailure } from "./chat-image-request-values.ts";
-import {
-  measureHydrationContext,
-  assertHydrationTextBudget,
-  assertHydrationTokenBudget,
-} from "./chat-image-hydration-budget.ts";
+import { assertHydrationTokenBudget } from "./chat-image-hydration-budget.ts";
 
 const LEGACY_WORKFLOW =
   "This proven pre-image-era continuation grants no image authority. Continue ordinary conversation " +
@@ -50,8 +46,6 @@ export const prepareLegacyTextGeneration = (input: {
   };
   generationUserPositions(input.original, context);
   assertLegacyTextMessages(context.messages);
-  const size = measureHydrationContext(context);
-  assertHydrationTextBudget(size, input.model);
   assertHydrationTokenBudget(context, input.model);
   input.signal.throwIfAborted();
   return context;

@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Revision } from "@starter/office-contract";
+import { Revision } from "@highchat/office-contract";
 import type { NativeStorage } from "./native/index.ts";
 import { readDocDto, docReadError, waitDocIO } from "./doc-read-io.ts";
 
@@ -11,12 +11,6 @@ const Settings = Schema.Struct({
   origin: Schema.String.check(Schema.isMaxLength(2048)),
   requestId: Name,
   expiresAt: Revision,
-  budget: Schema.Struct({
-    maxCalls: Revision,
-    maxBytes: Revision,
-    maxValueBytes: Revision.check(Schema.isLessThanOrEqualTo(128 * 1024 * 1024)),
-    maxHistoryRevisions: Revision,
-  }),
 });
 /** One original request association. Correlation is not authentication. */
 export function createDocReadLifetime(
@@ -58,12 +52,9 @@ export function createDocReadLifetime(
     throw docReadError("INVALID_INPUT");
   Object.freeze(config.scope);
   Object.freeze(config.access);
-  Object.freeze(config.budget);
   Object.freeze(config);
   const controller = new AbortController();
   let closed = false,
-    calls = 0,
-    bytes = 0,
     cleanupFailure = false;
   let tail: Promise<void> = Promise.resolve();
   let closing: Promise<void> | undefined;
@@ -154,11 +145,6 @@ export function createDocReadLifetime(
       cleanupFailure = true;
       revoke();
     },
-    charge(size: number) {
-      if (!Number.isSafeInteger(size) || size < 0 || size > config.budget.maxBytes - bytes)
-        throw docReadError("LIMIT_EXCEEDED");
-      bytes += size;
-    },
     async attach(close: () => Promise<void>) {
       if (closeNative) throw docReadError("FORBIDDEN");
       closeNative = close;
@@ -174,7 +160,6 @@ export function createDocReadLifetime(
       try {
         if (request.signal.aborted) revoke();
         assertLive(request.signal);
-        if (++calls > config.budget.maxCalls) throw docReadError("LIMIT_EXCEEDED");
       } catch (error) {
         return Promise.reject(error);
       }

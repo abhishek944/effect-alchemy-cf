@@ -1,5 +1,5 @@
-import type { WritePermit, FrozenReview, OwnerScope } from "@starter/office-server/ports";
-import { decodeWireSync } from "@starter/office-contract";
+import type { WritePermit, FrozenReview, OwnerScope } from "@highchat/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
 import type { MetadataStore } from "./store.ts";
 import { canonical, invalid, sqlNow } from "./store.ts";
 import { Permit } from "./schemas.ts";

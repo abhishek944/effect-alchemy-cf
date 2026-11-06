@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Id, Target } from "@starter/office-contract";
+import { Id, Target } from "@highchat/office-contract";
 import { isUuid } from "@/lib/chat-validate-base";
 import type { PreviewView, WorkspacePreviewTab } from "./workspace-preview-model";
 
@@ -16,7 +16,7 @@ const Native = Schema.Struct({
   kind: Schema.Literal("office"),
   target: Target,
   reviewId: Schema.NullOr(Id),
-  attachments: Schema.Array(ChatId).check(Schema.isMaxLength(100)),
+  attachments: Schema.Array(ChatId),
 });
 export const TabDescriptor = Schema.Union([Simple, File, Native]);
 export type TabDescriptor = typeof TabDescriptor.Type;
@@ -30,7 +30,7 @@ export type PaneDescriptor = typeof PaneDescriptor.Type;
 const Layout = Schema.Struct({
   version: Schema.Literal(1),
   chatId: ChatId,
-  tabs: Schema.Array(TabDescriptor).check(Schema.isMinLength(1), Schema.isMaxLength(128)),
+  tabs: Schema.Array(TabDescriptor).check(Schema.isMinLength(1)),
   activeId: TabId,
   panes: Schema.optional(PaneDescriptor),
 });
@@ -40,7 +40,7 @@ const layoutKey = (accountId: string, chatId: string) => `${prefix(accountId)}:c
 const read = (key: string): unknown => {
   try {
     const raw = sessionStorage.getItem(key);
-    return raw === null || raw.length > 131072 ? null : JSON.parse(raw);
+    return raw === null ? null : JSON.parse(raw);
   } catch {
     return null;
   }
@@ -68,8 +68,7 @@ export function readLayout(accountId: string, chatId: string | null): Layout | n
     if (
       value.chatId !== chatId ||
       !value.tabs.some((tab) => tab.id === value.activeId) ||
-      new Set(value.tabs.map((tab) => tab.id)).size !== value.tabs.length ||
-      value.tabs.filter((tab) => tab.kind === "office" || tab.kind === "office-file").length > 8
+      new Set(value.tabs.map((tab) => tab.id)).size !== value.tabs.length
     )
       return null;
     return value;
@@ -126,7 +125,7 @@ export function storePreview(accountId: string, view: PreviewView) {
     Schema.decodeUnknownSync(Layout, { onExcessProperty: "error" })(value);
     write(layoutKey(accountId, view.chatId), value);
   } catch {
-    /* Invalid/oversized descriptors are never storage authority. */
+    /* Invalid descriptors are never storage authority. */
   }
 }
 export function storePanes(accountId: string, chatId: string | null, panes: PaneDescriptor) {

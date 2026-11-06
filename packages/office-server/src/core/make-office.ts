@@ -1,5 +1,5 @@
 import { Effect, Schema, type Scope } from "effect";
-import { OfficeLimits, decodeWire, type OfficeError } from "@starter/office-contract";
+import { OfficeLimits, decodeWire, type OfficeError } from "@highchat/office-contract";
 import type { OfficeDependencies, OfficeService } from "../ports/index.ts";
 import { makeNativeRuntime, type OfficeNativeRuntime } from "./native-runtime.ts";
 import { makeOfficeReads } from "./reads.ts";

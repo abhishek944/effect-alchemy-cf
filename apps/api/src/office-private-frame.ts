@@ -1,4 +1,4 @@
-import { OfficeLimited, OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeLimited, OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import { officeReadable } from "./office-platform.ts";
 
 const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
@@ -6,18 +6,13 @@ const limited = () => new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
 /** Worker-only v1 transport framing. No import of Node channel/SDK implementations into Worker graph. */
 export function officeBinaryPrefix(header: string): Uint8Array {
   const bytes = new TextEncoder().encode(header);
-  if (bytes.byteLength === 0 || bytes.byteLength > 16 * 1024) throw limited();
+  if (bytes.byteLength === 0 || bytes.byteLength >= 0x100000000) throw limited();
   const prefix = new Uint8Array(bytes.byteLength + 4);
   new DataView(prefix.buffer).setUint32(0, bytes.byteLength);
   prefix.set(bytes, 4);
   return prefix;
 }
-export function officeBinaryCursor(
-  body: unknown,
-  signal: AbortSignal,
-  deadline: number,
-  charge: (bytes: number) => void,
-) {
+export function officeBinaryCursor(body: unknown, signal: AbortSignal, deadline: number) {
   const reader = officeReadable(body).getReader();
   const closed = reader.closed.then(
     () => true,
@@ -50,7 +45,6 @@ export function officeBinaryCursor(
     if (!part.done) {
       if (!(part.value instanceof Uint8Array)) throw unavailable();
       if (part.value.byteLength === 0 && ++empty > 1024) throw limited();
-      charge(part.value.byteLength);
       return { done: false, value: part.value };
     }
     return { done: true };
@@ -72,7 +66,7 @@ export function officeBinaryCursor(
     next,
     async header(): Promise<unknown> {
       const length = new DataView((await exact(4)).buffer).getUint32(0);
-      if (length === 0 || length > 16 * 1024) throw limited();
+      if (length === 0) throw limited();
       return JSON.parse(
         new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(await exact(length)),
       );

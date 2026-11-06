@@ -1,8 +1,8 @@
 import { Schema } from "effect";
 import { defineDocFamily, GenerationTask, LiveDoc, ToolTask } from "@earendil-works/pi-durable";
-import { Count, Digest, decodeWireSync, officeImportOptions } from "@starter/office-contract";
-import type { ArtifactRef } from "@starter/office-contract";
-import type { OfficeResolution } from "@starter/office-pi";
+import { Count, Digest, decodeWireSync, officeImportOptions } from "@highchat/office-contract";
+import type { ArtifactRef } from "@highchat/office-contract";
+import type { OfficeResolution } from "@highchat/office-pi";
 import type { OfficeTaskAssociation } from "./chat-office-task-association.ts";
 import { OfficeStageReceipt, OfficeStageReceipts } from "./office-task-proof.ts";
 import { freezeAcceptedInputValue, sameAcceptedInputValue } from "./chat-accepted-input-values.ts";

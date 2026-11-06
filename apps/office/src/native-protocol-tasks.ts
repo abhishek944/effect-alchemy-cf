@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import type { NodeTransportConnection } from "@univerjs-pro/collaboration-transport-node";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import type { OfficeProtocolAuthority } from "@starter/office-server/native-protocol";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import type { OfficeProtocolAuthority } from "@highchat/office-server/native-protocol";
 
 type HttpTask = {
   done: Promise<void>;

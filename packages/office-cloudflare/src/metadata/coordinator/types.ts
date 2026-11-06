@@ -3,7 +3,7 @@ import type {
   Store,
   NativeTarget,
   OwnerScope,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 
 export type DocumentKey = {
   readonly owner: OwnerScope;

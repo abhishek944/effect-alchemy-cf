@@ -5,9 +5,9 @@ import {
   OfficeUnavailable,
   decodeWire,
   safeFailure,
-} from "@starter/office-contract";
-import { HostDocumentRecord, HostViewRecord } from "@starter/office-server/native-remote";
-import type { OfficeDependencies, OwnerScope } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { HostDocumentRecord, HostViewRecord } from "@highchat/office-server/native-remote";
+import type { OfficeDependencies, OwnerScope } from "@highchat/office-server/ports";
 const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
 const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
 const sameOwner = (left: OwnerScope, right: OwnerScope) =>

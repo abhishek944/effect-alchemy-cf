@@ -4,7 +4,7 @@ import {
   invalid,
   record,
   type SheetDimensions,
-  type SheetLoadBudget,
+  sheetLoadJson,
 } from "./sheet-load-budget.ts";
 import { admitCells, admitSheet } from "./sheet-load-geometry.ts";
 
@@ -13,13 +13,11 @@ export function admitSheetHistory(
   history: readonly IChangeset[],
   unitId: string,
   dimensions: Map<string, SheetDimensions>,
-  budget: SheetLoadBudget,
 ): void {
   for (const change of history) {
     if (change.unitID !== unitId || change.type !== UniverType.UNIVER_SHEET) invalid();
-    budget.charge("mutations", change.mutations.length);
     for (const mutation of change.mutations) {
-      const p = budget.json(mutation.data);
+      const p = sheetLoadJson(mutation.data);
       if (p.unitId !== unitId) invalid();
       if (mutation.id === "sheet.mutation.insert-sheet") {
         if (
@@ -40,8 +38,8 @@ export function admitSheetHistory(
         )
           invalid();
         integer(p.index, 0, dimensions.size);
-        if (p.styles !== undefined) budget.charge("styles", Object.keys(record(p.styles)).length);
-        dimensions.set(id, admitSheet(sheet, sheet.rowCount, sheet.columnCount, budget));
+        if (p.styles !== undefined) record(p.styles);
+        dimensions.set(id, admitSheet(sheet, sheet.rowCount, sheet.columnCount));
       } else if (mutation.id === "sheet.mutation.set-range-values") {
         if (
           Object.keys(p).some(
@@ -61,10 +59,8 @@ export function admitSheetHistory(
         if (typeof p.subUnitId !== "string") invalid();
         const size = dimensions.get(p.subUnitId);
         if (!size) invalid();
-        if (p.styleRefMap !== undefined)
-          budget.charge("styles", Object.keys(record(p.styleRefMap)).length);
-        if (p.cellValue !== null)
-          admitCells(p.cellValue, size, budget, undefined, { historyStylePatches: true });
+        if (p.styleRefMap !== undefined) record(p.styleRefMap);
+        if (p.cellValue !== null) admitCells(p.cellValue, size);
       } else if (mutation.id === "sheet.mutation.set-worksheet-name") {
         if (
           Object.keys(p).some(

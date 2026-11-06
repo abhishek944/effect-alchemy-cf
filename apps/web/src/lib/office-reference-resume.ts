@@ -1,4 +1,4 @@
-import type { OfficeEditorHandle } from "@starter/office-react";
+import type { OfficeEditorHandle } from "@highchat/office-react";
 
 /** Release only an acknowledged temporary hold; report any uncertain resume to its surface. */
 export async function resumeOfficeReference(

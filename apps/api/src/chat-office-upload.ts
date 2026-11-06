@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import { ArtifactRef, decodeWireSync } from "@starter/office-contract";
-import { officeStagingFailure, type OfficeStagingPhase } from "@starter/office-pi";
-import type { BinaryUpload } from "@starter/office-contract/client";
+import { ArtifactRef, decodeWireSync } from "@highchat/office-contract";
+import { officeStagingFailure, type OfficeStagingPhase } from "@highchat/office-pi";
+import type { BinaryUpload } from "@highchat/office-contract/client";
 import { officeBinaryUpload } from "../../office/src/native-transfer-upload.ts";
 import { assertOfficeTaskUpload } from "./office-task-command.ts";
 import { officeDenied } from "./office-private-authority.ts";
@@ -29,7 +29,6 @@ export function officeTaskUpload(
         input.bytes,
         signal,
         lease.notAfter,
-        () => undefined,
       );
       const timer = setTimeout(() => stop.abort(), Math.max(0, lease.notAfter - Date.now()));
       const abort = () => {

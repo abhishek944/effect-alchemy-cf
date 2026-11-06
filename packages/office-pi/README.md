@@ -1,4 +1,4 @@
-# @starter/office-pi
+# @highchat/office-pi
 
 Attachment-oriented Univer CLI for the application's Pi Durable registry.
 It uses the shared native document server; it is not the unchanged local
@@ -9,35 +9,40 @@ It uses the shared native document server; it is not the unchanged local
 `makeOfficeExtension(host, display)` registers only:
 
 - `get_attachments({cursor?})`
-- `univer_cli({attachmentId, command: string[]})`
-- `open_in_panel({attachmentId})`, when a display callback is supplied.
+- `univer_cli({attachmentId, worktreeId?, command: string[]})`
+- `open_in_panel({attachmentId, worktreeId?})`, when a display callback is supplied.
+
+attachmentId alone selects Main; worktreeId selects an explicit working draft.
+Edits require worktreeId. Import and explicit worktree creation return it.
+Both paths open the latest saved target revision and retain backend write fencing.
+See [AI selector contract](../../docs/office-ai-selectors.md).
 
 The legacy `office({request: ...})` tool is no longer registered. One bundled
 Univer Skill supplies workflow and command guidance without version negotiation.
 Commands are real Commander argv, never shell input. No user/owner, chat ID,
-credentials, host path, backend address, Unit ID or worktree ID is accepted by
-the tools. Worksheet/paragraph/slide IDs remain ordinary content selectors from
+credentials, host path, backend address or physical SDK Unit/worktree ID is accepted.
+The public worktreeId is the application Draft.id, resolved to the SDK by Root. Worksheet/paragraph/slide IDs remain ordinary content selectors from
 inspection.
 
 ```text
 get_attachments({})
 get_attachments({cursor: "<nextCursor>"})
 univer_cli({attachmentId, command:["import"]})
-univer_cli({attachmentId, command:["inspect","workbook"]})
-univer_cli({attachmentId, command:["execute","-e","...Facade code..."]})
-open_in_panel({attachmentId})
+univer_cli({attachmentId, worktreeId, command:["inspect","workbook"]})
+univer_cli({attachmentId, worktreeId, command:["execute","-e","...Facade code..."]})
+open_in_panel({attachmentId, worktreeId})
 ```
 
 `get_attachments` proves its own tool call and accepted input, then lists the
-saved library of that same bound owner and chat: ID, name, kind, media type and
+saved library of that same bound owner and chat: attachmentId, name, kind, media type and
 byte size for ready files of every saved kind, with an opaque `nextCursor`. It
 returns no file bytes, excerpts, owner or chat argument, and listing never grants
 read, edit, approval or merge authority. `univer_cli` and `open_in_panel` still
-act only on the explicit `attachmentId` they are given; displayed Send context
+act only on the explicit `attachmentId`/`worktreeId` pair; displayed Send context
 never overrides that target.
 
 Use `command:["--help"]` for the actual command grammar. Supported operations are
-import, status, inspect, execute, export, worktree ready/reopen and operation.
+import, status, inspect, execute, export, worktree create/list/ready/reopen and operation.
 The application owns the CLI command program; existing official Univer headless,
 inspection, execution, Exchange and Collaboration capabilities execute the work.
 No custom local-file database or second collaboration authority is introduced.

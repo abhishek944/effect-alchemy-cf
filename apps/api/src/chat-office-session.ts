@@ -1,8 +1,8 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { AuthenticationUnavailable } from "./model.ts";
-import { Auth } from "@starter/auth";
-import { OfficeSessionEpochs, resolveOfficeSession } from "@starter/auth/office-session";
-import type { OfficeSessionBinding } from "@starter/auth/office-session";
+import { Auth } from "@highchat/auth";
+import { OfficeSessionEpochs, resolveOfficeSession } from "@highchat/auth/office-session";
+import type { OfficeSessionBinding } from "@highchat/auth/office-session";
 import { Config, Context, Effect, Option, Schema } from "effect";
 
 const Id = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
@@ -23,7 +23,7 @@ const header = "x-chat-office-session";
 export class CurrentChatOfficeSession extends Context.Service<
   CurrentChatOfficeSession,
   OfficeSessionBinding | null
->()("starter/CurrentChatOfficeSession") {}
+>()("highchat/CurrentChatOfficeSession") {}
 
 /** Capture dependencies during middleware construction, not in the returned Worker fetch effect. */
 export const makeChatOfficeSessionCapture = Effect.gen(function* () {

@@ -1,0 +1,22 @@
+:where(.public-site) .shader-surface {
+  background: #08090b url("../assets/interstella-desktop.webp") center / cover no-repeat;
+  pointer-events: none;
+}
+:where(.public-site) .shader-live {
+  background: #08090b;
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+:where(.public-site) [data-shader-ready="true"] > .shader-live {
+  opacity: 1;
+}
+@media (width <= 760px) {
+  :where(.public-site) .shader-surface {
+    background-image: url("../assets/interstella-phone.webp");
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.public-site) .shader-live {
+    transition: none;
+  }
+}

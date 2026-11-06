@@ -1,14 +1,14 @@
 import type * as cf from "@cloudflare/workers-types";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Effect, Schema } from "effect";
-import { diagnosticMetadata, withCause } from "@starter/diagnostics";
+import { diagnosticMetadata, withCause } from "@highchat/diagnostics";
 import {
   OfficeErrors,
   OfficeUnavailable,
   safeFailure,
   decodeWireSync,
-} from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import { OFFICE_CHAT_TASK_ORIGIN } from "./chat-office-task-http.ts";
 import { officeDeny, officeReportBranch } from "./office-diagnostic-report.ts";
 import { officeCaught } from "./office-private-authority.ts";
@@ -71,7 +71,7 @@ export const officeTaskProofReader = Effect.gen(function* () {
         }),
       );
       const value = await phase("callback-body", () =>
-        readOfficePrivateJson(response.body, stop.signal, deadline, 32 * 1024),
+        readOfficePrivateJson(response.body, stop.signal, deadline, null),
       );
       if (response.status !== 200) {
         if (response.status === 403 || response.status === 404)

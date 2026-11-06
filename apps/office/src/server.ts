@@ -3,7 +3,7 @@ import {
   makeIsolatedJobs,
   type AuthorizeJobHost,
   type IsolatedJobsOptions,
-} from "@starter/office-server/jobs";
+} from "@highchat/office-server/jobs";
 
 /** Injected Node composition. T22 supplies scoped resources; T11 owns authenticated app startup. */
 export function createOfficeJobHost(

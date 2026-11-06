@@ -17,7 +17,6 @@ export async function validateSnapshotManifest(
   revision(manifest.revision);
   if (
     ![1, 2, 3].includes(manifest.type) ||
-    manifest.blocks.length > nativeLimits.blocks ||
     new Set(manifest.blocks.map((b) => b.blockID)).size !== manifest.blocks.length
   ) {
     throw new NativeStorageError(
@@ -25,13 +24,10 @@ export async function validateSnapshotManifest(
       "Unsupported native type or duplicate/oversized block manifest",
     );
   }
-  let bytes = manifest.snapshot.bytes;
   const values = [manifest.snapshot, ...manifest.blocks.map((block) => block.value)];
   if (
     manifest.snapshot.kind !== "snapshot" ||
-    manifest.blocks.some(
-      (block) => block.value.kind !== "block" || block.value.bytes > nativeLimits.blockBytes + 1024,
-    )
+    manifest.blocks.some((block) => block.value.kind !== "block")
   )
     throw new NativeStorageError("CONTENT", "Native manifest kind/block size mismatch");
   for (const value of values) {
@@ -39,7 +35,6 @@ export async function validateSnapshotManifest(
       !Number.isSafeInteger(value.bytes) ||
       value.bytes < 1 ||
       !value.parts.length ||
-      value.parts.length > nativeLimits.parts ||
       value.parts.some(
         (part, index) => index < value.parts.length - 1 && part.bytes !== nativeLimits.pieceBytes,
       ) ||
@@ -50,10 +45,7 @@ export async function validateSnapshotManifest(
   }
   for (const block of manifest.blocks) {
     boundedID(block.blockID);
-    bytes += block.value.bytes;
   }
-  if (bytes > nativeLimits.aggregateBytes)
-    throw new NativeStorageError("LIMIT", "Native aggregate exceeds byte limit");
   await payloads.verifyPieces(values.flatMap((value) => [...value.parts]));
   await assertSnapshotHeaders(db, manifest);
   metadata(manifest, nativeLimits.manifestBytes);
@@ -80,15 +72,8 @@ export async function stageSnapshotValues(
   if (blocks.length !== supplied.size || [...required].some((id) => !supplied.has(id))) {
     throw new NativeStorageError("CONTENT", "Missing or duplicate native snapshot blocks");
   }
-  if (blocks.length > 32)
-    throw new NativeStorageError(
-      "LIMIT",
-      "SDK facade accepts at most 32 blocks per Worker call; use staged native references",
-    );
   const refs: { blockID: string; value: NativeValueRef }[] = [];
   for (const block of blocks) {
-    if (block.data.byteLength > nativeLimits.blockBytes)
-      throw new NativeStorageError("LIMIT", "Native block exceeds 8 MiB");
     refs.push({ blockID: boundedID(block.id), value: await payloads.stageValue("block", block) });
   }
   return {

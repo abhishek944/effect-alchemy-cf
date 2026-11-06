@@ -1,5 +1,5 @@
-import { Id, decodeWireSync } from "@starter/office-contract";
-import type { OfficeMetadata, NativeWriteRecord } from "@starter/office-server/ports";
+import { Id, decodeWireSync } from "@highchat/office-contract";
+import type { OfficeMetadata, NativeWriteRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "./store.ts";
 import { canonical, conflict, invalid, missing, storeEffect } from "./store.ts";
 import { WriteRow, Permit } from "./schemas.ts";
@@ -110,10 +110,7 @@ export function createNativeWrites(
           [db.owner(owner), id, cursor ?? ""],
         );
         const items: NativeWriteRecord[] = [];
-        let bytes = 0;
         for (const row of rows) {
-          bytes += new TextEncoder().encode(row.record).length;
-          if (bytes > db.limits.responseBytes) break;
           items.push(db.decode(WriteRow, row.record));
         }
         requirePageProgress(rows.length, items.length);

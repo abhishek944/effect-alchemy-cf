@@ -27,7 +27,7 @@
       {
         "patterns": [
           {
-            "group": ["**/apps/*", "@starter/infra"],
+            "group": ["**/apps/*", "@highchat/infra"],
             "message": "Application and infrastructure code must not be imported into reusable packages."
           }
         ]
@@ -63,15 +63,16 @@
                 "group": [
                   "alchemy",
                   "alchemy/*",
-                  "@starter/auth",
-                  "@starter/api",
-                  "@starter/infra",
+                  "@highchat/auth",
+                  "@highchat/api",
+                  "@highchat/infra",
                   "@cloudflare/*",
-                  "@starter/auth/*",
-                  "@starter/api/*",
-                  "@starter/infra/*",
-                  "@starter/integrations",
-                  "@starter/integrations/*",
+                  "@highchat/auth/*",
+                  "@highchat/api/*",
+                  "@highchat/infra/*",
+                  "@highchat/integrations",
+                  "@highchat/integrations/*",
+                  "@highchat/config/stage",
                   "**/packages/integrations/**",
                   "@alchemy.run/*"
                 ],
@@ -89,6 +90,99 @@
         "shadcn/no-unknown-classes": "error"
       },
       "plugins": ["react", "react-perf", "jsx-a11y"]
+    },
+    {
+      "files": [
+        "apps/web/src/components/public/**/*.tsx",
+        "apps/web/src/components/auth-form.tsx",
+        "apps/web/src/components/auth-fields.tsx",
+        "apps/web/src/components/auth-panel.tsx"
+      ],
+      "rules": {
+        "shadcn/no-unknown-classes": [
+          "error",
+          {
+            "message": "Unknown class {{className}}. Public classes must exist in the lazy-loaded public/styles stylesheet graph.",
+            "allow": [
+              "account",
+              "account-intro",
+              "actions",
+              "art",
+              "back",
+              "back-top",
+              "brand",
+              "chapter",
+              "closing",
+              "closing-C",
+              "closing-actions",
+              "closing-footer",
+              "closing-intro",
+              "content",
+              "deck-controls",
+              "description",
+              "details",
+              "direction-B",
+              "eyebrow",
+              "feedback",
+              "field",
+              "fields",
+              "flow-controls",
+              "graphic",
+              "hero",
+              "hint",
+              "intro",
+              "invite",
+              "invite-actions",
+              "invite-title",
+              "landing-closing",
+              "landing-hero",
+              "landing-workflow",
+              "landing-workspace",
+              "link-content",
+              "mobile-B",
+              "number",
+              "orbital-line",
+              "page",
+              "password-field",
+              "password-visibility",
+              "pillar",
+              "pillar-0",
+              "pillar-1",
+              "pillar-2",
+              "pillars",
+              "primary",
+              "public-auth",
+              "public-site",
+              "scroll-note",
+              "secondary",
+              "section",
+              "section-heading",
+              "session-status",
+              "shader",
+              "shader-error",
+              "shader-field",
+              "shader-live",
+              "shader-root",
+              "shader-shade",
+              "shader-surface",
+              "sign-in",
+              "skip",
+              "spinner",
+              "step",
+              "step-index",
+              "story",
+              "success",
+              "support",
+              "switch",
+              "variant-B",
+              "visual",
+              "visual-shade",
+              "words",
+              "workflow-C"
+            ]
+          }
+        ]
+      }
     }
   ]
 }

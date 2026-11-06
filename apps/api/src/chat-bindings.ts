@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
 import * as Cloudflare from "alchemy/Cloudflare";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { Context, Effect, Layer, Schema } from "effect";
 import { ChatUnavailable } from "./chat-model.ts";
 import { chatObservationHeaders, CHAT_OBSERVATION_REQUEST } from "./chat-observation.ts";
@@ -24,7 +24,7 @@ export class ChatNamespaces extends Context.Service<
     /** Configuration presence only; never account entitlement or a paid health probe. */
     readonly imageConfigured: () => boolean;
   }
->()("starter/ChatNamespaces") {}
+>()("highchat/ChatNamespaces") {}
 
 /** Declares the same-script object bindings on the Worker being constructed. */
 export const declareChatObjects = Effect.gen(function* () {

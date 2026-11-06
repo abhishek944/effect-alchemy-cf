@@ -1,10 +1,10 @@
-import { Auth } from "@starter/auth";
+import { Auth } from "@highchat/auth";
 import {
   OfficeSessionEpochs,
   resolveOfficeSession,
   type OfficeSession,
-} from "@starter/auth/office-session";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
+} from "@highchat/auth/office-session";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
 import { RuntimeContext } from "alchemy";
 import { Config, Context, Effect, Layer } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
@@ -14,7 +14,7 @@ import { authUnavailableEffect } from "./auth-failure.ts";
 
 /** Internal request capability; never serialize it or treat its fields as a native grant. */
 export class CurrentOfficeSession extends Context.Service<CurrentOfficeSession, OfficeSession>()(
-  "starter/CurrentOfficeSession",
+  "highchat/CurrentOfficeSession",
 ) {}
 
 type Authenticate = <E, R>(
@@ -28,7 +28,7 @@ type Authenticate = <E, R>(
 export class OfficeAuthentication extends Context.Service<
   OfficeAuthentication,
   { readonly authenticate: Authenticate }
->()("starter/OfficeAuthentication") {
+>()("highchat/OfficeAuthentication") {
   static readonly layer = Layer.effect(
     OfficeAuthentication,
     Effect.gen(function* () {

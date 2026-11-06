@@ -1,6 +1,6 @@
 import { Clock, Effect } from "effect";
-import type { ExportOptions, InspectQuery, RenderSelection } from "@starter/office-contract";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import type { ExportOptions, InspectQuery, RenderSelection } from "@highchat/office-contract";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type {
   Actor,
   IsolatedJob,
@@ -9,15 +9,14 @@ import type {
   OfficeDependencies,
   ViewRecord,
 } from "../../ports/index.ts";
-import { JOB_NATIVE_LIMITS, ownerDigest, snapshotDigest } from "../../jobs/frames.ts";
+import { ownerDigest, snapshotDigest } from "../../jobs/frames.ts";
 import { requireJobIdentity, requireJobRecord } from "../../jobs/identity.ts";
 import { stageNativeArtifact } from "../bytes.ts";
 import { officeFailure } from "../failure.ts";
 import { materializeView } from "../input.ts";
 import type { OfficeNativeRuntime } from "../native-runtime.ts";
-import { boundedMetadataDigest } from "../operations.ts";
+import { metadataDigestEffect } from "../operations.ts";
 import { lookupView } from "../views.ts";
-
 export type ReadSpec =
   | { readonly kind: "inspect"; readonly viewId: string; readonly query: InspectQuery }
   | { readonly kind: "render"; readonly selection: RenderSelection }
@@ -40,14 +39,8 @@ export const freshView = Effect.fn("Office.readJobs.freshView")(function* (
   original: ViewRecord,
 ) {
   const current = yield* lookupView(deps, actor, original.view.id);
-  const before = yield* boundedMetadataDigest(
-    viewIdentity(original),
-    deps.policy.limits.metadataBytes,
-  );
-  const after = yield* boundedMetadataDigest(
-    viewIdentity(current),
-    deps.policy.limits.metadataBytes,
-  );
+  const before = yield* metadataDigestEffect(viewIdentity(original));
+  const after = yield* metadataDigestEffect(viewIdentity(current));
   if (before !== after) return yield* Effect.fail(officeFailure("STALE_BASIS"));
   return current;
 });
@@ -88,8 +81,8 @@ export const existingReadJob = Effect.fn("Office.readJobs.existing")(function* (
     b.generation !== (scope.kind === "draft" ? scope.generation : null)
   )
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", operationId));
-  const expected = yield* boundedMetadataDigest(spec, deps.policy.limits.metadataBytes);
-  const actual = yield* boundedMetadataDigest(specOf(job), deps.policy.limits.metadataBytes);
+  const expected = yield* metadataDigestEffect(spec);
+  const actual = yield* metadataDigestEffect(specOf(job));
   if (actual !== expected)
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", operationId));
   return { saved, job };
@@ -129,14 +122,10 @@ export const prepareReadJob = Effect.fn("Office.readJobs.prepare")(function* (
     imageDigest: deps.policy.imageDigest,
     codec: NATIVE_WIRE_CODEC,
   };
-  const input = yield* stageNativeArtifact(
-    deps,
-    view.owner,
-    "native-input",
-    "job-input",
-    { binding, native },
-    Math.min(deps.policy.limits.nativeBytes, JOB_NATIVE_LIMITS.maxBytes),
-  );
+  const input = yield* stageNativeArtifact(deps, view.owner, "native-input", "job-input", {
+    binding,
+    native,
+  });
   const job: ReadJob = { ...spec, binding, input };
   const now = yield* Clock.currentTimeMillis;
   const queued: JobRecord = {

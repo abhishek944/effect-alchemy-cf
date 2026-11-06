@@ -1,18 +1,12 @@
 import { Schema } from "effect";
-import { Id } from "@starter/office-contract";
-export const OfficePanelRequest = Schema.Union([
-  Schema.Struct({ attachmentId: Id }),
-  Schema.Struct({ referenceId: Id }),
-]);
+import { Id } from "@highchat/office-contract";
+export const OfficePanelRequest = Schema.Struct({
+  attachmentId: Id,
+  worktreeId: Schema.optionalKey(Id),
+});
 export type OfficeToolSource = typeof OfficePanelRequest.Type;
-const Command = Schema.Array(Schema.String.check(Schema.isMaxLength(32_768))).check(
-  Schema.isMinLength(1),
-  Schema.isMaxLength(32),
-);
-export const UniverCliRequest = Schema.Union([
-  Schema.Struct({ attachmentId: Id, command: Command }),
-  Schema.Struct({ referenceId: Id, command: Command }),
-]);
+const Command = Schema.Array(Schema.String).check(Schema.isMinLength(1));
+export const UniverCliRequest = Schema.Struct({ ...OfficePanelRequest.fields, command: Command });
 export type UniverCliRequest = typeof UniverCliRequest.Type;
 /** Discovery page selector only: no owner, chat, kind or file argument is accepted. */
 export const AttachmentListRequest = Schema.Struct({

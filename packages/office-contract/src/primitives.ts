@@ -13,7 +13,7 @@ export const Title = Schema.String.check(
   Schema.isMinLength(1),
   Schema.isMaxLength(120),
 );
-export const Label = Schema.String.check(Schema.isMaxLength(512));
+export const Label = Schema.String;
 export const Cursor = Schema.NullOr(Schema.String.check(Schema.isMaxLength(256)));
 export const Kind = Schema.Literals(["sheet", "doc", "slide"]);
 export type Kind = typeof Kind.Type;
@@ -38,7 +38,7 @@ export const Scalar = Schema.Union([
   Schema.Null,
   Schema.Boolean,
   Schema.Number.check(Schema.isFinite()),
-  Label,
+  Schema.String,
 ]);
 export const OperationParams = Schema.Struct({ operationId: Id });
 export const DocumentParams = Schema.Struct({ documentId: Id });

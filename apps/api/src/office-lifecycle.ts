@@ -4,7 +4,7 @@ import {
   withCause,
   withDiagnostic,
   type FailureContext,
-} from "@starter/diagnostics";
+} from "@highchat/diagnostics";
 
 export const officeObserve = <A>(actual: Promise<A>): Promise<A> => {
   void actual.catch(() => undefined);

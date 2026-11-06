@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type {
   ActorClaims,
   DocumentRecord,
@@ -8,7 +8,7 @@ import type {
   OperationIntent,
 } from "../ports/index.ts";
 import { Intent } from "./record-schemas.ts";
-import { actorIdentity, boundedMetadataDigest, intentIdentity } from "./control-identity.ts";
+import { actorIdentity, metadataDigestEffect, intentIdentity } from "./control-identity.ts";
 import { operationTuple } from "../storage-remote/operation-identity.ts";
 import { officeFailure } from "./failure.ts";
 
@@ -39,9 +39,8 @@ export const prepareOperation = Effect.fn("Office.prepareOperation")(function* (
       (intent.kind === "create" && intent.input.destination !== "new-draft"))
   )
     return yield* Effect.fail(officeFailure("FORBIDDEN", intent.input.operationId));
-  const limit = deps.policy.limits.metadataBytes;
-  const lineageDigest = yield* boundedMetadataDigest(actorIdentity(actor), limit);
-  const intentDigest = yield* boundedMetadataDigest(
+  const lineageDigest = yield* metadataDigestEffect(actorIdentity(actor));
+  const intentDigest = yield* metadataDigestEffect(
     operationTuple(
       intentIdentity(intent),
       document.document.id,
@@ -49,7 +48,6 @@ export const prepareOperation = Effect.fn("Office.prepareOperation")(function* (
       draft?.worktreeId ?? null,
       deps.policy.version,
     ),
-    limit,
   );
   return { intent, lineageDigest, intentDigest } satisfies PreparedOperation;
 });

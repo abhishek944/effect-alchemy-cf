@@ -3,7 +3,7 @@ import type {
   HostWorktreeWrites,
   NativeChange,
   NativeSnapshot,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-server/native-remote";
 import type { OfficeNativeHandle } from "./office-native-handles.ts";
 import { officeDenied, officeNativeContext } from "./office-private-authority.ts";
 

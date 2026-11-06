@@ -32,9 +32,9 @@ same operation UUID. Known accepted originals and later draft additions survive.
 ## Private storage and native history
 
 The existing owner ChatCatalog and private stage-isolated ChatFiles R2 bucket own
-metadata, quota and originals. Owner-catalog object scope is distinct from the
+metadata, accounting and originals. Owner-catalog object scope is distinct from the
 conversation object scope used by native proof; browser/model fields choose neither.
-The 1 GiB retained/reserved quota remains enforced internally without a storage meter.
+There is no owner retained/reserved byte quota or storage meter.
 
 Every new ordinary or Skills recovery attempt freezes its image capability once
 before native admission. A preference/configuration outage freezes image generation
@@ -48,7 +48,7 @@ entry/model slot, task/attempt/cutoff, owner and chat-model proof is required at
 final Models boundary. Only that request receives transient original bytes and
 quoted text; hydrated values never enter checkpoints, memos, history or compaction.
 Saved references resolve authorized immutable file IDs without recalculating or
-comparing content checksums. Ownership, accepted state and bounded file-content
+comparing content checksums. Ownership, accepted state and actual file-content
 validation remain enforced; upload/ingest content identity is unchanged.
 Hook exceptions alone cannot authorize fallback inference. Historical rows are not
 rewritten or backfilled. Proven pre-image ordinary text-only continuations use a
@@ -56,7 +56,8 @@ fixed startup boundary and the same final native checks, without image-generatio
 authority; missing image-era sidecars and unprovable old binary recovery are refused.
 
 Generation uses the actual configured Cloudflare catalog/Gateway route with one
-provider attempt. The host reserves owner output storage before dispatch permission. Each immutable output is stored privately before a
+provider attempt. The host claims one dispatch before contacting the provider;
+there is no preallocated output quota. Each immutable output is stored privately before a
 compact link is returned. Receipts bind the real tool-calling assistant entry and
 native call/output order, not whichever later prose reply is newest.
 
@@ -66,23 +67,29 @@ Closing a preview/viewer releases viewing resources, not durable work or origina
 
 ## Execution limits and failure recovery
 
-Existing uploads remain at 10 MiB / 16 MP per image, 1 MiB per safe-text file and
-five files / 20 MiB per message, including references. These are not a promise that
-every original fits a chat model or a 128 MiB Worker request.
+There are no app original-byte/pixel, file-count, message-byte, caption, quoted-text,
+browser staging/preview or owner/per-call output storage caps. Originals still need
+to fit actual model and runtime boundaries; whole-file validation/hydration can
+fail at the Worker's128MiB runtime memory limit. Compact rows contain metadata,
+not original bodies, and actual SQLite row/string/BLOB limits still apply.
 
 There is no application-side image RAM estimate, shared reservation pool or
-memory-admission gate. Generation and edits use the existing10MiB image-file
-ceiling and a bounded encoded response body, with a120-second package deadline.
-Actual model/context, file-size and storage-quota limits still apply. There is no
+memory-admission gate. Generation and edits omit stricter host byte overrides.
+Installed pi-image-gen0.6.0 enforces20MiB per image,128MiB aggregate references,
+16 references and a catalog envelope ceiling of base64(20MiB) plus1MiB; these
+cannot be raised through host options. Its120-second generation lifetime remains.
+Actual model/context and SDK limits still apply. There is no
 resizing, app queue, fan-out or new image-count cap. Cloudflare runtime memory
 limits still apply: large requests can fail at runtime, including after charging.
 No refund or free-failure promise is made.
 
-Native generation allocates at most the lesser of advertised output,32,768 tokens
-and half the model context, respecting a smaller explicit allowance. Earlier
-Skills and final hydrated-input budgets reserve that same allocation; catalog
-maximum output is not subtracted as though every response requested all of it.
-The separate native compaction path is unchanged.
+Native generation fits output to the selected model's remaining context after
+the final hydrated messages, tools and guidance are prepared, respecting model
+output capacity and any smaller explicit allowance. It uses the existing SDK
+input-token estimate without an app32,768-token ceiling, half-context reserve,
+1.5MiB text-byte ceiling or guessed four-byte/token budget. Provider tokenization
+can differ from the estimate; actual provider context failures remain possible.
+The separate native compaction path and Skills-specific content policy are unchanged.
 
 Cancellation still disposes owned response bodies. The image host waits for real
 provider/body/storage work before finishing durable output intent; this is not

@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import { OwnerClaims } from "../ports/index.ts";
 import type {
   Actor,
@@ -124,11 +124,11 @@ export const operationCaller = Effect.fn("Office.operationCaller")(function* (
       actor.expiresAt <= now
     )
       return yield* Effect.fail(officeFailure("FORBIDDEN", operationId));
-    if (intent !== null && intent !== "receipt") yield* requireIntent(deps, record, intent);
+    if (intent !== null && intent !== "receipt") yield* requireIntent(record, intent);
     yield* verifyOperation(deps, record, yield* operationTarget(deps, record), "recovery-observe");
   } else if (record !== null && claims !== null) {
     if (intent === "receipt") yield* requireReceiptInput(claims, record);
-    else yield* requireExistingIntent(deps, claims, record, intent ?? record.intent);
+    else yield* requireExistingIntent(claims, record, intent ?? record.intent);
     yield* verifyOperation(deps, record, yield* operationTarget(deps, record), "recovery-observe");
   }
   return { claims, record };

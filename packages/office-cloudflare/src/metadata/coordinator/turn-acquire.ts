@@ -1,4 +1,4 @@
-import type { NativeTarget, SerialAdmission } from "@starter/office-server/ports";
+import type { NativeTarget, SerialAdmission } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "../store.ts";
 import { canonical, conflict, sqlNow } from "../store.ts";
 import { requireContext, forbidden } from "./context.ts";

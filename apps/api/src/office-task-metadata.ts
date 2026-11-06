@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficeMetadataCall } from "./office-metadata-dispatch.ts";
 import type { OfficeTaskAcknowledged } from "./office-task-metadata-record.ts";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";

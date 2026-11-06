@@ -1,4 +1,4 @@
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 
 /** One R2 copy/delete attempt; a rejected promise or explicit false both fail. */
 export type FileAttempt = { readonly ok: boolean; readonly cause?: unknown };

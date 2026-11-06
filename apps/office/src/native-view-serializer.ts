@@ -7,7 +7,7 @@ import {
 } from "@univerjs-pro/collaboration-service";
 import { UniverCollabEndpoint } from "@univerjs-pro/collaboration-endpoint";
 import { createNodeTransport } from "@univerjs-pro/collaboration-transport-node";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
 import { createViewSnapshotDatabase } from "./native-view-database.ts";
 
 const routes = new Set([

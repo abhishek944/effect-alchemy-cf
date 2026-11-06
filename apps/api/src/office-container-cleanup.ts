@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
 import type { officeNativeMonitor } from "./office-platform.ts";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 
 /** Keep foreign containers intact, and join monitor plus actual Worker callbacks before returning. */
 export async function officeContainerCleanup(

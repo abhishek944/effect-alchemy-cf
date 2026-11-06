@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ArtifactRef, Count, Digest, Id } from "@starter/office-contract";
+import { ArtifactRef, Count, Digest, Id } from "@highchat/office-contract";
 import { NativeReceiptBinding } from "../ports/index.ts";
 import { HostId, HostEpoch, hostMethod } from "./host-wire.ts";
 import {

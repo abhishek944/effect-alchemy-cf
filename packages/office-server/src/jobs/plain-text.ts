@@ -6,7 +6,7 @@ import {
   type ISnapshotServerService,
 } from "@univerjs-pro/collaboration";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
-import { OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { OfficeInvalid, safeFailure } from "@highchat/office-contract";
 
 const invalid = () => new OfficeInvalid(safeFailure("INVALID_INPUT"));
 const unavailable = async (): Promise<never> => {

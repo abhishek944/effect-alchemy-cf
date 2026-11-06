@@ -1,6 +1,6 @@
 import { Effect, Exit } from "effect";
-import type { ArtifactRef, OfficeError } from "@starter/office-contract";
-import type { OfficeBytes, OfficeMetadata } from "@starter/office-server/ports";
+import type { ArtifactRef, OfficeError } from "@highchat/office-contract";
+import type { OfficeBytes, OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficeMetadataCall, OfficeMetadataResponse } from "./office-metadata-dispatch.ts";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeCaught, officeDenied, officeSame } from "./office-private-authority.ts";

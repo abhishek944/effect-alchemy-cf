@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import { createNativeStorage } from "@starter/office-cloudflare/native";
-import { decodeWireSync } from "@starter/office-contract";
-import { HostUnitRecord } from "@starter/office-server/native-remote";
+import { createNativeStorage } from "@highchat/office-cloudflare/native";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostUnitRecord } from "@highchat/office-server/native-remote";
 import { officeNativeContext, officeDenied } from "./office-private-authority.ts";
 import type { OfficeHostActive, OfficeHostEntry } from "./office-host-state.ts";
 

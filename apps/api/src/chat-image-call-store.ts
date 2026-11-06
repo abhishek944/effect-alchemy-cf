@@ -16,7 +16,6 @@ import { recordImageCall } from "./chat-image-call-record.ts";
 import { ImageCallTable } from "./chat-image-call-table.ts";
 import { imageCallUsage } from "./chat-image-call-usage.ts";
 import {
-  CALL_EVIDENCE_BYTES,
   CallDigest,
   CallIndex,
   CallPositive,
@@ -39,7 +38,7 @@ export class ChatImageCallStore {
   admit(input: ImageCallAdmission): { fresh: boolean } {
     return callBoundary(() => {
       const json = encodeAdmission(input);
-      const valid = callValue(ImageCallAdmission, callParse(json, CALL_EVIDENCE_BYTES));
+      const valid = callValue(ImageCallAdmission, callParse(json, null));
       return this.storage.transactionSync(() => {
         const known = this.read(valid.key);
         if (known !== null) {

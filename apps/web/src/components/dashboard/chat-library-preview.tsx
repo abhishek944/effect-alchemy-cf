@@ -49,7 +49,7 @@ export function ChatLibraryPreview({
     saved.state === "ready" &&
     !original.reading &&
     !original.error &&
-    (saved.kind === "text" || saved.kind === "office" || state === "ready" || state === "withheld");
+    (saved.kind === "text" || saved.kind === "office" || state === "ready");
   const retry = () => {
     setAttempt((value) => value + 1);
     void original.retry();
@@ -82,15 +82,6 @@ export function ChatLibraryPreview({
         ) : saved.kind === "image" ? (
           <>
             <ChatLibraryImage file={saved} active={active} attempt={attempt} onState={onState} />
-            {state === "withheld" && (
-              <button
-                type="button"
-                data-cx="chat-library-preview-retry"
-                onClick={() => setAttempt((value) => value + 1)}
-              >
-                Retry preview
-              </button>
-            )}
           </>
         ) : saved.kind === "text" && textReferenceReveal ? (
           <ReferenceTextPreview file={saved} active={active} onReveal={textReferenceReveal} />

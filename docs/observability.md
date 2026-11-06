@@ -62,7 +62,7 @@ uncertain, and where its canonical record can actually be found without private
 data. Request completion stays context-rich; per-check INFO noise is not useful.
 
 Internal services retain original native Error/Effect Cause chains and useful
-domain classifications. `@starter/diagnostics.withCause` attaches causes after
+domain classifications. `@highchat/diagnostics.withCause` attaches causes after
 tagged-error construction, outside schema fields and serialized constructor data.
 Do not reconstruct a known local error into a public-shaped instance internally.
 Only outward HTTP/tool/native-client encoders choose safe user-facing errors.
@@ -72,6 +72,10 @@ allowlisted error tags/codes/provider status and bounded nested cause summaries.
 Only repository source locations may be extracted from stacks; foreign messages
 and full stacks are never emitted. Existing request/operation/task/call/submission
 IDs correlate failures without carrying owner/session credentials or authority.
+Office tool events include `tool_arguments`: exact format-valid attachment/reference
+IDs and worktreeId, ID validity states, allowlisted command/selector, argument count/size and cursor
+presence, never raw argv/code, selectors containing private text, filenames or cursor
+values. Admission denials add step, matched reference kind and accepted-input counts.
 Native causes remain intact in memory; log projection is not error propagation.
 
 Effect ErrorReporter observes Alchemy's existing HTTP/RPC failure boundary before
@@ -154,9 +158,10 @@ upload or incur paid inference simply to obtain a better error record.
 
 Local lane: inherited stdout/stderr of `pnpm dev`/`pnpm dev:web`; find a record by its
 generated `x-request-id` or existing operation/task/call/submission ID. Browser
-callers retain the validated `x-request-id` plus safe operation/status as a
-copyable reference and report fixed phase/reason records to the local browser
-console only (T17 local capture; runtime acceptance still unverified). No
+callers retain the validated `x-request-id` plus safe operation/status as an
+error’s diagnostic `reference`, separate from its user-facing message, and report
+fixed phase/reason records to the local browser console only (T17 local capture;
+runtime acceptance still unverified). No
 external browser collector is provisioned.
 Cloud lane: Workers Logs (persisted invocation plus structured application
 logs) and Workers Traces, both 100% head sampling initially with seven-day
@@ -164,7 +169,7 @@ paid retention; they are billable, separate events, and not an immutable audit
 record. Correlate by `request_id`/operation IDs plus service/stage/release;
 concurrent requests never share an ID. No saved dashboards, alert destinations,
 browser error reporting, Web Analytics, Observability MCP, or external exports
-are provisioned by this code. Privileged admin/OTA/billing-replay audit history
+are provisioned by this code. Privileged admin/OTA audit history
 is a deferred decision (O05): no new audit store is added and ordinary denials
 are not blanket-logged as errors. Email/Slack adapters are opt-in and
 unconsumed (O06): validate the chosen adapter when actually enabled.

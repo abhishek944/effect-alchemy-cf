@@ -12,9 +12,9 @@ const DraftRow = Schema.Struct({
   creator: NativeName,
   created: Natural,
   removed: Schema.Literals([0, 1]),
-  merge_result: Schema.NullOr(Schema.String.check(Schema.isMaxLength(16384))),
-  seed: Schema.NullOr(Schema.String.check(Schema.isMaxLength(4096))),
-  artifact: Schema.NullOr(Schema.String.check(Schema.isMaxLength(4096))),
+  merge_result: Schema.NullOr(Schema.String),
+  seed: Schema.NullOr(Schema.String),
+  artifact: Schema.NullOr(Schema.String),
   artifact_ready: Schema.NullOr(Natural),
 });
 const json = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));

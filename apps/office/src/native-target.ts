@@ -1,6 +1,6 @@
-import { decodeWireSync } from "@starter/office-contract";
-import { HostPermit, HostTarget } from "@starter/office-server/native-remote";
-import type { NativeTarget, WritePermit } from "@starter/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
+import { HostPermit, HostTarget } from "@highchat/office-server/native-remote";
+import type { NativeTarget, WritePermit } from "@highchat/office-server/ports";
 
 /** Detached identity validation only; never an authentication or admission constructor. */
 export function captureNativeTarget(input: NativeTarget): NativeTarget {

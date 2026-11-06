@@ -105,7 +105,7 @@ export class NativePayloads {
     return value;
   }
   async verifyPieces(input: readonly NativePieceRef[]): Promise<void> {
-    const parts = boundedArray(input, nativeLimits.blocks + nativeLimits.parts).map(readPiece);
+    const parts = boundedArray(input).map(readPiece);
     const prefix = await this.prefix();
     for (const part of parts) {
       if (

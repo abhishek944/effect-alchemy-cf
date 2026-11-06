@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import type { Actor } from "@starter/office-server/ports";
+import type { Actor } from "@highchat/office-server/ports";
 import type { OfficeRequestChannels } from "./native-request-context.ts";
 
 type OfficeIngress = {

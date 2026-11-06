@@ -1,6 +1,6 @@
 import type { IChangeset } from "@univerjs/protocol";
-import { HostNativeReads } from "@starter/office-server/native-remote";
-import { decodeChangeset } from "@starter/office-server/native-codec";
+import { HostNativeReads } from "@highchat/office-server/native-remote";
+import { decodeChangeset } from "@highchat/office-server/native-codec";
 import type { NativeSession } from "./native-client.ts";
 import type { NativeValues } from "./native-values.ts";
 import { invalidBytes } from "./native-stream-io.ts";
@@ -30,8 +30,7 @@ export function readNativeHistory(
     const result: IChangeset[] = [],
       seen = new Set<string>();
     let cursor: string | null = null,
-      head = from,
-      total = 0;
+      head = from;
     while (true) {
       const input: HistoryInput = {
         handleId: s.handleId,
@@ -55,12 +54,9 @@ export function readNativeHistory(
           row.value.kind !== "changeset" ||
           row.baseRev !== head ||
           row.revision !== head + 1 ||
-          (to !== undefined && row.revision > to) ||
-          result.length >= s.policy.limits.historyScanRevisions ||
-          row.value.bytes > values.maximum - total
+          (to !== undefined && row.revision > to)
         )
           throw invalidBytes();
-        total += row.value.bytes;
         const bytes = await values.load(
           { kind: "changeset", branch, revision: row.revision },
           row.value,

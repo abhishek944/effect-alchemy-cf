@@ -1,0 +1,184 @@
+@media (width <= 760px) {
+  :where(.landing-hero) footer {
+    gap: 12px;
+    font-size: 8px;
+    bottom: 50px;
+    left: 24px;
+    right: 24px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .scroll-note {
+    display: none;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .chapter b {
+    margin-right: 9px;
+  }
+}
+:where(.landing-hero) .variant-B h1 > span:nth-child(2) {
+  display: block;
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) {
+    height: auto;
+    min-height: 100svh;
+    padding-bottom: 170px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) header {
+    height: 86px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .content {
+    margin: 48px 24px 0px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) h1 {
+    letter-spacing: -0.06em;
+    line-height: 1;
+    font-size: 68px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .eyebrow {
+    margin-bottom: 24px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .description {
+    margin: 27px 0px 24px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    display: flex;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .primary {
+    justify-content: space-between;
+    height: 54px;
+    padding: 0px 20px;
+    font-size: 15px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .secondary {
+    align-self: center;
+    height: 46px;
+    font-size: 13px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) footer {
+    align-items: center;
+    gap: 8px;
+    font-size: 8px;
+    bottom: 40px;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .hero:not(.mobile-A) .chapter b {
+    display: none;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .mobile-B .visual {
+    top: 300px !important;
+  }
+}
+@media (width <= 760px) {
+  :where(.landing-hero) .mobile-B .visual-shade {
+    background: linear-gradient(
+      rgb(8, 9, 11) 0%,
+      rgba(8, 9, 11, 0.596) 24%,
+      rgba(8, 9, 11, 0.392) 55%,
+      rgba(8, 9, 11, 0.91) 100%
+    );
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    :where(.landing-hero) .hero:not(.mobile-A) h1 {
+      font-size: 58px !important;
+    }
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    :where(.landing-hero) .brand {
+      font-size: 13px;
+    }
+  }
+}
+@media (width <= 760px) {
+  @media (width <= 350px) {
+    :where(.landing-hero) .hero:not(.mobile-A) .eyebrow {
+      font-size: 8px;
+    }
+  }
+}
+:where(.landing-hero) .hero {
+  height: auto;
+  min-height: max(900px, 100svh);
+  padding-bottom: 170px;
+}
+:where(.landing-hero) header {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+:where(.landing-hero) .brand {
+  min-width: 0px;
+  max-width: 100%;
+  font-size: 1.1875rem;
+}
+:where(.landing-hero) .brand svg {
+  flex-shrink: 0;
+}
+:where(.landing-hero) .brand span {
+  overflow-wrap: anywhere;
+}
+:where(.landing-hero) nav :is(button, a) {
+  min-height: 44px;
+  font-size: 0.875rem;
+}
+:where(.landing-hero) .eyebrow {
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
+}
+:where(.landing-hero) .variant-B h1 {
+  overflow-wrap: anywhere;
+  font-size: 8.75rem;
+}
+:where(.landing-hero) .description {
+  font-size: 1.125rem;
+}
+:where(.landing-hero) .actions :is(button, a) {
+  height: auto;
+  min-height: 51px;
+  font-size: 0.875rem;
+}
+:where(.landing-hero) .primary span {
+  flex: 0 0 auto;
+  font-size: 1.4375rem;
+}
+:where(.landing-hero) footer {
+  font-size: 0.625rem;
+}
+@media (width <= 760px) {
+  :where(.landing-hero) header:has(.brand span) {
+    min-height: 86px;
+    padding: 16px 0px;
+    height: auto !important;
+  }
+}

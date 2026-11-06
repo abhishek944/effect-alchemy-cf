@@ -3,7 +3,7 @@ import {
   reportEvent,
   reportFailure,
   type FailureContext,
-} from "@starter/diagnostics";
+} from "@highchat/diagnostics";
 import type { LiveState, SubmissionRecord } from "@earendil-works/pi-durable";
 import { Effect, ErrorReporter, References } from "effect";
 

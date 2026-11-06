@@ -1,6 +1,5 @@
 import type * as cf from "@cloudflare/workers-types";
 import type { ImageStoreContext, Original } from "@abhishek944/pi-image-gen/core";
-import { MAX_IMAGE_BYTES } from "./chat-attachment-schema.ts";
 import { validateFileBytes } from "./chat-files-media.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";
 import type { ChatImageStorageLedger } from "./chat-image-storage-ledger.ts";
@@ -16,10 +15,10 @@ import type { GeneratedReceipt } from "./chat-generated-storage.ts";
 
 export const generatedDeclaredBytes = (request: Request): number => {
   const raw = request.headers.get("x-image-byte-size") ?? request.headers.get("content-length");
-  if (raw === null || !/^[1-9][0-9]{0,7}$/.test(raw)) throw new ImageStorageError("invalid_input");
+  if (raw === null || !/^[1-9][0-9]*$/.test(raw)) throw new ImageStorageError("invalid_input");
   const bytes = Number(raw);
   const contentLength = request.headers.get("content-length");
-  if (bytes > MAX_IMAGE_BYTES || (contentLength !== null && Number(contentLength) !== bytes))
+  if (!Number.isSafeInteger(bytes) || (contentLength !== null && Number(contentLength) !== bytes))
     throw new ImageStorageError("invalid_output");
   return bytes;
 };
@@ -47,8 +46,7 @@ export const persistGeneratedOutput = async (
   const buffer = output.bytes.buffer;
   if (!(buffer instanceof ArrayBuffer)) throw new ImageStorageError("invalid_output");
   const bytes = new Uint8Array(buffer, output.bytes.byteOffset, output.bytes.byteLength);
-  if (bytes.byteLength === 0 || bytes.byteLength > MAX_IMAGE_BYTES)
-    throw new ImageStorageError("invalid_output");
+  if (bytes.byteLength === 0) throw new ImageStorageError("invalid_output");
   const ext = output.mimeType === "image/jpeg" ? "jpg" : output.mimeType.slice(6);
   const name = `image-${index + 1}.${ext}`;
   const validated = await validateFileBytes(name, bytes);

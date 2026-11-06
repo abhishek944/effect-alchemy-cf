@@ -24,7 +24,6 @@ export const DIAGNOSTIC_TYPES = [
   "OfficeSessionDenied",
   "OfficeSessionUnavailable",
   "IntegrationError",
-  "BillingError",
   "SpeechTransportError",
   "ImageIOError",
   "ImageHydrationError",
@@ -154,8 +153,7 @@ export function classification(value: object) {
     type,
     ...(typeof code === "string" && codes.has(code) ? { code } : {}),
     ...(typeof kind === "string" && codes.has(kind) ? { kind } : {}),
-    ...(typeof provider === "string" &&
-    ["cloudflare", "resend", "slack", "dodo", "polar"].includes(provider)
+    ...(typeof provider === "string" && ["cloudflare", "resend", "slack"].includes(provider)
       ? { provider }
       : {}),
     ...(typeof retry === "number" && Number.isSafeInteger(retry) && retry >= 0 && retry <= 86400

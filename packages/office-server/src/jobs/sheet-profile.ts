@@ -1,6 +1,6 @@
 import { Predicate } from "effect";
 import { Tools, mergeWorksheetSnapshotWithDefault, type IWorkbookData } from "@univerjs/core";
-import { OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { OfficeInvalid, safeFailure } from "@highchat/office-contract";
 import { noExternalGraphics } from "./mutation-policy.ts";
 import { requireEmptySheetResources } from "./sheet-resources.ts";
 

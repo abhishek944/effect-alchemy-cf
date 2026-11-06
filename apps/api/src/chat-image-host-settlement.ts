@@ -1,5 +1,5 @@
 import type { ImageCallUpdate } from "./chat-image-call-schema.ts";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import type {
   ChatImageHostDependencies,
   ImageHostExecution,

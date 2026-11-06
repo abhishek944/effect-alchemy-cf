@@ -3,8 +3,8 @@ import {
   type NativeReceiptBinding,
   type WritePermit,
   type NativeWriteRecord,
-} from "@starter/office-server/ports";
-import { decodeWireSync } from "@starter/office-contract";
+} from "@highchat/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
 import type { MetadataStore } from "./store.ts";
 import { canonical, conflict, missing } from "./store.ts";
 import { WriteRow, Permit } from "./schemas.ts";

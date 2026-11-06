@@ -1,6 +1,6 @@
-import { ArtifactRef, decodeWireSync, officeAttachmentIds } from "@starter/office-contract";
-import type { OfficeResolution } from "@starter/office-pi";
-import { officeStagingFailure } from "@starter/office-pi";
+import { ArtifactRef, decodeWireSync, officeAttachmentIds } from "@highchat/office-contract";
+import type { OfficeResolution } from "@highchat/office-pi";
+import { officeStagingFailure } from "@highchat/office-pi";
 import { assertOfficeTaskUpload } from "./office-task-command.ts";
 import { readOfficeStageReceipts } from "./chat-office-stage-receipts.ts";
 import type { ChatOfficeTaskBroker, OfficeTaskLease } from "./chat-office-task-broker.ts";

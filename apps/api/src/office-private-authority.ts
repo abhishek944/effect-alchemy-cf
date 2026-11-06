@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import type { NativePrivateFile } from "../../office/src/native-private-wire.ts";
-import type { OfficeMetadata } from "@starter/office-server/ports";
-import type { HostOfficeRequest } from "@starter/office-server/native-remote";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
+import type { HostOfficeRequest } from "@highchat/office-server/native-remote";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import type { OfficePlacement } from "./office-host-placements.ts";
 import type { OfficeMetadataCall } from "./office-metadata-dispatch.ts";
@@ -23,7 +23,6 @@ export type OfficePrivateRequest = {
   readonly cleanupDeadline: number;
   readonly signal: AbortSignal;
   readonly currentPlacement: (documentId: string) => Promise<OfficePlacement>;
-  readonly charge: (bytes: number) => void;
   readonly receive: (callId: string) => void;
   readonly keepIO: (resource: OfficePrivateIO, cleanup: boolean) => void;
   /** Actual original process proof is checked before this object is selected. */

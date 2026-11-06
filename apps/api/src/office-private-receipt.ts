@@ -2,10 +2,14 @@ import { Effect } from "effect";
 import {
   createCoordinatorControl,
   createNativeReceiptObserver,
-} from "@starter/office-cloudflare/coordinator-control";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { NativeTarget, NativeWriteRecord, OfficeMetadata } from "@starter/office-server/ports";
-import type { HostControl } from "@starter/office-server/native-remote";
+} from "@highchat/office-cloudflare/coordinator-control";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type {
+  NativeTarget,
+  NativeWriteRecord,
+  OfficeMetadata,
+} from "@highchat/office-server/ports";
+import type { HostControl } from "@highchat/office-server/native-remote";
 import { officeDenied, officeSame, type OfficePrivateRequest } from "./office-private-authority.ts";
 import { officePrivateDigest } from "./office-private-placement.ts";
 import { assertOfficeTaskCommand, assertOfficeTaskReceipt } from "./office-task-command.ts";

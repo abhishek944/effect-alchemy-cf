@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import type { Message } from "@earendil-works/pi-ai";
-import type { OfficeSheetSelection } from "@starter/office-contract";
+import type { OfficeSheetSelection } from "@highchat/office-contract";
 import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
 
 /** Display-only strings; no native selectors or read/write authority cross this boundary. */
@@ -10,7 +10,7 @@ export const InputSelection = Schema.Struct({
   quote: Schema.NullOr(Schema.String),
 });
 export type InputSelection = typeof InputSelection.Type;
-export const InputSelections = Schema.Array(InputSelection).check(Schema.isMaxLength(8));
+export const InputSelections = Schema.Array(InputSelection);
 
 const column = (index: number): string => {
   let name = "";

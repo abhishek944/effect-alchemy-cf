@@ -16,8 +16,6 @@ export function nativePrivateChannels(
     invocationId: value.invocationId,
     signal,
     deadline: value.deadline,
-    maxCalls: 65536,
-    maxBytes: 1024 * 1024 * 1024,
     maxActive: 64,
   };
   const endpoint = (role: string) =>

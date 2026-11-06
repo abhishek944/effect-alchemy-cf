@@ -1,4 +1,4 @@
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import { officeReadable } from "./office-platform.ts";
 
 const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
@@ -7,14 +7,11 @@ export async function readOfficePrivateJson(
   body: unknown,
   signal: AbortSignal,
   deadline: number | null,
-  maximum: number,
-  charge?: (bytes: number) => void,
+  maximum: number | null,
 ): Promise<unknown> {
   if (
     body === null ||
-    !Number.isSafeInteger(maximum) ||
-    maximum < 1 ||
-    maximum > 2 * 1024 * 1024 ||
+    (maximum !== null && (!Number.isSafeInteger(maximum) || maximum < 1)) ||
     (deadline !== null && !Number.isSafeInteger(deadline))
   )
     throw unavailable();
@@ -23,7 +20,7 @@ export async function readOfficePrivateJson(
     () => true,
     () => false,
   );
-  const bytes = new Uint8Array(maximum);
+  const chunks: Uint8Array[] = [];
   let count = 0,
     empty = 0;
   let pending: Promise<unknown> | undefined;
@@ -71,13 +68,18 @@ export async function readOfficePrivateJson(
       if (part.done) break;
       if (
         !(part.value instanceof Uint8Array) ||
-        part.value.byteLength > maximum - count ||
+        (maximum !== null && part.value.byteLength > maximum - count) ||
         (part.value.byteLength === 0 && ++empty > 1024)
       )
         throw unavailable();
-      charge?.(part.value.byteLength);
-      bytes.set(part.value, count);
+      chunks.push(part.value);
       count += part.value.byteLength;
+    }
+    const bytes = new Uint8Array(count);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
     }
     return JSON.parse(
       new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes.subarray(0, count)),

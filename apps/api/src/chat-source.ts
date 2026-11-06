@@ -1,17 +1,10 @@
 import { LiveDoc } from "@earendil-works/pi-durable";
 import { installedChatModel } from "./chat-capability-catalog.ts";
 import { storedMessageTime } from "./chat-time.ts";
-import {
-  FRAME_BYTES,
-  WINDOW_MESSAGES,
-  InvalidCursor,
-  RefreshFence,
-  encodedBytes,
-  type TextCursor,
-} from "./chat-contract.ts";
+import { WINDOW_MESSAGES, InvalidCursor, RefreshFence, type TextCursor } from "./chat-contract.ts";
 import type { Chat, ChatSnapshot, PanelRequest } from "./chat-model.ts";
 import { INFERENCE_FAILURE } from "./chat-model.ts";
-import type { Target } from "@starter/office-contract";
+import type { Target } from "@highchat/office-contract";
 import type { SkillRecovery } from "./skills-model.ts";
 import { buildWindow } from "./chat-projection.ts";
 import { liveToolRound, partialToolPreview } from "./chat-tool-live.ts";
@@ -167,7 +160,6 @@ export class ChatSource {
       null,
       WINDOW_MESSAGES,
       (entry) => this.runtime.publicInput(entry),
-      FRAME_BYTES - encodedBytes(base) - 64,
       128 - (preview?.visited ?? 0) - toolBlocks,
       79,
       this.hasGeneratedFiles,
@@ -180,7 +172,6 @@ export class ChatSource {
       messages: [...window.messages, ...messages],
       history: window.history,
     };
-    if (encodedBytes(result) + 32 > FRAME_BYTES) throw new Error("Snapshot byte budget exceeded");
     return result;
   }
   async text(chat: Chat, messageId: string, cursor: TextCursor | null) {

@@ -9,7 +9,7 @@
  */
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { Models } from "@earendil-works/pi-ai/models";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { amountOfUsage } from "./chat-accounting-amount.ts";
 import { effortOf, messageModelId, modelIdOf, unknownAmount } from "./chat-accounting-model.ts";
 import type { ChatAccountingStore } from "./chat-accounting-store.ts";

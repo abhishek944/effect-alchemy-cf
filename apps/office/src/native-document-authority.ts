@@ -4,14 +4,14 @@ import {
   OfficeUnavailable,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
-import { HostControl, HostTurn } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import { HostControl, HostTurn } from "@highchat/office-server/native-remote";
 import type {
   DocumentAuthority,
   NativeTarget,
   SerialAdmission,
   WritePermit,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { OfficeControlSession } from "./native-channel.ts";
 import { captureNativeTarget, captureWritePermit, sameNativeTarget } from "./native-target.ts";
 

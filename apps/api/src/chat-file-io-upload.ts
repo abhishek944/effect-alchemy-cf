@@ -2,13 +2,11 @@ import type * as cf from "@cloudflare/workers-types";
 import type { ChatFilesRequestInput } from "./chat-files-http.ts";
 import type { ChatFilesCatalogClient } from "./chat-files-client.ts";
 import { FileName } from "./chat-attachment-schema.ts";
-import { readBoundedBody } from "./body-limit.ts";
 import { decodeOption, json } from "./chat-internal.ts";
 import { resolveMedia, validateFileBytes } from "./chat-files-media.ts";
 import { publicFail } from "./chat-files-public.ts";
 import type { ChatFilesFailure } from "./chat-files-model.ts";
 import { deleteStoredObjects, putStagedObject, stagingObjectKey } from "./chat-files-store.ts";
-import { fileByteLimit } from "./chat-file-io-limits.ts";
 
 const reserveStatus = (code: ChatFilesFailure): number => {
   if (code === "quota_exceeded") return 507;
@@ -19,7 +17,7 @@ const reserveStatus = (code: ChatFilesFailure): number => {
 const validationStatus = (code: ChatFilesFailure): number =>
   code === "file_too_large" ? 413 : code === "unsupported_type" ? 415 : 422;
 
-/** Authentication precedes the bounded read/hash/PUT/catalog operation. */
+/** Authentication precedes the read/hash/PUT/catalog operation. */
 export const uploadChatFile = async (
   input: ChatFilesRequestInput & {
     readonly bucket: cf.R2Bucket;
@@ -38,16 +36,12 @@ export const uploadChatFile = async (
   if (decodedName === null) return publicFail("invalid_input", 400);
   const media = resolveMedia(decodedName);
   if (media === null) return publicFail("unsupported_type", 415);
-  const limit = fileByteLimit(media.kind);
   const rawLength = input.request.headers.get("content-length");
-  if (rawLength !== null && !/^[0-9]{1,16}$/.test(rawLength))
-    return publicFail("invalid_input", 400);
+  if (rawLength !== null && !/^[0-9]+$/.test(rawLength)) return publicFail("invalid_input", 400);
   const declared = rawLength === null ? null : Number(rawLength);
-  if (declared !== null && declared > limit) return publicFail("file_too_large", 413);
-  const capacity = declared ?? limit;
+  if (declared !== null && !Number.isSafeInteger(declared)) return publicFail("invalid_input", 400);
   try {
-    const bytes = await readBoundedBody(input.request, capacity);
-    if (bytes === null) return publicFail("file_too_large", 413);
+    const bytes = new Uint8Array(await input.request.arrayBuffer());
     if (declared !== null && bytes.byteLength !== declared)
       return publicFail("invalid_content", 422);
     const validated = await validateFileBytes(decodedName, bytes);

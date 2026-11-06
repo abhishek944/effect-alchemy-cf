@@ -1,5 +1,5 @@
-import { Auth } from "@starter/auth";
-import { findUserByEmail, setUserRole } from "@starter/auth/admin-users";
+import { Auth } from "@highchat/auth";
+import { findUserByEmail, setUserRole } from "@highchat/auth/admin-users";
 import { RuntimeContext } from "alchemy";
 import { Effect } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";

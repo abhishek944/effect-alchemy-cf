@@ -3,14 +3,14 @@ import { Effect } from "effect";
 import { UniverType } from "@univerjs/protocol";
 import type { UnitRecord } from "@univerjs-pro/collaboration-service";
 import type { NodeHttpTransportContext } from "@univerjs-pro/collaboration-transport-node";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import type { OfficeNativeRuntime } from "@starter/office-server";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import type { OfficeNativeRuntime } from "@highchat/office-server";
 import {
   evaluateViewPermissions,
   type OfficeViewProtocol,
-} from "@starter/office-server/native-protocol";
-import { decodeNativeViewSnapshot } from "@starter/office-server/native-codec";
-import type { HumanActor, OfficeDependencies } from "@starter/office-server/ports";
+} from "@highchat/office-server/native-protocol";
+import { decodeNativeViewSnapshot } from "@highchat/office-server/native-codec";
+import type { HumanActor, OfficeDependencies } from "@highchat/office-server/ports";
 import { resolveNativeView } from "./native-app-view.ts";
 import { readBytes } from "./native-stream-io.ts";
 import { readOfficeNodeJson } from "./native-office-http.ts";
@@ -118,7 +118,7 @@ export function createOfficeViewProtocol(options: {
       const bytes = await readBytes(
         stored.body,
         stored.ref.bytes,
-        options.dependencies.policy.limits.nativeBytes,
+        null,
         stored.ref.digest,
         readers,
         check,
@@ -129,11 +129,11 @@ export function createOfficeViewProtocol(options: {
           : record.view.kind === "doc"
             ? UniverType.UNIVER_DOC
             : UniverType.UNIVER_SLIDE;
-      const native = decodeNativeViewSnapshot(
-        bytes,
-        { unitID: record.target.unitId, type: kind, revision: record.view.revision },
-        options.dependencies.policy.limits.nativeBytes,
-      );
+      const native = decodeNativeViewSnapshot(bytes, {
+        unitID: record.target.unitId,
+        type: kind,
+        revision: record.view.revision,
+      });
       check();
       await serializeViewSnapshot({
         request: context.incomingMessage,

@@ -51,7 +51,7 @@ const UsageValue = Schema.Struct({
   reservedBytes: Schema.Number,
   pendingBytes: Schema.Number,
   usedBytes: Schema.Number,
-  quotaBytes: Schema.Number,
+  quotaBytes: Schema.NullOr(Schema.Number),
 });
 const ReleaseValue = Schema.Struct({ released: Schema.Number });
 const RemoveValue = Schema.Struct({

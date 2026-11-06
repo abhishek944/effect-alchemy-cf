@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { withDiagnostic } from "@starter/diagnostics";
+import { withDiagnostic } from "@highchat/diagnostics";
 import type { OfficeInvocation } from "./office-invocations.ts";
 import { officeDenied } from "./office-private-authority.ts";
 import { officeEditorChannel } from "./office-editor-channel.ts";

@@ -21,7 +21,7 @@ export const EmailSearch = Schema.Struct({
   ),
 });
 export class CurrentAdmin extends Context.Service<CurrentAdmin, typeof AdminIdentity.Type>()(
-  "starter/CurrentAdmin",
+  "highchat/CurrentAdmin",
 ) {}
 export class Forbidden extends Schema.TaggedError<Forbidden>()(
   "Forbidden",

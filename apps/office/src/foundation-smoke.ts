@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { createOfficeRenderer } from "@starter/office-server/jobs";
+import { createOfficeRenderer } from "@highchat/office-server/jobs";
 import { Schema } from "effect";
 import { ExchangeFormat, importBufferToSnapshot } from "@univerjs-pro/exchange-node";
 import { UniverInstanceType } from "@univerjs/core";

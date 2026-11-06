@@ -4,9 +4,9 @@ ARG PNPM_VERSION=10.33.4
 RUN npm install --global --ignore-scripts pnpm@${PNPM_VERSION}
 WORKDIR /dependencies
 COPY dependency-root/ ./
-RUN pnpm --filter @starter/office-server... install --prod --frozen-lockfile --ignore-scripts
+RUN pnpm --filter @highchat/office-server... install --prod --frozen-lockfile --ignore-scripts
 # Private workspace code is bundled; discard only its staging links, never patch SDK packages.
-RUN rm -rf packages/office-server/node_modules/@starter node_modules/.pnpm/node_modules/@starter
+RUN rm -rf packages/office-server/node_modules/@highchat node_modules/.pnpm/node_modules/@highchat
 
 FROM ${BASE_IMAGE} AS render-resources
 WORKDIR /resources

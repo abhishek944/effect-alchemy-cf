@@ -1,6 +1,6 @@
+import { appConfig } from "@/lib/app-config";
 import "./settings.css";
 import type { ReactNode } from "react";
-import BillingPanel from "./billing-panel";
 import { DropdownSelect } from "./dropdown";
 import ImagePreferencesSettings from "./image-preferences-settings";
 import type { DashboardUser, SettingsSection } from "./model";
@@ -18,11 +18,8 @@ type SettingsRowProps = {
   label: string;
   description: string;
   value?: string;
-  disabledLabel?: string;
   control?: ReactNode;
 };
-
-const NOT_CONFIGURED = "Not configured";
 
 const sectionTitles: Record<SettingsSection, string> = {
   general: "General",
@@ -34,7 +31,7 @@ const sectionTitles: Record<SettingsSection, string> = {
   account: "Account",
 };
 
-function SettingsRow({ label, description, value, disabledLabel, control }: SettingsRowProps) {
+function SettingsRow({ label, description, value, control }: SettingsRowProps) {
   return (
     <div data-cx="settings-row">
       <dt data-cx="settings-row-label">
@@ -44,16 +41,6 @@ function SettingsRow({ label, description, value, disabledLabel, control }: Sett
       <dd data-cx="settings-row-control">
         {control}
         {value ? <span data-cx="settings-value">{value}</span> : null}
-        {disabledLabel ? (
-          <button
-            aria-label={`${label}: ${disabledLabel}`}
-            data-cx="settings-disabled"
-            disabled
-            type="button"
-          >
-            {disabledLabel}
-          </button>
-        ) : null}
       </dd>
     </div>
   );
@@ -68,24 +55,11 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
   );
 }
 
-function GeneralSettings() {
+function GeneralSettings({ user }: { user: DashboardUser }) {
   return (
-    <>
-      <SettingsGroup title="Workspace">
-        <SettingsRow
-          description="Reserved for future preferences"
-          disabledLabel={NOT_CONFIGURED}
-          label="Workspace settings"
-        />
-      </SettingsGroup>
-      <SettingsGroup title="Extensions">
-        <SettingsRow
-          description="Appear here when a module needs them"
-          disabledLabel={NOT_CONFIGURED}
-          label="Module settings"
-        />
-      </SettingsGroup>
-    </>
+    <SettingsGroup title={appConfig.name}>
+      <SettingsRow description={user.email} label="Signed in as" value={user.name} />
+    </SettingsGroup>
   );
 }
 
@@ -137,11 +111,6 @@ function AppearanceSettings() {
           description="Appearance used by the signed-in dashboard"
           label="Theme"
         />
-        <SettingsRow
-          description="Custom accents are not available"
-          disabledLabel={NOT_CONFIGURED}
-          label="Accent color"
-        />
       </SettingsGroup>
     </>
   );
@@ -152,20 +121,8 @@ function AccountSettings({ user }: { user: DashboardUser }) {
     <>
       <SettingsGroup title="Account">
         <SettingsRow description="Account identifier" label="Email" value={user.email} />
-        <SettingsRow
-          description="Managed by the starter session"
-          label="Session"
-          value="Signed in"
-        />
+        <SettingsRow description="Your current office session" label="Session" value="Signed in" />
       </SettingsGroup>
-      <SettingsGroup title="Data">
-        <SettingsRow
-          description="Export is not available in this starter"
-          disabledLabel={NOT_CONFIGURED}
-          label="Data export"
-        />
-      </SettingsGroup>
-      <BillingPanel userId={user.id} />
     </>
   );
 }
@@ -175,7 +132,7 @@ export default function SettingsPanel({ user, section }: SettingsPanelProps) {
   return (
     <div data-cx="settings-panel" data-section={section}>
       {titled ? <h1 data-cx="settings-title">{sectionTitles[section]}</h1> : null}
-      {section === "general" ? <GeneralSettings /> : null}
+      {section === "general" ? <GeneralSettings user={user} /> : null}
       {section === "voice" ? <VoiceSettings /> : null}
       {section === "images" ? <ImagePreferencesSettings /> : null}
       {section === "skills" ? <SkillsSettings key={user.id} userId={user.id} /> : null}

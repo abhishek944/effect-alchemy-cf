@@ -1,5 +1,5 @@
 import { Clock, Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type {
   IsolatedJob,
   JobRecord,
@@ -41,20 +41,16 @@ export const importJob = Effect.fn("Office.importJob")(function* (
   if (
     upload.id !== source.uploadId ||
     upload.kind !== "upload" ||
-    upload.bytes > deps.policy.limits.uploadBytes ||
     (into !== null && artifactKey(upload) !== artifactKey(into.source))
   )
     return yield* Effect.fail(officeFailure("CONTENT_REQUIRED", original.receipt.operationId));
-  const jobId = metadataDigest(
-    [
-      "office-import-job",
-      1,
-      original.owner.stage,
-      original.owner.ownerId,
-      original.receipt.operationId,
-    ],
-    4096,
-  );
+  const jobId = metadataDigest([
+    "office-import-job",
+    1,
+    original.owner.stage,
+    original.owner.ownerId,
+    original.receipt.operationId,
+  ]);
   if (original.jobId !== null && original.jobId !== jobId)
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", original.receipt.operationId));
   const job: ImportJob = {
@@ -71,17 +67,14 @@ export const importJob = Effect.fn("Office.importJob")(function* (
       unitId:
         into === null
           ? original.unitId
-          : metadataDigest(
-              [
-                "office-import-source",
-                1,
-                original.owner.stage,
-                original.owner.ownerId,
-                original.receipt.operationId,
-                upload.digest,
-              ],
-              4096,
-            ),
+          : metadataDigest([
+              "office-import-source",
+              1,
+              original.owner.stage,
+              original.owner.ownerId,
+              original.receipt.operationId,
+              upload.digest,
+            ]),
       kind: source.options.kind,
       generation:
         into !== null

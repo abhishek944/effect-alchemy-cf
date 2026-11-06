@@ -1,40 +1,54 @@
-# Effect + Alchemy Cloudflare starter
+# highchat
 
-A small reusable service template. **Development runs locally by default.**
-Optional real-cloud `dev` is isolated from `prod`. Install, lint and build do not deploy.
-GitHub checks main/PRs and automatically deploys prod pushes through Alchemy.
-See [CI/CD setup](docs/github-cicd.md) for required secrets and branch protection.
-[Backend observability](docs/observability.md) covers native metrics, traces and safe logs.
-Opt-in [email/Slack](docs/integrations.md) and [Dodo/Polar billing](docs/billing-setup.md) use shared backend services.
+A personal workspace for AI conversations, private files, and Office documents.
+Built with Effect, Alchemy, and Cloudflare. This repository is the application,
+not a SaaS starter: commercial billing, checkout, and subscriptions are removed.
+AI provider usage and cost tracking remain part of the workspace.
 
-## Stack
+## Existing capabilities
 
-- pnpm + Turborepo, strict TypeScript 7.
-- Effect 4 HTTP API with schema-defined responses and session middleware.
-- Alchemy 2 beta owns the Worker, isolated D1 database, auth signing secret,
-  additive auth migrations, and Cloudflare Access application.
-- Better Auth email/password auth and [admin portal](docs/admin-portal.md): OTA bootstrap, roles and email lookup.
-- React + Vite + Tailwind 4, assistant-ui [Pi Durable chat](docs/pi-chat.md) with model/files/manual voice, editable shadcn components.
-- Type-aware Oxlint, official Effect diagnostics, shadcn lint, Oxfmt, Lefthook,
-  CI, and a 200-physical-line file limit.
+- Saved private chats with durable responses, reconnect, Stop, rename and archive.
+- Model/reasoning selection, usage and estimated costs.
+- Private files, image generation/references, and optional development voice.
+- Account-wide Skills, profile settings, and five appearance themes.
+- Native Office editing, AI drafts, human review and document exports.
 
-## Layout
+See [chat](docs/pi-chat.md), [files](docs/chat-files.md),
+[images](docs/chat-images.md), [voice](docs/chat-voice.md),
+[Skills](docs/skills.md), [Office](docs/office.md), and
+[dashboard behavior](docs/dashboard-ui.md) for contracts and acceptance limits.
+Source implementation and passing builds do not establish deployed acceptance.
+There is no account-wide export or permanent chat deletion promise.
+
+## Stack and layout
+
+pnpm + Turborepo, strict TypeScript 7, Effect 4, Alchemy 2 beta,
+Better Auth, React/Vite/Tailwind, assistant-ui and Pi Durable.
 
 ```text
-apps/api       Effect Worker, /api/health and protected /api/me
-apps/web       React app and same-origin Better Auth client
-apps/infra     Alchemy stack composition
-packages/auth          Reusable auth service and Cloudflare D1 layer
-packages/integrations  Opt-in Email/Slack and Dodo/Polar billing adapters
-scripts        Repository file-length gate
+apps/api                    Effect Worker, authenticated APIs and durable chat
+apps/web                    React personal office and same-origin auth client
+apps/infra                  Alchemy stack composition
+apps/office                 Native document host and isolated job image
+packages/auth               Auth, D1 adapter and session boundaries
+packages/config             Private stage configuration defaults and key checks
+packages/diagnostics        Shared safe structured diagnostics
+packages/integrations       Optional backend Email/Slack adapters
+packages/office-contract    Office schemas, client and wire contracts
+packages/office-server      Office services, ports and isolated jobs
+packages/office-cloudflare  D1 metadata and R2/native storage adapters
+packages/office-react       Native editor frame and review UI
+packages/office-pi          AI Office tools and host integration
+scripts                     Local/cloud launchers and repository checks
 ```
 
-One Worker serves the frontend/API; `/api/*` goes to the Worker.
-Other requests use SPA fallback. Private cloud stages route
-assets through the Worker too, so its fail-closed Access check protects all paths.
-This avoids cross-origin cookies, public backend URLs, and separate CORS setup.
+Workspace packages use `@highchat/*`. Keep provider clients,
+infrastructure and secrets out of browser code. Add only services the existing
+application needs; no new tasks, memory, scheduling or connectors are introduced
+by this refactor. Optional [Email/Slack](docs/integrations.md) adapters remain
+backend-only and are not automatically enabled.
 
-## Install and commands
+## Install and local development
 
 Use Node >=22.21.1 and pnpm 10.33.4:
 
@@ -43,158 +57,112 @@ corepack enable
 pnpm install
 pnpm lint
 pnpm build
+pnpm dev:office  # explicitly build the local Office image when needed
+pnpm dev        # local Worker, auth, storage and Office binding at :1337
+pnpm dev:web    # Vite HMR frontend at :5173
 ```
 
-Run `pnpm run` to list scripts:
+Open **http://localhost:5173**. Docker must run for Office. `pnpm dev` inspects an
+existing image; it does not build, pull or publish one. After backend changes,
+restart the Worker. After Office host/job changes, rebuild its image and restart.
+Stop the local Worker before `pnpm build`; do not overwrite live hashed assets.
+See [local development](docs/local-development.md) for the complete workflow.
 
-| Command                                | Purpose                                                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `pnpm lint`                            | Formatting, matching env keys, Oxlint/shadcn, file lengths, Effect, types                         |
-| `pnpm lint:format`                     | Apply formatting fixes                                                                            |
-| `pnpm lint:format:check`               | Check formatting without changes                                                                  |
-| `pnpm lint:effect`                     | Effect correctness diagnostics for API/auth/infra                                                 |
-| `pnpm lint:typecheck`                  | All workspace and root TypeScript checks                                                          |
-| `pnpm build`                           | Build frontend and Worker without deploying; `pnpm dev:office` explicitly builds the Office image |
-| `pnpm dev` / `pnpm dev:web`            | Run local Worker/D1 at localhost:1337 (no build); Vite HMR frontend at 5173                       |
-| `pnpm audit`                           | Audit production dependencies for high/critical advisories                                        |
-| `pnpm plan:dev` / `pnpm plan:prod`     | Lint, build, preview infrastructure changes                                                       |
-| `pnpm deploy:dev` / `pnpm deploy:prod` | Lint, build, deploy the chosen cloud stage                                                        |
+Local storage stays local, but configured AI inference is remote and billable.
+Use only the development Gateway/provider credentials, never production resources.
+Missing inference configuration disables sending; optional voice setup is separate.
 
-`pnpm lint` never applies formatting fixes. The commit hook runs it; CI runs a
-frozen install, audit, lint, and build. See [local development](docs/local-development.md)
-for the local workflow; workspace `typecheck` scripts are internal Turbo tasks.
+## Configuration and compatibility
 
-Install creates `packages/config/.env.dev` and `.env.prod`, appending new default
-keys without overwriting edits. Both are gitignored and share `DEV_ACCESS_EMAILS`,
-`AUTH_BASE_URL`, `ALLOW_PRODUCTION`, `CHAT_GATEWAY_ID`, the chat model allowlist and nonsecret billing keys; lint rejects mismatches.
-Use the matching file for dev/prod; provider credentials stay in Alchemy profiles.
-Blank `AUTH_BASE_URL` uses the Worker origin. Alchemy determines execution mode;
-auth receives an automatically derived Worker binding, not a manual env flag.
+Install initializes gitignored `packages/config/.env.dev` and `.env.prod`.
+Both must contain identical keys: `APP_NAME`, `APP_DOMAIN`, `DEV_ACCESS_EMAILS`,
+`AUTH_BASE_URL`, `ALLOW_PRODUCTION`, `CHAT_GATEWAY_ID`, and `CHAT_MODEL_ALLOWLIST`.
+Provider credentials stay in private profiles, never stage files or browser code.
+`APP_NAME` is the display name everywhere; its default is `highchat`. `APP_DOMAIN`
+defaults to blank in dev and `highchat.space` in prod. Cloud auth derives its HTTPS
+origin from that hostname; an explicit `AUTH_BASE_URL` must match. With neither,
+auth uses the request origin. Local mode always keeps localhost/same-origin auth.
+Both stages default to `ALLOW_PRODUCTION=false`.
 
-Frontend `@shadcn/lint` rejects raw colors, inline styles, and unknown Tailwind
-classes. Configure it in `.oxlintrc.json`; arbitrary-value/restyling rules are
-opt-in. Official `@effect/tsgo` error-level correctness rules are configured in
-`tsconfig.base.json`. Style suggestions do not gate CI. This standalone checker
-does not patch TypeScript/Oxlint or activate Cursor's LSP. No unit-test framework
-is included. Narrow pinned overrides address Alchemy and transitive MCP OAuth advisories.
+Edit these stage values to rebrand, then restart local Worker/Vite or rebuild and
+redeploy the cloud application. Only the public name enters the browser bundle.
+`pnpm build` defaults to dev configuration; `APP_STAGE=prod pnpm build` selects
+production public values without deploying. Cloud plan/deploy commands select
+their stage before lint/build; Turbo hashes the public values and config inputs.
+See [naming and domains](docs/naming.md) for exact boundaries and rollout cautions.
 
-The Worker build is an offline verification artifact using Alchemy's public
-bundler and Cloudflare plugin. Alchemy builds its deployment bundle again with
-stage metadata. Before the first deployment of a copied service, give
-`service.config.ts` a unique `serviceName` and update the root package name. Keep that
-identity stable after deploying: it identifies persistent resources.
+Branding/package identity is separate from deployment and stored-data identity:
 
-## Cloud development
+- `service.config.ts` intentionally retains the legacy Alchemy stack name
+  `ServiceStarter`; its development Gateway remains `servicestarter-dev-chat`.
+- The existing local image tag `starter-office-local:dev` and Docker ownership
+  labels are retained so existing images/jobs remain discoverable.
+- Legacy theme storage keys and account-invalidation event names remain readable
+  across the rename. Historical diagnostic provider values remain decodable.
+- D1/R2 resource IDs, Durable Object classes, auth signing/session identity,
+  database contents, `.alchemy` state and provider profiles are not migrated.
 
-1. Configure the Cloudflare credentials in the `default` Alchemy profile
-   (skip creation if it already exists):
+Do not globally replace these compatibility identifiers. Renaming infrastructure,
+the hosted GitHub repository, or the checkout directory is a separate operation.
+Rebuild Office images after source/package changes; preserving a tag does not
+make an older image match new source/protocol provenance.
 
-   ```sh
-   pnpm --filter @starter/infra exec alchemy profile create default
-   pnpm --filter @starter/infra exec alchemy profile edit --profile default --add Cloudflare
-   ```
+Auth still uses the existing signup/signin and optional
+[admin recovery/role portal](docs/admin-portal.md). This refactor does not silently
+close signup, replace auth, or remove owner recovery. Cloud development is
+Access-gated; production retains application authentication without that developer
+wall. A different owner-only access policy requires an explicit follow-up decision.
 
-2. Set `DEV_ACCESS_EMAILS` in `packages/config/.env.dev` to your team's verified emails,
-   comma-separated. Complete Zero Trust onboarding; Alchemy provisions email PIN
-   and keeps dev access restricted to the allowlist. Account-scoped tokens need
-   Workers Admin, D1 Edit, Secrets Store Edit, Account Settings Edit, plus
-   Access: Apps and Policies Edit and Access: Organizations, Identity Providers,
-   and Groups Edit. Do not silently adopt an existing external PIN provider.
-3. Bootstrap Alchemy's shared, encrypted Cloudflare state store once:
+Commercial billing is preserved in checkpoint `4906c83` in Git history, but is no
+longer wired into the application. No historical billing tables/rows are deleted.
+Any live subscriptions or provider webhooks need separate operator retirement;
+removing code is not cancellation of financial obligations.
 
-   ```sh
-   pnpm --filter @starter/infra exec alchemy provider cloudflare bootstrap --profile default
-   ```
+## Commands and quality gates
 
-4. Review the plan, then deploy when ready:
+| Command                                | Purpose                                                                             |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm lint`                            | Formatting check, env-key parity, Oxlint, line limits, Effect diagnostics and types |
+| `pnpm lint:format`                     | Apply formatting fixes                                                              |
+| `pnpm build`                           | Build frontend/frame/Worker and check Office types, without deployment              |
+| `pnpm dev` / `pnpm dev:web`            | Local Worker / Vite HMR                                                             |
+| `pnpm dev:office`                      | Explicit local Office image build                                                   |
+| `pnpm audit`                           | Production dependency advisory check                                                |
+| `pnpm plan:dev` / `pnpm plan:prod`     | Lint, build and preview cloud changes                                               |
+| `pnpm deploy:dev` / `pnpm deploy:prod` | Lint, build and deploy an approved stage                                            |
 
-   ```sh
-   pnpm plan:dev
-   pnpm deploy:dev
-   ```
+Direct dependencies are pinned and the pnpm lockfile is retained. Authored text
+files must be <=200 physical lines; dependencies, generated output, lockfiles and
+`var/` are excluded. Lint never applies fixes. The commit hook runs lint; CI runs
+frozen install, audit, lint and build. No unit-test framework is included.
 
-5. Open the printed URL, pass Cloudflare Access, and create a **test** account.
-   Edit code and redeploy to test the next change on real Cloudflare services.
+## Cloud development and production
 
-The development commands explicitly select `--stage dev --profile default`.
-This stage owns its Worker, D1 database, signing secret, and Access application.
-It does not reference production resources. Access protects the whole site,
-including API, workers.dev, and preview URLs; Better Auth is the application
-login inside that developer wall. Deployment requires a nonempty Access email
-allowlist. Until Access admits a request, the private Worker also returns 403.
+One Worker serves the frontend and APIs. Authenticated files and Office frames
+remain same-origin. Cloud dev protects assets/API through Cloudflare Access;
+local mode binds only to localhost and has separate users/storage.
 
-If an earlier copy was deployed as `staging`, `dev` creates a different stage;
-it does not migrate that stage's users, data, or resources automatically.
-
-### What a plan does
-
-A plan previews resources Alchemy intends to create, update, or delete; it does
-not apply the application deployment. It is **not necessarily offline**: plans
-access shared cloud state and can prompt to bootstrap or upgrade the state store.
-Bootstrap is a real cloud change. Review deletions and persistent-resource changes
-before deploying. Deployment recomputes its plan; the preview is not a saved approval.
-
-Serialize deployments to each shared stage; separate stages do not make concurrent
-updates to the same stage safe. Cloud usage is billed. Do not run
-`alchemy dev --stage dev` or `--stage prod`: local/live replacement is unsafe.
-Underlying local mode refuses either cloud stage and requires a `dev_`/`dev-` name.
-State and auth settings derive from the actual CLI mode, not a stage env toggle.
-
-## Production
-
-Configure a separate `prod` Alchemy profile, ideally in a separate Cloudflare
-account. Use production credentials only for production external services.
-Production does not create the developer Access wall. Both planning and deployment
-require explicit opt-in: set `ALLOW_PRODUCTION=true` only in
-`packages/config/.env.prod` when deliberately preparing a production operation.
-Both files default to false. Run:
+Use the `default` profile for isolated cloud `dev` and a separate `prod` profile
+for production. Bootstrap the encrypted cloud state store only with approval:
 
 ```sh
-pnpm plan:prod
-pnpm deploy:prod
+pnpm --filter @highchat/infra exec alchemy profile create default
+pnpm --filter @highchat/infra exec alchemy profile edit --profile default --add Cloudflare
+pnpm --filter @highchat/infra exec alchemy provider cloudflare bootstrap --profile default
 ```
 
-Set the flag back to false afterward. An explicit Alchemy env file overrides
-shell variables, so a shell prefix cannot override false in that file.
-Production scripts explicitly select `--stage prod --profile prod`. Before public launch, add email verification
-and recovery delivery; review sign-up policy, domains, and migrations. Auth rate
-limiting uses D1 and Cloudflare's client-IP header; cloud cookies are secure.
-For a custom auth origin, set `AUTH_BASE_URL` to its HTTPS origin without a path.
-[Cloudflare/Resend email](docs/email.md) and Slack adapters are opt-in; no auth delivery callbacks or email provider is enabled automatically.
+Review [local/cloud setup](docs/local-development.md),
+[CI/CD](docs/github-cicd.md), [chat setup](docs/pi-chat.md), and
+[observability](docs/observability.md) before cloud use. Plans can access shared
+cloud state and prompt for a state-store bootstrap/upgrade; they are not necessarily
+offline. Inspect persistent-resource changes and deletions before deployment.
 
-## Manual checks after deployment
+GitHub checks PRs and main/prod pushes; only `prod` pushes deploy, using the
+production GitHub environment after checks. PRs/main never receive cloud secrets
+or deploy. Serialize stage deployments and keep dev/prod databases, signing
+secrets, Gateways, provider credentials and sessions isolated.
 
-- An unauthenticated visit reaches Cloudflare Access, not the application.
-- After Access login, `/api/health` returns `{ "ok": true }`.
-- `/api/me` returns 401 before application sign-in.
-- Sign up with a password of at least 12 characters; refresh to confirm the
-  session persists. `/api/me` returns only id, name, and email after sign-in.
-- Sign out, then confirm `/api/me` returns 401 again.
-- Redeploy the same stage and confirm users/sessions persist.
-- Confirm dev and prod do not share databases, signing secrets, or sessions.
-
-Do not delete deployment state or rename stack/auth resource IDs casually:
-these identify persistent resources and the signing secret. Never adopt existing
-production resources to make a development deployment succeed.
-
-## Adding a service
-
-Add only resources you need. Put reusable services under `packages/`, supply
-provider layers at the Worker composition boundary, and keep browser code free
-of server imports and secrets. Add schema-defined endpoints in `apps/api`.
-SQL migrations beyond Better Auth's additive schema need explicit review.
-
-`pnpm lint` rejects authored files exceeding 200 physical lines, including blanks
-and comments, across source, configuration, styles, SQL, and documentation.
-Lockfiles, generated output, dependencies, and scratch `var/` notes are excluded.
-
-## Ratstack patterns adopted
-
-Studied [ratstack.sh](https://ratstack.sh), its
-[pins](https://ratstack.sh/pins.md), [auth](https://ratstack.sh/systems/auth),
-[fence](https://ratstack.sh/systems/fence), and
-[Alchemy guide](https://ratstack.sh/skills/learn-alchemy).
-Adopted typed services/layers, provider boundaries, co-owned infrastructure,
-exact dependency pins, and automated lint/type/build gates.
-Skipped generic capability projections, MCP integration, XState, devtools, analytics, and
-vendoring: none are needed for a plain service starter.
+Production planning/deployment requires deliberate `ALLOW_PRODUCTION=true` in
+`.env.prod`; restore false afterward. Do not run local Alchemy dev against cloud
+`dev`/`prod`. Do not rename stacks, delete state, adopt resources, deploy or destroy
+resources casually. Read the plan and obtain approval before cloud changes.

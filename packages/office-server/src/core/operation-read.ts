@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type {
   ActorClaims,
   OfficeDependencies,
@@ -8,7 +8,7 @@ import type {
   OwnerScope,
 } from "../ports/index.ts";
 import { Intent, StoredOperation } from "./record-schemas.ts";
-import { boundedMetadataDigest } from "./operations.ts";
+import { metadataDigestEffect } from "./operations.ts";
 import { sameOwner } from "./claims.ts";
 import { officeFailure } from "./failure.ts";
 import { acceptedInputIdentity, intentIdentity } from "./control-identity.ts";
@@ -28,21 +28,14 @@ export const operationRecord = Effect.fn("Office.operationRecord")(function* (
   return record;
 });
 export const requireIntent = Effect.fn("Office.requireIntent")(function* (
-  deps: OfficeDependencies,
   record: OperationRecord,
   value: OperationIntent,
 ) {
   const intent = yield* decodeWire(Intent)(value).pipe(
     Effect.mapError(() => officeFailure("INVALID_INPUT")),
   );
-  const expected = yield* boundedMetadataDigest(
-    intentIdentity(record.intent),
-    deps.policy.limits.metadataBytes,
-  );
-  const actual = yield* boundedMetadataDigest(
-    intentIdentity(intent),
-    deps.policy.limits.metadataBytes,
-  );
+  const expected = yield* metadataDigestEffect(intentIdentity(record.intent));
+  const actual = yield* metadataDigestEffect(intentIdentity(intent));
   if (actual !== expected)
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", record.receipt.operationId));
   return undefined;
@@ -70,24 +63,17 @@ export const requireReceiptInput = Effect.fn("Office.requireReceiptInput")(funct
   return undefined;
 });
 export const requireExistingIntent = Effect.fn("Office.requireExistingIntent")(function* (
-  deps: OfficeDependencies,
   claims: ActorClaims,
   record: OperationRecord,
   value: OperationIntent,
 ) {
-  yield* requireIntent(deps, record, value);
+  yield* requireIntent(record, value);
   if (!sameOwner(claims.owner, record.owner)) return yield* Effect.fail(officeFailure("FORBIDDEN"));
   if (claims.capability === "draft-task") {
     if (record.actor.capability !== "draft-task")
       return yield* Effect.fail(officeFailure("FORBIDDEN"));
-    const before = yield* boundedMetadataDigest(
-      acceptedInputIdentity(record.actor.acceptedInput),
-      deps.policy.limits.metadataBytes,
-    );
-    const after = yield* boundedMetadataDigest(
-      acceptedInputIdentity(claims.acceptedInput),
-      deps.policy.limits.metadataBytes,
-    );
+    const before = yield* metadataDigestEffect(acceptedInputIdentity(record.actor.acceptedInput));
+    const after = yield* metadataDigestEffect(acceptedInputIdentity(claims.acceptedInput));
     if (before !== after || claims.principalId !== record.actor.principalId)
       return yield* Effect.fail(officeFailure("FORBIDDEN", record.receipt.operationId));
   }

@@ -5,9 +5,9 @@ import {
   reportEvent,
   reportedFailure,
   type FailureContext,
-} from "@starter/diagnostics";
+} from "@highchat/diagnostics";
 import type * as cf from "@cloudflare/workers-types";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 import type { officePrivateStream } from "./office-private-stream.ts";
 import type { officeNativeMonitor } from "./office-platform.ts";
 

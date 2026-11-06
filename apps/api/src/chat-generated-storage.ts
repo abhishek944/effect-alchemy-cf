@@ -2,7 +2,6 @@ import type * as cf from "@cloudflare/workers-types";
 import type { AgentContext } from "agents";
 import type { ImageStoreContext, Original } from "@abhishek944/pi-image-gen/core";
 import { ensureChatFilesSchema } from "./chat-files-table.ts";
-import { readBoundedBody } from "./body-limit.ts";
 import { generatedDeclaredBytes, persistGeneratedOutput } from "./chat-generated-output.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";
 import { ChatImageStorageLedger } from "./chat-image-storage-ledger.ts";
@@ -36,7 +35,7 @@ export type ChatGeneratedStorageOptions = {
   readonly canGenerate: (chatId: string) => boolean;
 };
 
-/** Owner-local quota/admission and immutable private originals; no provider logic. */
+/** Owner-local dispatch claims and immutable private originals; no provider logic. */
 export class ChatGeneratedStorage {
   private readonly ledger: ChatImageStorageLedger;
   private readonly options: ChatGeneratedStorageOptions;
@@ -77,17 +76,14 @@ export class ChatGeneratedStorage {
       context,
     );
   }
-  /** Private ingress keeps running-call authorization and durable output quota. */
+  /** Private ingress keeps running-call authorization and exact output validation. */
   async ingest(input: ImageStoreQuery, request: Request): Promise<SavedFile> {
     const key = requireImageValue(ImageStoreQuery, input);
     const declared = generatedDeclaredBytes(request);
     if (imageCall(this.options.storage.sql, key)?.state !== "running")
       throw new ImageStorageError("not_admitted");
-    if (declared > this.ledger.request(key).maxOutputBytes)
-      throw new ImageStorageError("invalid_output");
-    const bytes = await readBoundedBody(request, declared);
-    if (bytes === null || bytes.byteLength !== declared)
-      throw new ImageStorageError("invalid_output");
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    if (bytes.byteLength !== declared) throw new ImageStorageError("invalid_output");
     const mimeType = request.headers.get("content-type") ?? "";
     return this.persist(key, { bytes, mimeType }, key.index, {
       total: key.total,

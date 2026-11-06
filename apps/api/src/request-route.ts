@@ -13,15 +13,7 @@ export function requestRoute(url: string): string {
     };
     return routes[path] ?? "auth.other";
   }
-  if (path.startsWith("/api/billing/webhooks/")) return "billing.webhook";
-  if (path.startsWith("/api/admin/billing")) return "admin.billing";
   if (path.startsWith("/api/admin/")) return "admin.operation";
-  if (path.startsWith("/api/billing")) {
-    if (path.endsWith("/checkout")) return "billing.checkout";
-    if (path.endsWith("/portal")) return "billing.portal";
-    if (path.endsWith("/refresh")) return "billing.refresh";
-    return "billing.read";
-  }
   if (path.startsWith("/api/office/")) {
     if (path.includes("/protocol/")) return "office.protocol";
     if (path.includes("/operations/")) return "office.operation";

@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import {
   OfficeConflict,
   OfficeForbidden,
@@ -11,7 +11,7 @@ import {
   safeFailure,
   type ErrorCode,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { CollabError } from "@univerjs-pro/collaboration-service";
 import { WorktreeError } from "@univerjs-pro/collaboration-worktree-service";
 

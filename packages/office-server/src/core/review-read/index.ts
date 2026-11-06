@@ -1,5 +1,5 @@
 import { Clock, Effect, Schema } from "effect";
-import { Cursor, Id, ReviewPage, decodeWire } from "@starter/office-contract";
+import { Cursor, Id, ReviewPage, decodeWire } from "@highchat/office-contract";
 import type { Actor, OfficeDependencies, OfficeService } from "../../ports/index.ts";
 import { authorize, sameOwner } from "../claims.ts";
 import { officeFailure } from "../failure.ts";
@@ -46,21 +46,21 @@ const readReview = Effect.fn("Office.reviewRead")(function* (
     catch: () => officeFailure("CONTENT_REQUIRED"),
   });
   const bindings = yield* readRoles(deps, actor, review, bundle, true);
-  const identity = yield* pageIdentity(deps, review, bindings);
+  const identity = yield* pageIdentity(review, bindings);
   const offset = yield* Effect.try({
     try: () => readOffset(input.cursor, identity, bundle.totalChanges),
     catch: () => officeFailure("INVALID_INPUT"),
   });
   const page = yield* Effect.try({
-    try: () => projectPage(deps.policy.limits.responseBytes, review, bundle, identity, offset),
+    try: () => projectPage(review, bundle, identity, offset),
     catch: () => officeFailure("LIMIT_EXCEEDED"),
   });
   // Re-read exact metadata after artifact IO; immutable role content need not be decoded twice.
   const latest = yield* deps.metadata.review(claims.owner, input.reviewId);
-  if (latest === null || (yield* pageIdentity(deps, latest, bindings)) !== identity)
+  if (latest === null || (yield* pageIdentity(latest, bindings)) !== identity)
     return yield* Effect.fail(officeFailure("STALE_REVIEW"));
   const current = yield* readRoles(deps, actor, review, bundle, false);
-  if ((yield* pageIdentity(deps, review, current)) !== identity)
+  if ((yield* pageIdentity(review, current)) !== identity)
     return yield* Effect.fail(officeFailure("STALE_REVIEW"));
   let approval: ReviewPage["approval"] = review.state === "conflict" ? "conflict" : "incomplete";
   if (

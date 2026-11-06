@@ -119,7 +119,6 @@ export class ToolHistory {
     entry: EntryRecord,
     message: AssistantMessage,
     ceiling: number,
-    byteBudget: number,
     live?: LiveToolRound,
   ) {
     if (this.needsRecovery) {
@@ -130,7 +129,7 @@ export class ToolHistory {
       message,
       this.results,
       Math.max(0, this.blockLimit - this.budget.blocks),
-      byteBudget,
+      undefined,
       live?.assistant === entry.id ? live.slots : [],
       this.truncated,
     );

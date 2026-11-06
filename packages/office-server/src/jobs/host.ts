@@ -5,7 +5,7 @@ import {
   decodeWireSync,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { IsolatedJob, IsolatedJobs, OwnerScope } from "../ports/index.ts";
 import { IsolatedJobSchema } from "./schemas.ts";
 
@@ -31,7 +31,6 @@ async function metadataBody(request: Request): Promise<unknown> {
       const part = await reader.read();
       if (part.done) break;
       size += part.value.byteLength;
-      if (size > 16 * 1024) throw new OfficeInvalid(safeFailure("LIMIT_EXCEEDED"));
       parts.push(part.value);
     }
     const bytes = new Uint8Array(size);
@@ -73,8 +72,6 @@ export function createPrivateJobHandler(jobs: IsolatedJobs, authorize: Authorize
           ? yield* jobs.status(owner, id)
           : yield* jobs.cancel(owner, id);
       const body = JSON.stringify(state);
-      if (new TextEncoder().encode(body).byteLength > 16 * 1024)
-        return yield* Effect.fail(new OfficeInvalid(safeFailure("LIMIT_EXCEEDED")));
       return new Response(body, { status: 200, headers });
     },
     Effect.catch((error: OfficeError) =>

@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
-import { Auth } from "@starter/auth";
-import { reportFailureEffect, requestDiagnosticContext } from "@starter/diagnostics";
+import { Auth } from "@highchat/auth";
+import { reportFailureEffect, requestDiagnosticContext } from "@highchat/diagnostics";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { RuntimeContext } from "alchemy";
 import { Cause, Effect, Schema } from "effect";

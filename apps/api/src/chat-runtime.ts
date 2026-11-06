@@ -1,4 +1,4 @@
-import { reportFailure, type FailureContext } from "@starter/diagnostics";
+import { reportFailure, type FailureContext } from "@highchat/diagnostics";
 import {
   LiveDoc,
   ROOT_CONVERSATION_ID,

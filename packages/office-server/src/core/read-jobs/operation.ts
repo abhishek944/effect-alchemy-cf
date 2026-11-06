@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
+import { decodeWire } from "@highchat/office-contract";
 import type { Actor, OfficeDependencies, OperationIntent, ViewRecord } from "../../ports/index.ts";
 import { artifactKey } from "../../jobs/artifacts.ts";
 import { authorize, verifyOperation } from "../claims.ts";
@@ -9,7 +9,7 @@ import { operationRecord } from "../operation-read.ts";
 import { operationCaller } from "../operation-caller.ts";
 import {
   advanceOperation,
-  boundedMetadataDigest,
+  metadataDigestEffect,
   reserveOperation,
   terminalReceipt,
 } from "../operations.ts";
@@ -71,8 +71,7 @@ export const outputOperation = Effect.fn("Office.readJobs.operation")(function* 
   if (
     spec.kind === "render" &&
     spec.selection.kind !== "sheet" &&
-    (spec.selection.pages.length > deps.policy.limits.renderPages ||
-      new Set<string | number>(spec.selection.pages).size !== spec.selection.pages.length)
+    new Set<string | number>(spec.selection.pages).size !== spec.selection.pages.length
   )
     return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", operationId));
   const claims = yield* authorize(deps, actor, "read", view.target, operationId);
@@ -88,10 +87,7 @@ export const outputOperation = Effect.fn("Office.readJobs.operation")(function* 
   if (record.receipt.phase === "execution-unknown" || record.receipt.phase === "needs-attention")
     return record.receipt;
   yield* verifyOperation(deps, record, view.target, "final-commit");
-  const jobId = yield* boundedMetadataDigest(
-    ["office-output-job", 1, view.owner, operationId],
-    deps.policy.limits.metadataBytes,
-  );
+  const jobId = yield* metadataDigestEffect(["office-output-job", 1, view.owner, operationId]);
   if (record.jobId !== null && record.jobId !== jobId)
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", operationId));
   const existing = yield* existingReadJob(deps, view, spec, jobId, operationId);

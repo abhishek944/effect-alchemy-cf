@@ -1,8 +1,4 @@
-import {
-  MAX_IMAGE_BYTES,
-  MAX_IMAGE_PIXELS,
-  type FileDescriptor,
-} from "./chat-attachment-schema.ts";
+import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import {
   filesFail,
@@ -19,8 +15,6 @@ const imageFailure = (
   file: ImageLimitMetadata,
   model: ChatCatalogModel,
 ): ChatFilesFailure | null => {
-  if (file.byteSize > MAX_IMAGE_BYTES) return "file_too_large";
-  if ((file.width ?? 0) * (file.height ?? 0) > MAX_IMAGE_PIXELS) return "file_too_large";
   const resize = model.imageResize;
   if (resize === null) return null;
   if ((file.width ?? 0) > resize.maxWidth || (file.height ?? 0) > resize.maxHeight)

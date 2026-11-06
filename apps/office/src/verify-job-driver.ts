@@ -7,7 +7,7 @@ import {
   createDockerExecutor,
   type DockerExecutionResult,
   type DockerExecutor,
-} from "@starter/office-server/executor";
+} from "@highchat/office-server/executor";
 
 /** Probe-only output/owner namespace. Never an application job input or production API. */
 export function jobVerificationDirectory(): string {

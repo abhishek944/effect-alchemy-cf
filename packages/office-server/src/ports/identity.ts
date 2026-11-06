@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { ArtifactRef, Count, Digest, DraftTarget, Id, Label } from "@starter/office-contract";
-import type { DocumentScope, OfficeError } from "@starter/office-contract";
+import { ArtifactRef, Count, Digest, DraftTarget, Id, Label } from "@highchat/office-contract";
+import type { DocumentScope, OfficeError } from "@highchat/office-contract";
 import type { Effect } from "effect";
 
 const ClaimId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));

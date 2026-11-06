@@ -4,7 +4,7 @@ import {
   transformSnapshotToDocumentData,
   transformSnapshotToSlideData,
 } from "@univerjs-pro/collaboration";
-import type { Kind } from "@starter/office-contract";
+import type { Kind } from "@highchat/office-contract";
 
 /** Product-native IDs only. Unknown/protected-range/management objects are not inferred from strings. */
 export function nativePermissionObjects(

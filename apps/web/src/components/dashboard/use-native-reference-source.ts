@@ -1,10 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import { freezeOfficeSendTarget, type OfficeSendTarget } from "@starter/office-contract";
+import { freezeOfficeSendTarget, type OfficeSendTarget } from "@highchat/office-contract";
 import type {
   NativeSelectionCapture,
   OfficeEditorHandle,
   OfficeRuntime,
-} from "@starter/office-react";
+} from "@highchat/office-react";
 import { captureOfficeCheckpoint, officeSendAnchor } from "@/lib/office-anchor";
 import type { OpenOffice } from "@/lib/office-runtime";
 import { resumeOfficeReference } from "@/lib/office-reference-resume";

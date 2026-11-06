@@ -1,5 +1,5 @@
 import { officeImageReference } from "./office-image.ts";
-import { withCause, withDiagnostic } from "@starter/diagnostics";
+import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import { officeLifecycle } from "./office-lifecycle.ts";
 import { officeContainerCleanup } from "./office-container-cleanup.ts";
 import { stopPreexistingOfficeContainer } from "./office-container-preexisting.ts";
@@ -10,9 +10,9 @@ import {
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { HostPolicy } from "@starter/office-server/native-remote";
-import { OwnerClaims, type OwnerScope } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { HostPolicy } from "@highchat/office-server/native-remote";
+import { OwnerClaims, type OwnerScope } from "@highchat/office-server/ports";
 import { Effect, Exit } from "effect";
 
 const unavailable = (cause?: unknown) =>

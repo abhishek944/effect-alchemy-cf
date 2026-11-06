@@ -10,7 +10,7 @@ import {
   HostNativePieces,
   HostEditor,
   HostBytes,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-server/native-remote";
 import {
   NativeChannelMember,
   NativeChannelSubmission,

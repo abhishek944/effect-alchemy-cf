@@ -4,8 +4,8 @@ import {
   OfficeForbidden,
   OfficeUnavailable,
   safeFailure,
-} from "@starter/office-contract";
-import { withCause, withDiagnostic, type FailureContext } from "@starter/diagnostics";
+} from "@highchat/office-contract";
+import { withCause, withDiagnostic, type FailureContext } from "@highchat/diagnostics";
 import { NativeJobExit } from "../../office/src/native-private-wire.ts";
 import { readOfficePrivateJson } from "./office-private-json.ts";
 
@@ -45,7 +45,7 @@ export async function officeReadJobExit(
     response.body,
     new AbortController().signal,
     null,
-    16 * 1024,
+    null,
   );
   return decodeWireSync(NativeJobExit)(payload);
 }

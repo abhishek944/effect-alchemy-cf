@@ -1,4 +1,4 @@
-import { OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { OfficeInvalid, safeFailure } from "@highchat/office-contract";
 import type { UniverCollaborationRuntime } from "@univer-cli/univer-collaboration-runtime";
 import type { IsolatedJob } from "../ports/jobs.ts";
 import { createOfficeRenderer } from "./renderer.ts";

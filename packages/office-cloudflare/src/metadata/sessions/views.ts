@@ -1,5 +1,5 @@
-import { Id, decodeWireSync } from "@starter/office-contract";
-import type { OwnerScope, ViewRecord } from "@starter/office-server/ports";
+import { Id, decodeWireSync } from "@highchat/office-contract";
+import type { OwnerScope, ViewRecord } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "../store.ts";
 import type { PredicateSQL } from "../native-fence.ts";
 import { canonical, conflict, sqlNow } from "../store.ts";

@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Digest, Id, Revision } from "@starter/office-contract";
+import { Digest, Id, Revision } from "@highchat/office-contract";
 import { HostId, HostPolicy } from "./host-wire.ts";
 import { NativeProducer, NativeSnapshot } from "./wire.ts";
 

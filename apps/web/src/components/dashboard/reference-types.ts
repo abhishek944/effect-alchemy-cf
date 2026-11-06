@@ -1,5 +1,5 @@
-import type { ChatReferenceInput, OfficeSendTarget } from "@starter/office-contract";
-import type { NativeSelectionCapture } from "@starter/office-react";
+import type { ChatReferenceInput, OfficeSendTarget } from "@highchat/office-contract";
+import type { NativeSelectionCapture } from "@highchat/office-react";
 import type { SavedFile } from "@/lib/chat-library-types";
 
 export type ReferenceValue = Readonly<{

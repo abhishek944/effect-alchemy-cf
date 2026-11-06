@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { OfficeNativeEditor, OfficeReview, type FrameStatus } from "@starter/office-react";
-import type { Document } from "@starter/office-contract";
+import { OfficeNativeEditor, OfficeReview, type FrameStatus } from "@highchat/office-react";
+import type { Document } from "@highchat/office-contract";
 import { useDashboardTheme } from "./theme";
 import { useWorkspaceOffice } from "./workspace-office-context";
 import { useWorkspacePreview } from "./workspace-preview-context";
@@ -8,7 +8,7 @@ import { useOfficeSurface } from "./use-office-surface";
 import { useNativeReferenceSource } from "./use-native-reference-source";
 import { OfficeReopen } from "./office-reopen";
 import type { OfficeSelection } from "./workspace-preview-model";
-import "@starter/office-react/styles.css";
+import "@highchat/office-react/styles.css";
 import "./workspace-office.css";
 export function OfficeSurface({
   chatId,

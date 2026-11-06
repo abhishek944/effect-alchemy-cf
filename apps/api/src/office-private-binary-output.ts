@@ -60,7 +60,6 @@ export function officeBinaryOutput(
   };
   request.keepIO({ close, drain: () => done }, false);
   const prefix = officeBinaryPrefix(JSON.stringify(envelope()));
-  request.charge(prefix.byteLength);
   const pull = async (controller: ReadableStreamDefaultController<Uint8Array>) => {
     try {
       const before = guard();
@@ -91,7 +90,6 @@ export function officeBinaryOutput(
       }
       if (part.value.byteLength > expected - count) throw officeDenied();
       count += part.value.byteLength;
-      request.charge(part.value.byteLength);
       controller.enqueue(part.value);
     } catch (error) {
       controller.error(error);

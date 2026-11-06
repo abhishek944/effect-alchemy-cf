@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
+import { buildAppConfig } from "../../packages/config/stage.ts";
 
 const backend = "http://localhost:1337";
 
@@ -72,7 +73,7 @@ function officeFrameDev(): Plugin {
             response.statusCode = 503;
             response.setHeader("content-type", "text/plain; charset=utf-8");
             response.end(
-              "Office frame is not built. Run: pnpm --filter @starter/office-react build:frame\n",
+              "Office frame is not built. Run: pnpm --filter @highchat/office-react build:frame\n",
             );
             return;
           }
@@ -89,12 +90,28 @@ function officeFrameDev(): Plugin {
   };
 }
 
+const app = buildAppConfig();
+const htmlEntities: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+const escapedName = app.name.replace(/[&<>"']/g, (value) => htmlEntities[value] ?? value);
+const branding: Plugin = {
+  name: "app-branding",
+  transformIndexHtml: (html) => html.replaceAll("__APP_NAME__", () => escapedName),
+};
 const revision = process.env["GITHUB_SHA"] ?? "";
 const webRelease = /^[a-f0-9]{40}$/.test(revision) ? revision : `web-${Date.now().toString(36)}`;
 
 export default defineConfig({
-  define: { "import.meta.env.VITE_APP_VERSION": JSON.stringify(webRelease) },
-  plugins: [tailwindcss(), react(), officeFrameAssets(), officeFrameDev()],
+  define: {
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(webRelease),
+    PUBLIC_APP_CONFIG: JSON.stringify({ name: app.name }),
+  },
+  plugins: [tailwindcss(), react(), branding, officeFrameAssets(), officeFrameDev()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },

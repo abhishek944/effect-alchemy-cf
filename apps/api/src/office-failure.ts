@@ -1,10 +1,10 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import {
   OfficeErrors,
   OfficeUnavailable,
   safeFailure,
   type OfficeError,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 
 /** Foreign runtime/storage faults are not evidence of a denied association. */
 export function officeCaught(cause: unknown): OfficeError {

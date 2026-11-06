@@ -1,5 +1,5 @@
-import type { Editor, EditorAction } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+import type { Editor, EditorAction } from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { conflict, sqlNow } from "../store.ts";
 import { clock, leaseRow, observed } from "./leases.ts";

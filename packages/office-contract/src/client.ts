@@ -4,7 +4,6 @@ import { OfficeApi, UploadHeaders } from "./api.ts";
 import { ArtifactRef } from "./models.ts";
 import { decodeWireSync, Id } from "./primitives.ts";
 import { OfficeInvalid, OfficeUnavailable } from "./errors.ts";
-import { OFFICE_LIMITS } from "./limits.ts";
 
 export type OfficeClient = HttpApiClient.ForApi<typeof OfficeApi>;
 /** Supply an authenticated HttpClient at the host boundary; no auth/provider config is read here. */
@@ -33,8 +32,7 @@ export const uploadOfficeBytes = (
         "x-office-bytes": input.bytes,
         ...(input.digest === undefined ? {} : { "x-office-digest": input.digest }),
       });
-      const cap = input.kind === "code" ? OFFICE_LIMITS.codeBytes : OFFICE_LIMITS.uploadBytes;
-      if (!Number.isSafeInteger(input.bytes) || input.bytes < 0 || input.bytes > cap)
+      if (!Number.isSafeInteger(input.bytes) || input.bytes < 0)
         throw new OfficeInvalid({
           code: "LIMIT_EXCEEDED",
           message: "Upload exceeds its byte limit.",
@@ -80,8 +78,6 @@ export const uploadOfficeBytes = (
       const url = new URL(`/api/office/uploads/${input.operationId}`, baseUrl);
       const response = await request(url, init);
       if (!response.ok) throw new Error("Office upload rejected");
-      if (Number(response.headers.get("content-length") ?? 0) > OFFICE_LIMITS.metadataBytes)
-        throw new Error("Office upload response exceeded limit");
       if (response.body === null) throw new Error("Office upload response is empty");
       const output = response.body.getReader();
       const chunks: Uint8Array[] = [];
@@ -91,8 +87,6 @@ export const uploadOfficeBytes = (
           const part = await output.read();
           if (part.done) break;
           size += part.value.byteLength;
-          if (size > OFFICE_LIMITS.metadataBytes)
-            throw new Error("Office upload response exceeded limit");
           chunks.push(part.value);
         }
       } finally {

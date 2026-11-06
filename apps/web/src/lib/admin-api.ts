@@ -1,4 +1,4 @@
-import { readResponseRequestId, serverReference, withReference } from "@/lib/browser-diagnostics";
+import { readResponseRequestId, serverReference } from "@/lib/browser-diagnostics";
 
 export type AdminRole = "user" | "admin";
 
@@ -18,6 +18,7 @@ export type AdminUser = AdminIdentity & {
 export class AdminApiError extends Error {
   readonly status: number;
   readonly requestId: string | null;
+  readonly reference: string;
 
   constructor(
     status: number,
@@ -26,7 +27,8 @@ export class AdminApiError extends Error {
     operation = "admin.request",
     responseStatus = status,
   ) {
-    super(withReference(message, serverReference(operation, responseStatus, requestId)));
+    super(message);
+    this.reference = serverReference(operation, responseStatus, requestId);
     this.name = "AdminApiError";
     this.status = status;
     this.requestId = requestId;
@@ -41,7 +43,7 @@ const STATUS_MESSAGES: Record<number, string> = {
   503: "Admin tools are temporarily unavailable. Try again shortly.",
 };
 
-const UNEXPECTED_RESPONSE = "The server returned an unexpected response. Try again.";
+const UNEXPECTED_RESPONSE = "Unable to complete your request. Please try again.";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -100,7 +102,7 @@ async function request(
     const message = STATUS_MESSAGES[response.status];
     throw new AdminApiError(
       response.status,
-      message ?? `Request failed (${response.status}).`,
+      message ?? "Unable to complete your request. Please try again.",
       requestId,
       operation,
     );
@@ -160,7 +162,5 @@ export async function adminOtaLogin(token: string): Promise<void> {
 }
 
 export function adminErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : "Something went wrong. Please try again.";
+  return error instanceof AdminApiError ? error.message : "Something went wrong. Please try again.";
 }

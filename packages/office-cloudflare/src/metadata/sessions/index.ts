@@ -1,5 +1,5 @@
-import { Count, EditorAction, decodeWireSync } from "@starter/office-contract";
-import type { OfficeMetadata } from "@starter/office-server/ports";
+import { Count, EditorAction, decodeWireSync } from "@highchat/office-contract";
+import type { OfficeMetadata } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { invalid, storeEffect } from "../store.ts";
 import { activeView, prepareView } from "./views.ts";

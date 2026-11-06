@@ -1,12 +1,7 @@
 import { createHash } from "node:crypto";
 import type { IChangeset } from "@univerjs/protocol";
-import {
-  decodeWireSync,
-  OfficeForbidden,
-  OfficeLimited,
-  safeFailure,
-} from "@starter/office-contract";
-import { encodeNativeFrame, NATIVE_WIRE_LIMITS } from "@starter/office-contract/native-wire";
+import { decodeWireSync, OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import { encodeNativeFrame, NATIVE_WIRE_LIMITS } from "@highchat/office-contract/native-wire";
 import type { NativeEditorPermit, OfficeDependencies } from "../ports/index.ts";
 import { decodeChangeset } from "./native-envelope.ts";
 import { HostEditorPermit } from "./editor-records.ts";
@@ -34,9 +29,7 @@ export function prepareSdkEditorCommit(
     input.revision !== permit.expectedHead + 1
   )
     throw new OfficeForbidden(safeFailure("FORBIDDEN"));
-  const maximum = Math.min(policy.limits.nativeBytes, NATIVE_WIRE_LIMITS.maxBytes);
-  const bytes = encodeNativeFrame("changeset", input, { ...NATIVE_WIRE_LIMITS, maxBytes: maximum });
-  if (bytes.byteLength > maximum) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
+  const bytes = encodeNativeFrame("changeset", input, NATIVE_WIRE_LIMITS);
   const change = decodeChangeset(bytes, {
     unitID: permit.target.unitId,
     type: nativeType,

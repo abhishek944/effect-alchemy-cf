@@ -12,9 +12,9 @@ import {
   Kind,
   RenderSelection,
   Revision,
-} from "@starter/office-contract";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
-import { OwnerClaims } from "@starter/office-server/ports";
+} from "@highchat/office-contract";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
+import { OwnerClaims } from "@highchat/office-server/ports";
 import { NativeId } from "../schemas.ts";
 
 export const JobBindingRow = Schema.Struct({

@@ -5,7 +5,7 @@ import {
   OfficeForbidden,
   OfficeInvalid,
   safeFailure,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { UniverUnitRuntime, type IUnitRuntimeReader } from "@univerjs-pro/collaboration-service";
 import type { IChangeset, IMutation } from "@univerjs/protocol";
 import type { NativeInputFrame, NativeProposalFrame } from "../ports/jobs.ts";
@@ -28,9 +28,7 @@ export async function replayMutationCandidate(
   preserveWorkbookResources = false,
 ): Promise<NativeProposalFrame> {
   const binding = decodeWireSync(ProposalBindingSchema)(input.binding);
-  const checked = decodeWireSync(Schema.Array(MutationSchema).check(Schema.isMaxLength(5000)))(
-    mutations,
-  );
+  const checked = decodeWireSync(Schema.Array(MutationSchema))(mutations);
   const identity = decodeWireSync(Identity)(submission);
   requireSnapshot(input.native, binding);
   const changeset: IChangeset = {

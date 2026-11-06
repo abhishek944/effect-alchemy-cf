@@ -1,4 +1,4 @@
-import { diagnosticMetadata, reportEvent, reportFailure } from "@starter/diagnostics";
+import { diagnosticMetadata, reportEvent, reportFailure } from "@highchat/diagnostics";
 
 /** Fixed host entry owns boot/shutdown failures; native stdout/stderr are its canonical sinks. */
 export async function observeBootstrap(

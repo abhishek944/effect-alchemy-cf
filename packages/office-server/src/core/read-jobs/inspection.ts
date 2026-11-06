@@ -1,11 +1,11 @@
 import { Schema } from "effect";
-import { Count, InspectionEntry, Label, Scalar, decodeWireSync } from "@starter/office-contract";
-import type { InspectQuery } from "@starter/office-contract";
+import { Count, InspectionEntry, Label, Scalar, decodeWireSync } from "@highchat/office-contract";
+import type { InspectQuery } from "@highchat/office-contract";
 import { officeFailure } from "../failure.ts";
 import { columnName, rangeBounds, requireInspectionSelectors } from "./selectors.ts";
 
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
-const Text = Schema.String.check(Schema.isMaxLength(16_384));
+const Text = Schema.String;
 const Worksheet = Schema.Struct({ id: NativeId, name: Label, rowCount: Count });
 const Paragraph = Schema.Struct({ id: NativeId, index: Count, textPreview: Text });
 const Slide = Schema.Struct({
@@ -123,9 +123,7 @@ export function inspectionEntries(raw: unknown, unitId: string, query: InspectQu
         push({ kind: "summary", id: slide.id, name: slide.name, count: slide.elementCounts.total });
       break;
     case "slide": {
-      let nodes = 0;
-      const visit = (rawElement: unknown, depth: number) => {
-        if (depth > 16 || ++nodes > 1000) throw officeFailure("LIMIT_EXCEEDED");
+      const visit = (rawElement: unknown) => {
         const element = Schema.decodeUnknownSync(Element, { onExcessProperty: "ignore" })(
           rawElement,
         );
@@ -138,11 +136,11 @@ export function inspectionEntries(raw: unknown, unitId: string, query: InspectQu
             index: entries.length,
             text: element.tableText.map((row) => row.join("\t")).join("\n"),
           });
-        for (const child of element.children ?? []) visit(child, depth + 1);
+        for (const child of element.children ?? []) visit(child);
       };
       for (const slide of result.slides) {
         push({ kind: "summary", id: slide.id, name: slide.name, count: slide.elementCounts.total });
-        for (const element of slide.elements) visit(element, 0);
+        for (const element of slide.elements) visit(element);
         if (slide.speakerNotes !== "")
           push({ kind: "text", id: slide.id, index: slide.index, text: slide.speakerNotes });
       }

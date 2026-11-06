@@ -1,5 +1,5 @@
-import { Auth } from "@starter/auth";
-import { reportFailureEffect, withDiagnostic } from "@starter/diagnostics";
+import { Auth } from "@highchat/auth";
+import { reportFailureEffect, withDiagnostic } from "@highchat/diagnostics";
 import { RuntimeContext } from "alchemy";
 import { Cause, Effect } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";

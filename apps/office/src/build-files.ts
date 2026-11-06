@@ -110,7 +110,7 @@ export async function describeFiles(
       });
       if (
         path.endsWith(".mjs") &&
-        /(?:from\s*|import\s*\()\s*["']@starter\//u.test(bytes.toString("utf8"))
+        /(?:from\s*|import\s*\()\s*["']@highchat\//u.test(bytes.toString("utf8"))
       ) {
         throw new Error("Private TypeScript package escaped Node bundling.");
       }

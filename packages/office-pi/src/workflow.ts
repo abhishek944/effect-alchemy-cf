@@ -1,4 +1,4 @@
-import { withCause, reportFailure } from "@starter/diagnostics";
+import { withCause, reportFailure } from "@highchat/diagnostics";
 import {
   ArtifactRef,
   OfficeCommand,
@@ -7,18 +7,15 @@ import {
   safeFailure,
   type DraftTarget,
   type Receipt,
-} from "@starter/office-contract";
+  type OfficeSendTarget,
+  type OfficeSourceDescriptor,
+} from "@highchat/office-contract";
 import { OfficeStagingFailure, officeStagingFailure } from "./staging-failure.ts";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
 import { dispatch, checkReceipt, receiptKind, type OfficeOutput } from "./dispatch.ts";
 import { bindIntent, claimDispatch, digestBytes, hasOperation, type OfficeStep } from "./intent.ts";
 import type { OfficeToolSource } from "./parameters.ts";
-import type {
-  OfficeTaskAccess,
-  OfficeAttachment,
-  OfficePiHost,
-  OfficeToolContext,
-} from "./types.ts";
+import type { OfficeAttachment, OfficePiHost, OfficeToolContext } from "./types.ts";
 
 export type OfficeWorkflow = ReturnType<typeof officeWorkflow>;
 /** Internal orchestration; private step attestations bind every operation to the real tool call. */
@@ -31,17 +28,19 @@ export function officeWorkflow(
 ) {
   const selector = typeof source === "string" ? { attachmentId: source } : source;
   const attachmentId = "attachmentId" in selector ? selector.attachmentId : undefined;
-  let reference: OfficeTaskAccess["reference"];
-  let referenceBasis: DraftTarget | undefined;
   let attachment: OfficeAttachment | undefined;
   let receipt: Receipt | null | undefined;
   let basis: DraftTarget | undefined;
+  let mainView: OfficeSendTarget | undefined;
+  let sourceDescriptor: OfficeSourceDescriptor | null = null;
+  let nativeReference = false;
   const prepare = async (raw: OfficeCommand, label: string, operationId?: string) => {
     const step: OfficeStep = {
       ...selector,
       step: label,
       ...(operationId ? { operationId } : {}),
       ...(basis ? { basis } : {}),
+      ...(mainView ? { mainView } : {}),
     };
     const binding = await bindIntent(decodeWireSync(OfficeCommand)(raw), api, context, step);
     const candidate = {
@@ -61,36 +60,39 @@ export function officeWorkflow(
         throw error;
       });
     if (
-      "referenceId" in selector
-        ? access.reference?.id !== selector.referenceId
-        : access.attachment?.id !== attachmentId
+      access.attachment?.id !== attachmentId &&
+      access.reference?.target.documentId !== attachmentId
     )
       throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
-    reference = access.reference;
-    referenceBasis = access.referenceBasis;
+    sourceDescriptor = access.source;
+    nativeReference = access.reference?.kind === "native";
     attachment = access.attachment;
     receipt = access.attachmentReceipt;
     context.abortSignal?.throwIfAborted();
     return { ...binding, access };
   };
   return {
-    get referenceBasis() {
-      return referenceBasis;
+    set mainView(value: OfficeSendTarget) {
+      mainView = value;
+    },
+    async describeSource() {
+      await prepare(
+        { command: "operation", operationId: `source_open_${attachmentId}` },
+        "describe",
+      );
+      return sourceDescriptor;
     },
     get attachment() {
       return attachment;
     },
+    get importReceipt() {
+      return receipt;
+    },
+    get hasNativeReference() {
+      return nativeReference;
+    },
     set basis(value: DraftTarget) {
       basis = value;
-    },
-    async describeReference() {
-      if (!("referenceId" in selector)) throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
-      await prepare(
-        { command: "operation", operationId: `reference_open_${selector.referenceId}` },
-        "describe",
-      );
-      if (reference === undefined) throw new OfficeUnavailable(safeFailure("FORBIDDEN"));
-      return reference;
     },
     async describe() {
       await prepare({ command: "operation", operationId: `file_open_${attachmentId}` }, "describe");

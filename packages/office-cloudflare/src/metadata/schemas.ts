@@ -17,14 +17,14 @@ import {
   Digest,
   Id,
   DocumentScope,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import {
   MergeWitness,
   OriginalActorClaims,
   OwnerClaims,
   NativeReceiptKey,
   NativeReceiptBinding,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 
 export const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const DocumentRow = Schema.Struct({

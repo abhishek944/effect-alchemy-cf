@@ -1,14 +1,13 @@
 import { Effect } from "effect";
-import { createNativeStorage } from "@starter/office-cloudflare/native";
-import type { NativeInvocation, NativeReadInvocation } from "@starter/office-cloudflare/native";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { NativeAccess, OfficeMetadata } from "@starter/office-server/ports";
+import * as Native from "@highchat/office-cloudflare/native";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { NativeAccess, OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficePrivateTurns } from "./office-private-turns.ts";
 import type { OfficeEditorGrants } from "./office-editor-grants.ts";
 import { officeNativeWriter } from "./office-native-writer.ts";
 import { assertOfficeTaskRead } from "./office-task-read-policy.ts";
 import { officeTaskDescriptorRequest } from "./office-task-descriptor.ts";
-import type { HostNativeReads } from "@starter/office-server/native-remote";
+import type { HostNativeReads } from "@highchat/office-server/native-remote";
 import { retireOfficeNativeHandle, type OfficeNativeHandle } from "./office-native-handle.ts";
 import {
   officePrivateAuthority,
@@ -74,7 +73,7 @@ export function officeNativeHandles(
         target.scope.kind === "draft"
           ? await Effect.runPromise(metadata.draft(target.owner, target.scope.draftId))
           : null;
-      const storage = createNativeStorage(options, {
+      const storage = Native.createNativeStorage(options, {
         stage: target.owner.stage,
         ownerID: target.owner.ownerId,
         documentID: target.documentId,
@@ -90,7 +89,7 @@ export function officeNativeHandles(
             }),
       };
       const reader = access.kind === "write" ? null : await storage.readReferences(grant);
-      let pair: NativeInvocation | NativeReadInvocation;
+      let pair: Native.NativeInvocation | Native.NativeReadInvocation;
       let writer: Awaited<ReturnType<typeof officeNativeWriter>> | null = null;
       try {
         if (held === null) pair = await storage.readInvocation(grant);

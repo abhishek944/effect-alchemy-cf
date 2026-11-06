@@ -19,7 +19,6 @@ export {
   DocUnit,
   DocChangeRow,
 } from "./read-wire.ts";
-export type { DocReadBudget } from "./read-wire.ts";
 export * from "./host-wire.ts";
 export * from "./metadata-records.ts";
 export { HostMetadata, HostBytes } from "./metadata-wire.ts";

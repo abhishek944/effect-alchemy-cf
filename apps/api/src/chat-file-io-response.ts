@@ -1,5 +1,5 @@
 import type * as cf from "@cloudflare/workers-types";
-import { reportFailure, type FailureContext } from "@starter/diagnostics";
+import { reportFailure, type FailureContext } from "@highchat/diagnostics";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { publicFail } from "./chat-files-public.ts";
 import { holdFileBody } from "./chat-file-io-body.ts";

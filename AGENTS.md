@@ -1,4 +1,4 @@
-# Service starter
+# highchat
 
 - Use pnpm; pin direct dependency versions and keep the lockfile.
 - Run `pnpm lint` and `pnpm build` before handing off changes.

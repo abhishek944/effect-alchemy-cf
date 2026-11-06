@@ -1,4 +1,4 @@
-import type { ChatReferenceInputs } from "@starter/office-contract";
+import type { ChatReferenceInputs } from "@highchat/office-contract";
 
 /** No explicit selection (or an explicit whole occurrence) retains historical whole hydration. */
 export function originalReferenceSlices(

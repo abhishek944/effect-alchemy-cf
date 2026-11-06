@@ -3,9 +3,9 @@ import type {
   ISnapshotWithBlocks,
   UnitRecord,
 } from "@univerjs-pro/collaboration-service";
-import { OfficeForbidden, safeFailure } from "@starter/office-contract";
-import { HostUnitRecord, HostSnapshotInfo } from "@starter/office-server/native-remote";
-import { decodeWireSync } from "@starter/office-contract";
+import { OfficeForbidden, safeFailure } from "@highchat/office-contract";
+import { HostUnitRecord, HostSnapshotInfo } from "@highchat/office-server/native-remote";
+import { decodeWireSync } from "@highchat/office-contract";
 
 const denied = (): never => {
   throw new OfficeForbidden(safeFailure("FORBIDDEN"));

@@ -1,11 +1,11 @@
 import { Effect } from "effect";
-import type { DraftTarget } from "@starter/office-contract";
+import type { DraftTarget } from "@highchat/office-contract";
 import type {
   OfficeMetadata,
   OperationRecord,
   OwnerScope,
   ViewRecord,
-} from "@starter/office-server/ports";
+} from "@highchat/office-server/ports";
 import type { OfficeTaskTarget } from "./office-task-target.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 

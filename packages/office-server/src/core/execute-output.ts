@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Effect } from "effect";
 import type { IsolatedJob, JobState, OfficeDependencies, OperationRecord } from "../ports/index.ts";
-import { decodeJobInput, decodeMutationCandidate, JOB_NATIVE_LIMITS } from "../jobs/frames.ts";
+import { decodeJobInput, decodeMutationCandidate } from "../jobs/frames.ts";
 import { validateMutationCandidate } from "../jobs/validate.ts";
 import { readArtifact, stageNativeArtifact } from "./bytes.ts";
 import { advanceOperation } from "./operations.ts";
@@ -56,23 +56,16 @@ export const stageExecutionProposal = Effect.fn("Office.stageExecutionProposal")
       record,
       proposal: yield* readProposal(deps, record.owner, record.artifacts.proposal, job.binding),
     };
-  const inputBytes = yield* readArtifact(deps, record.owner, job.input, JOB_NATIVE_LIMITS.maxBytes);
+  const inputBytes = yield* readArtifact(deps, record.owner, job.input);
   const input = yield* Effect.try({
     try: () => decodeJobInput(inputBytes, job.binding),
     catch: () => officeFailure("CONTENT_REQUIRED", record.receipt.operationId),
   });
-  const candidateBytes = yield* readArtifact(
-    deps,
-    record.owner,
-    state.output,
-    deps.policy.limits.proposalBytes,
-  );
+  const candidateBytes = yield* readArtifact(deps, record.owner, state.output);
   const candidate = yield* Effect.try({
     try: () => decodeMutationCandidate(candidateBytes, job.binding),
     catch: () => officeFailure("INVALID_INPUT", record.receipt.operationId),
   });
-  if (candidate.mutations.length > deps.policy.limits.mutationCount)
-    return yield* Effect.fail(officeFailure("LIMIT_EXCEEDED", record.receipt.operationId));
   const proposal = yield* nativeCall(() =>
     validateMutationCandidate(input, candidate, {
       userId: record.owner.ownerId,
@@ -87,7 +80,6 @@ export const stageExecutionProposal = Effect.fn("Office.stageExecutionProposal")
     "native-proposal",
     "proposal",
     proposal,
-    deps.policy.limits.proposalBytes,
   );
   const current = yield* operationRecord(deps, record.owner, record.receipt.operationId);
   if (current === null)

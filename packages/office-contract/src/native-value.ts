@@ -10,13 +10,13 @@ export type NativeValue =
   | readonly NativeValue[]
   | { readonly [key: string]: NativeValue | undefined };
 export type NativeWireLimits = {
-  readonly maxBytes: number;
-  readonly maxDepth: number;
-  readonly maxNodes: number;
-  readonly maxArrayLength: number;
-  readonly maxMapLength: number;
-  readonly maxStringBytes: number;
-  readonly maxBinaryBytes: number;
+  readonly maxBytes?: number;
+  readonly maxDepth?: number;
+  readonly maxNodes?: number;
+  readonly maxArrayLength?: number;
+  readonly maxMapLength?: number;
+  readonly maxStringBytes?: number;
+  readonly maxBinaryBytes?: number;
 };
 export class NativeWireError extends Error {
   readonly code: "INVALID_FRAME" | "LIMIT_EXCEEDED";
@@ -31,18 +31,21 @@ const malformedUtf16 = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[
 export const forbiddenNativeKey = (key: string): boolean =>
   key === "__proto__" || key === "constructor" || key === "prototype";
 
-/** Iterative pre-encode validation: no getters, cycles, extension objects or unbounded fanout. */
+/** Proves the native value shape and optionally records its actual encoder nesting depth. */
 export function validateNativeValue(
   value: unknown,
   limits: NativeWireLimits,
+  measurement?: { depth: number },
 ): asserts value is NativeValue {
   const stack: { value: unknown; depth: number; exit?: object }[] = [{ value, depth: 0 }];
   const active = new Set<object>();
   let nodes = 0;
+  let depth = 0;
   let size = 0;
   const add = (bytes: number) => {
     size += bytes;
-    if (size > limits.maxBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+    if (limits.maxBytes !== undefined && size > limits.maxBytes)
+      throw new NativeWireError("LIMIT_EXCEEDED");
   };
   while (stack.length > 0) {
     const next = stack.pop();
@@ -51,7 +54,11 @@ export function validateNativeValue(
       active.delete(next.exit);
       continue;
     }
-    if (++nodes > limits.maxNodes || next.depth > limits.maxDepth)
+    depth = Math.max(depth, next.depth);
+    if (
+      (limits.maxNodes !== undefined && ++nodes > limits.maxNodes) ||
+      (limits.maxDepth !== undefined && next.depth > limits.maxDepth)
+    )
       throw new NativeWireError("LIMIT_EXCEEDED");
     const current = next.value;
     if (current === undefined) {
@@ -69,15 +76,24 @@ export function validateNativeValue(
     }
     if (typeof current === "string") {
       if (malformedUtf16.test(current)) throw new NativeWireError("INVALID_FRAME");
-      if (current.length > limits.maxStringBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (limits.maxStringBytes !== undefined && current.length > limits.maxStringBytes)
+        throw new NativeWireError("LIMIT_EXCEEDED");
       const bytes = encoder.encode(current).byteLength;
-      if (bytes > limits.maxStringBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (
+        bytes >= 0x100000000 ||
+        (limits.maxStringBytes !== undefined && bytes > limits.maxStringBytes)
+      )
+        throw new NativeWireError("LIMIT_EXCEEDED");
       add(5 + bytes);
       continue;
     }
     if (current instanceof Uint8Array) {
       // Binary vectors are bytes, not object maps; never enumerate potentially huge index sets.
-      if (current.byteLength > limits.maxBinaryBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (
+        current.byteLength >= 0x100000000 ||
+        (limits.maxBinaryBytes !== undefined && current.byteLength > limits.maxBinaryBytes)
+      )
+        throw new NativeWireError("LIMIT_EXCEEDED");
       add(5 + current.byteLength);
       continue;
     }
@@ -91,7 +107,11 @@ export function validateNativeValue(
     if (Array.isArray(current)) {
       if (Object.getPrototypeOf(current) !== Array.prototype)
         throw new NativeWireError("INVALID_FRAME");
-      if (current.length > limits.maxArrayLength) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (
+        current.length >= 0x100000000 ||
+        (limits.maxArrayLength !== undefined && current.length > limits.maxArrayLength)
+      )
+        throw new NativeWireError("LIMIT_EXCEEDED");
       if (Object.getOwnPropertyNames(current).length !== current.length + 1)
         throw new NativeWireError("INVALID_FRAME");
       for (let i = current.length - 1; i >= 0; i--) {
@@ -105,20 +125,33 @@ export function validateNativeValue(
       const keys = Object.keys(current);
       if (Object.getOwnPropertyNames(current).length !== keys.length)
         throw new NativeWireError("INVALID_FRAME");
-      if (keys.length > limits.maxMapLength) throw new NativeWireError("LIMIT_EXCEEDED");
+      if (
+        keys.length >= 0x100000000 ||
+        (limits.maxMapLength !== undefined && keys.length > limits.maxMapLength)
+      )
+        throw new NativeWireError("LIMIT_EXCEEDED");
       for (const key of keys) {
-        if (++nodes > limits.maxNodes || next.depth + 1 > limits.maxDepth)
+        if (
+          (limits.maxNodes !== undefined && ++nodes > limits.maxNodes) ||
+          (limits.maxDepth !== undefined && next.depth + 1 > limits.maxDepth)
+        )
           throw new NativeWireError("LIMIT_EXCEEDED");
         if (forbiddenNativeKey(key) || malformedUtf16.test(key))
           throw new NativeWireError("INVALID_FRAME");
         const entry = Object.getOwnPropertyDescriptor(current, key);
         if (!entry || !("value" in entry)) throw new NativeWireError("INVALID_FRAME");
-        if (key.length > limits.maxStringBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+        if (limits.maxStringBytes !== undefined && key.length > limits.maxStringBytes)
+          throw new NativeWireError("LIMIT_EXCEEDED");
         const keyBytes = encoder.encode(key).byteLength;
-        if (keyBytes > limits.maxStringBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+        if (
+          keyBytes >= 0x100000000 ||
+          (limits.maxStringBytes !== undefined && keyBytes > limits.maxStringBytes)
+        )
+          throw new NativeWireError("LIMIT_EXCEEDED");
         add(5 + keyBytes);
         stack.push({ value: entry.value, depth: next.depth + 1 });
       }
     }
   }
+  if (measurement !== undefined) measurement.depth = depth;
 }

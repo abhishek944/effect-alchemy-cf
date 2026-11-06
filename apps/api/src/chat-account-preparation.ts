@@ -8,7 +8,7 @@
  * unreachable catalog produces an honest `unavailable` intent instead of a guess.
  */
 import type { Storage } from "@earendil-works/pi-durable";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { Effect } from "effect";
 import { doCall, type ChatCatalogStub, type DoCall } from "./chat-bindings.ts";
 import { conversationOwner, type ChatOwnerBinding } from "./chat-tool-authorization.ts";

@@ -1,8 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { IncomingMessage } from "node:http";
 import { Schema } from "effect";
-import { OfficeForbidden, decodeWireSync, safeFailure } from "@starter/office-contract";
-import { HostId } from "@starter/office-server/native-remote";
+import { OfficeForbidden, decodeWireSync, safeFailure } from "@highchat/office-contract";
+import { HostId } from "@highchat/office-server/native-remote";
 import { NativePrivateResolution } from "./native-private-wire.ts";
 import type { NativePrivateConnection } from "./native-private-connection.ts";
 import { nativePrivateChannels } from "./native-private-channels.ts";

@@ -1,6 +1,6 @@
 import type { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import { OfficeUnavailable, decodeWireSync, safeFailure } from "@starter/office-contract";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
+import { OfficeUnavailable, decodeWireSync, safeFailure } from "@highchat/office-contract";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
 import * as Cloudflare from "alchemy/Cloudflare";
 import { Effect, Schema } from "effect";
 

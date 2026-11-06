@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { safeFailure } from "@starter/office-contract";
+import { safeFailure } from "@highchat/office-contract";
 import type { WorktreeData } from "@univerjs-pro/collaboration-worktree-service";
 import type {
   FrozenReview,

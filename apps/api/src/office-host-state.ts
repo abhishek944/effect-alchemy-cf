@@ -1,7 +1,7 @@
 import type * as cf from "@cloudflare/workers-types";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
-import type { OfficeMetadata, OwnerScope } from "@starter/office-server/ports";
-import type { HostPolicy } from "@starter/office-server/native-remote";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
+import type { OfficeMetadata, OwnerScope } from "@highchat/office-server/ports";
+import type { HostPolicy } from "@highchat/office-server/native-remote";
 import type { NativePrivateResolution } from "../../office/src/native-private-wire.ts";
 import type { OfficeInvocationRegistry } from "./office-invocations.ts";
 import type { OfficeNamespace } from "./office-private-bindings.ts";

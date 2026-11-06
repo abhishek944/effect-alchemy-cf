@@ -1,5 +1,5 @@
-import { Count, DocumentEvent, Id, decodeWireSync } from "@starter/office-contract";
-import type { OwnerScope, OfficeMetadata } from "@starter/office-server/ports";
+import { Count, DocumentEvent, Id, decodeWireSync } from "@highchat/office-contract";
+import type { OwnerScope, OfficeMetadata } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { canonical, missing, storeEffect } from "./store.ts";
 import { requirePageProgress } from "./pages.ts";
@@ -70,10 +70,7 @@ export function createEvents(db: MetadataStore): Pick<OfficeMetadata, "events"> 
           [key, documentId, after],
         );
         const items: DocumentEvent[] = [];
-        let bytes = 0;
         for (const row of rows.slice(0, 100)) {
-          bytes += new TextEncoder().encode(row.record).length;
-          if (bytes > db.limits.responseBytes) break;
           const event = db.decode(DocumentEvent, row.record);
           items.push(event);
         }

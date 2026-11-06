@@ -12,7 +12,7 @@ import {
   freezeOfficeSendTarget,
   type ChatReferenceInputs,
   type OfficeSendTarget,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { LexicalEditor } from "lexical";
 import type {
   ReferenceEditorBinding,

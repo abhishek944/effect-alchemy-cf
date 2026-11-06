@@ -1,4 +1,4 @@
-import { diagnosticMetadata, failureRecord } from "@starter/diagnostics";
+import { diagnosticMetadata, failureRecord } from "@highchat/diagnostics";
 import type { decodeJobRequest } from "./transport.ts";
 
 export type JobPhase =

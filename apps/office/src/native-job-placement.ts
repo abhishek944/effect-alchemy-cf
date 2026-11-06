@@ -1,8 +1,13 @@
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
-import type { FreshJobPlacement } from "@starter/office-server/jobs";
+import {
+  diagnosticMetadata,
+  reportEvent,
+  reportFailure,
+  type FailureContext,
+} from "@highchat/diagnostics";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
+import type { FreshJobPlacement } from "@highchat/office-server/jobs";
 import { NativeJobExit } from "./native-private-wire.ts";
 import type { NativePrivateInvocations } from "./native-private-invocations.ts";
-
 const unknown = () => new OfficeUnavailable(safeFailure("OUTCOME_UNKNOWN"));
 /** Worker launches a separate fresh box after the genuine first D1 claim ACK. Never exec in this host. */
 export function nativeJobPlacement(
@@ -13,9 +18,45 @@ export function nativeJobPlacement(
     imageDigest,
     async run(input, signal) {
       const original = invocations.current();
-      if (input.byteLength > 64 * 1024 * 1024) throw unknown();
-      const { invocationId, deadline, cleanupDeadline } = original.value;
+      const { actor, invocationId, deadline, cleanupDeadline } = original.value;
       const linked = AbortSignal.any([signal, original.signal]);
+      const diagnostic = {
+        ...diagnosticMetadata(process.env),
+        component: "office.job-placement",
+        operation: "run",
+        release: imageDigest,
+        requestId: actor.capability === "draft-task" ? actor.acceptedInput.requestId : undefined,
+        taskId: actor.capability === "draft-task" ? actor.acceptedInput.toolTaskId : undefined,
+        deadlineAt: deadline,
+      };
+      let phase = "dispatch",
+        began = Date.now(),
+        count = 0;
+      const enter = (next: string) => {
+        phase = next;
+        began = Date.now();
+        reportEvent({ ...diagnostic, phase, reason: "entered", bytes: count });
+      };
+      const done = (extra: Partial<FailureContext> = {}) =>
+        reportEvent({
+          ...diagnostic,
+          phase,
+          reason: "completed",
+          outcome: "confirmed",
+          durationMs: Date.now() - began,
+          bytes: count,
+          ...extra,
+        });
+      const failed = (cause: unknown) =>
+        reportFailure(cause, {
+          ...diagnostic,
+          event: "application.phase",
+          phase,
+          reason: "failed",
+          outcome: "unknown",
+          durationMs: Date.now() - began,
+          bytes: count,
+        });
       let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
       let reading: Promise<unknown> | undefined;
       let closed: Promise<unknown> | undefined;
@@ -25,22 +66,41 @@ export function nativeJobPlacement(
         if (actual !== undefined)
           cancellation ??= actual.cancel().then(
             () => undefined,
-            () => {
-              invocations.context.failCleanup();
+            (cause) => {
+              invocations.context.failCleanup(cause, "placement-reader-cancel");
             },
           );
       };
-      linked.addEventListener("abort", cancel, { once: true });
+      const abort = () => {
+        reportEvent({
+          ...diagnostic,
+          event: "application.cancelled",
+          phase,
+          reason: "linked-abort",
+          outcome: "cancelled",
+          bytes: count,
+          durationMs: Date.now() - began,
+        });
+        cancel();
+      };
+      linked.addEventListener("abort", abort, { once: true });
       let sent = false,
         completed = false;
       const cleanup = async () => {
+        enter("cleanup-read-join");
         cancel();
         await reading;
+        done();
+        enter("cleanup-close-join");
         await closed;
+        done();
+        enter("cleanup-cancel-join");
         await cancellation;
         reader?.releaseLock();
-        linked.removeEventListener("abort", cancel);
+        linked.removeEventListener("abort", abort);
+        done();
         if (sent && !completed) {
+          enter("cleanup-status");
           try {
             await invocations.connection.json(
               `/private/${invocationId}/job-status`,
@@ -49,8 +109,9 @@ export function nativeJobPlacement(
               new AbortController().signal,
               cleanupDeadline,
             );
-          } catch {
-            invocations.context.failCleanup();
+            done();
+          } catch (cause) {
+            invocations.context.failCleanup(cause, "placement-status-cancel");
             throw unknown();
           }
         }
@@ -59,6 +120,7 @@ export function nativeJobPlacement(
         linked.throwIfAborted();
         if (Date.now() >= deadline) throw unknown();
         sent = true;
+        enter("dispatch");
         const response = await invocations.connection.request(
           new Request(`${invocations.connection.origin}/private/${invocationId}/job-run`, {
             method: "POST",
@@ -67,6 +129,7 @@ export function nativeJobPlacement(
             signal: linked,
           }),
         );
+        done({ status: response.status });
         if (
           response.status !== 200 ||
           response.body === null ||
@@ -81,9 +144,9 @@ export function nativeJobPlacement(
           () => undefined,
         );
         if (linked.aborted) cancel();
-        const bytes = new Uint8Array(32 * 1024 * 1024);
-        let count = 0,
-          empty = 0;
+        const chunks: Uint8Array[] = [];
+        let empty = 0;
+        enter("result-receive");
         while (true) {
           linked.throwIfAborted();
           if (Date.now() >= deadline) throw unknown();
@@ -96,15 +159,15 @@ export function nativeJobPlacement(
           linked.throwIfAborted();
           if (Date.now() >= deadline) throw unknown();
           if (part.done) break;
-          if (
-            part.value.byteLength > bytes.byteLength - count ||
-            (part.value.byteLength === 0 && ++empty > 1024)
-          )
-            throw unknown();
-          bytes.set(part.value, count);
+          if (part.value.byteLength === 0 && ++empty > 1024) throw unknown();
+          chunks.push(part.value);
           count += part.value.byteLength;
         }
+        done();
+        enter("result-close-join");
         await closed;
+        done();
+        enter("result-status");
         const outcome = await invocations.connection.json(
           `/private/${invocationId}/job-status`,
           { cancel: false },
@@ -112,10 +175,25 @@ export function nativeJobPlacement(
           new AbortController().signal,
           cleanupDeadline,
         );
+        done({ exitCode: outcome.exitCode ?? undefined, step: outcome.status });
         completed = true;
-        return { ...outcome, stdout: bytes.slice(0, count) };
+        enter("result-assemble");
+        const stdout = new Uint8Array(count);
+        let offset = 0;
+        for (const chunk of chunks) {
+          stdout.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+        done();
+        return { ...outcome, stdout };
+      } catch (cause) {
+        failed(cause);
+        throw cause;
       } finally {
-        await cleanup();
+        await cleanup().catch((cause) => {
+          failed(cause);
+          throw cause;
+        });
       }
     },
   };

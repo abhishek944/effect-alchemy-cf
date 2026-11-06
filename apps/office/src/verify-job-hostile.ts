@@ -1,10 +1,10 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { decodeNativeFrame, encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeNativeFrame, encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import { Schema } from "effect";
-import { decodeWireSync } from "@starter/office-contract";
-import type { DockerExecutor } from "@starter/office-server/executor";
-import type { IsolatedJob } from "@starter/office-server/ports";
+import { decodeWireSync } from "@highchat/office-contract";
+import type { DockerExecutor } from "@highchat/office-server/executor";
+import type { IsolatedJob } from "@highchat/office-server/ports";
 import { MutationCandidateSchema } from "../../../packages/office-server/src/jobs/schemas.ts";
 
 /** Actual clean SDK/outer-process rejection checks using only synthetic captured candidates. */

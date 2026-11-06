@@ -2,8 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { finished, pipeline } from "node:stream/promises";
 import { Effect } from "effect";
-import { OfficeForbidden, OfficeInvalid, safeFailure } from "@starter/office-contract";
-import type { Actor, OfficeService } from "@starter/office-server/ports";
+import { OfficeForbidden, OfficeInvalid, safeFailure } from "@highchat/office-contract";
+import type { Actor, OfficeService } from "@highchat/office-server/ports";
 import { downloadBody, incomingBody } from "./native-private-readers.ts";
 import type { NativePrivateFile } from "./native-private-wire.ts";
 

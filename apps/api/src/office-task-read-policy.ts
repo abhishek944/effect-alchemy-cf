@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { NativeAccess, OfficeMetadata } from "@starter/office-server/ports";
+import type { NativeAccess, OfficeMetadata } from "@highchat/office-server/ports";
 import type { OfficePrivateRequest } from "./office-private-authority.ts";
 import { officeDenied, officeSame } from "./office-private-authority.ts";
 import { assertOfficeTaskCommand } from "./office-task-command.ts";
@@ -43,7 +43,12 @@ export async function assertOfficeTaskRead(
   )
     throw officeDenied();
   const bound = original.actor.target;
-  let allowed = false;
+  const sourceSelection = original.task.binding.selected;
+  let allowed =
+    request.command.method === "office.open" &&
+    sourceSelection?.scope.kind === "main" &&
+    target.scope.kind === "main" &&
+    sourceSelection.documentId === target.documentId;
   if (bound !== null && bound.documentId === target.documentId) {
     if (target.scope.kind === "draft") {
       const draft = await Effect.runPromise(metadata.draft(target.owner, target.scope.draftId));

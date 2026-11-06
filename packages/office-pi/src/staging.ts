@@ -1,21 +1,15 @@
 import { Cause, Effect, Exit, Schema } from "effect";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { officeStagingFailure } from "./staging-failure.ts";
-import {
-  ArtifactRef,
-  Count,
-  Digest,
-  OFFICE_LIMITS,
-  decodeWireSync,
-} from "@starter/office-contract";
-import type { OfficeCommand } from "@starter/office-contract";
-import type { BinaryUpload } from "@starter/office-contract/client";
+import { ArtifactRef, Count, Digest, decodeWireSync } from "@highchat/office-contract";
+import type { OfficeCommand } from "@highchat/office-contract";
+import type { BinaryUpload } from "@highchat/office-contract/client";
 import { digestBytes } from "./intent.ts";
 import type { OfficeTaskAccess } from "./types.ts";
 
 const FileMetadata = Schema.Struct({
   filename: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
-  bytes: Count.check(Schema.isLessThanOrEqualTo(OFFICE_LIMITS.uploadBytes)),
+  bytes: Count,
   digest: Digest,
 });
 type Stage = Extract<OfficeCommand, { command: "stage-code" | "stage-file" }>;

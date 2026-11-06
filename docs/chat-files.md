@@ -22,7 +22,7 @@ Failed files keep their explanation; remove and reattach files that cannot prepa
 Frozen sends keep Remove disabled until their outcome settles.
 
 An accepted message retains private originals across reload/archive. Metadata and
-quota live in the owner's catalog actor; bytes live in the stage's private R2
+accounting live in the owner's catalog actor; bytes live in the stage's private R2
 `ChatFiles` bucket. Object keys include the real owner actor's identity, not just
 browser-supplied chat/file IDs. No public domain, public URL, CORS, provider key,
 base64 payload or owner identifier is exposed in the public descriptor/history.
@@ -63,36 +63,36 @@ Uncommitted uploads expire after24h, with scheduled bounded cleanup. An upload
 bound to uncertain native acceptance is retained until acceptance can be
 reconciled; an unavailable/unconfirmed receipt never authorizes erasure of a
 possibly accepted original. Accepted originals are not deletable through Remove;
-there is no permanent-erasure or immediate retained-quota recovery promise.
+there is no permanent-erasure promise.
 
-## Limits
+## Capacity boundaries
 
-| Boundary                              | Limit                      |
-| ------------------------------------- | -------------------------- |
-| Files per message                     | 5                          |
-| Original image                        | 10MiB /16MP                |
-| Original UTF-8 text file              | 1MiB                       |
-| Original XLSX/DOCX/PPTX               | 10MiB                      |
-| Originals per message                 | 20MiB                      |
-| Quoted non-CSV text                   | 100,000 Unicode characters |
-| Retained/reserved originals per owner | 1GiB                       |
-| Local draft files per tab             | 40MiB                      |
-| Preview cache / decoded images        | 20MiB /64MiB               |
+The app imposes no original-file byte/pixel ceiling, attachment-count limit,
+whole-message attachment quota, quoted-text cap, owner storage quota or browser
+staging/preview admission budget. Native tabs and accumulated Office lists have
+no app count ceiling; list endpoints still use explicit pagination.
 
-Actual model dimensions/modalities and runtime ceilings can be stricter. No
-silent resizing, truncation or dropping historical images is permitted.
+This is not unlimited capacity. Upload/content validation and request hydration
+still materialize whole originals, so real browser and Worker memory/CPU limits
+can fail an operation. Uploads use one native request buffer, not a retained chunk
+list plus another concatenation. Exact length, content and upload hash checks stay.
+Model dimensions, encoded image bytes, modalities and context still apply; the
+installed generation SDK has its own non-overridable limits. No silent resizing,
+truncation or dropping historical images is permitted.
 
-### Compact native inputs and request limits
+### Compact native inputs and platform storage
 
 Cloudflare's SQLite row limit is not used as a new-image byte allowance. New
-inputs freeze compact caption/reference metadata within128KiB and hydrate exact
-private originals only for the proven provider request. The old1.75MiB inline
-builder is not used for new sends; historical inline rows remain unchanged.
+inputs freeze compact caption/reference metadata and hydrate exact private
+originals only for the proven provider request. No conservative128KiB compact or
+1.75MiB legacy allowance remains. Actual SQLite string/BLOB/row constraints can
+still reject storage; no capacity claim or extra envelope reserve replaces them.
+Historical inline rows remain unchanged and readable.
 
 There is no app-side RAM estimate or reservation gate. Cloudflare may still
-fail a request at its real runtime memory limit. Model image/context limits,
-file/body limits and storage quotas remain; there is no silent resizing or
-promise that a10MiB original fits every request. See
+fail a request at its real128MiB runtime memory limit. Model image/context and
+SDK/platform limits remain; there is no silent resizing or promise that an
+original fits every request. See
 [chat images and saved references](chat-images.md) for honest post-charge failures,
 per-chat library/@ behavior and accounting.
 
@@ -111,7 +111,7 @@ Files contains accepted uploads and generated images, independent of loaded
 transcript pages. Card footers show only the name, time, size and download icon;
 media types, dimensions and origin labels are not displayed there. Select exact same-chat files with @; saved references are frozen
 separately from new uploads, never rebound or deleted when removed from a draft.
-The existing five-file/20MiB input policy covers both. Archive keeps read access,
+Uploads and saved references share identity and model validation. Archive keeps read access,
 and missing originals keep identity with read-only Retry. Generated edits are
 separate immutable files with source links; no persistent storage meter is shown.
 
@@ -137,17 +137,16 @@ Native insertion associates unchanged content with a real ACK and exact checkpoi
 a saved revision alone does not prove unchanged local content. Send freezes the
 caption, UTF-16 occurrence spans and original/native selectors before asynchronous
 work. Retry retains that tuple. Selected original text hydrates only its declared
-slices; native context is bounded, untrusted description, not a range access rule.
-Eight inline occurrences fit the existing contextual bound. Repeated originals
-count once against five files/20MiB; native contexts do not charge original bytes.
+slices; native context is untrusted description, not a range access rule.
+Inline occurrences have no app count cap. Repeated originals resolve once by
+identity; native contexts do not charge original bytes.
 Historical accepted inputs and absent/empty reference identities stay unchanged.
 
 Refresh restores account/chat-scoped tab and pane descriptors through fresh reads,
 not editor grants, private content or tray selections. Unresolved original tabs
 remain observation-only: refresh never replays import or AI panel requests. Explicit
-opens and restores stay bound to their origin chat across visibility changes, and the
-eight-surface account limit leaves excess native placeholders unopened until a slot
-frees. Settings, pane visibility and switching chats retain mounted native editors;
+opens and restores stay bound to their origin chat across visibility changes.
+Settings, pane visibility and switching chats retain mounted native editors;
 close, sign-out and account teardown retain their unsaved-data protection.
 
 ## Setup and acceptance
@@ -158,8 +157,8 @@ not permission to provision/deploy. Review a plan and obtain approval before
 applying cloud changes. Development must never reference production storage.
 
 After explicit setup, verify owner isolation using two users, reload/archive
-retention, picker/paste/drop, all file limits, invalid UTF-8/format/dimensions,
-quota/concurrent reservations, duplicate UUID/content rejection, uncertain send
+retention, picker/paste/drop, mandatory SDK/platform boundaries, invalid UTF-8/format/dimensions,
+concurrent upload claims, duplicate UUID/content rejection, uncertain send
 repair, preview resource cleanup and24h abandoned cleanup. Lose the retain
 acknowledgment after native acceptance and confirm the same operation/probe
 preserves the original. Builds/static checks do not prove R2 or deployed recovery.

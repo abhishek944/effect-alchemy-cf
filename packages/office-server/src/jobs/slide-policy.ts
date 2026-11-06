@@ -1,5 +1,5 @@
 import { Predicate, Schema } from "effect";
-import { decodeWireSync, OfficeInvalid, safeFailure } from "@starter/office-contract";
+import { decodeWireSync, OfficeInvalid, safeFailure } from "@highchat/office-contract";
 import type { NativeInputFrame } from "../ports/jobs.ts";
 
 const Target = Schema.Struct({

@@ -1,0 +1,82 @@
+.public-site {
+  font-family: "DM Sans", sans-serif;
+  font-size: 1rem;
+  line-height: normal;
+  font-synthesis: none;
+  color-scheme: dark;
+  background: #08090b;
+  color: #f5f2e9;
+  -webkit-font-smoothing: auto;
+  text-rendering: auto;
+  min-height: 100svh;
+}
+html:has(.public-site) {
+  color-scheme: dark;
+  background: #08090b;
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+  scrollbar-gutter: stable;
+}
+:where(.public-site) button,
+:where(.public-site) input {
+  letter-spacing: normal;
+}
+:where(.public-site) ::selection {
+  background: #ffb775;
+  color: #08090b;
+}
+@keyframes public-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+:where(.public-site) {
+  font-synthesis: none;
+  --lightningcss-light: ;
+  --lightningcss-dark: initial;
+  color-scheme: dark;
+  color: rgb(245, 242, 233);
+  background: rgb(8, 9, 11);
+  font-family: "DM Sans", sans-serif;
+}
+:where(.public-site) * {
+  box-sizing: border-box;
+}
+:where(.public-site) {
+  margin: 0px;
+}
+:where(.public-site) a {
+  color: inherit;
+  text-decoration: none;
+}
+:where(.public-site) button {
+  font: inherit;
+  color: inherit;
+}
+:where(.public-site) a:focus-visible,
+:where(.public-site) button:focus-visible,
+:where(.public-site) [tabindex="0"]:focus-visible {
+  outline-offset: 6px;
+  outline: rgb(131, 216, 222) solid 2px;
+}
+:where(.public-site) .shader-error {
+  color: rgb(255, 193, 160);
+  font: 12px / 1.5 system-ui;
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.public-site) *,
+  :where(.public-site) ::before,
+  :where(.public-site) ::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: auto ease 0s 1 normal none running none !important;
+  }
+}

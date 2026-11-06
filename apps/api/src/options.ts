@@ -4,6 +4,7 @@ import { AlchemyContext } from "alchemy/AlchemyContext";
 import { Stack } from "alchemy/Stack";
 import { Config, Effect, Redacted } from "effect";
 import { serviceName } from "../../../service.config.ts";
+import { authBaseURL, readAppConfig } from "@highchat/config/public";
 import { chatWorkerSource } from "./chat-objects-entry.ts";
 import { ChatFilesBucket } from "./chat-resources.ts";
 import { OfficeStorage } from "./office-resources.ts";
@@ -15,6 +16,13 @@ export const workerOptions = Effect.gen(function* () {
   const office = yield* OfficeStorage;
   const modelAllowlist = yield* Config.String("CHAT_MODEL_ALLOWLIST").pipe(Config.withDefault(""));
   const { dev: local } = yield* AlchemyContext;
+  const app = readAppConfig({
+    APP_NAME: yield* Config.String("APP_NAME"),
+    APP_DOMAIN: local ? "" : yield* Config.String("APP_DOMAIN").pipe(Config.withDefault("")),
+  });
+  const origin = local
+    ? ""
+    : authBaseURL(app, yield* Config.String("AUTH_BASE_URL").pipe(Config.withDefault("")));
   const production = stack.stage === "prod";
   const localIdle = local
     ? yield* Config.Boolean("OFFICE_LOCAL_IDLE").pipe(Config.withDefault(false))
@@ -72,6 +80,7 @@ export const workerOptions = Effect.gen(function* () {
         : ""
       : expectedDevGateway;
   return {
+    ...(!local && app.domain ? { domain: app.domain } : {}),
     observability: {
       enabled: true,
       redactQueryString: true,
@@ -96,6 +105,9 @@ export const workerOptions = Effect.gen(function* () {
     },
     dev: { host: "localhost", port: 1337, strictPort: true },
     env: {
+      APP_NAME: app.name,
+      APP_DOMAIN: local ? "" : app.domain,
+      AUTH_BASE_URL: origin,
       // Non-JSON boolean literals survive Alchemy runtime env unpacking as strings.
       REQUIRE_ACCESS: !local && !production ? "yes" : "no",
       AUTH_LOCAL: local ? "yes" : "no",
@@ -118,8 +130,6 @@ export const workerOptions = Effect.gen(function* () {
             ),
           }
         : {}),
-      BILLING_ENVIRONMENT: production ? "live" : "test",
-      BILLING_NAMESPACE: `${stack.name}:${stack.stage}`,
       // Custom sources suppress the local automatic ASSETS hook.
       ...(local ? { ASSETS: { kind: "Cloudflare.Workers.Assets" as const } } : {}),
       // No remote AI binding without an explicitly configured gateway id.

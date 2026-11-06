@@ -2,11 +2,6 @@ import { Option, Schema } from "effect";
 import { type ImageAcceptedBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
 import { freezeImageRequestValue } from "./chat-image-request-values.ts";
 
-import {
-  isBoundedImageResponseJson,
-  MAX_IMAGE_RESPONSE_JSON_BYTES,
-} from "./chat-image-response-json.ts";
-export { MAX_IMAGE_RESPONSE_JSON_BYTES } from "./chat-image-response-json.ts";
 export type ImageResponseErrorCode = "invalid_input" | "conflict" | "corrupt" | "storage_error";
 export class ImageResponseError extends Error {
   readonly code: ImageResponseErrorCode;
@@ -104,22 +99,13 @@ const candidateKeys = [
   "endOffset",
 ];
 export function encodeCandidate(input: ImageResponseCandidate): string {
-  if (!isBoundedImageResponseJson(input)) throw new ImageResponseError("invalid_input");
   const valid = responseValue(ImageResponseCandidate, input);
   const json = JSON.stringify(valid, candidateKeys);
-  if (new TextEncoder().encode(json).byteLength > MAX_IMAGE_RESPONSE_JSON_BYTES)
-    throw new ImageResponseError("invalid_input");
   return json;
 }
 
 export function decodeCandidate(json: string): ImageResponseCandidate {
   try {
-    if (
-      typeof json !== "string" ||
-      json.length > MAX_IMAGE_RESPONSE_JSON_BYTES ||
-      new TextEncoder().encode(json).byteLength > MAX_IMAGE_RESPONSE_JSON_BYTES
-    )
-      throw new ImageResponseError("corrupt");
     const value = responseValue(ImageResponseCandidate, JSON.parse(json), "corrupt");
     for (const original of value.originals) Object.freeze(original);
     Object.freeze(value.originals);

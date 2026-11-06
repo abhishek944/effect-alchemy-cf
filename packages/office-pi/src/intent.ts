@@ -5,7 +5,7 @@ import {
   OfficeCommand,
   decodeWireSync,
   type DraftTarget,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import type { ToolExecutionApi } from "@earendil-works/pi-durable";
 import type { OfficeToolSource } from "./parameters.ts";
 import type { OfficeIntentCommand, OfficeToolContext, OfficeToolIntent } from "./types.ts";
@@ -18,6 +18,7 @@ export type OfficeStep = OfficeToolSource & {
   readonly step: string;
   readonly operationId?: string;
   readonly basis?: DraftTarget;
+  readonly mainView?: OfficeToolIntent["mainView"];
 };
 export const officeMemoKey = (key: string, step?: string) => (step ? `${key}.${step}` : key);
 
@@ -66,9 +67,14 @@ export const bindIntent = async (
         api.callId,
         description,
         ...(step
-          ? "referenceId" in step
-            ? ["office.reference", step.referenceId, step.step, step.basis ?? null]
-            : [step.attachmentId, step.step, step.basis ?? null]
+          ? [
+              "office.source.v2",
+              step.attachmentId,
+              step.worktreeId ?? null,
+              step.step,
+              step.basis ?? null,
+              step.mainView ?? null,
+            ]
           : []),
       ]),
     ),
@@ -87,9 +93,9 @@ export const bindIntent = async (
       command: await describe(bound),
       ...(step
         ? {
-            ...("referenceId" in step
-              ? { referenceId: step.referenceId }
-              : { attachmentId: step.attachmentId }),
+            attachmentId: step.attachmentId,
+            ...(step.worktreeId === undefined ? {} : { worktreeId: step.worktreeId }),
+            ...(step.mainView === undefined ? {} : { mainView: step.mainView }),
             step: step.step,
             ...(step.basis ? { basis: step.basis } : {}),
           }

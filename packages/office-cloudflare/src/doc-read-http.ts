@@ -4,13 +4,9 @@ import {
   OfficeInvalid,
   OfficeLimited,
   OfficeUnavailable,
-} from "@starter/office-contract";
-import type { ErrorCode } from "@starter/office-contract";
-import {
-  DOC_READ_LIMITS,
-  DocReadRequest,
-  NativePartRequest,
-} from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import type { ErrorCode } from "@highchat/office-contract";
+import { DocReadRequest, NativePartRequest } from "@highchat/office-server/native-remote";
 import { NativeStorageError } from "./native/index.ts";
 import { openDocReadData } from "./doc-read-data.ts";
 import { docReadError, readDocDto, readDocBody, streamDocReply } from "./doc-read-io.ts";
@@ -52,9 +48,7 @@ export async function createDocReadSession(options: DocReadSessionOptions) {
       readReferences: options.native.readReferences.bind(options.native),
     });
     const data = await life.track(
-      openDocReadData(readers, config.scope, config.access, config.ceiling, config.budget, () =>
-        life.check(),
-      ),
+      openDocReadData(readers, config.scope, config.access, config.ceiling, () => life.check()),
     );
     await life.attach(() => data.dispose());
     await life.check();
@@ -97,17 +91,10 @@ export async function createDocReadSession(options: DocReadSessionOptions) {
             guard,
           );
           payload = new TextEncoder().encode(JSON.stringify(result));
-          if (payload.byteLength > DOC_READ_LIMITS.metadataBytes)
-            throw docReadError("LIMIT_EXCEEDED");
-          life.charge(payload.byteLength);
           needsUnit =
             result.method === "snapshot" ? result.manifest !== null : result.unit !== null;
         } else {
-          payload = await data.part(
-            readDocDto(NativePartRequest, raw, "INVALID_INPUT"),
-            guard,
-            (size) => life.charge(size),
-          );
+          payload = await data.part(readDocDto(NativePartRequest, raw, "INVALID_INPUT"), guard);
           type = "application/octet-stream";
         }
         const emit = async () => {
@@ -123,7 +110,6 @@ export async function createDocReadSession(options: DocReadSessionOptions) {
         life.assertLive(request.signal);
         const { code } = safeError(error);
         const payload = new TextEncoder().encode(JSON.stringify(safeFailure(code)));
-        life.charge(payload.byteLength);
         const status =
           code === "INVALID_INPUT"
             ? 400

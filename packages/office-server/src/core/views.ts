@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
-import { View, decodeWire, type NativeViewTarget, type Target } from "@starter/office-contract";
+import { View, decodeWire, type NativeViewTarget, type Target } from "@highchat/office-contract";
 import type { Actor, OfficeDependencies, ViewRecord } from "../ports/index.ts";
 import { authorize, sameOwner } from "./claims.ts";
 import { resolveLiveState } from "./target.ts";

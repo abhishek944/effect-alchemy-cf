@@ -1,13 +1,13 @@
 import { Effect } from "effect";
-import { createNativeEditorAdmission } from "@starter/office-cloudflare/coordinator-control";
-import type { OfficeProviderOptions } from "@starter/office-cloudflare/metadata";
+import { createNativeEditorAdmission } from "@highchat/office-cloudflare/coordinator-control";
+import type { OfficeProviderOptions } from "@highchat/office-cloudflare/metadata";
 import type {
   VerifiedCoordinatorContext,
   NativeEditorAdmission,
   JoinedChannel,
-} from "@starter/office-cloudflare/coordinator-control";
-import type { Editor } from "@starter/office-contract";
-import type { OfficeMetadata, ViewRecord } from "@starter/office-server/ports";
+} from "@highchat/office-cloudflare/coordinator-control";
+import type { Editor } from "@highchat/office-contract";
+import type { OfficeMetadata, ViewRecord } from "@highchat/office-server/ports";
 import type { NativePrivateMember } from "../../office/src/native-private-wire.ts";
 import {
   officeDenied,

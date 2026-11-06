@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, Digest, DocumentScope, Failure, Id, OfficeLimits } from "@starter/office-contract";
+import { Count, Digest, DocumentScope, Failure, Id, OfficeLimits } from "@highchat/office-contract";
 import {
   OwnerClaims,
   OriginalActorClaims,

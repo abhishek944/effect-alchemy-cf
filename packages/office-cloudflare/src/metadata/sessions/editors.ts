@@ -1,5 +1,5 @@
-import type { Editor, EditorAction } from "@starter/office-contract";
-import type { OwnerScope, ViewRecord } from "@starter/office-server/ports";
+import type { Editor, EditorAction } from "@highchat/office-contract";
+import type { OwnerScope, ViewRecord } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "../store.ts";
 import { canonical, conflict, invalid, sqlNow } from "../store.ts";
 import { noBarrier } from "../native-fence.ts";

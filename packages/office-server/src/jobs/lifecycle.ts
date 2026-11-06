@@ -1,6 +1,6 @@
 import { Clock, Effect } from "effect";
-import { reportFailureEffect } from "@starter/diagnostics";
-import { OfficeInvalid, OfficeNotFound, safeFailure } from "@starter/office-contract";
+import { reportFailureEffect } from "@highchat/diagnostics";
+import { OfficeInvalid, OfficeNotFound, safeFailure } from "@highchat/office-contract";
 import type { JobRecord, JobState, OfficeMetadata, OwnerScope } from "../ports/index.ts";
 import { jobScopeKey, requireJobRecord, unknownJobState } from "./identity.ts";
 

@@ -19,14 +19,13 @@ export const ImportInto = Schema.Struct({
   source: Schema.Struct({
     ...ArtifactRef.fields,
     kind: Schema.Literal("upload"),
-    bytes: ArtifactRef.fields.bytes.check(Schema.isLessThanOrEqualTo(10 * 1024 * 1024)),
+    bytes: ArtifactRef.fields.bytes,
   }),
   options: SheetImportOptions,
   selection: Schema.Struct({
     destinationNames: Schema.Array(
       Schema.Struct({ sourceName: Name, destinationName: Name }),
     ).check(
-      Schema.isMaxLength(32),
       Schema.makeFilter(
         (items) =>
           new Set(items.map((item) => item.sourceName)).size === items.length &&
@@ -37,7 +36,6 @@ export const ImportInto = Schema.Struct({
       Schema.Literal("all"),
       Schema.Array(Name).check(
         Schema.isMinLength(1),
-        Schema.isMaxLength(32),
         Schema.makeFilter((names) => new Set(names).size === names.length),
       ),
     ]),

@@ -1,5 +1,5 @@
 import type { Effect } from "effect";
-import type { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import type { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type { IChangeset, IMutation } from "@univerjs/protocol";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
 import type { OwnerScope } from "./identity.ts";
@@ -13,7 +13,7 @@ import type {
   Kind,
   OfficeError,
   RenderSelection,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 
 export type JobBinding = {
   readonly version: 1;

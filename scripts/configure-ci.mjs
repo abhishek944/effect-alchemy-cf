@@ -1,5 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseEnv } from "node:util";
+import { authBaseURL, readAppConfig } from "../packages/config/public.ts";
+import { serializeEnv } from "../packages/config/stage.ts";
 
 if (
   process.env.CI !== "true" ||
@@ -9,29 +11,22 @@ if (
   throw new Error("Production CI configuration is allowed only for pushes to prod in CI.");
 }
 
-const origin = process.env.AUTH_BASE_URL?.trim() ?? "";
-const url = URL.canParse(origin) ? new URL(origin) : undefined;
-if (origin && (url?.protocol !== "https:" || url.origin !== origin)) {
-  throw new Error("AUTH_BASE_URL must be an HTTPS origin without a path or credentials.");
-}
 const file = "packages/config/.env.prod";
+const current = parseEnv(readFileSync(file, "utf8"));
+const app = readAppConfig({
+  APP_NAME: process.env.APP_NAME?.trim() || current.APP_NAME,
+  APP_DOMAIN: process.env.APP_DOMAIN?.trim() ?? current.APP_DOMAIN,
+});
+const origin = authBaseURL(app, process.env.AUTH_BASE_URL ?? "");
 const values = {
-  ...parseEnv(readFileSync(file, "utf8")),
+  ...current,
+  APP_NAME: app.name,
+  APP_DOMAIN: app.domain,
   DEV_ACCESS_EMAILS: "",
   AUTH_BASE_URL: origin,
   ALLOW_PRODUCTION: "true",
   CHAT_GATEWAY_ID: process.env.CHAT_GATEWAY_ID?.trim() ?? "",
   CHAT_MODEL_ALLOWLIST: process.env.CHAT_MODEL_ALLOWLIST?.trim() ?? "",
-  BILLING_PROVIDER: process.env.BILLING_PROVIDER?.trim() ?? "",
-  BILLING_PRODUCTS: process.env.BILLING_PRODUCTS?.trim() || "{}",
-  DODO_ACCOUNT_ID: process.env.DODO_ACCOUNT_ID?.trim() ?? "",
-  POLAR_ACCOUNT_ID: process.env.POLAR_ACCOUNT_ID?.trim() ?? "",
 };
-writeFileSync(
-  file,
-  Object.entries(values)
-    .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-    .join("\n") + "\n",
-  { mode: 0o600 },
-);
+writeFileSync(file, serializeEnv(values), { mode: 0o600 });
 process.stdout.write("Production CI environment configured.\n");

@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { Config, Effect, Layer, type Redacted, Schema } from "effect";
 import * as HttpClient from "effect/http/HttpClient";
 import { Email, EmailMessage, EmailReceipt } from "./email.ts";

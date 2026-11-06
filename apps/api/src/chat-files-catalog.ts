@@ -1,18 +1,15 @@
 /**
- * Owner-catalog file policy: quota, idempotency and operation binding.
+ * Owner-catalog file policy: idempotency and operation binding.
  *
- * One instance per owner (inside ChatCatalog) serializes the 1 GiB retained
- * quota and every transition. Rows are never removed: accepted bindings stay
+ * One instance per owner (inside ChatCatalog) serializes every transition. Rows are never removed: accepted bindings stay
  * permanent and abandoned rows are tombstoned, so a replayed UUID cannot
  * silently reuse old bytes.
  */
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
-import { RETAINED_BYTES_PER_USER } from "./chat-attachment-schema.ts";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
 import { sweepChatFiles, type ChatFilesSweepRequest } from "./chat-files-cleanup.ts";
 import {
   acceptedDescriptor,
-  countsTowardQuota,
   filesFail,
   filesOk,
   publicDescriptor,
@@ -62,16 +59,23 @@ export class ChatFilesCatalog {
   }
   usage(): ChatFilesUsageView {
     const bytes = usageBytes(this.db);
+    const usedBytes = bytes.retained + bytes.staged + bytes.reserved + bytes.pending;
+    if (
+      ![...Object.values(bytes), usedBytes].every(
+        (value) => Number.isSafeInteger(value) && value >= 0,
+      )
+    )
+      throw new Error("Invalid file byte accounting");
     return {
       retainedBytes: bytes.retained,
       stagedBytes: bytes.staged,
       reservedBytes: bytes.reserved,
       pendingBytes: bytes.pending,
-      usedBytes: bytes.retained + bytes.staged + bytes.reserved + bytes.pending,
-      quotaBytes: RETAINED_BYTES_PER_USER,
+      usedBytes,
+      quotaBytes: null,
     };
   }
-  /** Reserves quota before bytes leave the request; identical bytes are idempotent. */
+  /** Claims the original before PUT; identical bytes are idempotent. */
   reserve(input: ChatFilesReserve): ChatFilesResult<ChatFilesReserveResult> {
     const existing = fileRow(this.db, input.fileId);
     if (existing !== null && (existing.state === "deleted" || existing.state === "expired"))
@@ -84,9 +88,6 @@ export class ChatFilesCatalog {
     if (existing !== null && existing.state === "uploading") return filesFail("upload_in_progress");
     if (existing !== null && (existing.state === "ready" || existing.state === "accepted"))
       return filesOk({ status: "existing", file: publicDescriptor(existing) });
-    const held = existing !== null && countsTowardQuota(existing) ? existing.byteSize : 0;
-    if (this.usage().usedBytes - held + input.byteSize > RETAINED_BYTES_PER_USER)
-      return filesFail("quota_exceeded");
     if (existing === null) insertUploading(this.db, input);
     else updateForUpload(this.db, input);
     const row = fileRow(this.db, input.fileId);
@@ -108,7 +109,7 @@ export class ChatFilesCatalog {
     return row === null ? filesFail("unavailable") : filesOk(publicDescriptor(row));
   }
   /**
-   * A failed PUT may still have committed; the row stays quota-holding and
+   * A failed PUT may still have committed; the row stays accounted and
    * purge-due after the abandoned TTL, and may be retried before that.
    */
   abort(input: ChatFilesAbort): void {
@@ -136,6 +137,7 @@ export class ChatFilesCatalog {
       byteSize += row.byteSize;
       if (row.kind === "image") hasImage = true;
     }
+    if (!Number.isSafeInteger(byteSize)) return filesFail("invalid_content");
     for (const row of rows) {
       if (row.state === "ready" && row.operationId === null)
         bindOperation(this.db, row.fileId, input.operationId);

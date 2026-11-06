@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
-import type { ExecutionBinding, IsolatedJob, JobBinding } from "@starter/office-server/ports";
-import { encodeNativeFrame, NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
-import type { Kind } from "@starter/office-contract";
+import type { ExecutionBinding, IsolatedJob, JobBinding } from "@highchat/office-server/ports";
+import { encodeNativeFrame, NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
+import type { Kind } from "@highchat/office-contract";
 
 export const hash = (value: Uint8Array): string => createHash("sha256").update(value).digest("hex");
 const text = (value: string) => new TextEncoder().encode(value);

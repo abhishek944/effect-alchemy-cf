@@ -1,7 +1,11 @@
 import { Effect } from "effect";
-import type { VerifiedCoordinatorContext } from "@starter/office-cloudflare/coordinator-control";
-import type { ActorVerification, NativeTarget, OfficeMetadata } from "@starter/office-server/ports";
-import { mergeOperationTuple } from "@starter/office-server/native-remote";
+import type { VerifiedCoordinatorContext } from "@highchat/office-cloudflare/coordinator-control";
+import type {
+  ActorVerification,
+  NativeTarget,
+  OfficeMetadata,
+} from "@highchat/office-server/ports";
+import { mergeOperationTuple } from "@highchat/office-server/native-remote";
 import {
   officeDenied,
   officeSame,
@@ -172,7 +176,6 @@ export async function verifyOfficeActorPhase(
       ),
     ),
   );
-  if (bytes.byteLength > 16 * 1024) throw officeDenied();
   const hash = await crypto.subtle.digest("SHA-256", bytes);
   const digest = Array.from(new Uint8Array(hash), (value) =>
     value.toString(16).padStart(2, "0"),

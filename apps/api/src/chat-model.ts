@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ChatReferenceInputs, OfficeSendTarget, Target } from "@starter/office-contract";
+import { ChatReferenceInputs, OfficeSendTarget, Target } from "@highchat/office-contract";
 import { ChatSelection } from "./chat-capabilities.ts";
 import { AttachmentReferences, FileDescriptor } from "./chat-attachment-schema.ts";
 import { validReferenceSend } from "./chat-reference-input.ts";
@@ -50,7 +50,7 @@ export const ChatMessage = Schema.Struct({
   text: Schema.String,
   createdAt: Schema.String,
   operationId: Schema.NullOr(OperationId),
-  attachments: Schema.Array(FileDescriptor).check(Schema.isMaxLength(5)),
+  attachments: Schema.Array(FileDescriptor),
   selectedAreas: Schema.optionalKey(InputSelections),
   hasGeneratedFiles: Schema.optionalKey(Schema.Boolean),
   tools: Schema.optionalKey(ChatTools),
@@ -101,7 +101,7 @@ export const PatchChat = Schema.Struct({
 });
 
 export const SendMessage = Schema.Struct({
-  text: Schema.String.check(Schema.isTrimmed(), Schema.isMaxLength(16000)),
+  text: Schema.String.check(Schema.isTrimmed()),
   operationId: OperationId,
   selection: ChatSelection,
   attachments: AttachmentReferences,

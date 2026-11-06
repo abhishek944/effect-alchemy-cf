@@ -1,4 +1,4 @@
-import type { NativeEditorPermit } from "@starter/office-server/ports";
+import type { NativeEditorPermit } from "@highchat/office-server/ports";
 import type { MetadataStore, Statement } from "./store.ts";
 import { EditorPermit, EditorTurn } from "./native-editor-schema.ts";
 import type { EditorContext } from "./native-editor-schema.ts";

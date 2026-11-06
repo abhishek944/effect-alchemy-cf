@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { OfficeSourceLink } from "@starter/office-contract";
+import type { OfficeSourceLink } from "@highchat/office-contract";
 import { useWorkspaceOffice } from "./workspace-office-context";
 
 type Window = { items: OfficeSourceLink[]; next: string | null; error: string; loaded: string };
@@ -37,12 +37,6 @@ export function OfficeSources({ documentId, active }: { documentId: string; acti
             (request.cursor === null ? [] : old.items).map((item) => [item.operationId, item]),
           );
           for (const item of page.items) rows.set(item.operationId, item);
-          if (rows.size > 200)
-            return {
-              ...old,
-              loaded: key,
-              error: "This page exceeds the 200-row history window. Refresh to restart.",
-            };
           return { items: [...rows.values()], next: page.next, error: "", loaded: key };
         });
         return undefined;
@@ -93,14 +87,11 @@ export function OfficeSources({ documentId, active }: { documentId: string; acti
       {data.next !== null && (
         <button
           type="button"
-          disabled={busy || !active || data.items.length >= 200 || Boolean(data.error)}
+          disabled={busy || !active || Boolean(data.error)}
           onClick={() => setRequest((old) => ({ cursor: data.next, version: old.version + 1 }))}
         >
           More import history
         </button>
-      )}
-      {data.items.length >= 200 && data.next !== null && (
-        <p>Showing 200 imports. Refresh to start again.</p>
       )}
       <button type="button" disabled={busy || !active} onClick={refresh}>
         Refresh import history

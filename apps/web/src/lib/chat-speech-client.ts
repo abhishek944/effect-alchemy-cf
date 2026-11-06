@@ -25,20 +25,16 @@ const statusMessages: Record<number, string> = {
   401: "You are signed out. Sign in again to use voice.",
   403: "This request was blocked. Reload the page and try again.",
   413: "That recording is too large to transcribe.",
-  502: "The speech provider could not complete that request.",
-  503: "Speech is temporarily unavailable.",
-  504: "The speech provider took too long. Try again.",
+  502: "Unable to complete your voice request. Please try again.",
+  503: "Voice is temporarily unavailable.",
+  504: "Your voice request took too long. Please try again.",
 };
 
 const failureMessage = async (response: Response): Promise<string> => {
-  try {
-    const body: unknown = await response.json();
-    if (isRecord(body) && typeof body.message === "string" && body.message.trim())
-      return body.message;
-  } catch {
-    // Keep the safe status message when the body is not JSON.
-  }
-  return statusMessages[response.status] ?? `Speech request failed (${response.status}).`;
+  await response.body?.cancel().catch(() => undefined);
+  return (
+    statusMessages[response.status] ?? "Unable to complete your voice request. Please try again."
+  );
 };
 
 export const speechRequestError = (error: unknown): string =>

@@ -20,7 +20,6 @@ export {
   OFFICE_PANEL_TOOL_NAME,
 } from "./extension.ts";
 export { attachmentListTool, OFFICE_ATTACHMENTS_TOOL_NAME } from "./attachment-tool.ts";
-export { OFFICE_TOOL_RESULT_BYTES } from "./results.ts";
 export { OfficeStagingFailure, officeStagingFailure } from "./staging-failure.ts";
 export type { OfficeStagingPhase } from "./staging-failure.ts";
 export {

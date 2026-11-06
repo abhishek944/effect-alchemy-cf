@@ -1,5 +1,5 @@
-import { ArtifactRef, OfficeLimited, decodeWireSync, safeFailure } from "@starter/office-contract";
-import type { OwnerScope } from "@starter/office-server/ports";
+import { ArtifactRef, decodeWireSync } from "@highchat/office-contract";
+import type { OwnerScope } from "@highchat/office-server/ports";
 import { MetadataStore, canonical, conflict, invalid, sqlNow } from "../metadata/store.ts";
 import type { OfficeProviderOptions } from "../metadata/store.ts";
 import { MAX_ATTEMPTS, Pending, PutMetadata, assertKey, unknownOutcome } from "./data.ts";
@@ -36,22 +36,6 @@ export class ByteStore extends MetadataStore {
       [owner, id, key],
     );
   }
-  cap(kind: ArtifactRef["kind"]): number {
-    switch (kind) {
-      case "code":
-        return this.limits.codeBytes;
-      case "upload":
-        return this.limits.uploadBytes;
-      case "native-proposal":
-        return this.limits.proposalBytes;
-      case "render":
-        return this.limits.renderBytes;
-      case "inspection":
-        return this.limits.responseBytes;
-      default:
-        return this.limits.nativeBytes;
-    }
-  }
   metadata(input: PutInput) {
     const parsed = decodeWireSync(PutMetadata)({
       id: input.id,
@@ -60,8 +44,6 @@ export class ByteStore extends MetadataStore {
       declaredBytes: input.declaredBytes,
       expectedDigest: input.expectedDigest,
     });
-    if (parsed.declaredBytes > this.cap(parsed.kind))
-      throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
     return parsed;
   }
   pending(input: PutInput): string {

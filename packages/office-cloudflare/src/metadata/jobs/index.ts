@@ -1,6 +1,6 @@
 import { jobRecordSql } from "../legacy-failure.ts";
-import { Count, Id, decodeWireSync } from "@starter/office-contract";
-import type { JobRecord, OfficeMetadata, OwnerScope } from "@starter/office-server/ports";
+import { Count, Id, decodeWireSync } from "@highchat/office-contract";
+import type { JobRecord, OfficeMetadata, OwnerScope } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { canonical, conflict, invalid, missing, sqlNow, storeEffect } from "../store.ts";
 import { artifactEdges, completeRefs } from "../artifacts.ts";
@@ -58,19 +58,8 @@ export function createJobMetadata(
         try {
           await db.write(
             `(${basis.sql}) AND (${ready.sql}) AND ?<=${sqlNow}
-          AND NOT EXISTS(SELECT 1 FROM office_meta_jobs WHERE owner=? AND (id=? OR operation=?))
-          AND (SELECT count(*) FROM office_meta_jobs WHERE owner=? AND document=? AND state='queued')<?`,
-            [
-              ...basis.values,
-              ...ready.values,
-              record.createdAt,
-              key,
-              id,
-              b.operationId,
-              key,
-              b.documentId,
-              db.limits.queueDepth,
-            ],
+          AND NOT EXISTS(SELECT 1 FROM office_meta_jobs WHERE owner=? AND (id=? OR operation=?))`,
+            [...basis.values, ...ready.values, record.createdAt, key, id, b.operationId],
             [
               [
                 "INSERT INTO office_meta_jobs VALUES(?,?,?,?,?,?,?,?)",

@@ -18,7 +18,7 @@ import {
   Receipt,
   Revision,
   RenderRequest,
-} from "@starter/office-contract";
+} from "@highchat/office-contract";
 import { MergeWitness, OriginalActorClaims, OwnerClaims } from "../ports/index.ts";
 const NativeId = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 export const StoredDocument = Schema.Struct({

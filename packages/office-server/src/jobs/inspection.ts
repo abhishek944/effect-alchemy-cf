@@ -1,6 +1,6 @@
 import { inspectContent, type ContentInspectionQuery } from "@univer-cli/content-inspection";
 import type { UniverCollaborationRuntime } from "@univer-cli/univer-collaboration-runtime";
-import type { InspectQuery } from "@starter/office-contract";
+import type { InspectQuery } from "@highchat/office-contract";
 import type { JobBinding } from "../ports/jobs.ts";
 
 function queryFor(query: InspectQuery): ContentInspectionQuery {

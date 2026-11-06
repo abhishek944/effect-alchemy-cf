@@ -1,11 +1,11 @@
 import { BetterAuth } from "@alchemy.run/better-auth";
-import { reportFailureEffect, withCause, withDiagnostic } from "@starter/diagnostics";
+import { reportFailureEffect, withCause, withDiagnostic } from "@highchat/diagnostics";
 import { AlchemyContext } from "alchemy/AlchemyContext";
 import { isAPIError } from "better-auth/api";
 import { Config, Context, Effect, Layer, Option } from "effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { adminOTA } from "./admin-ota.ts";
-import { billingSchema } from "./billing-schema.ts";
+import { authBaseURL, readAppConfig } from "@highchat/config/public";
 
 /**
  * Better Auth answers API failures with Responses, so they never reach the Effect
@@ -50,14 +50,21 @@ const makeAuth = Effect.gen(function* () {
         onNone: () => false,
         onSome: (context) => context.dev,
       });
-  const baseURL = yield* Config.String("AUTH_BASE_URL").pipe(Config.option);
+  const app = readAppConfig({
+    APP_NAME: yield* Config.String("APP_NAME"),
+    APP_DOMAIN: local ? "" : yield* Config.String("APP_DOMAIN").pipe(Config.withDefault("")),
+  });
+  const baseURL = local
+    ? ""
+    : authBaseURL(app, yield* Config.String("AUTH_BASE_URL").pipe(Config.withDefault("")));
   const instance = yield* BetterAuth({
     // Request outcomes are logged at the Worker boundary; suppress raw auth diagnostics.
     logger: { disabled: true },
     // Supported error hook: safe projection, fixed 500 for unexpected failures only.
     onAPIError: { onError: reportAuthApiFailure },
     basePath: "/api/auth",
-    baseURL: Option.getOrUndefined(baseURL)?.trim() || undefined,
+    appName: app.name,
+    baseURL: baseURL || undefined,
     // A callback preserves Better Auth's inferred same-origin URL alongside local Vite.
     trustedOrigins: () => (local ? ["http://localhost:5173"] : []),
     emailAndPassword: { enabled: true, minPasswordLength: 12 },
@@ -68,7 +75,7 @@ const makeAuth = Effect.gen(function* () {
       },
     },
     session: { cookieCache: { enabled: false } },
-    plugins: [adminOTA, billingSchema],
+    plugins: [adminOTA],
     advanced: {
       useSecureCookies: !local,
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
@@ -78,6 +85,8 @@ const makeAuth = Effect.gen(function* () {
   return { ...instance, fetch: instance.fetch.pipe(Effect.catchDefect(reportFetchFailure)) };
 });
 
-export class Auth extends Context.Service<Auth, Effect.Success<typeof makeAuth>>()("starter/Auth") {
+export class Auth extends Context.Service<Auth, Effect.Success<typeof makeAuth>>()(
+  "highchat/Auth",
+) {
   static readonly layer = Layer.effect(Auth, makeAuth);
 }

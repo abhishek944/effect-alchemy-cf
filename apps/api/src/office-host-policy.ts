@@ -1,6 +1,6 @@
 import { officeImageReference } from "./office-image.ts";
-import { OFFICE_LIMITS, decodeWireSync } from "@starter/office-contract";
-import { HostPolicy } from "@starter/office-server/native-remote";
+import { OFFICE_LIMITS, decodeWireSync } from "@highchat/office-contract";
+import { HostPolicy } from "@highchat/office-server/native-remote";
 
 /** Configuration only. Actual image/process/private-binding/SDK readiness is verified separately. */
 export function officeHostPolicy(imageRef: string, stage: string): typeof HostPolicy.Type {

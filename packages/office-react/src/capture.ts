@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Count, Id, OfficeNativeReferenceContext, decodeWireSync } from "@starter/office-contract";
+import { Count, Id, OfficeNativeReferenceContext, decodeWireSync } from "@highchat/office-contract";
 
 /** Frame-local observation, never a claimed saved revision or source authority. */
 export type NativeSelectionCapture = Readonly<{

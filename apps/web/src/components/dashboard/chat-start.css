@@ -1,0 +1,17 @@
+[data-dashboard] [data-cx="chat-start"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-card);
+  background: var(--cx-card);
+  color: var(--cx-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="chat-start"] output {
+  margin: 0;
+}

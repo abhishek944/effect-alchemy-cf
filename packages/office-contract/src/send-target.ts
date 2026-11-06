@@ -1,9 +1,6 @@
 import { Schema } from "effect";
 import { Count, Id, Kind, Revision, decodeWireSync } from "./primitives.ts";
 
-/** Bounded context sizes; the frame uses the same cap so one native selection fits the wire. */
-export const MAX_OFFICE_SEND_RANGES = 8;
-export const MAX_OFFICE_SEND_ATTACHMENTS = 8;
 /** Native worksheet/range identity: opaque in the document, not a task or read/write reference. */
 const SheetId = Schema.String.check(
   Schema.isMinLength(1),
@@ -28,10 +25,7 @@ export type OfficeSheetRange = typeof OfficeSheetRange.Type;
 export const OfficeSheetSelection = Schema.Struct({
   sheetId: SheetId,
   sheetName: Schema.optionalKey(SheetName),
-  ranges: Schema.Array(OfficeSheetRange).check(
-    Schema.isMinLength(1),
-    Schema.isMaxLength(MAX_OFFICE_SEND_RANGES),
-  ),
+  ranges: Schema.Array(OfficeSheetRange).check(Schema.isMinLength(1)),
 });
 export type OfficeSheetSelection = typeof OfficeSheetSelection.Type;
 /**
@@ -40,9 +34,7 @@ export type OfficeSheetSelection = typeof OfficeSheetSelection.Type;
  * that receives it must still resolve the requested attachment and native target itself.
  */
 export const OfficeSendContext = Schema.Struct({
-  attachmentIds: Schema.optionalKey(
-    Schema.Array(Id).check(Schema.isMaxLength(MAX_OFFICE_SEND_ATTACHMENTS)),
-  ),
+  attachmentIds: Schema.optionalKey(Schema.Array(Id)),
   sheet: Schema.optionalKey(OfficeSheetSelection),
 });
 export type OfficeSendContext = typeof OfficeSendContext.Type;

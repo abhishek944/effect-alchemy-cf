@@ -1,4 +1,4 @@
-import { reportFailure, withCause } from "@starter/diagnostics";
+import { reportFailure, withCause } from "@highchat/diagnostics";
 import {
   disposeImageBindingResult,
   ownImageBindingBody,

@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { Effect, Schema } from "effect";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import {
@@ -11,10 +11,9 @@ import {
   OfficeUnauthorized,
   OfficeUnavailable,
   safeFailure,
-} from "@starter/office-contract";
-import type { Failure, OfficeError } from "@starter/office-contract";
+} from "@highchat/office-contract";
+import type { Failure, OfficeError } from "@highchat/office-contract";
 
-export const OFFICE_HTTP_METADATA_BYTES = 16 * 1024;
 const statusOf = (error: OfficeError): number =>
   Schema.is(OfficeInvalid)(error)
     ? 400
@@ -84,12 +83,15 @@ type OfficeChunkReader = {
   releaseLock(): void;
 };
 /** Bounded, fully joined read: cancelled, closed and released before return; no drift on bytes. */
-const readChunks = async (reader: OfficeChunkReader, maximum: number): Promise<Uint8Array> => {
+const readChunks = async (
+  reader: OfficeChunkReader,
+  maximum: number | null,
+): Promise<Uint8Array> => {
   const closed = reader.closed.then(
     () => undefined,
     () => undefined,
   );
-  const bytes = new Uint8Array(maximum);
+  const chunks: Uint8Array[] = [];
   let count = 0;
   try {
     while (true) {
@@ -97,8 +99,9 @@ const readChunks = async (reader: OfficeChunkReader, maximum: number): Promise<U
       if (part.done) break;
       const chunk: unknown = part.value;
       if (!(chunk instanceof Uint8Array)) throw new Error("invalid chunk");
-      if (chunk.byteLength > maximum - count) throw new Error("stream exceeds limit");
-      bytes.set(chunk, count);
+      if (maximum !== null && chunk.byteLength > maximum - count)
+        throw new Error("stream exceeds limit");
+      chunks.push(chunk);
       count += chunk.byteLength;
     }
   } finally {
@@ -110,12 +113,18 @@ const readChunks = async (reader: OfficeChunkReader, maximum: number): Promise<U
       // Already released after natural completion.
     }
   }
-  return bytes.subarray(0, count);
+  const bytes = new Uint8Array(count);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 };
 /** Private reply reader: the actual platform Response body, never a copied bridge. */
 export const readBounded = (
   response: Response,
-  maximum: number,
+  maximum: number | null = null,
 ): Effect.Effect<Uint8Array, OfficeError> =>
   Effect.tryPromise({
     try: () => {
@@ -136,7 +145,7 @@ export const officeJsonValue = (bytes: Uint8Array): unknown => {
 /** Bounded JSON metadata read for one public request body; no unbounded text/arrayBuffer read. */
 export const officeReadJson = (
   body: ReadableStream<Uint8Array> | null,
-  maximum: number = OFFICE_HTTP_METADATA_BYTES,
+  maximum: number | null = null,
 ): Effect.Effect<unknown, OfficeError> =>
   Effect.gen(function* () {
     if (body === null) return yield* Effect.fail(invalid());

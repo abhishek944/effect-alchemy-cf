@@ -1,9 +1,9 @@
 import { Effect } from "effect";
-import { decodeWire } from "@starter/office-contract";
-import { decodeNativeFrame, encodeNativeFrame } from "@starter/office-contract/native-wire";
+import { decodeWire } from "@highchat/office-contract";
+import { decodeNativeFrame, encodeNativeFrame } from "@highchat/office-contract/native-wire";
 import type { IsolatedJob, JobState, OfficeDependencies, OperationRecord } from "../ports/index.ts";
 import { ImportedOutputSchema } from "../jobs/output.ts";
-import { JOB_OUTPUT_LIMITS, requireBinding, requireSnapshot } from "../jobs/frames.ts";
+import { requireBinding, requireSnapshot } from "../jobs/frames.ts";
 import { stageNativeArtifact, readArtifact } from "./bytes.ts";
 import { sha256, advanceOperation } from "./operations.ts";
 import { operationRecord } from "./operation-read.ts";
@@ -19,9 +19,9 @@ export const stageImportedSeed = Effect.fn("Office.stageImportedSeed")(function*
 ) {
   if (state.jobId !== job.binding.jobId || state.inputDigest !== job.binding.inputDigest)
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", original.receipt.operationId));
-  const bytes = yield* readArtifact(deps, original.owner, state.output, JOB_OUTPUT_LIMITS.maxBytes);
+  const bytes = yield* readArtifact(deps, original.owner, state.output);
   const payload = yield* Effect.try({
-    try: () => decodeNativeFrame(bytes, "job-output", JOB_OUTPUT_LIMITS).payload,
+    try: () => decodeNativeFrame(bytes, "job-output").payload,
     catch: () => officeFailure("CONTENT_REQUIRED", original.receipt.operationId),
   });
   const output = yield* decodeWire(ImportedOutputSchema)(payload).pipe(
@@ -65,6 +65,6 @@ export const stageImportedSeed = Effect.fn("Office.stageImportedSeed")(function*
     ref.bytes !== encoded.byteLength
   )
     return yield* Effect.fail(officeFailure("IDEMPOTENCY_CONFLICT", original.receipt.operationId));
-  yield* readArtifact(deps, record.owner, ref, deps.policy.limits.nativeBytes);
+  yield* readArtifact(deps, record.owner, ref);
   return { record, native: output.native };
 });

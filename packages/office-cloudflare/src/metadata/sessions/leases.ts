@@ -1,6 +1,6 @@
-import { Count, Id, decodeWireSync, OfficeLimited, safeFailure } from "@starter/office-contract";
-import type { Editor } from "@starter/office-contract";
-import type { OwnerScope, ViewRecord } from "@starter/office-server/ports";
+import { Count, Id, decodeWireSync } from "@highchat/office-contract";
+import type { Editor } from "@highchat/office-contract";
+import type { OwnerScope, ViewRecord } from "@highchat/office-server/ports";
 import type { MetadataStore } from "../store.ts";
 import { canonical, conflict, invalid, sqlNow } from "../store.ts";
 import { LeaseRow } from "./schemas.ts";
@@ -71,16 +71,13 @@ export async function editorRows(
 ): Promise<readonly Editor[]> {
   decodeWireSync(Id)(documentId);
   const rows = await db.all<{ id: string }>(
-    "SELECT id FROM office_meta_editors WHERE owner=? AND document=? AND state IN ('active','draining','unclean') ORDER BY id LIMIT 101",
+    "SELECT id FROM office_meta_editors WHERE owner=? AND document=? AND state IN ('active','draining','unclean') ORDER BY id",
     [db.owner(owner), documentId],
   );
-  if (rows.length > 100) throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   const result: Editor[] = [];
   for (const row of rows) {
     const editor = await editorRow(db, owner, row.id);
     if (editor) result.push(editor);
   }
-  if (new TextEncoder().encode(canonical(result)).byteLength > db.limits.responseBytes)
-    throw new OfficeLimited(safeFailure("LIMIT_EXCEEDED"));
   return result;
 }

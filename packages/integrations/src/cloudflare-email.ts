@@ -1,4 +1,4 @@
-import { withCause } from "@starter/diagnostics";
+import { withCause } from "@highchat/diagnostics";
 import { Effect, Layer, Schema } from "effect";
 import { Email, EmailMessage } from "./email.ts";
 import type { IntegrationError } from "./error.ts";

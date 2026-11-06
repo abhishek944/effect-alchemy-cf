@@ -28,7 +28,7 @@ import { nativeTransport } from "./transport.ts";
 import { pinnedSnapshotService } from "./snapshot.ts";
 import { nativeActivity } from "./activity.ts";
 import type { FrameInit, NativeTheme, NativeUser } from "./messages.ts";
-import type { Kind } from "@starter/office-contract";
+import type { Kind } from "@highchat/office-contract";
 
 export function createNativeApplication(
   container: HTMLElement,

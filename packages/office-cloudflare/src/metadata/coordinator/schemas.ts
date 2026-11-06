@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { Count, Digest, Id } from "@starter/office-contract";
-import { OwnerClaims } from "@starter/office-server/ports";
+import { Count, Digest, Id } from "@highchat/office-contract";
+import { OwnerClaims } from "@highchat/office-server/ports";
 import { NativeId, Permit } from "../schemas.ts";
 
 export const Positive = Count.check(Schema.isGreaterThanOrEqualTo(1));

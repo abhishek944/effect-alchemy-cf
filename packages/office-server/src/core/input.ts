@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { decodeWire, type Kind } from "@starter/office-contract";
+import { decodeWire, type Kind } from "@highchat/office-contract";
 import type { NativeAccess, OfficeDependencies, ViewRecord } from "../ports/index.ts";
 import { SnapshotWithBlocksSchema } from "../jobs/snapshot-schema.ts";
 import { snapshotDigest } from "../jobs/frames.ts";
@@ -38,7 +38,6 @@ export const materializeView = Effect.fn("Office.materializeView")(function* (
     return native;
   }
   return yield* materializeNativeSnapshot(
-    deps,
     runtime,
     {
       kind: "read",
@@ -52,7 +51,6 @@ export const materializeView = Effect.fn("Office.materializeView")(function* (
   );
 });
 export const materializeNativeSnapshot = Effect.fn("Office.materializeNativeSnapshot")(function* (
-  deps: OfficeDependencies,
   runtime: OfficeNativeRuntime,
   access: Extract<NativeAccess, { kind: "read" }>,
   worktreeId: string | null,
@@ -68,7 +66,6 @@ export const materializeNativeSnapshot = Effect.fn("Office.materializeNativeSnap
       worktreeId,
       kind,
       revision,
-      deps.policy.limits,
       preflight,
     ),
   );

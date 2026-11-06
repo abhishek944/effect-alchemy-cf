@@ -1,3 +1,5 @@
+import { Schema } from "effect";
+import { Count, Id } from "./primitives.ts";
 import type { ImportOptions } from "./requests.ts";
 
 /** Shared original-open policy; CSV remains a saved text attachment, not prompt text. */
@@ -14,6 +16,15 @@ export function officeImportOptions(mediaType: string, filename: string): Import
     return { kind: "doc", format: "txt", compatibility: "modern" };
   return null;
 }
+
+/** Public worktreeId is Draft.id; the physical SDK worktree stays server-resolved. */
+export const OfficeSourceDescriptor = Schema.Struct({
+  documentId: Id,
+  mainAvailable: Schema.Boolean,
+  importWorktreeId: Schema.NullOr(Id),
+  worktree: Schema.NullOr(Schema.Struct({ id: Id, documentId: Id, generation: Count })),
+});
+export type OfficeSourceDescriptor = typeof OfficeSourceDescriptor.Type;
 
 export const officeAttachmentIds = (attachmentId: string) => ({
   operationId: `file_open_${attachmentId}`,

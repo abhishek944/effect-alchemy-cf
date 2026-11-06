@@ -45,10 +45,7 @@ export const prepareConversationFiles = async (
   });
   if (result.ok) return result.value;
   if (result.code === "unavailable") throw new ChatUnavailable();
-  const message =
-    result.code === "native_storage_limit"
-      ? "These originals exceed this runtime's 1.75 MiB message storage limit. Remove files or choose smaller originals; nothing was resized."
-      : `These files cannot be sent: ${result.code.replaceAll("_", " ")}. Your draft and originals are unchanged.`;
+  const message = `These files cannot be sent: ${result.code.replaceAll("_", " ")}. Your draft and originals are unchanged.`;
   throw new ChatInvalid({ message });
 };
 

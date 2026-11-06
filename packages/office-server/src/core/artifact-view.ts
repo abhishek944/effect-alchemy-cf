@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
-import { View, decodeWire, type Kind, type OfficeError } from "@starter/office-contract";
+import { View, decodeWire, type Kind, type OfficeError } from "@highchat/office-contract";
 import type { ISnapshotWithBlocks } from "@univerjs-pro/collaboration-service";
 import type {
   NativeTarget,
@@ -46,12 +46,11 @@ export const stageReadyRoleView = Effect.fn("Office.stageReadyRoleView")(functio
   );
   yield* Effect.try({
     try: () =>
-      prepareSdkSnapshot(
-        native.snapshot,
-        native.sheetBlocks,
-        { unitID: original.unitId, type: nativeTypes[kind], revision: native.snapshot.rev },
-        deps.policy.limits.nativeBytes,
-      ),
+      prepareSdkSnapshot(native.snapshot, native.sheetBlocks, {
+        unitID: original.unitId,
+        type: nativeTypes[kind],
+        revision: native.snapshot.rev,
+      }),
     catch: () => officeFailure("CONTENT_REQUIRED", permit.operationId),
   });
   const now = yield* Clock.currentTimeMillis;

@@ -1,11 +1,10 @@
 import type { DurableImageHost } from "@abhishek944/pi-image-gen/durable";
-import { reportFailure } from "@starter/diagnostics";
+import { reportFailure } from "@highchat/diagnostics";
 import { createChatGeneratedClient } from "./chat-generated-client.ts";
 import { prepareImageHostPlan, recheckImageHostPlan } from "./chat-image-host-proof.ts";
 import { imageHostRefusal } from "./chat-image-host-sources.ts";
 import { createImageHostLifetime } from "./chat-image-host-lifetime.ts";
 import { assertImageHostLogical, imageHostIO } from "./chat-image-host-io.ts";
-import { nativeImageLimits } from "./chat-image-policy.ts";
 import {
   imageHostToolResult,
   rememberImageHostMetadata,
@@ -75,11 +74,6 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
         const snapshot = plan.proof.snapshot;
         const image = snapshot.image;
         if (image.state !== "ready") return imageHostRefusal();
-        const referenceBytes = plan.sources.reduce(
-          (sum, item) => sum + item.authority.file.byteSize,
-          0,
-        );
-        const limits = nativeImageLimits(referenceBytes);
         const key = { chatId: snapshot.chatId, callId: plan.key };
         const client = execution.client;
         const requestDigest = plan.requestDigest;
@@ -92,7 +86,6 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
             ...key,
             operationId: snapshot.operationId,
             requestDigest,
-            maxOutputBytes: limits.imageBytes ?? 0,
             sources,
             model: image.preferences.model,
             size,
@@ -155,7 +148,7 @@ export function createChatImageHost(deps: ChatImageHostDependencies): DurableIma
           outcome,
           outcome.dispatched
             ? "Image work did not finish cleanly. Saved results are retained. Do not repeat generation without a new explicit request."
-            : "This invocation did not contact the image provider. Image settings, references, admission or storage quota could not be verified.",
+            : "This invocation did not contact the image provider. Image settings, references or admission could not be verified.",
         );
       } finally {
         if (execution !== undefined && ownsStart)

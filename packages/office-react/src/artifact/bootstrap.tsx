@@ -3,7 +3,7 @@ import { useLayoutEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { OfficeNativeEditor } from "../editor.tsx";
-import type { View } from "@starter/office-contract";
+import type { View } from "@highchat/office-contract";
 import type { FrameStatus, NativeTheme } from "../frame/messages.ts";
 
 const container = document.getElementById("probe-root");

@@ -1,6 +1,6 @@
 import type * as cf from "@cloudflare/workers-types";
 import { Schema } from "effect";
-import { OfficeUnavailable, safeFailure } from "@starter/office-contract";
+import { OfficeUnavailable, safeFailure } from "@highchat/office-contract";
 
 const unavailable = () => new OfficeUnavailable(safeFailure("UNAVAILABLE"));
 /** Native Web-IDL boundary only, like chat-bindings WorkerSignal/doStream. These constructors

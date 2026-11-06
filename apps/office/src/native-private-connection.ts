@@ -4,8 +4,8 @@ import {
   OfficeUnavailable,
   decodeWireSync,
   safeFailure,
-} from "@starter/office-contract";
-import { HostId } from "@starter/office-server/native-remote";
+} from "@highchat/office-contract";
+import { HostId } from "@highchat/office-server/native-remote";
 import { readOfficeControlBody } from "./native-channel-body.ts";
 
 const forbidden = () => new OfficeForbidden(safeFailure("FORBIDDEN"));
@@ -14,7 +14,6 @@ export class NativePrivateConnection {
   readonly bootId: string;
   readonly origin: string;
   private failed = false;
-  private bytes = 0;
   constructor(bootId: string, origin: string) {
     this.bootId = decodeWireSync(HostId)(bootId);
     if (origin !== "http://office-storage.internal") throw forbidden();
@@ -61,7 +60,6 @@ export class NativePrivateConnection {
       throw forbidden();
     if (Date.now() >= deadline) throw forbidden();
     const body = JSON.stringify(value);
-    if (new TextEncoder().encode(body).byteLength > 16 * 1024) throw forbidden();
     const stop = new AbortController();
     const linked = AbortSignal.any([signal, stop.signal]);
     const timer = setTimeout(() => stop.abort(), Math.max(0, deadline - Date.now()));
@@ -79,15 +77,11 @@ export class NativePrivateConnection {
         response,
         linked,
         deadline,
-        (count) => {
-          this.bytes += count;
-          if (this.bytes > 64 * 1024 * 1024) throw forbidden();
-        },
         () => {
           this.failed = true;
           stop.abort();
         },
-        16 * 1024,
+        null,
       );
       if (
         response.status !== 200 ||

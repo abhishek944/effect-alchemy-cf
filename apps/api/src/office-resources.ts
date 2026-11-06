@@ -8,4 +8,4 @@ export class OfficeStorage extends Context.Service<
     readonly database: Cloudflare.D1.Database;
     readonly bucket: Cloudflare.R2.Bucket;
   }
->()("starter/OfficeStorage") {}
+>()("highchat/OfficeStorage") {}

@@ -1,5 +1,5 @@
 import type { IChangeset, ISheetBlock, ISnapshot } from "@univerjs/protocol";
-import { NATIVE_WIRE_CODEC } from "@starter/office-contract/native-wire";
+import { NATIVE_WIRE_CODEC } from "@highchat/office-contract/native-wire";
 import type { NativeDatabase } from "./database.ts";
 import type { NativePayloads } from "./payloads.ts";
 import type { NativePayloadKind, NativePieceRef, NativeValueRef } from "./types.ts";

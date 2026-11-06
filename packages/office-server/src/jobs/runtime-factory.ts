@@ -9,6 +9,7 @@ import {
   type UniverCollaborationRuntimeFactory,
 } from "@univer-cli/univer-collaboration-runtime";
 import { UniverInstanceType } from "@univerjs/core";
+import { constants as bufferConstants } from "node:buffer";
 
 export const OFFICE_NATIVE_TYPES = Object.freeze({
   sheet: UniverInstanceType.UNIVER_SHEET,
@@ -46,8 +47,9 @@ export function createOfficeRuntimeFactory(
   const createUniver = createStandardHeadlessUniverFactory({
     license: options.runtimeLicense ?? "",
   });
-  const maxCodeLength = options.maxCodeLength ?? 512 * 1024;
-  if (!Number.isSafeInteger(maxCodeLength) || maxCodeLength < 1 || maxCodeLength > 512 * 1024) {
+  // SDK 1.0.3 requires a positive safe integer; use Node's actual string representation bound.
+  const maxCodeLength = options.maxCodeLength ?? bufferConstants.MAX_STRING_LENGTH;
+  if (!Number.isSafeInteger(maxCodeLength) || maxCodeLength < 1) {
     throw new RangeError("Facade source exceeds the supported runtime profile.");
   }
   return createUniverCollaborationRuntimeFactory({

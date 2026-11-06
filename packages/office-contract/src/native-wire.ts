@@ -27,24 +27,7 @@ export const NativeFrameKind = Schema.Literals([
   "merge-artifact",
 ]);
 export type NativeFrameKind = typeof NativeFrameKind.Type;
-export const NATIVE_WIRE_LIMITS: NativeWireLimits = Object.freeze({
-  maxBytes: 128 * 1024 * 1024,
-  maxDepth: 64,
-  maxNodes: 1_000_000,
-  maxArrayLength: 100_000,
-  maxMapLength: 50_000,
-  maxStringBytes: 8 * 1024 * 1024,
-  maxBinaryBytes: 128 * 1024 * 1024,
-});
-export const NATIVE_WIRE_CEILINGS: NativeWireLimits = Object.freeze({
-  maxBytes: 256 * 1024 * 1024,
-  maxDepth: 96,
-  maxNodes: 2_000_000,
-  maxArrayLength: 200_000,
-  maxMapLength: 100_000,
-  maxStringBytes: 16 * 1024 * 1024,
-  maxBinaryBytes: 256 * 1024 * 1024,
-});
+export const NATIVE_WIRE_LIMITS: NativeWireLimits = Object.freeze({});
 const Envelope = Schema.Struct({
   format: Schema.Literal(NATIVE_WIRE_FORMAT),
   version: Schema.Literal(NATIVE_WIRE_VERSION),
@@ -58,9 +41,8 @@ export type NativeFrame = {
   readonly payload: NativeValue;
 };
 const bounded = (limits: NativeWireLimits) => {
-  for (const [key, ceiling] of Object.entries(NATIVE_WIRE_CEILINGS)) {
-    const value: unknown = Reflect.get(limits, key);
-    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > ceiling)
+  for (const value of Object.values(limits)) {
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
       throw new NativeWireError("LIMIT_EXCEEDED");
   }
   return limits;
@@ -78,13 +60,15 @@ export function encodeNativeFrame(
     bounded(limits);
     decodeWireSync(NativeFrameKind)(kind);
     const frame = { format: NATIVE_WIRE_FORMAT, version: NATIVE_WIRE_VERSION, kind, payload };
-    validateNativeValue(frame, limits);
+    const measurement = { depth: 0 };
+    validateNativeValue(frame, limits, measurement);
     const bytes = encode(liftNativeUndefined(frame), {
-      maxDepth: limits.maxDepth + 1,
+      maxDepth: measurement.depth + 1,
       extensionCodec: nativeExtensionCodec,
       forceIntegerToFloat: true,
     });
-    if (bytes.byteLength > limits.maxBytes) throw new NativeWireError("LIMIT_EXCEEDED");
+    if (limits.maxBytes !== undefined && bytes.byteLength > limits.maxBytes)
+      throw new NativeWireError("LIMIT_EXCEEDED");
     return bytes;
   } catch (error) {
     throw error instanceof NativeWireError ? error : new NativeWireError("INVALID_FRAME");
@@ -99,10 +83,10 @@ export function decodeNativeFrame(
     bounded(limits);
     scanNativeMessagePack(bytes, limits);
     const decoded = decode(bytes, {
-      maxStrLength: limits.maxStringBytes,
-      maxBinLength: limits.maxBinaryBytes,
-      maxArrayLength: limits.maxArrayLength,
-      maxMapLength: limits.maxMapLength,
+      ...(limits.maxStringBytes === undefined ? {} : { maxStrLength: limits.maxStringBytes }),
+      ...(limits.maxBinaryBytes === undefined ? {} : { maxBinLength: limits.maxBinaryBytes }),
+      ...(limits.maxArrayLength === undefined ? {} : { maxArrayLength: limits.maxArrayLength }),
+      ...(limits.maxMapLength === undefined ? {} : { maxMapLength: limits.maxMapLength }),
       maxExtLength: 0,
       extensionCodec: nativeExtensionCodec,
     });
@@ -110,8 +94,9 @@ export function decodeNativeFrame(
       throw new NativeWireError("INVALID_FRAME");
     const frame = decodeWireSync(Envelope)(decoded);
     if (frame.kind !== expectedKind) throw new NativeWireError("INVALID_FRAME");
-    validateNativeValue(frame.payload, limits);
-    return { format: NATIVE_WIRE_FORMAT, version: 1, kind: frame.kind, payload: frame.payload };
+    const payload = frame.payload;
+    validateNativeValue(payload, limits);
+    return { format: NATIVE_WIRE_FORMAT, version: 1, kind: frame.kind, payload };
   } catch (error) {
     throw error instanceof NativeWireError ? error : new NativeWireError("INVALID_FRAME");
   }

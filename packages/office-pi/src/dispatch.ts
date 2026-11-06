@@ -7,8 +7,8 @@ import {
   ReviewPage,
   View,
   decodeWireSync,
-} from "@starter/office-contract";
-import type { ArtifactRef, OfficeCommand } from "@starter/office-contract";
+} from "@highchat/office-contract";
+import type { ArtifactRef, OfficeCommand } from "@highchat/office-contract";
 import { stage } from "./staging.ts";
 import type { OfficeTaskAccess } from "./types.ts";
 

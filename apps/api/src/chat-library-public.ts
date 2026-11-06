@@ -45,7 +45,7 @@ export class ChatLibraryApi extends HttpApiGroup.make("chatLibrary")
   .middleware(ChatAuthentication) {}
 
 // Same identifier/group as parent composition, without a shared root Api import cycle.
-const LibraryApi = HttpApi.make("starter").add(ChatLibraryApi);
+const LibraryApi = HttpApi.make("highchat").add(ChatLibraryApi);
 const PageEnvelope = Schema.Struct({ ok: Schema.Literal(true), value: SavedLibraryPage });
 const FileEnvelope = Schema.Struct({ ok: Schema.Literal(true), value: SavedFile });
 

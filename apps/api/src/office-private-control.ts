@@ -1,7 +1,7 @@
 import { Schema } from "effect";
-import { reportFailure } from "@starter/diagnostics";
-import { OfficeErrors, decodeWireSync, safeFailure } from "@starter/office-contract";
-import { hostEnvelope } from "@starter/office-server/native-remote";
+import { reportFailure } from "@highchat/diagnostics";
+import { OfficeErrors, decodeWireSync, safeFailure } from "@highchat/office-contract";
+import { hostEnvelope } from "@highchat/office-server/native-remote";
 import {
   OfficePrivateCall,
   OfficePrivateReply,
@@ -23,11 +23,11 @@ export async function officePrivateControl(
   peer: () => Promise<void>,
 ) {
   const cleanup = role === "cleanup";
-  const maximum = role === "manifest" ? 2 * 1024 * 1024 : 16 * 1024;
+  const maximum = null;
   const signal = cleanup ? frame.cleanup.signal : frame.work.signal;
   const deadline = cleanup ? frame.cleanupDeadline : frame.deadline;
   const envelope = decodeWireSync(Envelope)(
-    await readOfficePrivateJson(body, signal, deadline, maximum, frame.request.charge),
+    await readOfficePrivateJson(body, signal, deadline, maximum),
   );
   if (envelope.invocationId !== frame.id) throw officeDenied();
   frame.request.receive(envelope.callId);
@@ -58,6 +58,5 @@ export async function officePrivateControl(
     cleanup,
     peer,
     200,
-    frame.request.charge,
   );
 }
