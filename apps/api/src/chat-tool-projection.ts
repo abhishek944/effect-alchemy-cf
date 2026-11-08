@@ -1,5 +1,7 @@
 import type { AssistantMessage, ToolResultMessage } from "@earendil-works/pi-ai";
-import { ToolResultEntry, type EntryRecord, type ToolSlot } from "@earendil-works/pi-durable";
+import type { EntryRecord, ToolSlot } from "./chat-transcript-types.ts";
+import { Schema } from "effect";
+import { decodeOption } from "./chat-internal.ts";
 import { encodedBytes } from "./chat-contract.ts";
 import { safeToolText, toolInputExcerpt } from "./chat-tool-excerpts.ts";
 import {
@@ -21,7 +23,11 @@ export const toolResultPreview = (
   message: ToolResultMessage,
   budget: number,
 ): { result: ToolResultPreview; visited: number } => {
-  const diagnostics = ToolResultEntry.is(entry) ? entry.data.diagnostics : [];
+  const diagnostics =
+    decodeOption(
+      Schema.Struct({ diagnostics: Schema.Array(Schema.Struct({ code: Schema.String })) }),
+      entry.data,
+    )?.diagnostics ?? [];
   // Native appendToolResult appends exactly one rendered diagnostic block last.
   const length = Math.max(0, message.content.length - (diagnostics.length > 0 ? 1 : 0));
   let output = "";

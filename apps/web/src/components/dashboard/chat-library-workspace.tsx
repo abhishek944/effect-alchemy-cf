@@ -14,9 +14,6 @@ import {
   workspaceTabLabel,
 } from "./workspace-preview-tabs";
 import "./chat-library-workspace.css";
-import { OfficeFiles } from "./office-files";
-import { OfficeSurface } from "./office-surface";
-import { OfficeOriginal } from "./office-original";
 import { WorkspacePreviewRestore } from "./workspace-preview-restore";
 import { useOriginalReferenceSource } from "./reference-original-source";
 
@@ -32,7 +29,6 @@ function FilesView({ chatId, active, archived, title }: ViewProps & { title: str
   if (!chatId) return null;
   return (
     <>
-      <OfficeFiles active={active} refreshKey={refreshKey} />
       <ChatLibraryPanel
         library={library}
         chatTitle={title}
@@ -130,10 +126,6 @@ export function ChatLibraryWorkspace({ active }: { active: boolean }) {
             >
               {tab.kind === "restoring" ? (
                 <WorkspacePreviewRestore chatId={chatId} tab={tab} />
-              ) : tab.kind === "office" ? (
-                <OfficeSurface chatId={chatId} id={tab.id} selection={tab.selection} />
-              ) : tab.kind === "office-file" ? (
-                <OfficeOriginal file={tab.file} id={tab.id} archived={chat?.archived ?? false} />
               ) : tab.kind === "files" ? (
                 <FilesView
                   chatId={chatId}

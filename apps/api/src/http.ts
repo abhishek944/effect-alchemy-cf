@@ -1,4 +1,4 @@
-import * as Http from "alchemy/Http";
+import { httpPlatformLayer } from "@highchat/platform";
 import { Effect, Layer } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { AccountLive } from "./account-http.ts";
@@ -45,5 +45,5 @@ export const HttpLive = HttpApiBuilder.layer(Api).pipe(
       ChatNamespacesLive,
     ),
   ),
-  Layer.provide(Http.Platform),
+  Layer.provide(httpPlatformLayer),
 );

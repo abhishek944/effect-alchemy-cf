@@ -1,5 +1,5 @@
 import { withDiagnostic } from "@highchat/diagnostics";
-import { Config, type Context, Effect, Schema } from "effect";
+import { type Context, Effect, Schema } from "effect";
 import { type ChatNamespaces, doCall } from "./chat-bindings.ts";
 import { OperationReceipt } from "./chat-contract.ts";
 import { ignoreReport, privateUnavailable } from "./chat-diagnostics.ts";
@@ -26,12 +26,13 @@ import {
   type SendMessage,
 } from "./chat-model.ts";
 import { CurrentUser } from "./model.ts";
+import { chatInferenceConfigured } from "./chat-model-transport.ts";
 import { sendIdentity } from "./chat-send-identity.ts";
 import { publicApplicationOrigin } from "./chat-public-origin.ts";
-import { chatOfficeSessionHeaders, CurrentChatOfficeSession } from "./chat-office-session.ts";
 
 export const sendChat = (
   ns: Context.Service.Shape<typeof ChatNamespaces>,
+  env: Readonly<Record<string, unknown>>,
   id: string,
   payload: typeof SendMessage.Type,
 ) =>
@@ -46,7 +47,7 @@ export const sendChat = (
     const identity = sendIdentity(payload);
     const user = yield* CurrentUser;
     const chat = yield* requireOwnedChat(ns, user.id, id);
-    const applicationOrigin = yield* publicApplicationOrigin;
+    const applicationOrigin = yield* publicApplicationOrigin(env);
     if (chat.archived) return yield* Effect.fail(new ChatArchived());
     // Metadata only: an unavailable object cannot fail the accepted message, and
     // the bounded title model call runs in the catalog after this quick claim.
@@ -112,11 +113,10 @@ export const sendChat = (
         ),
       );
     if (!nativeAccepted) {
-      const gateway = yield* Config.String("CHAT_GATEWAY_ID").pipe(
-        Config.withDefault(""),
-        Effect.orDie,
-      );
-      if (gateway.length === 0)
+      // Configuration presence only, from the same predicate that enables
+      // submission: a configured provider never fails before admission, and an
+      // unconfigured one never admits or reserves quota for unreachable work.
+      if (!chatInferenceConfigured(env))
         return yield* Effect.fail(new InferenceUnavailable({ message: INFERENCE_UNCONFIGURED }));
     }
     let decision = yield* admit();
@@ -138,12 +138,10 @@ export const sendChat = (
     // Catalog identity is still checked/repaired; native accepted retries never recharge or resubmit.
     if (decision.reason === "duplicate" && !nativeAccepted)
       return yield* Effect.fail(new ChatUnavailable());
-    const officeHeaders = chatOfficeSessionHeaders(yield* CurrentChatOfficeSession);
     const call = yield* doCall(ns.conversation(user.id, chat.id), "POST", "/messages", payload, {
       ...chatHeader(chat),
       "x-chat-owner": user.id,
       "x-chat-application-origin": applicationOrigin,
-      ...officeHeaders,
     });
     if (call.status === 409 || call.status === 400) {
       yield* doCall(ns.catalog(user.id), "POST", "/release", {

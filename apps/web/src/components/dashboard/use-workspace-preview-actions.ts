@@ -8,22 +8,19 @@ type Options = {
   setViews: Dispatch<SetStateAction<WorkspaceViews>>;
   activeId: string;
   readViews: () => WorkspaceViews;
-  leave: (chatId: string, id: string) => Promise<boolean>;
   cancelFiles: (chatId: string, fileIds: readonly string[]) => void;
 };
 const nextId = () => `workspace-tab-${crypto.randomUUID()}`;
 
 /**
  * Workspace actions for the selected chat. Each one mutates only its own chat's retained view;
- * reveal/focus is granted only to the chat that is on screen, and a new native tab is admitted
- * through that chat's command scope instead of a workspace-wide mutex.
+ * reveal/focus is granted only to the chat that is on screen.
  */
 export function useWorkspacePreviewActions({
   scope,
   setViews,
   activeId,
   readViews,
-  leave,
   cancelFiles,
 }: Options) {
   const reveal = useRef<(() => void) | null>(null);
@@ -40,7 +37,7 @@ export function useWorkspacePreviewActions({
     },
     [scope],
   );
-  // Tab focus and re-click are not destructive: retained editors keep their sessions.
+  // Tab focus and re-click are not destructive: retained views keep their sessions.
   const select = (id: string) => {
     const chatId = scope.current.selectedId;
     if (chatId === null || id === activeId) return;
@@ -63,29 +60,22 @@ export function useWorkspacePreviewActions({
     },
     [revealFor, setViews],
   );
-  /** Closing finishes and drains only this tab's editor, even if another chat is selected now. */
+  /** Closing abandons only this tab's pending reads, even if another chat is selected now. */
   const close = (id: string) => {
     const chatId = scope.current.selectedId;
     if (chatId === null) return;
-    void leave(chatId, id).then((allowed) => {
-      if (!allowed) return undefined;
-      const tab = readViews()[chatId]?.tabs.find((value) => value.id === id);
-      if (tab) {
-        const aliases = "attachments" in tab ? tab.attachments : [];
-        const descriptor = tab.kind === "restoring" ? tab.descriptor : null;
-        cancelFiles(chatId, [
-          ...aliases,
-          ...("file" in tab ? [tab.file.id] : []),
-          ...(descriptor && "fileId" in descriptor ? [descriptor.fileId] : []),
-          ...(descriptor?.kind === "office" ? descriptor.attachments : []),
-        ]);
-      }
-      const replacement = nextId();
-      setViews((current) =>
-        updateView(current, chatId, (view) => closePreview(view, id, replacement)),
-      );
-      return undefined;
-    });
+    const tab = readViews()[chatId]?.tabs.find((value) => value.id === id);
+    if (tab) {
+      const descriptor = tab.kind === "restoring" ? tab.descriptor : null;
+      cancelFiles(chatId, [
+        ...("file" in tab ? [tab.file.id] : []),
+        ...(descriptor && "fileId" in descriptor ? [descriptor.fileId] : []),
+      ]);
+    }
+    const replacement = nextId();
+    setViews((current) =>
+      updateView(current, chatId, (view) => closePreview(view, id, replacement)),
+    );
   };
   const add = () => {
     const chatId = scope.current.selectedId;
@@ -110,7 +100,7 @@ export function useWorkspacePreviewActions({
     );
     revealFor(chatId);
   };
-  const { openImage, openImageIn, openOffice, openOfficeIn } = useWorkspacePreviewOpen({
+  const { openImage, openImageIn } = useWorkspacePreviewOpen({
     scope,
     setViews,
     readViews,
@@ -124,8 +114,6 @@ export function useWorkspacePreviewActions({
     showFiles,
     openImage,
     openImageIn,
-    openOffice,
-    openOfficeIn,
     registerReveal,
   };
 }

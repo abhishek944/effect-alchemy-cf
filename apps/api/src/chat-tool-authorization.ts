@@ -8,7 +8,7 @@
  * internal `/messages` route, repeated values must match, and a mismatch fails
  * closed instead of replacing the binding.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { Schema } from "effect";
 import { decodeOption } from "./chat-internal.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
@@ -30,9 +30,9 @@ export const conversationOwner = (name: string | undefined): string | null => {
 };
 
 export class ChatOwnerBinding {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS chat_owner_binding (
       key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, updated_at INTEGER NOT NULL

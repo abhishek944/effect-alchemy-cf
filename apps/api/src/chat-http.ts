@@ -1,3 +1,4 @@
+import { RuntimeEnv } from "@highchat/platform";
 import { Effect, Schema } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { Api } from "./api.ts";
@@ -39,6 +40,7 @@ const FailureEnvelope = Schema.Struct({
 export const ChatLive = HttpApiBuilder.group(Api, "chat", (handlers) =>
   Effect.gen(function* () {
     const ns = yield* ChatNamespaces;
+    const env = yield* RuntimeEnv;
     /** Owner-authenticated recovery command; the browser never chooses owner or pin. */
     const skillCommand = (
       id: string,
@@ -49,9 +51,8 @@ export const ChatLive = HttpApiBuilder.group(Api, "chat", (handlers) =>
       Effect.gen(function* () {
         const user = yield* CurrentUser;
         const chat = yield* requireOwnedChat(ns, user.id, id);
-        // No public archive precheck: exact receipt repair may run while archived;
-        // the private command refuses NEW admission and reports code archived.
-        const applicationOrigin = yield* publicApplicationOrigin;
+        // Exact receipt repair may run while archived; NEW admission is refused privately.
+        const applicationOrigin = yield* publicApplicationOrigin(env);
         const call = yield* doCall(ns.conversation(user.id, chat.id), "POST", path, payload, {
           ...chatHeader(chat),
           "x-chat-owner": user.id,
@@ -149,17 +150,9 @@ export const ChatLive = HttpApiBuilder.group(Api, "chat", (handlers) =>
         ),
       )
       .handle("chatReceipt", ({ params }) =>
-        chatRead(
-          ns,
-          params.id,
-          "/receipt",
-          {
-            operationId: params.operationId,
-          },
-          OperationReceipt,
-        ),
+        chatRead(ns, params.id, "/receipt", { operationId: params.operationId }, OperationReceipt),
       )
-      .handle("sendMessage", ({ params, payload }) => sendChat(ns, params.id, payload))
+      .handle("sendMessage", ({ params, payload }) => sendChat(ns, env, params.id, payload))
       .handle("stopChat", ({ params, payload }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser;

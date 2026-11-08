@@ -7,7 +7,7 @@
  * Repeating the same operation is a no-op; mismatched operations are rejected
  * by the catalog. Staging bytes are removed only after the commit succeeded.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";

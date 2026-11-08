@@ -1,8 +1,6 @@
 # Backend observability
 
-Alchemy owns the settings in `apps/api/src/options.ts`. Deploying the stack
-configures Workers Logs and native tracing; there is no separate Wrangler deploy
-or external collector. These features are not live-verified yet.
+Logs, request ids and failure reporting come from `effect` Logger/ErrorReporter layers in `apps/api/src/observability.ts` over a local Node process. Any Workers Trace reference below is historical.
 
 ## Signals and sampling
 
@@ -49,8 +47,7 @@ platform diagnostics and may not appear as a failed completion record.
 
 `release` is the validated GitHub commit SHA during Actions deployments; without
 a valid SHA it is `local-<startup stamp>` for local runs and `manual-<stamp>`
-otherwise. A stamp marks the startup, not a versioned build; the inspected
-Docker image ID remains the local Office build identity. Metadata is bound by
+otherwise. A stamp marks the startup, not a versioned build. Metadata is bound by
 Alchemy, not copied from user-supplied headers. No stage env-file keys were
 added.
 
@@ -72,11 +69,11 @@ allowlisted error tags/codes/provider status and bounded nested cause summaries.
 Only repository source locations may be extracted from stacks; foreign messages
 and full stacks are never emitted. Existing request/operation/task/call/submission
 IDs correlate failures without carrying owner/session credentials or authority.
-Office tool events include `tool_arguments`: exact format-valid attachment/reference
-IDs and worktreeId, ID validity states, allowlisted command/selector, argument count/size and cursor
-presence, never raw argv/code, selectors containing private text, filenames or cursor
-values. Admission denials add step, matched reference kind and accepted-input counts.
-Native causes remain intact in memory; log projection is not error propagation.
+Tool events may include `tool_arguments`: exact format-valid attachment/reference
+IDs, ID validity states, argument count/size and cursor presence, never raw argv or
+code, selectors containing private text, filenames or cursor values. Admission
+denials add step, matched reference kind and accepted-input counts. Native causes
+remain intact in memory; log projection is not error propagation.
 
 Effect ErrorReporter observes Alchemy's existing HTTP/RPC failure boundary before
 safe response encoding, using generated request-scoped correlation. The logger
@@ -104,8 +101,8 @@ reads only `OBS_SERVICE`/`OBS_STAGE`/`OBS_RELEASE`. Phase and reason labels are
 fixed application strings; first-failure causes stay intact while separate
 cleanup/recovery records carry their own outcome.
 
-Native chat Durable Objects, Node Office processes, fixed jobs and detached work
-do not automatically inherit the API Effect logger. Their handling/recovery
+Native chat Durable Objects and detached work do not automatically inherit the API
+Effect logger. Their handling/recovery
 owners call the same bounded reporting helper. Private bridges report at origin
 and join existing operation/call identities rather than serializing raw errors.
 Do not log at every propagation layer, retry to obtain logs, or treat missing

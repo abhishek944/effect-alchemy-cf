@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import type { EntryId } from "@earendil-works/pi-durable";
+import type { EntryId } from "./chat-transcript-types.ts";
 
 export const AcceptedEntryId = Schema.declare<EntryId>(
   (value): value is EntryId =>

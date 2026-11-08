@@ -5,11 +5,6 @@ type Presentation = { title: string; icon: ToolIconName };
 
 /** Labels derive from the tool name and status only, never from formatted input text. */
 export function toolPresentation(tool: ChatTool): Presentation {
-  const done = tool.status === "succeeded";
-  if (tool.name === "open_in_panel")
-    // This tool requests navigation; it cannot prove that a panel rendered its content.
-    return { title: done ? "Panel requested" : "Panel request", icon: "panel" };
-  if (tool.name === "univer_cli") return { title: "Office document tool", icon: "tools" };
   const name = tool.name.replaceAll(/[_-]+/g, " ").trim();
   return {
     title: name ? name.charAt(0).toUpperCase() + name.slice(1) : "Tool call",

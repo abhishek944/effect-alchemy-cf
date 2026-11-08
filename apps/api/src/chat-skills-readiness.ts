@@ -7,7 +7,7 @@
  * (readiness must not cost a per-token or per-file fetch). An empty verified
  * library is ready without an object binding.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { SKILLS_INTEGRITY, SKILLS_UNAVAILABLE } from "./chat-skills-errors.ts";
 import { decodeOption } from "./chat-internal.ts";

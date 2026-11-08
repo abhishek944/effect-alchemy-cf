@@ -1,8 +1,12 @@
 # Naming and custom domains
 
+**Current runtime:** identity is Clerk, storage is local SQLite and files, and no cloud domain or provider resource is attached by this repository. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
 ## Editable branding
 
-Edit the existing gitignored `packages/config/.env.dev` and `.env.prod`.
+Edit the existing gitignored `packages/config/.env.local` and `.env.prod`.
 Both stages have the same keys. Defaults come from `packages/config/defaults.ts`:
 
 | Key          | Dev default | Prod default     | Consumer                                 |
@@ -57,8 +61,7 @@ move into or modify the unrelated Highchat checkout under Documents.
 Keep the legacy ServiceStarter Alchemy stack/dev Gateway, D1/R2/DO resource IDs,
 BetterAuthSecret/migration IDs, cookie names, Docker labels/image tag and theme
 storage/event identifiers stable. They identify data or ownership, not branding.
-Changing APP_NAME/APP_DOMAIN does not migrate or delete any of them. New Office
-images still need an explicit rebuild after package/source/provenance changes.
+Changing APP_NAME/APP_DOMAIN does not migrate or delete any of them.
 
 ## Domain rollout is separate from code changes
 
@@ -73,9 +76,9 @@ Do not overwrite another site or adopt an existing attachment silently. No www
 alias, redirect or access-policy change is implied. A blank config omits domain
 management; intentional detachment needs a separately approved cloud change.
 
-The same-origin frontend, API, files and Office WebSockets use the new hostname.
+The same-origin frontend, API and files use the new hostname.
 Cookies/localStorage from an older hostname do not transfer automatically: expect
 sign-in and origin-local preferences again, without deleting application users.
 After approved rollout, verify DNS/TLS, static assets, auth/origin checks, existing
-chats/files and Office WebSocket/save/reopen behavior. No live acceptance follows
-merely from passing source lint/build checks.
+chats/files behavior. No live acceptance follows merely from passing source
+lint/build checks.

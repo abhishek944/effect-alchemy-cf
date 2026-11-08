@@ -7,7 +7,7 @@
  * them. The `attempts` array is a bounded recent window while totals stay
  * lifetime, and no historical row set is loaded into memory.
  */
-import type { UsageState } from "@earendil-works/pi-durable";
+import type { UsageState } from "./chat-transcript-types.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { categoryOfAttempt, emptyCounters, modelIdOf } from "./chat-accounting-model.ts";

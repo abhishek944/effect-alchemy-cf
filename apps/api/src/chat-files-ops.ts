@@ -9,8 +9,8 @@ import {
   FileName,
   MAX_EXCERPT_CHARS,
 } from "./chat-attachment-schema.ts";
-import { isOfficeMediaType } from "./chat-office-media.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
+import { isOfficeMediaType } from "./chat-files-office.ts";
 import { SWEEP_BATCH_LIMIT } from "./chat-files-model.ts";
 
 export type ChatFilesReserveResult = {

@@ -1,4 +1,4 @@
-import type { UserInput } from "@earendil-works/pi-durable";
+import type { UserInput } from "./chat-transcript-types.ts";
 import { Schema } from "effect";
 import { ImageResponseError, responseValue } from "./chat-image-response-codec.ts";
 
@@ -13,10 +13,9 @@ export async function digestCompactImageInput(input: UserInput): Promise<string>
   let compact: string | (typeof TextBlock.Type)[];
   if (typeof input === "string") compact = input;
   else {
-    if (!Array.isArray(input)) throw new ImageResponseError("invalid_input");
     compact = [];
     for (const block of input) {
-      if (block?.type !== "text") throw new ImageResponseError("invalid_input");
+      if (block.type !== "text") throw new ImageResponseError("invalid_input");
       const text = responseValue(TextBlock, block);
       compact.push(
         text.textSignature === undefined

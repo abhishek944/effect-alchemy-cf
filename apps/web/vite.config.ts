@@ -1,96 +1,17 @@
-import { cpSync, existsSync, readFileSync } from "node:fs";
-import { extname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
-import { buildAppConfig } from "../../packages/config/stage.ts";
+import { buildAppConfig, stagePublicConfig } from "../../packages/config/stage.ts";
 
 const backend = "http://localhost:1337";
 
-/** Copy the complete production frame tree, including its relative native Worker assets. */
-function officeFrameAssets(): Plugin {
-  const source = fileURLToPath(new URL("../../packages/office-react/dist/", import.meta.url));
-  let destination = "";
-  return {
-    name: "office-frame-assets",
-    apply: "build",
-    configResolved(config) {
-      destination = resolve(config.root, config.build.outDir, "office");
-    },
-    writeBundle() {
-      if (!existsSync(resolve(source, "frame.html")))
-        throw new Error(
-          "Office frame is missing. Run pnpm build to build workspace dependencies first.",
-        );
-      for (const fixture of [
-        "artifact.html",
-        "trace.html",
-        "bootstrap.html",
-        "bootstrap-frame.html",
-      ]) {
-        if (existsSync(resolve(source, fixture)))
-          throw new Error(
-            "Refusing to publish Office fixture pages. Rebuild the production frame.",
-          );
-      }
-      cpSync(source, destination, { recursive: true });
-    },
-  };
-}
-
-const frameTypes: Record<string, string> = {
-  ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-};
-
-/**
- * Serve the prebuilt Office frame from its owning package during Vite development.
- * The production build copies the same tree to dist/office; serving it here keeps the
- * iframe same-origin and authenticated without requiring apps/web/dist or a Worker restart.
- */
-function officeFrameDev(): Plugin {
-  const source = resolve(
-    fileURLToPath(new URL("../../packages/office-react/dist/", import.meta.url)),
-  );
-  return {
-    name: "office-frame-dev",
-    apply: "serve",
-    configureServer(server) {
-      // Connect strips the "/office/" mount, so request.url is "/frame.html" or "/assets/…".
-      server.middlewares.use("/office/", (request, response, next) => {
-        const pathname = (request.url ?? "").split("?")[0] ?? "";
-        const file = resolve(source, pathname.replace(/^\/+/, ""));
-        const relativePath = relative(source, file);
-        if (relativePath.length === 0 || relativePath.startsWith("..") || isAbsolute(relativePath))
-          return next();
-        let body: Buffer;
-        try {
-          body = readFileSync(file);
-        } catch {
-          if (relativePath === "frame.html") {
-            response.statusCode = 503;
-            response.setHeader("content-type", "text/plain; charset=utf-8");
-            response.end(
-              "Office frame is not built. Run: pnpm --filter @highchat/office-react build:frame\n",
-            );
-            return;
-          }
-          return next();
-        }
-        response.setHeader("content-type", frameTypes[extname(file)] ?? "application/octet-stream");
-        response.setHeader(
-          "cache-control",
-          relativePath.startsWith("assets/") ? "public, max-age=31536000, immutable" : "no-store",
-        );
-        response.end(body);
-      });
-    },
-  };
-}
+/** Fixed local origins: the main UI and the separate admin UI. */
+const mainPort = 5173;
+const adminPort = 5175;
 
 const app = buildAppConfig();
+const stageConfig = stagePublicConfig();
 const htmlEntities: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -103,26 +24,57 @@ const branding: Plugin = {
   name: "app-branding",
   transformIndexHtml: (html) => html.replaceAll("__APP_NAME__", () => escapedName),
 };
+/**
+ * The admin dev origin is admin-only: document navigations outside /admin become
+ * /admin, so its root opens the portal. Assets, HMR and proxied /api are untouched,
+ * and the app keeps its single production path.
+ */
+const adminSurface: Plugin = {
+  name: "admin-surface",
+  apply: "serve",
+  configureServer(server) {
+    server.middlewares.use((request, response, next) => {
+      const navigation =
+        request.method === "GET" && (request.headers.accept ?? "").includes("text/html");
+      const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+      // Portal pages and proxied API responses keep their own paths.
+      const portal = pathname === "/admin" || pathname.startsWith("/admin/");
+      if (!navigation || portal || pathname.startsWith("/api/")) return next();
+      response.writeHead(302, { location: "/admin" });
+      response.end();
+    });
+  },
+};
 const revision = process.env["GITHUB_SHA"] ?? "";
 const webRelease = /^[a-f0-9]{40}$/.test(revision) ? revision : `web-${Date.now().toString(36)}`;
 
-export default defineConfig({
-  define: {
-    "import.meta.env.VITE_APP_VERSION": JSON.stringify(webRelease),
-    PUBLIC_APP_CONFIG: JSON.stringify({ name: app.name }),
-  },
-  plugins: [tailwindcss(), react(), branding, officeFrameAssets(), officeFrameDev()],
-  resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
-  },
-  server: {
-    host: "localhost",
-    port: 5173,
-    strictPort: true,
-    // Same-origin development: preserve the browser Host/Origin for auth and cookies.
-    proxy: {
-      "/api": { target: backend, ws: true },
-      "/universer-api": { target: backend, ws: true },
+export default defineConfig(({ mode }) => {
+  const admin = mode === "admin";
+  return {
+    define: {
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(webRelease),
+      PUBLIC_APP_CONFIG: JSON.stringify({ name: app.name }),
+      // The local admin origin links home to the main UI; blank elsewhere.
+      PUBLIC_ADMIN_HOME_URL: JSON.stringify(admin ? `http://localhost:${mainPort}` : ""),
+      // Public by design: only the stage publishable key reaches the bundle.
+      PUBLIC_CLERK_PUBLISHABLE_KEY: JSON.stringify(stageConfig.clerkPublishableKey),
     },
-  },
+    plugins: [tailwindcss(), react(), branding, ...(admin ? [adminSurface] : [])],
+    resolve: {
+      alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    },
+    // Two servers share this root during local development; keep their caches apart.
+    cacheDir: fileURLToPath(
+      new URL(admin ? "./node_modules/.vite/admin" : "./node_modules/.vite/main", import.meta.url),
+    ),
+    server: {
+      host: "localhost",
+      port: admin ? adminPort : mainPort,
+      strictPort: true,
+      // Same-origin development: preserve the browser Host/Origin for auth and cookies.
+      proxy: {
+        "/api": { target: backend, ws: true },
+      },
+    },
+  };
 });

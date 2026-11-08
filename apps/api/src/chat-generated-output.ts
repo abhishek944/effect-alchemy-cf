@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { ImageStoreContext, Original } from "@abhishek944/pi-image-gen/core";
 import { validateFileBytes } from "./chat-files-media.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";

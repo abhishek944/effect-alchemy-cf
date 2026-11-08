@@ -1,28 +1,23 @@
-import { Auth } from "@highchat/auth";
 import { reportFailureEffect, withDiagnostic } from "@highchat/diagnostics";
-import { RuntimeContext } from "alchemy";
 import { Cause, Effect } from "effect";
-import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall, doStream } from "./chat-bindings.ts";
+import { nativeIdentity } from "./native-auth.ts";
 import { privateUnavailable } from "./chat-diagnostics.ts";
 import { chatHeader, decodeOrFail, fail } from "./chat-internal.ts";
 import { Chat, ChatUnavailable } from "./chat-model.ts";
 
 /** Snapshot-first SSE relay. Kept outside the JSON group because it streams. */
 export const handleChatEvents = Effect.gen(function* () {
-  const auth = yield* Auth;
   const ns = yield* ChatNamespaces;
-  const request = yield* HttpServerRequest.HttpServerRequest;
-  const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
+  const identity = yield* nativeIdentity;
+  const web = identity.web;
   const id = /^\/api\/chats\/([0-9a-fA-F-]{36})\/events$/.exec(new URL(web.url).pathname)?.[1];
-  const session = yield* auth.getSession().pipe(
-    Effect.mapError(() => new ChatUnavailable()),
-    Effect.catchDefect(() => Effect.fail(new ChatUnavailable())),
-  );
-  if (session === null) return fail(401, "Unauthorized");
+  if (identity.ownerId === null)
+    return identity.outage ? yield* Effect.fail(new ChatUnavailable()) : fail(401, "Unauthorized");
+  const ownerId = identity.ownerId;
   if (id === undefined) return fail(404, "Not found");
-  const lookup = yield* doCall(ns.catalog(session.user.id), "GET", `/get?id=${id}`);
+  const lookup = yield* doCall(ns.catalog(ownerId), "GET", `/get?id=${id}`);
   if (lookup.status === 404) return fail(404, "Not found");
   if (lookup.status !== 200)
     return yield* reportFailureEffect(privateUnavailable("lookup", lookup.status), {
@@ -34,13 +29,10 @@ export const handleChatEvents = Effect.gen(function* () {
   const chat = yield* decodeOrFail(Chat, lookup.body).pipe(
     Effect.mapError((error) => withDiagnostic(error, "lookup-decode")),
   );
-  return yield* doStream(
-    ns.conversation(session.user.id, chat.id),
-    "/events",
-    chatHeader(chat),
-  ).pipe(Effect.map((response) => HttpServerResponse.fromWeb(response)));
+  return yield* doStream(ns.conversation(ownerId, chat.id), "/events", chatHeader(chat)).pipe(
+    Effect.map((response) => HttpServerResponse.fromWeb(response)),
+  );
 }).pipe(
-  Effect.provide(RuntimeContext.phantom),
   Effect.tapCause((cause) =>
     Cause.hasInterruptsOnly(cause)
       ? Effect.void

@@ -1,6 +1,6 @@
 import type { CatalogImageModelId } from "@abhishek944/pi-image-gen/core";
 import { Schema } from "effect";
-import { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
+import { ChatReferenceInputs } from "@highchat/chat-contract";
 import {
   AcceptedInputBinding,
   AcceptedInputDigest,
@@ -65,16 +65,13 @@ export const ImageResponseCandidate = Schema.Struct({
   image: ImageResponseCapability,
   inputDigest: AcceptedInputDigest,
   originals: Schema.Array(AcceptedOriginalBinding),
-  officeTarget: Schema.optionalKey(OfficeSendTarget),
   referenceInputs: Schema.optionalKey(ChatReferenceInputs),
 }).check(
   Schema.makeFilter((candidate) =>
-    (candidate.referenceInputs ?? []).every(
-      (ref) =>
-        ref.kind === "native" ||
-        candidate.originals.some(
-          (file) => file.fileId === ref.fileId && (ref.text === undefined || file.kind === "text"),
-        ),
+    (candidate.referenceInputs ?? []).every((ref) =>
+      candidate.originals.some(
+        (file) => file.fileId === ref.fileId && (ref.text === undefined || file.kind === "text"),
+      ),
     ),
   ),
   Schema.makeFilter((candidate) =>

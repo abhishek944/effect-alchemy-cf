@@ -1,5 +1,4 @@
 import { Schema } from "effect";
-import { Id, Target } from "@highchat/office-contract";
 import { isUuid } from "@/lib/chat-validate-base";
 import type { PreviewView, WorkspacePreviewTab } from "./workspace-preview-model";
 
@@ -8,17 +7,10 @@ const TabId = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{1,512}$/));
 const Simple = Schema.Struct({ id: TabId, kind: Schema.Literals(["tools", "files"]) });
 const File = Schema.Struct({
   id: TabId,
-  kind: Schema.Literals(["image", "text", "office-file"]),
+  kind: Schema.Literals(["image", "text"]),
   fileId: ChatId,
 });
-const Native = Schema.Struct({
-  id: TabId,
-  kind: Schema.Literal("office"),
-  target: Target,
-  reviewId: Schema.NullOr(Id),
-  attachments: Schema.Array(ChatId),
-});
-export const TabDescriptor = Schema.Union([Simple, File, Native]);
+export const TabDescriptor = Schema.Union([Simple, File]);
 export type TabDescriptor = typeof TabDescriptor.Type;
 export const PaneDescriptor = Schema.Struct({
   sidebar: Schema.Boolean,
@@ -78,24 +70,9 @@ export function readLayout(accountId: string, chatId: string | null): Layout | n
 }
 export function describeTab(tab: WorkspacePreviewTab): TabDescriptor {
   if (tab.kind === "restoring") return tab.descriptor;
-  if (tab.kind === "tools" || tab.kind === "files") return { id: tab.id, kind: tab.kind };
-  const selection =
-    tab.kind === "office" ? tab.selection : tab.kind === "office-file" ? tab.resolved : null;
-  if (selection !== null)
-    return {
-      id: tab.id,
-      kind: "office",
-      target: selection.target,
-      reviewId: selection.reviewId,
-      attachments: [
-        ...new Set([
-          ...selection.attachments,
-          ...(tab.kind === "office-file" ? [tab.file.id] : []),
-        ]),
-      ],
-    };
-  if ("file" in tab) return { id: tab.id, kind: tab.kind, fileId: tab.file.id };
-  throw new Error("Office selection is unavailable.");
+  if (tab.kind === "image" || tab.kind === "text")
+    return { id: tab.id, kind: tab.kind, fileId: tab.file.id };
+  return { id: tab.id, kind: tab.kind };
 }
 export function restorePreview(accountId: string, chatId: string | null): PreviewView | null {
   const layout = readLayout(accountId, chatId);

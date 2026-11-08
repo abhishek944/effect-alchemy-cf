@@ -7,7 +7,7 @@
  * one ready stage while retiring the previous avatar, so no reader ever sees a
  * reference without bytes and a superseded avatar can never become current again.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { decodeOption } from "./chat-internal.ts";
 import type { ProfileObjects } from "./profile-objects.ts";
 import {
@@ -26,10 +26,10 @@ import {
 type Publication = { readonly record: ProfileRecord };
 
 export class ProfileStore {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
   private readonly objects: ProfileObjects;
 
-  constructor(storage: AgentContext["storage"], objects: ProfileObjects) {
+  constructor(storage: ChatObjectContext["storage"], objects: ProfileObjects) {
     this.storage = storage;
     this.objects = objects;
     storage.sql.exec(

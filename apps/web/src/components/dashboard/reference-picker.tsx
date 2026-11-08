@@ -8,7 +8,6 @@ import {
   type ReferenceSource,
   type ReferenceObservation,
 } from "./reference-types";
-import { observationLabel } from "./reference-admission";
 
 type Choice = {
   id: string;
@@ -43,30 +42,7 @@ export function useReferencePicker({
   const open = enabled && token !== null && !overlapsToken && dismissed !== key;
   const lookup = useChatReferencesLookup(chatId, open ? token.query : null);
   const listId = useId();
-  const query = token?.query.toLocaleLowerCase() ?? "";
-  const native = workspace
-    .sources(chatId)
-    .filter(
-      (source) => source.kind === "native" && source.name.toLocaleLowerCase().includes(query),
-    );
-  const choices: Choice[] = native.flatMap((source) => {
-    const observation = workspace
-      .observations(chatId)
-      .find((item) => item.sourceKey === source.key);
-    return [
-      { id: source.key, label: `${source.name} · Whole document`, source, observation: null },
-      ...(observation
-        ? [
-            {
-              id: observation.captureId,
-              label: observationLabel(source, observation),
-              source,
-              observation,
-            },
-          ]
-        : []),
-    ];
-  });
+  const choices: Choice[] = [];
   for (const file of lookup.files) {
     if (file.state !== "ready") continue;
     choices.push({

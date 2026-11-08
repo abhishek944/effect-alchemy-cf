@@ -56,9 +56,7 @@ export function ReferencePickerPopup({
             <ReferenceKindIcon source={choice.source} />
             <span data-cx="chat-reference-option-copy">
               <strong>{choice.label}</strong>
-              <small>
-                {choice.source.kind === "native" ? "Native checkpoint" : "Saved original"}
-              </small>
+              <small>Saved original</small>
             </span>
           </button>
         ))}

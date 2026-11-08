@@ -1,6 +1,6 @@
 /** Filename-to-media allowlist and actual content validation. */
 import { type FileKind, MAX_EXCERPT_CHARS } from "./chat-attachment-schema.ts";
-import { isOfficeContainer, officeMediaType } from "./chat-office-media.ts";
+import { inspectOfficeBytes, officeMediaType } from "./chat-files-office.ts";
 import { readImageInfo } from "./chat-files-image.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
 import { decodeTextFile } from "./chat-files-text.ts";
@@ -154,16 +154,8 @@ export const inspectFileBytes = (
     });
   }
   if (media.kind === "office") {
-    const extension = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
-    if (!isOfficeContainer(bytes, extension)) return filesFail("unsupported_type");
-    return filesOk({
-      kind: "office",
-      mediaType: media.mediaType,
-      width: null,
-      height: null,
-      excerpt: null,
-      chars: 0,
-    });
+    const inspected = inspectOfficeBytes(name, bytes, media.mediaType);
+    return inspected === null ? filesFail("unsupported_type") : filesOk(inspected);
   }
   if (hasImageSignature(bytes)) return filesFail("unsupported_type");
   const decoded = decodeTextFile(bytes, MAX_EXCERPT_CHARS);

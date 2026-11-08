@@ -7,23 +7,7 @@ const sources = [
     "worker",
     "observability",
     "authentication",
-    "office-authentication",
     "auth-failure",
-    "office-job-process",
-    "office-job-object",
-    "office-job-http",
-    "office-job-streams",
-    "office-job-termination",
-    "office-private-jobs",
-    "office-container-lifetime",
-    "office-host-process",
-    "office-host-fetch",
-    "office-host-object",
-    "office-invocations",
-    "office-task-callback",
-    "office-task-issuance",
-    "office-private-stream",
-    "office-private-authority",
     "chat-runtime",
     "chat-source",
     "chat-submission",
@@ -43,12 +27,6 @@ const sources = [
     "chat-title",
     "chat-accounting",
   ].map((name) => `apps/api/src/${name}.ts`),
-  ...["worker", "native-bootstrap", "native-job-anchor", "native-main", "native-client"].map(
-    (name) => `apps/office/src/${name}.ts`,
-  ),
-  ...["worker", "placement", "exchange", "run", "supervisor"].map(
-    (name) => `packages/office-server/src/jobs/${name}.ts`,
-  ),
   "packages/auth/src/auth.ts",
   ...["http", "slack-api", "cloudflare-email"].map(
     (name) => `packages/integrations/src/${name}.ts`,
@@ -56,14 +34,8 @@ const sources = [
 ];
 const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const source = `(?:${sources.map(escape).join("|")})`;
-const entries = "(?:native-bootstrap|native-job-anchor|worker|server|office)\\.mjs";
-export const DIAGNOSTIC_FRAME_PATTERN = new RegExp(
-  `^(?:${source}|office-bundle/${entries}):[0-9]{1,6}:[0-9]{1,6}$`,
-);
+export const DIAGNOSTIC_FRAME_PATTERN = new RegExp(`^${source}:[0-9]{1,6}:[0-9]{1,6}$`);
 const sourceFrame = new RegExp(`\\b(${source}):([0-9]{1,6}):([0-9]{1,6})\\b`);
-const bundleFrame = new RegExp(
-  `/opt/office/dependencies/packages/office-server/(${entries}):([0-9]{1,6}):([0-9]{1,6})\\b`,
-);
 /** Skip message text; only actual frame lines and fixed known source identities are projected. */
 export function diagnosticFrames(stack: unknown): string[] {
   if (typeof stack !== "string") return [];
@@ -71,10 +43,7 @@ export function diagnosticFrames(stack: unknown): string[] {
   for (const line of stack.slice(0, 16384).split("\n").slice(1, 41)) {
     if (!/^\s*at\s/.test(line)) continue;
     const sourceMatch = sourceFrame.exec(line);
-    const bundleMatch = bundleFrame.exec(line);
     if (sourceMatch) frames.push(`${sourceMatch[1]}:${sourceMatch[2]}:${sourceMatch[3]}`);
-    else if (bundleMatch)
-      frames.push(`office-bundle/${bundleMatch[1]}:${bundleMatch[2]}:${bundleMatch[3]}`);
     if (frames.length === 3) break;
   }
   return frames;

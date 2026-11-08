@@ -22,10 +22,12 @@ export const CHAT_EFFORTS: readonly ChatEffort[] = [
 
 export type ChatGroup = "openai" | "anthropic";
 export const CHAT_GROUPS: readonly ChatGroup[] = ["openai", "anthropic"];
-export type ChatApi = "openai-responses" | "anthropic-messages";
+export const CHAT_PROVIDER = "openrouter" as const;
+export type ChatProvider = typeof CHAT_PROVIDER;
+export type ChatApi = "openai-responses" | "anthropic-messages" | "openai-completions";
 
 export type ChatSelection = {
-  provider: "cloudflare";
+  provider: ChatProvider;
   /** Catalog specifier, for example openai/gpt-6-luna. */
   model: string;
   effort: ChatEffort;
@@ -51,7 +53,7 @@ export type ChatPricing = {
 export type ChatImageResize = { maxWidth: number; maxHeight: number; maxBytes: number };
 
 export type ChatCatalogModel = {
-  provider: "cloudflare";
+  provider: ChatProvider;
   group: ChatGroup;
   api: ChatApi;
   model: string;
@@ -84,7 +86,6 @@ export type ChatCatalog = {
 };
 
 export const MODEL_EFFORT_LIMIT = 64;
-export const STAGE_MODEL_LIMIT = 64;
 
 export type ChatEffortAdjustment = {
   requested: ChatEffort;

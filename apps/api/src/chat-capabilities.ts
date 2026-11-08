@@ -18,14 +18,14 @@ export const DomainUuid = Schema.String.check(
 export type DomainUuid = typeof DomainUuid.Type;
 
 /** The one registered chat provider. Another provider is invalid input, not a fallback. */
-export const CHAT_PROVIDER = "cloudflare" as const;
+export const CHAT_PROVIDER = "openrouter" as const;
 
 /** Exact installed reasoning levels, ordered lowest to highest. */
 export const CHAT_EFFORTS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 export const ChatEffort = Schema.Literals(CHAT_EFFORTS);
 export type ChatEffort = typeof ChatEffort.Type;
 
-/** Catalog specifier `<gateway slug>/<vendor id>`, for example openai/gpt-6-luna. */
+/** Catalog specifier `<vendor>/<model>`, for example `openai/gpt-5.2`. */
 export const ChatModelId = Schema.String.check(
   Schema.isPattern(/^(openai|anthropic)\/[a-z0-9][a-z0-9._-]{0,63}$/),
 );
@@ -39,7 +39,7 @@ export const ChatSelection = Schema.Struct({
 export type ChatSelection = typeof ChatSelection.Type;
 
 /** Authoritative first-run selection; the installed catalog must still confirm it. */
-export const DEFAULT_CHAT_MODEL: ChatModelId = "openai/gpt-6-luna";
+export const DEFAULT_CHAT_MODEL: ChatModelId = "openai/gpt-5.2";
 export const DEFAULT_CHAT_EFFORT: ChatEffort = "high";
 export const DEFAULT_CHAT_SELECTION: ChatSelection = {
   provider: CHAT_PROVIDER,
@@ -120,7 +120,7 @@ export type ChatGroup = typeof ChatGroup.Type;
 export const ChatCatalogModel = Schema.Struct({
   provider: Schema.Literal(CHAT_PROVIDER),
   group: ChatGroup,
-  api: Schema.Literals(["openai-responses", "anthropic-messages"]),
+  api: Schema.Literals(["openai-responses", "anthropic-messages", "openai-completions"]),
   model: ChatModelId,
   vendorId: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(64)),
   name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(120)),

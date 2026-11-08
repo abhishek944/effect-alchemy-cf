@@ -1,4 +1,4 @@
-import type { SubmissionRecord } from "@earendil-works/pi-durable";
+import type { SubmissionRecord } from "./chat-transcript-types.ts";
 import type { OperationReceipt } from "./chat-contract.ts";
 import type { LedgerStatus } from "./chat-ledger.ts";
 import { INFERENCE_FAILURE } from "./chat-model.ts";

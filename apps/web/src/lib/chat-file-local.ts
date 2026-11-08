@@ -4,12 +4,12 @@
  * uploads or stores anything. Classification follows the exact server filename
  * allowlist, never an operating-system MIME guess, and content is validated:
  * fatal UTF-8 with the control policy for text, real image structure for
- * JPEG/PNG/WebP, and OOXML structure for Office. Office stays staged without a
- * browser preview.
+ * JPEG/PNG/WebP, and OOXML structure for XLSX/DOCX/PPTX. Documents stay staged
+ * without a browser preview.
  */
 import type { ChatFileDescriptor, FileKind } from "@/lib/chat-capability-file-types";
 import { MAX_EXCERPT_CHARS } from "@/lib/chat-capability-file-types";
-import { isOfficeContainer } from "@/lib/chat-office-media";
+import { isOfficeDocument } from "@/lib/chat-file-office";
 import { readImageInfo } from "@/lib/chat-file-image-policy";
 import {
   ALLOWED_EXTENSIONS,
@@ -100,12 +100,11 @@ export async function prepareLocalFile(file: File, id: string): Promise<LocalFil
   if (file.size <= 0) return { ...base, state: "failed", error: "Empty files cannot be attached." };
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (media.kind === "office") {
-    const extension = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
-    if (!isOfficeContainer(bytes, extension))
+    if (!isOfficeDocument(file.name, bytes))
       return {
         ...base,
         state: "unsupported",
-        error: "The file content does not match a supported Office container.",
+        error: "The file content does not match a supported XLSX, DOCX or PPTX container.",
       };
     return { ...base, state: "ready" };
   }

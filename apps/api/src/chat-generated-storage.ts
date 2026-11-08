@@ -1,5 +1,5 @@
-import type * as cf from "@cloudflare/workers-types";
-import type { AgentContext } from "agents";
+import type * as cf from "./platform.ts";
+import type { ChatObjectContext } from "./chat-object.ts";
 import type { ImageStoreContext, Original } from "@abhishek944/pi-image-gen/core";
 import { ensureChatFilesSchema } from "./chat-files-table.ts";
 import { generatedDeclaredBytes, persistGeneratedOutput } from "./chat-generated-output.ts";
@@ -28,7 +28,7 @@ export type GeneratedReceipts = {
   readonly nextIndex: number | null;
 };
 export type ChatGeneratedStorageOptions = {
-  readonly storage: AgentContext["storage"];
+  readonly storage: ChatObjectContext["storage"];
   readonly bucket: cf.R2Bucket;
   readonly scope: string;
   /** Authoritative owner chat lookup, false for missing/archived chats. */

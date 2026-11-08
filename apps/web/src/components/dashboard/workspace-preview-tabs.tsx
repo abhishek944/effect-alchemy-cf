@@ -23,14 +23,12 @@ export const workspaceTabId = (chatId: string, id: string) =>
 /** Accessible name shared by the tab button and its panel, including hidden retained views. */
 export const workspaceTabLabel = (tab: WorkspacePreviewTab) =>
   tab.kind === "restoring"
-    ? `Saved ${tab.descriptor.kind === "office-file" ? "original" : tab.descriptor.kind} tab`
-    : tab.kind === "image" || tab.kind === "text" || tab.kind === "office-file"
+    ? `Saved ${tab.descriptor.kind} tab`
+    : tab.kind === "image" || tab.kind === "text"
       ? tab.file.name
-      : tab.kind === "office"
-        ? tab.selection.title
-        : tab.kind === "files"
-          ? "Files"
-          : "New tab";
+      : tab.kind === "files"
+        ? "Files"
+        : "New tab";
 /** The single top-toolbar tab strip; it never loads an original by itself. */
 export function WorkspacePreviewTabs({
   rightRef,

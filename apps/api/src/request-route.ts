@@ -14,17 +14,6 @@ export function requestRoute(url: string): string {
     return routes[path] ?? "auth.other";
   }
   if (path.startsWith("/api/admin/")) return "admin.operation";
-  if (path.startsWith("/api/office/")) {
-    if (path.includes("/protocol/")) return "office.protocol";
-    if (path.includes("/operations/")) return "office.operation";
-    if (path.startsWith("/api/office/originals/")) return "office.original";
-    if (path.includes("/uploads")) return "office.upload";
-    if (path.includes("/views")) return "office.view";
-    if (path.includes("/drafts")) return "office.draft";
-    if (path.includes("/documents")) return "office.document";
-    return "office.control";
-  }
-  if (path.startsWith("/universer-api")) return "office.native-protocol";
   if (path === "/api/chat/capabilities") return "chat.capabilities";
   if (path === "/api/chat/preferences") return "chat.account-preferences";
   if (path.startsWith("/api/chats")) {

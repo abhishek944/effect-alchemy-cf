@@ -13,7 +13,6 @@
     "typescript/no-misused-promises": "error",
     "typescript/consistent-type-imports": "error",
     "eqeqeq": "error",
-    "no-underscore-dangle": ["error", { "allow": ["__ALCHEMY_RUNTIME__"] }],
     "max-lines": [
       "error",
       {
@@ -42,15 +41,15 @@
     "typescript/no-unsafe-assignment": "error",
     "typescript/no-unsafe-member-access": "error",
     "typescript/no-unsafe-argument": "error",
-    "typescript/no-unsafe-return": "error"
+    "typescript/no-unsafe-return": "error",
+    "no-underscore-dangle": [
+      "error",
+      {
+        "allow": ["_tag"]
+      }
+    ]
   },
-  "ignorePatterns": [
-    "**/dist/**",
-    "**/node_modules/**",
-    "**/.alchemy/**",
-    "**/.turbo/**",
-    "var/**"
-  ],
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**", "**/.turbo/**", "var/**"],
   "overrides": [
     {
       "files": ["apps/web/**"],
@@ -95,7 +94,6 @@
       "files": [
         "apps/web/src/components/public/**/*.tsx",
         "apps/web/src/components/auth-form.tsx",
-        "apps/web/src/components/auth-fields.tsx",
         "apps/web/src/components/auth-panel.tsx"
       ],
       "rules": {

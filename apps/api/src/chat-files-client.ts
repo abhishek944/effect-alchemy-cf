@@ -5,7 +5,7 @@
  * identity. Any transport error, non-decoding response or unavailable binding
  * throws, so callers fail closed instead of assuming a successful write.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { Option, Schema } from "effect";
 import { FileDescriptor } from "./chat-attachment-schema.ts";
 import { ChatFilesFailure, type ChatFilesResult } from "./chat-files-model.ts";

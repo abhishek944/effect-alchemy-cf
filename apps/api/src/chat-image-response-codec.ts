@@ -67,7 +67,6 @@ const candidateKeys = [
   "mediaType",
   "width",
   "height",
-  "officeTarget",
   "viewId",
   "documentId",
   "documentKind",
@@ -111,8 +110,6 @@ export function decodeCandidate(json: string): ImageResponseCandidate {
     Object.freeze(value.originals);
     if (value.image.state === "ready") Object.freeze(value.image.preferences);
     Object.freeze(value.image);
-    // Nested target fields (attachment identities, selection coordinates) must be immutable too.
-    if (value.officeTarget !== undefined) freezeImageRequestValue(value.officeTarget);
     if (value.referenceInputs !== undefined) freezeImageRequestValue(value.referenceInputs);
     return Object.freeze(value);
   } catch {

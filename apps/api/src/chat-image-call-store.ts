@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { committedId } from "./chat-text.ts";
 import type { ImageUsagePresentation } from "./chat-image-presentation.ts";
@@ -29,9 +29,9 @@ import {
 
 /** Local evidence only. No method grants owner consume, native or provider authority. */
 export class ChatImageCallStore {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
   private readonly table: ImageCallTable;
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     this.table = callBoundary(() => new ImageCallTable(storage));
   }

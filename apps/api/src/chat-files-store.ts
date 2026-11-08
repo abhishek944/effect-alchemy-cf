@@ -6,7 +6,7 @@
  * objects are uncommitted and swept explicitly; retained objects are accepted
  * originals. Keys never leave server code.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { fileIOUnavailable } from "./chat-file-io-limits.ts";
 import {
   readFileObjectBytes as readStoredObject,

@@ -6,7 +6,7 @@
  * a fallback for unavailable storage, and every read re-verifies owner scope and
  * the parent-owned manifest digest before returning files to a caller.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import {
   type SkillList,
   type SkillManifest,

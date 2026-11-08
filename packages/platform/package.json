@@ -1,0 +1,23 @@
+{
+  "name": "@highchat/platform",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./env": "./src/env.ts",
+    "./http": "./src/http.ts",
+    "./kv": "./src/kv.ts",
+    "./objects": "./src/objects.ts",
+    "./sql": "./src/sql.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.1",
+    "effect": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.6"
+  }
+}

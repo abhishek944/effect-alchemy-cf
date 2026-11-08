@@ -4,17 +4,20 @@
 - Run `pnpm lint` and `pnpm build` before handing off changes.
 - Every authored text file must be <=200 physical lines, including blanks/comments.
   Generated lockfiles, dependencies, build output, and `var/` are excluded.
-- Keep auth/database adapters in `packages/auth`; API handlers in `apps/api`;
-  frontend in `apps/web`; stack composition in `apps/infra`.
-- Never import infrastructure, provider clients, or secrets into browser code.
-- Stage env files live in `packages/config/.env.dev` and `.env.prod`, stay
-  gitignored, and must have identical keys. Provider credentials stay in profiles.
+- Keep identity adapters in `packages/auth`; API handlers in `apps/api`; frontend in
+  `apps/web`; runtime adapters (SQLite, object storage, runtime env, HTTP boundary)
+  in `packages/platform`.
+- Never import provider clients or secrets into browser code.
+- Stage env files live in `packages/config/.env.local` (the `dev` stage) and
+  `.env.prod`, stay gitignored, and must have identical keys. They hold public
+  values only; secrets are process environment values.
 - Prefer Effect services and schema-defined boundaries over custom abstractions.
-- Cloud development uses the `dev` stage, isolated from `prod` and gated by
-  Cloudflare Access. Do not reference production resources from development.
+- The runtime is one local Node process plus the private Pi host. There is no
+  edge runtime, infrastructure-as-code provider or deployment configuration, and no
+  cloud resource is referenced by this repository.
 - Read plans before deploying. Do not deploy, destroy, adopt, or commit without approval.
-- GitHub deploys only prod pushes after checks; production secrets stay in the
-  production GitHub environment. Keep PR checks unprivileged; see docs/github-cicd.md.
+- CI runs frozen install, audit, lint and build only; it holds no cloud credential.
+  See docs/github-cicd.md and docs/runtime.md.
 - No unit tests unless the latest user request explicitly asks for them.
 - Do not add optional services until an application actually needs them.
 

@@ -12,7 +12,7 @@
  * and every failure returns `{ code, message }` with a safe human message.
  * Private `/files/*` envelopes stay internal to the catalog client.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure, type FailureContext } from "@highchat/diagnostics";
 import { decodeOption, json } from "./chat-internal.ts";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";

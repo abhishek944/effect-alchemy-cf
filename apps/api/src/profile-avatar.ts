@@ -6,7 +6,7 @@
  * written before the record can reference them; unreferenced, superseded and
  * cancelled objects are deleted explicitly and retried by the catalog sweep.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { AvatarMediaType } from "./profile-model.ts";
 
 /** Owner prefix stays discoverable even after an expired reservation row is gone. */

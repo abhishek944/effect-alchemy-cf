@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { formatFileSize } from "@/lib/chat-file-local";
 import type { SavedFile } from "@/lib/chat-library-types";
-import { isNativeOpenFile } from "@/lib/office-original";
 import { ChatLibraryImage, type LibraryImageState } from "./chat-library-image";
 import { AttachmentArt, AttachmentPreview } from "./attachment-preview";
 import { ChatLibraryResultActions, type LibraryResultActions } from "./chat-library-result-actions";
@@ -62,7 +61,7 @@ function Result({
             {saved.width && saved.height
               ? `${saved.width} × ${saved.height}`
               : saved.kind === "office"
-                ? "Office original"
+                ? "Document original"
                 : "Safe text"}{" "}
             · Saved
           </>
@@ -106,20 +105,7 @@ function Result({
           {copy}
         </div>
       )}
-      {preview && active && (
-        <AttachmentPreview
-          source={saved}
-          onClose={() => setPreview(false)}
-          onOpenOffice={
-            isNativeOpenFile(saved)
-              ? () => {
-                  setPreview(false);
-                  actions.onOpenImage(saved);
-                }
-              : undefined
-          }
-        />
-      )}
+      {preview && active && <AttachmentPreview source={saved} onClose={() => setPreview(false)} />}
       <ChatLibraryResultActions
         file={saved}
         archived={archived}

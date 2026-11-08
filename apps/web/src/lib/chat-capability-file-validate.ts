@@ -5,7 +5,6 @@
  */
 import type { ChatFileDescriptor, ChatFileDescriptorList } from "@/lib/chat-capability-file-types";
 import { MAX_EXCERPT_CHARS } from "@/lib/chat-capability-file-types";
-import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "@/lib/chat-office-media";
 import {
   isBoundedText,
   isIsoTimestamp,
@@ -13,6 +12,7 @@ import {
   listed,
 } from "@/lib/chat-capability-validate";
 import { isRecord, isUuid } from "@/lib/chat-validate-base";
+import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "@/lib/chat-file-office";
 
 const mediaTypePattern = new RegExp(
   `^(image\\/(jpeg|png|webp)|${OFFICE_MEDIA_PATTERN}|application\\/json|text\\/[a-z0-9][a-z0-9.+-]{0,63})$`,
@@ -51,8 +51,7 @@ export function parseChatFileDescriptor(value: unknown): ChatFileDescriptor | nu
   }
   if (!isBoundedText(value.mediaType, 128) || !mediaTypePattern.test(value.mediaType)) return null;
   if ((value.kind === "image") !== value.mediaType.startsWith("image/")) return null;
-  if (value.kind === "office" && !isOfficeMediaType(value.mediaType)) return null;
-  if (value.kind !== "office" && isOfficeMediaType(value.mediaType)) return null;
+  if ((value.kind === "office") !== isOfficeMediaType(value.mediaType)) return null;
   if (!isPositiveCount(value.byteSize)) return null;
   if (value.width !== null && !isPositiveCount(value.width)) return null;
   if (value.height !== null && !isPositiveCount(value.height)) return null;

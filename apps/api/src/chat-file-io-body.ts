@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { ChatFileIOUnavailable, fileIOUnavailable } from "./chat-file-io-limits.ts";
 
 export type HeldFileBody = {
@@ -151,4 +151,24 @@ export const collectFileBody = async (body: ReadableStream<Uint8Array>): Promise
   } finally {
     reader.releaseLock();
   }
+};
+
+/** Local stand-in for the Workers-only fixed-length stream. */
+export const fixedLengthStream = (
+  size: number,
+): {
+  readonly readable: ReadableStream<Uint8Array>;
+  readonly writable: WritableStream<Uint8Array>;
+} => {
+  let written = 0;
+  return new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      written += chunk.byteLength;
+      if (written > size) controller.error(new Error("Stream exceeds its fixed length"));
+      else controller.enqueue(chunk);
+    },
+    flush(controller) {
+      if (written !== size) controller.error(new Error("Stream is shorter than its fixed length"));
+    },
+  });
 };

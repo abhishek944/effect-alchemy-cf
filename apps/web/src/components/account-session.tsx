@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
+import { useSignOut } from "@/lib/auth-client";
 
 type Props = { name: string; email: string };
 
 export default function AccountSession({ name, email }: Props) {
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const signOut = useSignOut();
   const handleSignOut = async () => {
     setFeedback(null);
     setPending(true);
     try {
-      const { error } = await authClient.signOut();
-      if (error) setFeedback("Unable to sign out. Please try again.");
+      await signOut();
     } catch {
       setFeedback("Unable to sign out. Please try again.");
     } finally {

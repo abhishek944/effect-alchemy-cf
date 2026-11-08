@@ -117,7 +117,7 @@ export function ChatSessionOwner({
     onAccepted,
   });
   const { stop, stopping, stoppingRef } = useChatStop(setActionError);
-  const { send, retrySend, discardSend, sending } = useChatSend({
+  const { send, retrySend, discardSend } = useChatSend({
     chatId,
     pendingSend,
     connection: stream.connection,
@@ -141,7 +141,6 @@ export function ChatSessionOwner({
       connectionError: stream.connectionError,
       pendingSend,
       stopping,
-      sending,
       attachment,
     }),
     [
@@ -151,7 +150,6 @@ export function ChatSessionOwner({
       stream.connectionError,
       pendingSend,
       stopping,
-      sending,
       attachment,
     ],
   );

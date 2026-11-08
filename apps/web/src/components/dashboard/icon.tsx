@@ -53,6 +53,12 @@ const icons = {
       <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
     </>
   ),
+  "credit-card": (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M3 9h18M7 15h4" />
+    </>
+  ),
   "sliders-horizontal": (
     <>
       <path d="M10 5H3" />

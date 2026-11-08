@@ -5,7 +5,7 @@
  * the fuller counters are used, the cost only covers a single fuller side, and
  * the caller marks the amount Partial instead of claiming an exact union.
  */
-import type { UsageState } from "@earendil-works/pi-durable";
+import type { UsageState } from "./chat-transcript-types.ts";
 import { installedChatModel } from "./chat-capability-catalog.ts";
 import { modelOfBucket } from "./chat-accounting-model.ts";
 import {

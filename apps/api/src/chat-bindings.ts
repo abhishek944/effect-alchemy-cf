@@ -1,8 +1,9 @@
-import type * as cf from "@cloudflare/workers-types";
-import * as Cloudflare from "alchemy/Cloudflare";
+import type * as cf from "./platform.ts";
+import { RuntimeEnv } from "@highchat/platform";
 import { withCause } from "@highchat/diagnostics";
 import { Context, Effect, Layer, Schema } from "effect";
 import { ChatUnavailable } from "./chat-model.ts";
+import { imageTransportConfigured } from "./chat-model-transport.ts";
 import { chatObservationHeaders, CHAT_OBSERVATION_REQUEST } from "./chat-observation.ts";
 
 /** Drop caller-supplied observation headers; only generated annotations may set them. */
@@ -26,40 +27,21 @@ export class ChatNamespaces extends Context.Service<
   }
 >()("highchat/ChatNamespaces") {}
 
-/** Declares the same-script object bindings on the Worker being constructed. */
-export const declareChatObjects = Effect.gen(function* () {
-  const host = yield* Cloudflare.Worker;
-  yield* host.bind`ChatCatalog`({
-    bindings: [{ type: "durable_object_namespace", name: "ChatCatalog", className: "ChatCatalog" }],
-  });
-  yield* host.bind`ChatConversation`({
-    bindings: [
-      {
-        type: "durable_object_namespace",
-        name: "ChatConversation",
-        className: "ChatConversation",
-      },
-    ],
-  });
-});
-
+/** The local runtime installs object namespaces directly; nothing is declared on a Worker. */
 const isNamespace = (value: unknown): value is cf.DurableObjectNamespace =>
   typeof value === "object" &&
   value !== null &&
   "getByName" in value &&
-  typeof value.getByName === "function" &&
-  "idFromName" in value &&
-  typeof value.idFromName === "function";
+  typeof value.getByName === "function";
 
 /**
- * Resolves raw object namespaces lazily: the environment record exists at
- * construction but its bindings are only populated at runtime. The guard keeps
- * the untyped environment boundary honest instead of asserting a shape.
+ * Resolves the object namespaces from the host environment record. The guard
+ * keeps the untyped environment boundary honest instead of asserting a shape.
  */
 export const ChatNamespacesLive = Layer.effect(
   ChatNamespaces,
   Effect.gen(function* () {
-    const env = (yield* Cloudflare.WorkerEnvironment) as Record<string, unknown>;
+    const env = yield* RuntimeEnv;
     const namespace = (name: string): cf.DurableObjectNamespace => {
       const candidate: unknown = env[name];
       if (!isNamespace(candidate)) throw new Error(`Missing chat object binding ${name}`);
@@ -69,29 +51,7 @@ export const ChatNamespacesLive = Layer.effect(
       catalog: (ownerId) => namespace("ChatCatalog").getByName(`owner:${ownerId}`),
       conversation: (ownerId, chatId) =>
         namespace("ChatConversation").getByName(`chat:${ownerId}:${chatId}`),
-      imageConfigured: () => {
-        const ai = env.AI;
-        const bucket = env.CHAT_FILES;
-        const gateway = env.CHAT_GATEWAY_ID;
-        return (
-          typeof ai === "object" &&
-          ai !== null &&
-          "run" in ai &&
-          typeof ai.run === "function" &&
-          typeof bucket === "object" &&
-          bucket !== null &&
-          "get" in bucket &&
-          typeof bucket.get === "function" &&
-          "head" in bucket &&
-          typeof bucket.head === "function" &&
-          "put" in bucket &&
-          typeof bucket.put === "function" &&
-          typeof gateway === "string" &&
-          gateway.length > 0 &&
-          gateway.length <= 128 &&
-          gateway.trim() === gateway
-        );
-      },
+      imageConfigured: () => imageTransportConfigured(),
     };
   }),
 );

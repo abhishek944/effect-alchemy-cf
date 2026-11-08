@@ -1,13 +1,11 @@
-import type { ChatReferenceInputs, OfficeSendTarget, Target } from "@highchat/office-contract";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
 import type { ChatSelection } from "@/lib/chat-capability-types";
 import type { ChatMessage } from "@/lib/chat-message-types";
 export type { ChatMessage } from "@/lib/chat-message-types";
+import { type ApiErrorTag, readApiErrorBody, statusOfTag } from "@highchat/chat-contract";
+import { apiErrorMessage } from "@/lib/api-error";
 import { rejectionOf, type NoAdmissionRejection } from "@/lib/chat-api-rejection";
-import {
-  OfficeRuntimeError,
-  readResponseRequestId,
-  serverReference,
-} from "@/lib/browser-diagnostics";
+import { readResponseRequestId, serverReference } from "@/lib/browser-diagnostics";
 import type { Coverage } from "@/lib/chat-history-types";
 import type { SkillRecovery } from "@/lib/chat-skills-api";
 import {
@@ -39,7 +37,6 @@ export type ChatSnapshot = {
   usageRevision: string;
   /** Present only while a pinned skill attempt still needs an explicit recovery action. */
   skillRecovery: SkillRecovery | null;
-  panelRequest?: { id: string; target: Target; expiresAt: number } | null;
 };
 export class ChatApiError extends Error {
   readonly status: number;
@@ -62,15 +59,7 @@ export class ChatApiError extends Error {
     this.requestId = requestId;
   }
 }
-const statusMessages: Record<number, string> = {
-  400: "That request was not valid. Check the message and try again.",
-  401: "You are signed out. Sign in again to use chats.",
-  403: "This request was blocked. Reload the page and try again.",
-  404: "This chat is no longer available.",
-  409: "This chat cannot accept that change right now.",
-  429: "Too many requests. Wait a moment and try again.",
-  503: "The assistant is temporarily unavailable. Try again shortly.",
-};
+
 export function newOperationId(): string {
   return crypto.randomUUID();
 }
@@ -78,7 +67,7 @@ export function errorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === "AbortError") {
     return "The request was cancelled.";
   }
-  if (error instanceof ChatApiError || error instanceof OfficeRuntimeError) return error.message;
+  if (error instanceof ChatApiError) return error.message;
   if (error instanceof TypeError) {
     return "Could not reach the server. Check your connection and try again.";
   }
@@ -98,17 +87,24 @@ export async function requestJson(
   });
   const requestId = readResponseRequestId(response);
   if (!response.ok) {
-    const message =
-      statusMessages[response.status] ?? "Unable to complete your request. Please try again.";
-    let rejection: NoAdmissionRejection | null = null;
+    let body: unknown = null;
     try {
-      const body: unknown = await response.json();
-      rejection = rejectionOf(body, response.status);
+      body = await response.json();
     } catch (cause) {
       if (init?.signal?.aborted) throw cause;
       // Keep the safe status message when the body is not JSON.
     }
-    throw new ChatApiError(response.status, message, rejection, requestId, operation);
+    // A server tag is authoritative; a status-only reply keeps the generic copy.
+    const tag: ApiErrorTag | null = readApiErrorBody(body)?._tag ?? null;
+    const status = tag === null ? response.status : statusOfTag(tag);
+    throw new ChatApiError(
+      status,
+      apiErrorMessage(tag, status),
+      rejectionOf(body, response.status),
+      requestId,
+      operation,
+      response.status,
+    );
   }
   if (response.status === 204) return { body: undefined, requestId, status: response.status };
   try {
@@ -175,7 +171,6 @@ export async function sendMessage(
     selection: ChatSelection;
     attachments: readonly string[];
     references: readonly string[];
-    officeTarget?: OfficeSendTarget;
     referenceInputs?: ChatReferenceInputs;
   },
 ): Promise<{ accepted: boolean }> {

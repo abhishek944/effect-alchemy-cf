@@ -6,8 +6,9 @@
  * object: exact byte size, SHA-256 digest and valid UTF-8 text. Nothing here
  * truncates, repairs or substitutes bytes, so a failed check is a hard error.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { withCause } from "@highchat/diagnostics";
+import { bufferSource } from "./binary.ts";
 import { skillObjectKey } from "./skills-manifest.ts";
 import { MAX_SKILL_BYTES, type SkillVersionRef } from "./skills-model.ts";
 
@@ -19,7 +20,7 @@ export class SkillObjectUnavailable extends Error {
 }
 
 export const skillDigest = async (bytes: Uint8Array): Promise<string> => {
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const digest = await crypto.subtle.digest("SHA-256", bufferSource(bytes));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 

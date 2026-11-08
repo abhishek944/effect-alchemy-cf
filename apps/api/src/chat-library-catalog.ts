@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { ensureChatFilesSchema } from "./chat-files-table.ts";
 import { retainedObjectKey } from "./chat-files-store.ts";

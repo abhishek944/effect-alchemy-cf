@@ -1,6 +1,6 @@
-import type { SqlStorage } from "@cloudflare/workers-types";
+import type { SqlClient } from "@highchat/platform";
 
-export type ChatSqlStorage = SqlStorage;
+export type ChatSqlStorage = SqlClient;
 
 export type LedgerStatus = "tentative" | "accepted" | "done" | "unanswered" | "stopped";
 export type LatestOperation = { readonly operationId: string; readonly status: LedgerStatus };

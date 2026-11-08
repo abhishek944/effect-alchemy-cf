@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { ChatImageCallStore } from "./chat-image-call-store.ts";
 import { ImageCallError } from "./chat-image-call-values.ts";
 import { ImageStorageError } from "./chat-image-storage-schema.ts";

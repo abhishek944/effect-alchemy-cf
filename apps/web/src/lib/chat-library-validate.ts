@@ -56,7 +56,7 @@ export function librarySearchParams(query: LibraryQuery): URLSearchParams {
     params.set("search", query.search);
   }
   for (const [key, allowed] of [
-    ["kind", ["all", "image", "text"]],
+    ["kind", ["all", "image", "text", "office"]],
     ["origin", ["all", "upload", "generated"]],
     ["sort", ["newest", "oldest", "name"]],
   ] as const) {

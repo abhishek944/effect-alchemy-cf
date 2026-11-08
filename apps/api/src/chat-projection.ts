@@ -1,4 +1,4 @@
-import type { Conversation } from "@earendil-works/pi-durable";
+import type { Conversation, PiContext } from "./chat-transcript-types.ts";
 import type { PublicChatInput } from "./chat-send-records.ts";
 import { publicInputMessage } from "./chat-input-projection.ts";
 import { publicInputSelections } from "./chat-input-selections.ts";
@@ -20,7 +20,7 @@ import type { Chat, ChatMessage, Position } from "./chat-model.ts";
 import { isEntryId, publicRole, sliceText, textInfo } from "./chat-text.ts";
 import { ToolHistory, type LiveToolRound } from "./chat-tool-history.ts";
 import { committedRevision } from "./chat-text.ts";
-export type PiContext = Parameters<Conversation["configure"]>[1];
+export type { PiContext } from "./chat-transcript-types.ts";
 export const buildWindow = async (
   conversation: Conversation,
   chat: Chat,

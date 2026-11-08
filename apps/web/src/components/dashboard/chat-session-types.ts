@@ -8,17 +8,14 @@
  * resolution and the owner's own failure message.
  */
 import type { Chat, ChatSnapshot } from "@/lib/chat-api";
-import type { ChatReferenceInputs } from "@highchat/office-contract";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
 import type {
   ChatConnection,
-  ChatPanelRequest,
   OperationRef,
   PendingSend,
   SendOutcome,
   StopTarget,
 } from "@/lib/chat-store-context";
-
-export type { ChatPanelRequest };
 export type ChatSessionState = {
   chatId: string;
   snapshot: ChatSnapshot | null;
@@ -26,8 +23,6 @@ export type ChatSessionState = {
   connectionError: string | null;
   pendingSend: PendingSend | null;
   stopping: StopTarget | null;
-  /** A Send is being prepared or submitted; releasing it now could lose the operation. */
-  sending: boolean;
   /** Opaque history/receipt fence for this session lifetime. */
   attachment: string;
 };
@@ -52,10 +47,7 @@ export type ChatSessionEntry = {
  * No eviction policy, timer or queue: absence of work is the whole condition.
  */
 export const retainsSession = (state: ChatSessionState): boolean =>
-  state.sending ||
-  state.pendingSend !== null ||
-  state.stopping !== null ||
-  state.snapshot?.isRunning === true;
+  state.pendingSend !== null || state.stopping !== null || state.snapshot?.isRunning === true;
 
 /** Newest authoritative chat metadata for admission: catalog override wins at equal timestamps. */
 export const newestChat = (live: Chat | null, override: Chat | undefined): Chat | null => {

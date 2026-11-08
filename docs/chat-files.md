@@ -1,9 +1,14 @@
 # Private chat files
 
+**Current runtime:** files are stored by the local `ObjectStore` under `var/storage/objects`; there is no bucket binding. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
 Chat accepts JPEG, PNG, WebP and allowlisted safe UTF-8 text/Markdown/CSV/JSON/code
-files, plus modern XLSX, DOCX and PPTX originals in the Office source implementation.
+files, plus modern XLSX, DOCX and PPTX document originals. Documents are format-only
+attachments: the picker, drop and paste paths require a real OOXML ZIP container with
+`[Content_Types].xml` and the matching family entry, and never unzip or render it.
 PDF, legacy XLS/DOC/PPT, generic archives, SVG, audio and video are not attachments.
-See [Office setup and boundaries](office.md): the new Office build/runtime is not yet accepted.
 The picker, drop and paste paths share validation; ordinary pasted text remains
 editable draft text. Nothing executes uploaded markup or code.
 
@@ -17,7 +22,7 @@ selection under an old UUID. Preparation/upload failures preserve the draft and
 local originals for send recovery or removal. Composer cards show a local content
 preview, filename, individual size and Remove, with a neutral border in all five
 themes. Click the thumbnail to preview; there is no separate Preview button.
-Previewing never uploads a file or imports an Office draft.
+Previewing never uploads a file.
 Failed files keep their explanation; remove and reattach files that cannot prepare.
 Frozen sends keep Remove disabled until their outcome settles.
 
@@ -30,36 +35,25 @@ base64 payload or owner identifier is exposed in the public descriptor/history.
 Visible Files, sent-file and reference thumbnails show content when available.
 Loading, unavailable, empty or complex thumbnails show a quiet file icon, not prose.
 Images retain exact right-panel tabs. Cards show escaped text excerpts and
-quoted-field-aware CSV tables; text tabs use the decoded original for exact selection. Click a non-image card for a larger
-read-only preview; non-TXT text source links and Open in panel use a text preview tab.
-TXT Open in panel imports into Univer Docs; DOCX and plain-text downloads export its
-working content without replacing the original. TXT export drops rich formatting,
-images, headers/footers and notes and uses UTF-8 with normalized LF line endings.
-Office previews show file metadata, original download and explicit Open in panel,
-without reading or parsing private Office bytes in the preview. Native formatting
-is available after an explicit Office open, not through a semantic thumbnail.
-Explicit TXT/CSV/Office Open in panel or AI `univer_cli` import creates a Univer draft.
-Manual opens stage the retained original server-side using authenticated chat/file
-identity; private bytes no longer download to the browser and upload back.
-The saved original and Main stay unchanged. Reopens reuse the same owner-scoped
-import operation; unconfirmed imports offer Check original operation, not a new job.
-They do not block workspace navigation: reopening the file discovers that same
-operation rather than replaying an uncertain import.
-Text originals download as plain text; Office originals retain their declared
-binary media type and filename. Downloads use attachment, `nosniff`, no-store and
-sandbox policy; images retain their validated inline format. At the proven model
-request boundary, non-CSV text becomes quoted untrusted text and images become
-transient native image blocks. CSV/Office contributes compact file references,
-never complete CSV rows or binary model blocks. The attachment-ID `univer_cli`
-imports once and works on the same native draft used by manual/AI panel opens.
+quoted-field-aware CSV tables; text tabs use the decoded original for exact
+selection. Click a non-image card for a larger read-only preview; non-TXT text
+source links and Open in panel use a text preview tab. XLSX, DOCX and PPTX cards show
+file metadata and a download link only: their content is not decoded, previewed,
+converted or sent to the model. Text originals download as plain text; document
+originals download unchanged with their declared OOXML media type. Downloads use
+attachment, `nosniff`, no-store and sandbox policy; images retain their validated
+inline format. At the proven model request boundary, every allowlisted text
+original, CSV included, becomes quoted untrusted text, and images become transient
+native image blocks. Every document attachment is described only by untrusted name,
+media type and byte-size metadata, so both the model and the interface report that
+document content is unavailable.
 Sent bubbles show the exact caption first, immutable selected-area rows, then two-column
 attachment previews with existing file actions. Background opened-file context stays hidden.
-Selected native Docs text expands below its source; original-file offsets without stored
-quotation bytes show an unavailable note, never current file/editor text. Legacy selected
-cells may lack a historical filename and use a generic source label. No complete file body
-is stored in new native inputs. Attaching/uploading alone never creates a document.
+Selected text expands below its source; original-file offsets without stored quotation
+bytes show an unavailable note, never current file text. No complete file body is stored
+in new model inputs. Attaching or uploading alone never sends content.
 
-Uncommitted uploads expire after24h, with scheduled bounded cleanup. An upload
+Uncommitted uploads expire after 24h, with scheduled bounded cleanup. An upload
 bound to uncertain native acceptance is retained until acceptance can be
 reconciled; an unavailable/unconfirmed receipt never authorizes erasure of a
 possibly accepted original. Accepted originals are not deletable through Remove;
@@ -69,7 +63,7 @@ there is no permanent-erasure promise.
 
 The app imposes no original-file byte/pixel ceiling, attachment-count limit,
 whole-message attachment quota, quoted-text cap, owner storage quota or browser
-staging/preview admission budget. Native tabs and accumulated Office lists have
+staging/preview admission budget. Workspace tabs and accumulated file lists have
 no app count ceiling; list endpoints still use explicit pagination.
 
 This is not unlimited capacity. Upload/content validation and request hydration
@@ -118,7 +112,7 @@ separate immutable files with source links; no persistent storage meter is shown
 ## Inline references and selections
 
 `+` and external files are new uploads. `@`, Add reference and eligible loaded
-file/native tab drops insert atomic inline references, not uploads. Plain text
+file tab drops insert atomic inline references, not uploads. Plain text
 paste cannot forge reference identity. Undo restores token identity through the
 editor library; assistant-ui remains the text/voice runtime and Send owner.
 Tools, Files-library and New tabs are not individual sources.
@@ -130,21 +124,18 @@ inline token or original, and never changes an already frozen Send/retry.
 Click View to reveal that exact source/scope; changed or unavailable captures
 refuse rather than selecting newer content. Right-click or the keyboard menu
 explicitly adds a reference at the remembered composer caret. Observation alone
-never adds message context. Sheet ranges and contiguous native Docs text use
-SDK selections; text previews map displayed offsets back to raw UTF-16 originals.
+never adds message context. Text previews map displayed offsets back to raw UTF-16
+originals.
 
-Native insertion associates unchanged content with a real ACK and exact checkpoint;
-a saved revision alone does not prove unchanged local content. Send freezes the
-caption, UTF-16 occurrence spans and original/native selectors before asynchronous
-work. Retry retains that tuple. Selected original text hydrates only its declared
-slices; native context is untrusted description, not a range access rule.
-Inline occurrences have no app count cap. Repeated originals resolve once by
-identity; native contexts do not charge original bytes.
-Historical accepted inputs and absent/empty reference identities stay unchanged.
+Send freezes the caption, UTF-16 occurrence spans and original selectors before
+asynchronous work. Retry retains that tuple. Selected original text hydrates only
+its declared slices. Inline occurrences have no app count cap; repeated originals
+resolve once by identity. Historical accepted inputs and absent/empty reference
+identities stay unchanged.
 
 Refresh restores account/chat-scoped tab and pane descriptors through fresh reads,
 not editor grants, private content or tray selections. Unresolved original tabs
-remain observation-only: refresh never replays import or AI panel requests. Explicit
+remain read-only: refresh never replays a write. Explicit
 opens and restores stay bound to their origin chat across visibility changes.
 Settings, pane visibility and switching chats retain mounted native editors;
 close, sign-out and account teardown retain their unsaved-data protection.

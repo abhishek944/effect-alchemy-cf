@@ -7,6 +7,7 @@
  * attempt. Usage keeps real units, including provider-reported seconds/tokens
  * from a failed attempt, and TTS characters are an honest estimate.
  */
+import { bodyInit } from "./binary.ts";
 import { speechSynthesisWithinLimit } from "./chat-speech-schema.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { fingerprintSpeech } from "./chat-speech-fingerprint.ts";
@@ -182,7 +183,7 @@ export const speakSpeechOperation = async (
     "WARN",
   );
   await settleSpeechOperation(services, admission.claimId, "completed", input.operationId);
-  return new Response(result.audio, {
+  return new Response(bodyInit(result.audio), {
     status: 200,
     headers: {
       "content-type": result.contentType,

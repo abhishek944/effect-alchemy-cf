@@ -1,4 +1,5 @@
-import { Agent, type AgentContext } from "agents";
+import { ChatObject } from "./chat-object.ts";
+import type { ChatObjectContext } from "./chat-object.ts";
 import {
   chatObjectMetadata,
   reportCatalogSweep,
@@ -26,10 +27,10 @@ import { reportTitleUsage } from "./chat-external-usage.ts";
 import { json } from "./chat-internal.ts";
 import { type ChatTitleEnv, ChatTitles } from "./chat-title-store.ts";
 
-type ChatEnv = ChatTitleEnv & CatalogFilesEnv & { CHAT_MODEL_ALLOWLIST?: string };
+export type ChatCatalogEnv = ChatTitleEnv & CatalogFilesEnv & { CHAT_MODEL_ALLOWLIST?: string };
 
 /** One private metadata, preference and paid-admission catalog per authenticated owner. */
-export class ChatCatalog extends Agent<ChatEnv> {
+export class ChatCatalog extends ChatObject<ChatCatalogEnv> {
   private readonly admission: ChatAdmission;
   private readonly titles: ChatTitles;
   private readonly preferences: ChatPreferencesStore;
@@ -44,7 +45,7 @@ export class ChatCatalog extends Agent<ChatEnv> {
   private readonly speech: ChatCatalogSpeech;
   private readonly metadata: ChatObjectMetadata;
 
-  constructor(ctx: AgentContext, env: ChatEnv) {
+  constructor(ctx: ChatObjectContext, env: ChatCatalogEnv) {
     super(ctx, env);
     this.preferences = new ChatPreferencesStore(ctx.storage);
     this.objects = new ProfileObjects(ctx.storage);

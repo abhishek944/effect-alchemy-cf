@@ -1,149 +1,116 @@
 # Chat images and saved files
 
-The app uses the published `@abhishek944/pi-image-gen@0.6.0` portable engine and
-native Pi Durable extension. It does not copy provider serializers or run the
-Node desktop extension in a Worker. Desktop package capabilities remain separate.
+**Current runtime:** paid image generation has no configured transport in this runtime and reports itself as not configured. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
+The app uses the published `@abhishek944/pi-image-gen@0.6.0` portable engine.
+A direct Pi SDK extension in the Node host registers `image_generate`; its
+operation-scoped Worker callback owns authorization, the existing Cloudflare
+binding, immutable output storage and accounting. No legacy agent runtime or
+Node desktop image extension executes in the Worker.
 
 ## Using images
 
-- Set account-wide **Image model**, **Shape** and **Quality** in Settings → Images.
-  Flare / Auto / Auto are the initial account defaults; Sunburst is also supported.
-  These are independent of the chat text model. Setup state reflects nonsecret
-  binding/route configuration only, not tested provider eligibility. Failed/conflicting saves preserve
-  attempted choices and expose preference-only recovery.
-- Use the existing Send action to ask clearly for generation or an edit. There is
-  no Generate mode, composer settings popup, automatic Send or per-call approval.
-  Supported explicit tool controls override omitted response defaults.
-- Open **Files** in the existing right-pane toolbar. Search/filter/sort the saved
-  collection independently of loaded messages. **+** opens an empty Tools tab;
-  image tabs show the image above its details and private Download link.
-- Type **@** to select exact saved files from this chat. Chips stay above the draft.
-  Prepare edit/Add to draft selects the same immutable file; it never sends.
-  A clear follow-up edit can reuse the exact recent image; ambiguous sources need
-  clarification, not filename guessing. Edits create separate files with source links.
-- Nonimages are download-only in the right pane. Safe text can still be referenced
-  and quoted for chat reading. File contents and metadata are untrusted data.
+- Settings → Images retains account-wide Image model, Shape and Quality.
+  Flare / Auto / Auto are the initial defaults; Sunburst is also supported.
+  Setup state proves configuration presence, not provider entitlement. Failed
+  preference writes preserve attempted choices and expose conflict recovery.
+- Use the existing explicit Send to request generation/editing. There is no
+  Generate mode, automatic Send or per-call approval. Tool controls override
+  omitted response-frozen defaults.
+- Files in the right pane contains saved uploads and generated images separately
+  from loaded transcript pages. Image tabs show the original and private Download.
+- Use @ or Add reference to select immutable same-chat files. Preparing an edit
+  never sends. Edits create separate files with source links; clearing a chip
+  neither deletes an original nor changes an already accepted input.
+- Nonimages remain download-only or safe text previews. Office documents are
+  metadata-only; their content is not decoded or sent to the model. Metadata,
+  quoted text and file bodies remain untrusted data, never authority/instructions.
 
-Only explicit Send uploads staged local files. Saved references are not uploaded
-again, rebound to another creator or removed when their draft chips are cleared.
-Uncertain delivery retries preserve text, model, upload IDs, reference IDs and the
-same operation UUID. Known accepted originals and later draft additions survive.
+Uncertain message delivery keeps the same caption, model, upload/reference IDs
+and operation UUID. Known accepted originals and later independent drafts survive.
+See [private files](chat-files.md) for upload/format/selection details.
 
-## Private storage and native history
+## Ownership, context and storage
 
-The existing owner ChatCatalog and private stage-isolated ChatFiles R2 bucket own
-metadata, accounting and originals. Owner-catalog object scope is distinct from the
-conversation object scope used by native proof; browser/model fields choose neither.
-There is no owner retained/reserved byte quota or storage meter.
+The owner ChatCatalog and stage-isolated private ChatFiles R2 bucket retain
+metadata and originals. Their owner scope comes from the authenticated catalog
+actor, never model arguments. There is no retained/reserved owner byte quota.
 
-Every new ordinary or Skills recovery attempt freezes its image capability once
-before native admission. A preference/configuration outage freezes image generation
-as unavailable; it does not replace defaults later or disable ordinary text/Vision
-lineage. A duplicate attempt reuses its original snapshot. Skills Retry preserves
-logical ancestry and cannot regain already-used image-generation authority.
+Before accepting a new operation, the object verifies uploads and exact saved
+references, freezes compact original identifiers/reference slices and snapshots
+image preferences/configuration once. Preference/configuration failure freezes
+image generation unavailable; it does not silently change defaults later.
 
-New native inputs and Skills rows contain caption and compact authenticated original
-identifiers, not base64 or complete file bodies. Exact accepted input/submission,
-entry/model slot, task/attempt/cutoff, owner and chat-model proof is required at the
-final Models boundary. Only that request receives transient original bytes and
-quoted text; hydrated values never enter checkpoints, memos, history or compaction.
-Saved references resolve authorized immutable file IDs without recalculating or
-comparing content checksums. Ownership, accepted state and actual file-content
-validation remain enforced; upload/ingest content identity is unchanged.
-Hook exceptions alone cannot authorize fallback inference. Historical rows are not
-rewritten or backfilled. Proven pre-image ordinary text-only continuations use a
-fixed startup boundary and the same final native checks, without image-generation
-authority; missing image-era sidecars and unprovable old binary recovery are refused.
+New transcript rows contain compact caption/reference metadata, not base64 or
+full original bodies. At each actual model request, server transcript entries
+map historical/current user messages to their immutable accepted sidecars. The
+callback rechecks owner, chat, accepted state, metadata, format and model
+compatibility before reading exact private originals. Text is quoted as untrusted
+content; selected original text uses only its frozen slices. Images are transient
+original blocks. Missing/altered sidecars fail closed, never authorize fetching a
+URL guessed from model text. Historical valid inline images remain readable.
+No resizing, silent dropping or truncation is used to make an original fit.
 
-Generation uses the actual configured Cloudflare catalog/Gateway route with one
-provider attempt. The host claims one dispatch before contacting the provider;
-there is no preallocated output quota. Each immutable output is stored privately before a
-compact link is returned. Receipts bind the real tool-calling assistant entry and
-native call/output order, not whichever later prose reply is newest.
+The object verifies each `image_generate` callback against the active operation
+and the exact stored assistant tool call. Edits resolve only authorized same-chat
+immutable attachment URLs. Arbitrary remote URLs, local paths, credentials and
+model-provided owner/storage scope are refused. Generation uses one actual
+configured catalog/Gateway route; the portable engine owns provider serialization.
 
-Archive preserves browsing/downloads but blocks new work. Already admitted storage
-can finish; Stop does not erase accepted outputs or guarantee that billing stopped.
-Closing a preview/viewer releases viewing resources, not durable work or originals.
+One dispatch claim precedes contact. Each accepted output is written privately
+before compact file links are returned. Existing call receipts bind the assistant
+entry, native call position and output order; file reads and image usage endpoints
+retain their public contract. Accounting records real dispatch/result evidence;
+Unknown or partial outcomes are not reported as free or successful.
 
-## Execution limits and failure recovery
+## Stop and process loss
 
-There are no app original-byte/pixel, file-count, message-byte, caption, quoted-text,
-browser staging/preview or owner/per-call output storage caps. Originals still need
-to fit actual model and runtime boundaries; whole-file validation/hydration can
-fail at the Worker's128MiB runtime memory limit. Compact rows contain metadata,
-not original bodies, and actual SQLite row/string/BLOB limits still apply.
+Stop revokes the exact run's further callback authority, cancels owned response
+work where supported and asks the Node SDK session to abort. It cannot promise
+that already dispatched provider work stopped billing. Accepted outputs and
+originals are not erased. Archive preserves browsing/downloads and blocks new
+work; a previously admitted output can finish its storage obligations.
 
-There is no application-side image RAM estimate, shared reservation pool or
-memory-admission gate. Generation and edits omit stricter host byte overrides.
-Installed pi-image-gen0.6.0 enforces20MiB per image,128MiB aggregate references,
-16 references and a catalog envelope ceiling of base64(20MiB) plus1MiB; these
-cannot be raised through host options. Its120-second generation lifetime remains.
-Actual model/context and SDK limits still apply. There is no
-resizing, app queue, fan-out or new image-count cap. Cloudflare runtime memory
-limits still apply: large requests can fail at runtime, including after charging.
-No refund or free-failure promise is made.
+A dispatched/uncertain failure never automatically regenerates. The same call
+cannot be replayed into another paid attempt. Process-loss checkpoint recovery
+has been removed: losing the object/host channel makes the response unanswered,
+retains existing receipts/files and requires a new explicit user request for new
+paid work. Read-only file retry can inspect the same original/receipt; it is not
+a generation retry. Browser preview/SSE cleanup does not stop a model run.
 
-Native generation fits output to the selected model's remaining context after
-the final hydrated messages, tools and guidance are prepared, respecting model
-output capacity and any smaller explicit allowance. It uses the existing SDK
-input-token estimate without an app32,768-token ceiling, half-context reserve,
-1.5MiB text-byte ceiling or guessed four-byte/token budget. Provider tokenization
-can differ from the estimate; actual provider context failures remain possible.
-The separate native compaction path and Skills-specific content policy are unchanged.
+## Capacity boundaries
 
-Cancellation still disposes owned response bodies. The image host waits for real
-provider/body/storage work before finishing durable output intent; this is not
-memory accounting or admission. Runtime heap behavior remains unverified. Arbitrary remote output
-URLs are denied without established trusted origins; inline catalog outputs use the
-shared package materializer. Original URL identifiers are never fetched externally.
+No new app file-byte/pixel, attachment-count, message-byte, caption, quoted-text,
+browser staging/preview or output-storage cap is added. Actual browser/Node/Worker
+heap, CPU, provider context and SQLite row/string/BLOB limits still apply.
+Whole-original validation/hydration can fail at the Worker's 128 MiB memory limit.
+There is no app RAM estimator, reservation pool or extra memory-admission gate.
 
-A dispatched/uncertain failure never triggers automatic image regeneration.
-Internal adapter, response-body and bookkeeping failures retain their original
-native causes for fixed, correlated diagnostics; only allowlisted classification,
-owner/operation and existing operation/call IDs are emitted. These reports never
-replace a known accepted or partial output, add a retry, release an uncertain
-claim or rewrite an uncertain write, and user/tool-facing messages stay unchanged.
-Read-only Retry checks the same metadata/original/receipt; another paid attempt needs
-a new explicit user request. Missing bytes keep file identity and an honest local
-unavailable state. Partial successful outputs are retained. Interrupted unsafe native
-calls reconcile existing receipts on reopen rather than repeating the paid request.
+Existing installed image-engine limits are preserved: 20 MiB per image, 128 MiB
+aggregate references, 16 references, a catalog envelope of base64(20 MiB) plus
+1 MiB, and its 120-second generation lifetime. The existing tool schema also
+retains its 32,000-character prompt and 8,192-character source-URL validation.
+These are inherited engine/tool boundaries, not an unlimited-capacity claim.
 
-## Cost and routes
-
-Existing Response facts and Cost details show image requests separately from native
-text/voice accounting. Provider-reported cost wins over estimates. Gateway estimates
-remain estimates; partial known components are not complete totals. Missing usage
-stays Unknown, non-USD values are not converted, and request cost is never multiplied
-by output count. The recent detail window is bounded; SQL lifetime totals are not.
-No image cost is fabricated as native text-token Usage. Context facts include
-proven active image presence. Unmeasured text originals without character-count
-evidence make Context Unknown rather than counting only their compact links;
-applicable real assistant usage still covers its measured prefix.
-
-Authenticated, no-store read endpoints include:
-
-- `/api/chats/:id/files` and `/api/chats/:id/files/:fileId`.
-- `/api/chats/:id/attachments/:fileId` for private original GET/HEAD/download.
-- `/api/chats/:id/messages/:messageId/files` for at most30 saved receipts per page.
-- `/api/chats/:id/images/usage`, optionally filtered by exact native messageId.
-- `/api/account/images/preferences` for versioned preference read/save.
-
-Private generation reserve/consume/ingest/receipt routes are actor-only, not browser
-endpoints. No provider key, R2 key, owner scope, canonical admission or binary payload
-is exposed by the public saved-file/cost DTOs.
+Text model output is fitted to the actual selected model's remaining context
+and output capacity after complete hydration, preserving any smaller explicit
+SDK allowance. The installed token estimate is not the provider tokenizer;
+provider context failures and post-charge runtime failures remain possible.
+No app 32,768-token ceiling, half-context reserve or guessed bytes/token budget
+is introduced. No refund/free-failure promise is made.
 
 ## Setup and acceptance
 
-Use the existing stage-specific Gateway/AI binding and secure default BYOK aliases;
-see [Pi chat](pi-chat.md). Local inference is remote and billable. Do not deploy,
-provision keys, change production resources or call providers without approval.
+Use the Node host and Gateway setup in [Pi chat](pi-chat.md). Provider credentials
+remain in Cloudflare profiles/BYOK, not browser code, Node host configuration or
+stage files. The private Node service token authorizes transport only.
 
-Build/type/lint/source review cannot prove provider eligibility, charges, R2/SQLite
-crash recovery, actual Proxy/stream behavior, aggregate heap or authenticated visuals.
-After permitted live setup, verify two-user isolation; upload and @ retention across
-reload/archive; readable saved originals and source links; preference CAS/outages;
-runtime failures under load; Stop before/during provider/storage work; lost
-consume/PUT/acceptance acknowledgments; retained partial outputs; no replay after
-crash/reconnect/Skills Retry; exact assistant receipt/cost association; Unknown,
-partial, zero and mixed-currency costs; and keyboard/IME/narrow/all-theme UI behavior.
-No migration, backfill, deletion or unit-test harness is part of this feature.
+After explicit setup, verify two-owner isolation; upload/reference/edit flows;
+current and historical image/text hydration; selected slices; office metadata;
+Stop during provider/body/storage phases; duplicate/uncertain calls; immutable
+file links/receipts; image/model/title/speech usage; reload/archive browsing; and
+read-only recovery without regeneration. Typechecks/lint/builds and SDK
+construction do not establish real provider, R2, paid or deployed acceptance.
+No unit tests or live interactive end-to-end/provider calls are implied.

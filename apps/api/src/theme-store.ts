@@ -4,7 +4,7 @@
  * transaction as the theme change. Undo consumes only its own chat's pointer and
  * only while that target is still current; manual writes never own a pointer.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { ThemeReceipts } from "./theme-receipts.ts";
 import { ThemeRecord } from "./theme-record.ts";
 import { undoThemeCommand } from "./theme-undo.ts";
@@ -32,11 +32,11 @@ const conflict = (current: AccountTheme, message: string): ThemeActionOutcome =>
 });
 
 export class ThemeStore {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
   private readonly record: ThemeRecord;
   private readonly receipts: ThemeReceipts;
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     this.record = new ThemeRecord(storage);
     this.receipts = new ThemeReceipts(storage);

@@ -11,7 +11,7 @@ import {
   type LexicalNode,
   type PointType,
 } from "lexical";
-import { freezeChatReferenceInputs } from "@highchat/office-contract";
+import { freezeChatReferenceInputs } from "@highchat/chat-contract";
 import { $isReferenceNode } from "./reference-node";
 import type { SavedFile } from "@/lib/chat-library-types";
 

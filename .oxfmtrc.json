@@ -2,8 +2,8 @@
   "ignorePatterns": [
     "**/dist/**",
     "**/node_modules/**",
-    "**/.alchemy/**",
     "**/.turbo/**",
+    ".pi/decisions/**",
     "pnpm-lock.yaml",
     "var/**"
   ],

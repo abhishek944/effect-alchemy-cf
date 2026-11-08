@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { Schema } from "effect";
 import {
   ImagePreferences,
@@ -13,9 +13,9 @@ export type ImagePreferencesWriteResult =
 
 /** Owner-actor singleton. Reads and writes never perform image work. */
 export class ChatImagePreferencesStore {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS chat_image_preferences (
       singleton INTEGER PRIMARY KEY CHECK (singleton = 1), value TEXT NOT NULL

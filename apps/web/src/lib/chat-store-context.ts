@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
 import type { CapabilityLoadState } from "@/lib/chat-capability-api";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import type {
@@ -22,7 +22,6 @@ export type SendSnapshot = {
   selection: ChatSelection;
   attachments: readonly string[];
   references: readonly string[];
-  officeTarget?: OfficeSendTarget;
   referenceInputs?: ChatReferenceInputs;
 };
 
@@ -86,9 +85,6 @@ export type ChatUsageControls = {
 
 export type ChatActionError = { title: string; message: string; dismissLabel: string };
 
-/** A fresh native-panel request published by one chat's snapshot (30s server expiry). */
-export type ChatPanelRequest = NonNullable<ChatSnapshot["panelRequest"]>;
-
 export type ChatStoreValue = {
   chats: Chat[];
   listState: ListState;
@@ -111,9 +107,6 @@ export type ChatStoreValue = {
   usage: ChatUsageControls;
   /** Chats whose own retained owner is running, including hidden ones. */
   runningChatIds: ReadonlySet<string>;
-  /** Unclaimed, unexpired requests from every retained chat. */
-  panelRequests: readonly { chatId: string; request: ChatPanelRequest }[];
-  claimPanelRequest: (chatId: string, requestId: string) => void;
   select: (id: string | null) => void;
   startNewChat: () => Promise<void>;
   renameChat: (id: string, title: string) => Promise<void>;

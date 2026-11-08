@@ -3,8 +3,8 @@
  * after an expiry/delete is rediscovered here, even if its Worker never hands off.
  * One bounded page per recurring cleanup; only absent-row, noncurrent IDs delete.
  */
-import type * as cf from "@cloudflare/workers-types";
-import type { AgentContext } from "agents";
+import type * as cf from "./platform.ts";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { Schema } from "effect";
 import { withCause, withDiagnostic } from "@highchat/diagnostics";
 import { DomainUuid } from "./chat-capabilities.ts";
@@ -15,7 +15,7 @@ import type { ProfileStore } from "./profile-store.ts";
 
 const CURSOR = "profile:orphan-scan:cursor:v1";
 type Scope = {
-  readonly storage: AgentContext["storage"];
+  readonly storage: ChatObjectContext["storage"];
   readonly objects: ProfileObjects;
   readonly profile: ProfileStore;
   readonly bucket: cf.R2Bucket | undefined;

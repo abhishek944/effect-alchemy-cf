@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { ReadImageContextEvidence } from "./chat-image-context.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import { createChatFilesCatalogClient } from "./chat-files-client.ts";

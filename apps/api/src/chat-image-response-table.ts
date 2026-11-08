@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import type { ImageAcceptedBinding, ImageResponseCandidate } from "./chat-image-response-schema.ts";
 import { ImageResponsePending } from "./chat-image-response-pending.ts";
 
@@ -15,9 +15,9 @@ const bindingColumns = `operation_id AS operationId, submission_id AS submission
 
 /** SQL details remain local; callers own synchronous transaction boundaries. */
 export class ImageResponseTable {
-  private readonly db: AgentContext["storage"]["sql"];
+  private readonly db: ChatObjectContext["storage"]["sql"];
   private readonly pending: ImageResponsePending;
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.db = storage.sql;
     this.db.exec(`CREATE TABLE IF NOT EXISTS chat_image_response_candidates (
       operation_id TEXT PRIMARY KEY NOT NULL, logical_operation_id TEXT NOT NULL,

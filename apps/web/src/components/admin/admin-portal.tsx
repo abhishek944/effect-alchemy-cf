@@ -1,3 +1,4 @@
+import { useUser } from "@clerk/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckingScreen,
@@ -14,7 +15,7 @@ import {
   adminErrorMessage,
   fetchAdminIdentity,
 } from "@/lib/admin-api";
-import { authClient } from "@/lib/auth-client";
+import { useSignOut } from "@/lib/auth-client";
 import { navigate, usePathname } from "@/lib/router";
 
 type AccessState =
@@ -26,10 +27,11 @@ type AccessState =
 
 const SESSION_ENDED = "Your admin session ended or was revoked. Sign in again to continue.";
 const NOT_ADMIN =
-  "The signed-in account does not have the admin role on the server. Sign in with an admin account or use a one-time access token.";
+  "The signed-in account does not have the admin role. Ask an administrator to set public metadata role to admin on this account in Clerk, then reload.";
 
 // Server-side check; every admin render is gated by this result, not client state.
-async function loadAccess(): Promise<AccessState> {
+async function loadAccess(signedIn: boolean): Promise<AccessState> {
+  if (!signedIn) return { kind: "unauthenticated", notice: null };
   try {
     const identity = await fetchAdminIdentity();
     return identity.role === "admin"
@@ -52,16 +54,20 @@ type RequestRef = { current: number };
 async function applyNewest(
   requestRef: RequestRef,
   requestId: number,
+  signedIn: boolean,
   apply: (next: AccessState) => void,
 ): Promise<void> {
-  const next = await loadAccess();
+  const next = await loadAccess(signedIn);
   if (requestRef.current === requestId) apply(next);
 }
 
 export default function AdminPortal() {
   const pathname = usePathname();
+  // Clerk reports sign-in here; the server still decides whether this account is admin.
+  const { isSignedIn } = useUser();
   const [access, setAccess] = useState<AccessState>({ kind: "checking" });
   const [signOutPending, setSignOutPending] = useState(false);
+  const clerkSignOut = useSignOut();
   const [actionError, setActionError] = useState<string | null>(null);
   // Monotonic request id: only the newest server check may update access state.
   const requestRef = useRef(0);
@@ -69,19 +75,19 @@ export default function AdminPortal() {
   useEffect(() => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
-    void applyNewest(requestRef, requestId, setAccess);
+    void applyNewest(requestRef, requestId, isSignedIn === true, setAccess);
     return () => {
       // Unmount or remount invalidates any in-flight check.
       requestRef.current += 1;
     };
-  }, []);
+  }, [isSignedIn]);
 
   const refreshAccess = () => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
     setAccess({ kind: "checking" });
     setActionError(null);
-    void applyNewest(requestRef, requestId, setAccess);
+    void applyNewest(requestRef, requestId, isSignedIn === true, setAccess);
   };
 
   const handleAccessLost = useCallback((status: number) => {
@@ -98,11 +104,7 @@ export default function AdminPortal() {
     setSignOutPending(true);
     setActionError(null);
     try {
-      const { error } = await authClient.signOut();
-      if (error) {
-        setActionError("Unable to sign out. Please try again.");
-        return;
-      }
+      await clerkSignOut();
       refreshAccess();
     } catch {
       setActionError("Unable to sign out. Please try again.");
@@ -114,7 +116,7 @@ export default function AdminPortal() {
   if (access.kind === "checking") return <CheckingScreen />;
 
   if (access.kind === "unauthenticated") {
-    return <LoginScreen notice={access.notice} onAuthenticated={refreshAccess} />;
+    return <LoginScreen notice={access.notice} />;
   }
 
   if (access.kind === "forbidden") {
@@ -123,7 +125,6 @@ export default function AdminPortal() {
         notice={access.notice ?? NOT_ADMIN}
         actionError={actionError}
         signOutPending={signOutPending}
-        onUseToken={() => setAccess({ kind: "unauthenticated", notice: null })}
         onSignOut={() => void handleSignOut()}
       />
     );

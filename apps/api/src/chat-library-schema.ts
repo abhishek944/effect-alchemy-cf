@@ -12,7 +12,7 @@ export const SavedFile = Schema.Struct({
 export type SavedFile = typeof SavedFile.Type;
 export const LibraryQuery = Schema.Struct({
   search: Schema.optional(Schema.String.check(Schema.isMaxLength(120))),
-  kind: Schema.optional(Schema.Literals(["all", "image", "text"])),
+  kind: Schema.optional(Schema.Literals(["all", "image", "text", "office"])),
   origin: Schema.optional(Schema.Literals(["all", "upload", "generated"])),
   sort: Schema.optional(Schema.Literals(["newest", "oldest", "name"])),
   cursor: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2048))),

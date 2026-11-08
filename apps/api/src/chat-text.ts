@@ -3,7 +3,7 @@ import {
   UserEntry,
   type EntryId,
   type EntryRecord,
-} from "@earendil-works/pi-durable";
+} from "./chat-transcript-types.ts";
 import {
   MAX_BLOCK_VISITS,
   TEXT_BYTES,

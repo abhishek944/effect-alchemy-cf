@@ -5,6 +5,7 @@
  */
 import { Option, Schema } from "effect";
 import { withCause } from "@highchat/diagnostics";
+import { blobPart } from "./binary.ts";
 import { beginSpeechAttempt, drainResponse, readBoundedBytes } from "./chat-speech-io.ts";
 import type { SpeechModel, SpeechVoice, TranscriptionModel } from "./chat-speech-schema.ts";
 import {
@@ -116,7 +117,7 @@ export const transcribeAudio = (
 ): Promise<TranscriptionResult> =>
   attempt(signal, async (owned) => {
     const form = new FormData();
-    form.set("file", new File([input.audio], "recording.wav", { type: "audio/wav" }));
+    form.set("file", new File([blobPart(input.audio)], "recording.wav", { type: "audio/wav" }));
     form.set("model", input.model);
     form.set("response_format", "json");
     const response = await fetch(TRANSCRIPTION_ENDPOINT, {

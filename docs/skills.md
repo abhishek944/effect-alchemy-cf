@@ -1,145 +1,112 @@
 # Private chat Skills
 
+**Current runtime:** skill originals are verified and stored by the local object store. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
 ## Product contract
 
-Settings → Skills is one private library for the signed-in user, shared by all
-of that user's chats. Upload one `.txt` or `.md` instruction file at a time.
-The list shows full filenames and Download buttons. Files are downloaded for
-external reading; there is no body preview, editor or detail page.
+Settings → Skills is one private instruction library for the signed-in user,
+shared by that user's chats. Upload one `.txt` or `.md` file at a time. The list
+shows full filenames and Download; there is no body preview, editor or detail page.
+Markdown frontmatter is not required. ZIPs, executable scripts, supporting files
+and skill-image resources are not accepted.
 
-Uploading the same normalized filename requires an explicit Cancel/Replace
-choice. Replace supplies the version the user confirmed; another tab's newer
-version must not be overwritten silently. Original spelling and bytes are
-preserved. Filename matching uses NFC normalization followed by lowercasing.
+The same normalized filename needs explicit Cancel/Replace confirmation. Replace
+supplies the version the user confirmed; a newer version from another tab cannot
+be overwritten silently. Original spelling/bytes remain exact. Filename matching
+uses NFC normalization and lowercasing.
 
-A lost upload response is not proof of failure. Keep the upload identity and
-inspect its receipt before deciding what happened. A known publication remains
-acknowledged if refreshing the list subsequently fails. Only an authoritative
-list read updates displayed current files; an old receipt does not prove which
-version is current. Checking a receipt must not replay an upload.
+An interrupted upload response is not proof of failure. Retain the same upload
+identity and inspect its receipt before replacing it. A known publication remains
+acknowledged even if list refresh fails. Only an authoritative list read proves
+current library contents. Checking a receipt never replays an upload.
 
-No ZIPs, supporting files, executable scripts or skill-image resources are
-accepted. Markdown frontmatter is not required. These instruction-file limits do
-not remove the chat's separate attachment or image features.
+## SDK activation and lifecycle
 
-## Chat lifecycle contract
+A new distinct Send verifies a fresh owner-scoped immutable library snapshot
+before acceptance. An unavailable/unverifiable library blocks admission without
+losing the draft. The model receives a short catalog and activates instructions
+on demand with `skill(name)`. The direct Pi SDK extension registers that tool;
+its Worker callback returns the full exact approved instruction document.
 
-The model receives a short catalog and activates instructions on demand with
-`skill(name)`. New, distinct Sends use a fresh verified library snapshot. Accepted
-work and original-version retries keep their immutable original versions.
+An active response retains its prepared snapshot even if the user replaces a
+library file. Activation validates owner and operation, uses only the prepared
+documents and enforces the existing combined active-guidance budget. Unknown
+names produce an ordinary tool error. A known document that cannot be verified
+or activated is fatal: the response stops, retains partial/finalized output as
+incomplete and does not silently continue with stale or empty instructions.
 
-Retiring obsolete guidance on a subsequent Send does not delete visible history,
-undo earlier actions, erase learned facts or promise semantic forgetting. Current
-standing instructions must come from the current approved context, not replayed
-raw skill-tool results or summaries.
+A later Send retires prior Skills tool-result instructions from model history
+and advertises its fresh approved catalog. Visible transcript is not deleted,
+earlier account/file actions are not undone, and semantic forgetting is not
+promised. Prior tool results, quoted documents and summaries are not standing
+authority. No YAML parser, local filesystem skill discovery, shell or executable
+resource support is added to the application.
 
-An unavailable or unverifiable library blocks admission without losing input.
-A genuine approved instruction-read failure after acceptance stops that answer
-and preserves partial output as incomplete. It must not silently skip the file,
-use a stale/empty library or continue by relying on a swallowed SDK hook error.
+Before acceptance, the Skills unavailable notice preserves the draft and its
+Try again action only checks readiness. It does not send or alter the model. The
+existing 15-second readiness deadline and disabled-while-checking control remain.
 
-Before acceptance, the Skills unavailable notice keeps the draft and offers
-Try again. This only rechecks readiness; it does not send or change the model.
-The read has a 15-second deadline, and its button is disabled while checking.
-After acceptance, the original-version recovery below is a different action.
+**Checkpoint recovery has been removed with the old runtime.** There is no
+original-version automatic resume or accepted-operation re-execution. A host/
+object process loss makes accepted work unanswered; retrying that same message
+UUID only repairs its receipt. Old permanently rejected UUID tombstones remain
+fenced. The old `/skills/retry` and `/skills/new-send` commands explicitly refuse
+checkpoint recovery. To start new work, use a new explicit ordinary Send with the
+current library. This does not roll back or replay earlier mutations or files.
 
-Original Try again preserves the logical operation, original skill versions,
-model/input, accepted attachment authority and account-action/Undo identity. It
-uses one authenticated successor native attempt; replaying a settled native UUID
-only repairs delivery and is not another execution.
+## Ownership and storage
 
-An explicit New Send with current skills is different: current skills and an
-explicit current allowed model selection, a new logical operation, a fresh active
-instruction context and freshly prepared account intent. Its original caption and
-files must remain independently verifiable even if old guidance is damaged.
-Neither recovery action may overwrite an independent composer draft. Earlier
-actions are not automatically rolled back; replayed receipts describe historical
-actions rather than claiming a new mutation.
+- `skills-model.ts`, `skills-manifest.ts` and the existing catalog/storage helpers
+  own filename keys, immutable manifests, scope-bound digests, original bytes,
+  expected versions and publication receipts.
+- `chat-sdk-skills*.ts` verifies one snapshot and owns operation-scoped activation.
+- The Node SDK host owns the direct extension/session lifecycle. Its run-scoped
+  callbacks cannot select another owner, operation, catalog or private original.
+- The conversation owns acceptance, Stop, transcript and accounting. Browser
+  code imports no provider/SDK/infra client or secret.
 
-An uncertain New Send retains its exact UUID, source and frozen model/effort.
-Only an exact acceptance or a tagged terminal rejection for that same new UUID
-settles it; generic errors do not authorize a fresh replacement operation.
-A terminal rejection requires durable proof that the UUID was not admitted and
-must permanently prevent its later execution. Original Retry is never fenced
-this way. Browser storage failure must not dispatch an unretained recovery.
-
-## Implementation boundaries
-
-- `apps/api/src/skills-model.ts` and `skills-manifest.ts`: schemas, filename keys,
-  immutable references, scope-bound manifest digest and integrity verification.
-- `skills-store.ts`, reservation/publication helpers and owner `ChatCatalog`:
-  naming, immutable manifests, quotas and durable publication receipts.
-- `skills-objects.ts`: private original-byte storage and complete digest/UTF-8
-  verification. Keys derive from the real owner scope and version, not filenames.
-- `chat-skills-*` and existing chat admission/runtime/projection seams:
-  pinned attempts, bounded active context, SDK activation adaptation, mandatory
-  model-request guards, cancellation, provenance and recovery.
-- Web Skills components/hooks/client: minimal Settings surface and retained
-  publication intent. Browser code must not import provider clients or secrets.
-
-Reuse the installed Agents skills adapter/source/parser/activation rather than
-introducing another YAML loader. Account/file authorization, model eligibility,
-usage, Stop, history and title attribution remain application-owned boundaries.
-
-## File HTTP interface
+HTTP contracts remain:
 
 - `GET /api/skills[?uploadId=UUID]`: current verified list and optional receipt.
-- `POST /api/skills?filename=...&uploadId=UUID[&replaceVersion=UUID]`: raw file
-  bytes, not multipart; returns its publication acknowledgement.
-- `GET /api/skills/download?id=UUID&version=UUID`: authenticated original
-  attachment, never an inline application viewer.
-- `POST /api/skills/cancel?uploadId=UUID`: explicitly fence an unresolved upload.
-  An already-published upload returns its receipt unchanged; unpublished/unknown
-  intent retirement returns expired. This is not a published-file Delete action.
+- `POST /api/skills?filename=...&uploadId=UUID[&replaceVersion=UUID]`: raw bytes,
+  not multipart; returns the publication acknowledgement.
+- `GET /api/skills/download?id=UUID&version=UUID`: private attachment download.
+- `POST /api/skills/cancel?uploadId=UUID`: fences an unresolved upload; a known
+  publication keeps its receipt. This is not Delete for a published file.
 
-Owner identity comes from authentication, never request/model scope arguments.
-Mutations require the application origin. Responses are non-cacheable; download
-also applies attachment, nosniff, sandbox and same-origin resource headers.
+Authentication chooses owner identity; mutations require the application origin.
+Downloads remain attachment/nosniff/sandbox/same-origin and non-cacheable.
+Stored-manifest corruption and storage errors are failures, not missing Skills.
+Diagnostics use fixed safe classifications, never raw bodies or secret values.
 
-## Defensive storage bounds
+## Existing bounds preserved
 
-- 64 KiB per file; valid nonempty UTF-8 text and bounded printable filenames.
+- 64 KiB valid nonempty UTF-8 per file and bounded printable filenames.
 - 32 current files; 512 live retained/reserved versions.
-- 64 MiB retained/reserved original bytes.
-- 4096 cumulative upload intents, including permanent expired tombstones.
-  Existing idempotent receipts still work at this cap; new reservations stop.
-- 256 permanent New Send rejection records per conversation. Existing records
-  remain readable at the cap; inability to persist a new fence keeps uncertainty.
-- 8 unresolved New Send commands per chat in browser storage; no silent eviction.
-- 56 KiB for serialized active state and rendered active context, plus a separate
-  selected-model request/output budget. SDK formatting adds overhead: an accepted
-  upload can still be too large to activate. Nothing is silently shortened.
+- 64 MiB retained/reserved originals; 4,096 cumulative upload intents including
+  permanent expired tombstones. Known receipts still work at the cap.
+- 56 KiB combined active state/rendered guidance. Nothing is silently shortened;
+  a valid upload may still be too large to activate with other instructions.
+- Existing permanent New Send rejection records remain readable and are never
+  evicted or revived by a normal Send.
 
-Publication rechecks its fresh candidate and head after asynchronous work, then
-atomically promotes manifest/head/file/version/intent state. Abandoned unpublished
-versions are claimed for retirement; published originals are never selected.
+Publication rechecks the fresh candidate/head and atomically promotes its rows.
+Original PUTs stay create-only. Retirement applies only to unpublished originals,
+uses a permanent marker and preserves the expired intent against late writes.
+Quota is released only after confirmed retirement. Current published originals
+are not silently selected for cleanup.
 
-Original PUTs are create-only. Retirement replaces unpublished bytes with a
-permanent zero-byte marker and retains the expired intent, preventing late PUTs
-or UUID reuse from resurrecting an old intent. Original-byte quota is released
-only after confirmed retirement. Active model context also has separate storage
-and selected-model request budgets; it must not silently truncate instructions.
+## User-owned verification
 
-## Failure diagnostics
+After explicit setup, verify two-user isolation, exact downloads, interrupted
+publication receipts, concurrent Replace conflicts, readiness/draft preservation,
+activation, guidance budget failure, replacement during a response, a fresh
+library on the next Send, exact Stop, retained incomplete output, no automatic
+paid replay and truthful model/tool usage. Verify old rejected UUIDs cannot run.
 
-Stored-manifest corruption and storage/transport exceptions remain internal
-failures, not missing Skills or empty libraries. Private catalog and public HTTP
-handlers report safe correlated diagnostics before encoding unavailable responses.
-Confirmed concurrent publication can recover to its original receipt; this does
-not permit another upload. Cleanup failures retain retirement obligations/quota.
-Uncertain writes never imply that no bytes were saved. See [observability](observability.md).
-
-## Verification and rollout
-
-Typechecks, lint, builds and source inspection do not prove runtime acceptance.
-Before rollout, an explicitly approved isolated development procedure must verify
-owner isolation, original-byte downloads, uncertain upload receipts, stale Replace,
-keyboard/narrow/theme behavior, cold-start restoration, compaction, strict failure,
-original Retry versus New Send, duplicate/uncertain acceptance, exact Stop and
-account/file/usage authority. Retained partials and older failures must remain
-truthfully attributable, with unavailable originals explicitly unrecoverable.
-
-Do not infer provider/R2 behavior from a source fixture or local TypeScript pass.
-Chat inference, titles and compaction can incur remote usage even on localhost.
-No deployment, production resource use or billable acceptance flow is implied by
-this document. Review existing development/stage instructions before any startup.
+Typechecks/lint/builds and no-network SDK construction do not prove deployed
+Access, provider/R2 behavior, real billing or native cancellation timing. No unit
+tests, live interactive end-to-end run or deployment is implied. See
+[Pi chat setup](pi-chat.md) and [observability](observability.md).

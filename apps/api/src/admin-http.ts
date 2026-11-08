@@ -1,6 +1,4 @@
-import { Auth } from "@highchat/auth";
-import { findUserByEmail, setUserRole } from "@highchat/auth/admin-users";
-import { RuntimeContext } from "alchemy";
+import { ClerkAdminUsers } from "@highchat/auth/admin-users";
 import { Effect } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { Api } from "./api.ts";
@@ -9,15 +7,13 @@ import { authUnavailableEffect } from "./auth-failure.ts";
 
 export const AdminLive = HttpApiBuilder.group(Api, "admin", (handlers) =>
   Effect.gen(function* () {
-    const auth = yield* Auth;
+    const users = yield* ClerkAdminUsers;
     return handlers
       .handle("adminMe", () => CurrentAdmin)
       .handle("searchUsers", ({ payload }) =>
-        findUserByEmail(payload.email).pipe(
+        users.findByEmail(payload.email).pipe(
           Effect.map((user) => ({ user })),
           Effect.catch((cause) => authUnavailableEffect("admin.users.search", cause)),
-          Effect.provideService(Auth, auth),
-          Effect.provide(RuntimeContext.phantom),
         ),
       )
       .handle("setRole", ({ params, payload }) =>
@@ -27,12 +23,12 @@ export const AdminLive = HttpApiBuilder.group(Api, "admin", (handlers) =>
           if (current.id === params.id && payload.role !== "admin") {
             return yield* Effect.fail(new Forbidden());
           }
-          const found = yield* setUserRole(params.id, payload.role).pipe(
-            Effect.catch((cause) => authUnavailableEffect("admin.users.setRole", cause)),
-          );
+          const found = yield* users
+            .setRole(params.id, payload.role)
+            .pipe(Effect.catch((cause) => authUnavailableEffect("admin.users.setRole", cause)));
           if (!found) return yield* Effect.fail(new UserNotFound());
           return { ok: true };
-        }).pipe(Effect.provideService(Auth, auth), Effect.provide(RuntimeContext.phantom)),
+        }),
       );
   }),
 );

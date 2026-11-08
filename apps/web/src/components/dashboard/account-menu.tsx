@@ -1,6 +1,6 @@
 import RouteLink from "@/lib/route-link";
 import { useEffect, useId, useRef, useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useSignOut } from "@/lib/auth-client";
 import { Icon, type IconName } from "./icon";
 import { type DashboardUser } from "./model";
 import { requestLeave } from "./account-leave-guard";
@@ -52,16 +52,13 @@ export default function AccountMenu({ user }: { user: DashboardUser }) {
     popoverRef.current?.hidePopover();
   };
 
+  const clerkSignOut = useSignOut();
   const signOut = async () => {
     setFeedback(null);
     setPending(true);
     try {
-      const { error } = await authClient.signOut();
-      if (error) {
-        setFeedback("Unable to sign out. Please try again.");
-      } else {
-        close();
-      }
+      await clerkSignOut();
+      close();
     } catch {
       setFeedback("Unable to sign out. Please try again.");
     } finally {

@@ -1,0 +1,82 @@
+/* In-card management entry and the preview-only details panel. */
+[data-dashboard] [data-cx="subscription-manage-entry"] {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 24px;
+}
+[data-dashboard] [data-cx="subscription-manage-entry"] button {
+  min-height: 37px;
+  padding: 8px 16px;
+  border: 1px solid color-mix(in srgb, var(--cx-text) 25%, var(--sub-surface));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cx-text) 8%, transparent);
+  color: var(--cx-text);
+  font-size: 13px;
+}
+
+[data-dashboard] [data-cx="subscription-management"] {
+  margin-top: 24px;
+  padding: 26px;
+  border: 1px solid var(--sub-edge);
+  border-radius: 20px;
+  background: var(--sub-surface);
+}
+[data-dashboard] [data-cx="subscription-management"][hidden] {
+  display: none;
+}
+[data-dashboard] [data-cx="subscription-management-top"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+[data-dashboard] [data-cx="subscription-management"] h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 550;
+}
+[data-dashboard] [data-cx="subscription-close"] {
+  margin-left: auto;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--cx-muted);
+  font-size: 13px;
+}
+[data-dashboard] [data-cx="subscription-management-note"] {
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-facts"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 25px;
+  margin: 22px 0;
+  padding: 18px 0;
+  border-block: 1px solid var(--sub-edge);
+}
+[data-dashboard] [data-cx="subscription-facts"] dt {
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-facts"] dd {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+[data-dashboard] [data-cx="subscription-management"] h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 550;
+}
+[data-dashboard] [data-cx="subscription-cancel-open"] {
+  margin-top: 10px;
+  padding: 9px 15px;
+  border: 1px solid var(--sub-danger-edge);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--sub-danger);
+  font-size: 13px;
+}

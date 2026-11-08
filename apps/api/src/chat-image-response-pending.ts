@@ -1,11 +1,11 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { ImageResponseError } from "./chat-image-response-codec.ts";
 import type { CandidateWindowRow } from "./chat-image-response-table.ts";
 
 /** Derived state only; candidate/binding/era history stays immutable. */
 export class ImageResponsePending {
-  private readonly db: AgentContext["storage"]["sql"];
-  constructor(storage: AgentContext["storage"]) {
+  private readonly db: ChatObjectContext["storage"]["sql"];
+  constructor(storage: ChatObjectContext["storage"]) {
     this.db = storage.sql;
     storage.transactionSync(() => {
       // Table existence proves initialization only if coverage and DDL commit together.

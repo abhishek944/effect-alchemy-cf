@@ -95,7 +95,12 @@ export const decodePng = async (bytes: Uint8Array): Promise<PngGeometry | null> 
         controller.close();
       },
     });
-    reader = compressed.pipeThrough(new DecompressionStream("deflate")).getReader();
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the codec is byte-oriented
+    const inflate = new DecompressionStream("deflate") as unknown as TransformStream<
+      Uint8Array,
+      Uint8Array
+    >;
+    reader = compressed.pipeThrough(inflate).getReader();
   } catch {
     return null;
   }

@@ -180,7 +180,9 @@ export const ChatCatalog = Schema.Struct({
   version: Schema.Literal(1),
   stageConfigured: Schema.Boolean,
   defaultSelection: ChatSelection,
-  models: Schema.Array(ChatCatalogEntry).check(Schema.isMaxLength(STAGE_MODEL_LIMIT)),
+  // The installed catalog is bounded by the pinned provider catalog, not by a
+  // response cap; only an explicit CHAT_MODEL_ALLOWLIST is length-limited.
+  models: Schema.Array(ChatCatalogEntry),
 });
 export type ChatCatalog = typeof ChatCatalog.Type;
 

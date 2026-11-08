@@ -6,7 +6,7 @@
  * it conflict instead of reverting someone else's choice. A consumed pointer cannot
  * be used twice, and every attempt stores its terminal receipt.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import {
   fingerprintOf,
   type AccountTheme,
@@ -21,7 +21,7 @@ import type { ThemeReceipts } from "./theme-receipts.ts";
 export type UndoResult = { readonly receipt: ActionReceipt; readonly current: AccountTheme };
 
 export const undoThemeCommand = (
-  storage: AgentContext["storage"],
+  storage: ChatObjectContext["storage"],
   record: ThemeRecord,
   receipts: ThemeReceipts,
   command: FrozenUndo,

@@ -1,94 +1,45 @@
-# GitHub CI/CD with Alchemy
+# GitHub CI
 
 ## Branch workflow
 
-1. Work on a feature branch; run `pnpm deploy:dev` locally and test its URL.
+1. Work on a feature branch and run `pnpm lint` and `pnpm build` locally.
 2. Open a PR into `main`; merge only after the `Check` job succeeds.
 3. Open a PR from tested `main` into `prod` and merge it.
-4. A push to `prod` runs checks, then `pnpm deploy:prod` in GitHub Actions.
 
-PRs targeting main/prod and pushes to either run frozen install, audit, lint,
-and build. PRs and main pushes never deploy or receive Cloudflare credentials.
-Dev testing is a manual process; CI does not prove it happened.
+PRs targeting main/prod and pushes to either run a frozen install, audit, lint and
+build. There is no deploy job and no cloud credential in this workflow: the runtime
+is a local Node process, and the repository owns no deployment configuration.
 
-`.github/workflows/ci.yml` is the only automatic deployment owner. Do not also
-connect Cloudflare Workers Builds or separately deploy the same Worker with Wrangler.
-Production deploys are serialized and do not cancel an in-progress deployment;
-GitHub may replace older queued runs with newer ones. After acquiring the deploy
-slot, a branch-head check skips superseded commits to prevent stale rollbacks.
-Avoid concurrent manual
-production deploys and do not manually cancel an infrastructure update casually.
+## What CI proves
+
+`Check` proves formatting, configuration-key parity, linting, the 200-line rule,
+Effect diagnostics, all workspace typechecks and the production build. It does not
+prove that Clerk sign-in works, that a model provider answers, or that a deployment
+succeeds, because none of those run in CI.
 
 ## One-time repository setup
 
-Configure repository environments and branch protection before enabling production deployment:
-
 1. Keep `main` as the default branch and create `prod` from tested main.
-2. In GitHub **Settings → Environments**, create **production**.
-3. Restrict that environment to deployments from the `prod` branch only.
-4. Add these **environment secrets** (not variables or committed files):
-   - `CLOUDFLARE_ACCOUNT_ID`: the production Cloudflare account.
-   - `CLOUDFLARE_API_TOKEN`: an account-scoped CI deployment token.
-5. Set public production variables `APP_NAME=highchat` and `APP_DOMAIN=highchat.space`
-   (or your intended name/hostname). A blank `APP_DOMAIN` leaves domains unmanaged.
-   `AUTH_BASE_URL` may remain blank to derive the domain HTTPS origin; an explicit
-   value must match it and have no path, query, credentials or trailing slash.
-6. For production Pi chat, optionally set nonsecret environment variable
-   `CHAT_GATEWAY_ID` to a separate production gateway and `CHAT_MODEL_ALLOWLIST`
-   to a JSON array of exact enabled catalog IDs. Blank configuration disables
-   inference; never use dev resources. Provision enabled vendors' default BYOK
-   aliases securely in Cloudflare, not GitHub/stage env. Audio stays disabled in prod.
-7. Protect main and prod: require PRs and the `Check` status, disallow force pushes,
-   and restrict direct prod pushes. Reviewers for production environment approvals
-   are optional: enable them if deployment should pause for human approval.
+2. Protect main and prod: require PRs and the `Check` status, disallow force pushes,
+   and restrict direct prod pushes.
 
-Environment secrets/protection availability depends on your GitHub plan; private
-repositories may require a paid plan. Verify availability before enabling prod.
-
-GitHub's contents permission is read-only; checkout does not persist its token.
-Cloudflare secrets are passed only to the deploy step, not install/build-only PR
-jobs or package lifecycle scripts. Trusted prod code still runs with deployment
-credentials; branch protection and environment restrictions must be configured.
-
-## Cloudflare credentials and state
-
-Use a production-only account/profile locally, preferably separate from dev.
-The CI token needs the permissions used by this stack: Workers Scripts,
-D1, account settings/subdomain access, and the shared state's Secrets Store
-and edge-preview authentication. Use the [Alchemy CI guide](https://alchemy.run/environments/ci/)
-and scope the token to the intended account; a generic Workers-only token may
-not cover D1, private chat-file R2 bucket management or state access. Do not grant API-token-creation permissions to
-normal deployment CI. Additional stack resources may require more permissions.
-
-Before enabling the workflow, bootstrap the **production account's** encrypted
-state store once locally with approved credentials:
-
-```sh
-pnpm --filter @highchat/infra exec alchemy provider cloudflare bootstrap --profile prod
-```
-
-Keep the remote state store compatible with the pinned Alchemy version. CI fails
-if it is missing/outdated; this workflow does not pass `--yes` or automatically
-bootstrap/upgrade it. Do not delete state to make an error disappear.
-
-Alchemy reads Cloudflare credentials from the CI environment, not local profiles.
-The script's `--profile prod` selects the name; CI needs no copied profile files.
-The existing stack already uses shared Cloudflare state, not ephemeral local state.
+No environment secrets are needed by this workflow. Provider credentials belong to
+whichever machine runs the server, never to GitHub.
 
 ## Private environment configuration
 
-Env files remain ignored by Git. Install creates blank/default dev/prod files.
-On a prod push only, `scripts/configure-ci.mjs` reconstructs the runner's
-`.env.prod` with the same keys, `ALLOW_PRODUCTION=true`, blank
-Access allowlist (prod has no developer wall), the optional auth origin and
-nonsecret `APP_NAME`, `APP_DOMAIN`, `CHAT_GATEWAY_ID` and `CHAT_MODEL_ALLOWLIST`.
-The deployment launcher selects prod before lint/build and passes public branding
-into Turbo hashing; the earlier unprivileged Check job uses default dev values.
-Production speech allowlists stay blank and no audio token/profile is loaded.
-This does not change your local file. The explicit env file overrides shell
-values; the production opt-in must be written into that file.
+`packages/config/.env.local` and `.env.prod` stay gitignored and must contain
+identical keys; `pnpm lint` fails otherwise. They hold only public, nonsecret
+values: `APP_NAME`, `APP_DOMAIN`, `AUTH_BASE_URL`, `CHAT_MODEL_ALLOWLIST`,
+`CHAT_HOST_URL` and `CLERK_PUBLISHABLE_KEY`.
 
-Update the shared defaults and this CI adapter together when adding common keys.
-Do not upload env files, profiles, `.alchemy` state, or secrets as build artifacts.
-First live deployment and auth/session checks are user-owned; no production
-workflow or cloud deployment was executed as part of this repository change.
+`CLERK_SECRET_KEY`, `OPENROUTER_API_KEY` and the Pi host token are process
+environment values on the machine that runs the server. Install creates blank
+dev/prod files when they are missing; it never overwrites existing values.
+
+## Deployments
+
+There is none. Running the application is `pnpm dev` locally or `pnpm start` on a
+machine you own. Adding a deployment target is a separate decision that must bring
+its own configuration, credential handling and rollback plan; this repository does
+not ship one and no deployment was performed as part of this change.

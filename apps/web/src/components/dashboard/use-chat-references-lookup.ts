@@ -48,7 +48,8 @@ export function useChatReferencesLookup(chatId: string, search: string | null) {
   const error = read?.key === key ? read.error : null;
   return {
     key,
-    files: page?.files ?? [],
+    // Document originals are download-only; they cannot become unreadable references.
+    files: (page?.files ?? []).filter((file) => file.kind !== "office"),
     state: page ? ("ready" as const) : error ? ("error" as const) : ("loading" as const),
     error,
     retry: () => setAttempt((value) => value + 1),

@@ -82,17 +82,20 @@ async function originalBytes(source: AttachmentSource, signal: AbortSignal): Pro
   }
 }
 
-/** Reads content only; never imports Office, evaluates formulas or renders markup. */
+/** Reads content only; never evaluates formulas or renders markup. */
 export async function readAttachmentContent(
   source: AttachmentSource,
   signal: AbortSignal,
 ): Promise<AttachmentContent> {
   signal.throwIfAborted();
-  // Office content is native state, not a browser parsing format. No private bytes are read.
+  // Document originals are downloaded, never decoded in the browser or sent to a model.
   if (source.kind === "office")
     return {
       sections: [],
-      note: `${source.name} · ${source.mediaType} · ${source.byteSize} bytes. Download the original, or open it in the panel to create a native draft.`,
+      note:
+        `${source.name} · ${source.mediaType} · ${source.byteSize} bytes. ` +
+        "This document is stored as an ordinary file: its content is not read, previewed " +
+        "or sent to the model. Download the original to open it in a desktop app.",
     };
   const bytes = await originalBytes(source, signal);
   signal.throwIfAborted();

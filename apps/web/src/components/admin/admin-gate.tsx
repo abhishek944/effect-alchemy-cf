@@ -2,6 +2,7 @@ import type { MouseEvent, ReactNode } from "react";
 import AdminLogin from "@/components/admin/admin-login";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { adminHomeHref } from "@/lib/admin-home";
 import { navigate } from "@/lib/router";
 
 function Centered({ children }: { children: ReactNode }) {
@@ -13,6 +14,8 @@ function Centered({ children }: { children: ReactNode }) {
 }
 
 function backHome(event: MouseEvent<HTMLAnchorElement>) {
+  // A local admin origin leaves for the main UI through the absolute href.
+  if (adminHomeHref !== "/") return;
   event.preventDefault();
   navigate("/");
 }
@@ -21,7 +24,7 @@ function BackHomeLink({ asButton = false }: { asButton?: boolean }) {
   if (asButton) {
     return (
       <Button className="w-full" variant="ghost" asChild>
-        <a href="/" onClick={backHome}>
+        <a href={adminHomeHref} onClick={backHome}>
           Back to home
         </a>
       </Button>
@@ -30,7 +33,7 @@ function BackHomeLink({ asButton = false }: { asButton?: boolean }) {
   return (
     <a
       className="block text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-      href="/"
+      href={adminHomeHref}
       onClick={backHome}
     >
       Back to home
@@ -52,17 +55,11 @@ export function CheckingScreen() {
   );
 }
 
-export function LoginScreen({
-  notice,
-  onAuthenticated,
-}: {
-  notice: string | null;
-  onAuthenticated: () => void;
-}) {
+export function LoginScreen({ notice }: { notice: string | null }) {
   return (
     <Centered>
       <div className="w-full max-w-md space-y-4">
-        <AdminLogin notice={notice} onAuthenticated={onAuthenticated} />
+        <AdminLogin notice={notice} />
         <BackHomeLink />
       </div>
     </Centered>
@@ -92,13 +89,11 @@ export function DeniedScreen({
   notice,
   actionError,
   signOutPending,
-  onUseToken,
   onSignOut,
 }: {
   notice: string;
   actionError: string | null;
   signOutPending: boolean;
-  onUseToken: () => void;
   onSignOut: () => void;
 }) {
   return (
@@ -117,9 +112,6 @@ export function DeniedScreen({
               {actionError}
             </p>
           )}
-          <Button className="w-full" onClick={onUseToken}>
-            Use one-time access
-          </Button>
           <Button
             className="w-full"
             variant="outline"

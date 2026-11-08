@@ -1,7 +1,7 @@
-import { Auth } from "@highchat/auth";
-import { RuntimeContext } from "alchemy";
+import { ClerkIdentity } from "@highchat/auth";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
+import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import { authUnavailableEffect } from "./auth-failure.ts";
 import { AuthenticationUnavailable, CurrentUser, Unauthorized } from "./model.ts";
 
@@ -14,20 +14,23 @@ export class Authentication extends HttpApiMiddleware.Service<
   static readonly layer = Layer.effect(
     Authentication,
     Effect.gen(function* () {
-      const auth = yield* Auth;
+      const identity = yield* ClerkIdentity;
       return (httpEffect) =>
         Effect.gen(function* () {
-          const session = yield* auth.getSession().pipe(
-            Effect.catch((cause) => authUnavailableEffect("auth.session", cause)),
-            Effect.catchDefect((defect) => authUnavailableEffect("auth.session", defect)),
+          const request = yield* HttpServerRequest.HttpServerRequest;
+          const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
+          const current = yield* identity.current(web).pipe(
+            Effect.catchTag("Unauthenticated", () => Effect.fail(new Unauthorized())),
+            Effect.catchTag("IdentityUnavailable", (cause) =>
+              authUnavailableEffect("auth.identity", cause),
+            ),
           );
-          if (session === null) return yield* Effect.fail(new Unauthorized());
           return yield* Effect.provideService(httpEffect, CurrentUser, {
-            id: session.user.id,
-            name: session.user.name,
-            email: session.user.email,
+            id: current.id,
+            name: current.name,
+            email: current.email,
           });
-        }).pipe(Effect.provide(RuntimeContext.phantom));
+        });
     }),
   );
 }

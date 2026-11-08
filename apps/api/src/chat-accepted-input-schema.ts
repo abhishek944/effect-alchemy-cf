@@ -1,13 +1,13 @@
 import { Schema } from "effect";
-import type { ChatReferenceInputs, OfficeSendTarget } from "@highchat/office-contract";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
 import { FileMediaType, FileName } from "./chat-attachment-schema.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
-import { isOfficeMediaType } from "./chat-office-media.ts";
+import { isOfficeMediaType } from "./chat-files-office.ts";
 
 /**
  * Persisted accepted-input records predate this module. These schemas are moved here
- * unchanged (same fields, checks and encoded values) so image and Office capabilities share
- * one accepted-input representation without rewriting stored rows.
+ * unchanged (same fields, checks and encoded values) so references and chat
+ * capabilities share one accepted-input representation without rewriting stored rows.
  */
 export const AcceptedInputDigest = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
 export type AcceptedInputDigest = typeof AcceptedInputDigest.Type;
@@ -93,7 +93,6 @@ export type AcceptedInputRecord = {
   readonly conversationId: string;
   readonly inputDigest: AcceptedInputDigest;
   readonly originals: readonly AcceptedOriginalBinding[];
-  readonly officeTarget?: OfficeSendTarget | undefined;
   readonly referenceInputs?: ChatReferenceInputs | undefined;
 };
 

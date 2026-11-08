@@ -5,7 +5,8 @@
  * second paid attempt. An expired playback snapshot that was already claimed
  * fails closed instead of re-freezing a different voice.
  */
-import type { AgentContext } from "agents";
+import type { SQLInputValue } from "node:sqlite";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { decodeSpeechPreferences, type SpeechPreferences } from "./chat-speech-schema.ts";
 import { canonicalSpeechPreferences, SpeechPlaybackSnapshots } from "./chat-speech-playback.ts";
 
@@ -49,11 +50,11 @@ type Selection =
   | { readonly ok: false; readonly code: SpeechClaimFailure };
 
 export class SpeechClaimStore {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
   private readonly playbacks: SpeechPlaybackSnapshots;
   private readonly preferences: () => SpeechPreferences;
 
-  constructor(storage: AgentContext["storage"], options: SpeechClaimStoreOptions) {
+  constructor(storage: ChatObjectContext["storage"], options: SpeechClaimStoreOptions) {
     this.storage = storage;
     this.playbacks = new SpeechPlaybackSnapshots(storage);
     this.preferences = options.preferences;
@@ -86,7 +87,7 @@ export class SpeechClaimStore {
     }
   }
 
-  private rows(sql: string, ...params: readonly unknown[]): number {
+  private rows(sql: string, ...params: readonly SQLInputValue[]): number {
     const row = this.storage.sql.exec<{ total: number }>(sql, ...params).toArray()[0];
     return row?.total ?? 0;
   }

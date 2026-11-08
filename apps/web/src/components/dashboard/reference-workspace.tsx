@@ -8,11 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createEmptyHistoryState } from "@lexical/history";
-import {
-  freezeOfficeSendTarget,
-  type ChatReferenceInputs,
-  type OfficeSendTarget,
-} from "@highchat/office-contract";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
 import type { LexicalEditor } from "lexical";
 import type {
   ReferenceEditorBinding,
@@ -21,7 +17,7 @@ import type {
 } from "./reference-types";
 import { prepareReference } from "./reference-admission";
 import { freezeReferenceObservation } from "./reference-observation";
-import { nativeReferenceKey, originalReferenceKey } from "./reference-types";
+import { originalReferenceKey } from "./reference-types";
 
 type Session = {
   editor: LexicalEditor | null;
@@ -37,7 +33,6 @@ type Workspace = {
   observe: (observation: ReferenceObservation) => void;
   observations: (chatId: string) => readonly ReferenceObservation[];
   close: (observation: ReferenceObservation) => void;
-  sendTarget: (chatId: string, target: OfficeSendTarget) => OfficeSendTarget;
   add: (
     source: ReferenceSource,
     observation?: ReferenceObservation | null,
@@ -51,12 +46,9 @@ type Workspace = {
 };
 const Context = createContext<Workspace | null>(null);
 const scopeKey = (chatId: string, key: string) => JSON.stringify([chatId, key]);
-const selectSource = (rows: readonly ReferenceSource[] | undefined, viewId?: string) =>
-  (viewId
-    ? rows?.find((source) => source.kind === "native" && source.target.viewId === viewId)
-    : rows?.at(-1)) ?? null;
+const selectSource = (rows: readonly ReferenceSource[] | undefined) => rows?.at(-1) ?? null;
 
-/** Mount once inside the account boundary, above ChatStoreProvider and preview/native siblings. */
+/** Mount once inside the account boundary, above ChatStoreProvider and preview siblings. */
 export function ReferenceWorkspaceProvider({ children }: { children: ReactNode }) {
   const sources = useRef(new Map<string, readonly ReferenceSource[]>());
   const entries = useRef(new Map<string, Entry>());
@@ -67,11 +59,7 @@ export function ReferenceWorkspaceProvider({ children }: { children: ReactNode }
   const value = useMemo<Workspace>(
     () => ({
       registerSource(source) {
-        const canonical =
-          source.kind === "native"
-            ? nativeReferenceKey(source.target)
-            : originalReferenceKey(source.file.id);
-        if (source.key !== canonical)
+        if (source.key !== originalReferenceKey(source.file.id))
           throw new Error("Use the canonical reference source key to avoid duplicate aliases.");
         const key = scopeKey(source.chatId, source.key);
         sources.current.set(key, [...(sources.current.get(key) ?? []), source]);
@@ -97,10 +85,7 @@ export function ReferenceWorkspaceProvider({ children }: { children: ReactNode }
         entries.current.set(key, {
           observation: freezeReferenceObservation(
             observation,
-            selectSource(
-              sources.current.get(key),
-              observation.kind === "native" ? observation.capture.viewId : undefined,
-            ) ?? undefined,
+            selectSource(sources.current.get(key)) ?? undefined,
           ),
           closed: false,
         });
@@ -119,15 +104,6 @@ export function ReferenceWorkspaceProvider({ children }: { children: ReactNode }
         });
         changed();
       },
-      sendTarget(chatId, target) {
-        const entry = entries.current.get(scopeKey(chatId, nativeReferenceKey(target)));
-        if (!entry?.closed || !target.context?.sheet) return target;
-        const { context, ...identity } = target;
-        return freezeOfficeSendTarget({
-          ...identity,
-          ...(context.attachmentIds ? { context: { attachmentIds: context.attachmentIds } } : {}),
-        });
-      },
       async add(source, observation = null, replace) {
         const binding = editors.current.get(source.chatId);
         if (!binding) throw new Error("Open this chat's composer before adding a reference.");
@@ -135,16 +111,7 @@ export function ReferenceWorkspaceProvider({ children }: { children: ReactNode }
         const frozenObservation = observation
           ? freezeReferenceObservation(observation, source)
           : null;
-        const owning =
-          source.kind === "native"
-            ? selectSource(
-                sources.current.get(scopeKey(source.chatId, source.key)),
-                observation?.kind === "native" ? observation.capture.viewId : source.target.viewId,
-              )
-            : source;
-        if (!owning)
-          throw new Error("The exact source frame is unavailable. Reopen it and reselect.");
-        const prepared = await prepareReference(owning, frozenObservation);
+        const prepared = await prepareReference(source, frozenObservation);
         if (editors.current.get(source.chatId) !== binding)
           throw new Error(
             "The composer changed before the reference was ready. Your draft is kept.",
@@ -154,14 +121,10 @@ export function ReferenceWorkspaceProvider({ children }: { children: ReactNode }
       async view(observation) {
         const source = selectSource(
           sources.current.get(scopeKey(observation.chatId, observation.sourceKey)),
-          observation.kind === "native" ? observation.capture.viewId : undefined,
         );
         if (!source || source.kind !== observation.kind)
           throw new Error("This source is no longer available. Reopen it to view the selection.");
-        if (source.kind === "native" && observation.kind === "native")
-          await source.reveal(observation.capture);
-        else if (source.kind === "original" && observation.kind === "original")
-          await source.reveal(observation.capture);
+        await source.reveal(observation.capture);
       },
       bindEditor(chatId, editor) {
         editors.current.set(chatId, editor);

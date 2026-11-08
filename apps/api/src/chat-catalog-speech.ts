@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { Schema } from "effect";
 import { DomainUuid } from "./chat-capabilities.ts";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
@@ -33,9 +33,9 @@ const SettleBody = Schema.Struct({
 
 /** Owner-actor speech admission; a consumed operation never pays for a replay. */
 export class ChatCatalogSpeech {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
   private readonly claims: SpeechClaimStore;
-  constructor(storage: AgentContext["storage"], preferences: ChatPreferencesStore) {
+  constructor(storage: ChatObjectContext["storage"], preferences: ChatPreferencesStore) {
     this.storage = storage;
     this.claims = new SpeechClaimStore(storage, {
       preferences: () => preferences.speech().preferences,

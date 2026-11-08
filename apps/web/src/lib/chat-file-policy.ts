@@ -6,10 +6,10 @@
  * filename extension only — an operating-system MIME guess (.ts as video/mp2t,
  * .js as application/javascript, .yaml as application/yaml) is never trusted.
  * Content is still validated: fatal UTF-8 with the control policy for text, real
- * image signatures for JPEG/PNG/WebP, and bounded OOXML structure for Office.
+ * image signatures for JPEG/PNG/WebP, and bounded OOXML structure for XLSX/DOCX/PPTX.
  */
 import type { FileKind } from "@/lib/chat-capability-file-types";
-import { officeMediaType } from "@/lib/chat-office-media";
+import { officeMediaType } from "@/lib/chat-file-office";
 
 export type ResolvedMedia = { readonly kind: FileKind; readonly mediaType: string };
 

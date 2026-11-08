@@ -2,7 +2,6 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { chatIdFromPath, chatPath, isChatLanding } from "@/lib/chat-route";
 import { navigate } from "@/lib/router";
 import { requestLeave } from "./account-leave-guard";
-import { useWorkspaceOffice } from "./workspace-office-context";
 import { rememberChat, rememberedChat } from "./workspace-session";
 
 function selectedChat(pathname: string, remembered: string | null): string | null {
@@ -13,8 +12,7 @@ function selectedChat(pathname: string, remembered: string | null): string | nul
 }
 
 /** URL owns explicit selection; Settings keeps the last chat and its draft alive. */
-export function useChatSelection(pathname: string) {
-  const { accountId } = useWorkspaceOffice();
+export function useChatSelection(pathname: string, accountId: string) {
   const [selection, setSelection] = useState(() => {
     const remembered = chatIdFromPath(pathname) ?? rememberedChat(accountId);
     return { id: selectedChat(pathname, remembered), remembered, generation: 0 };

@@ -12,7 +12,7 @@
  */
 import { Schema } from "effect";
 import { DomainUuid, IsoTimestamp } from "./chat-capabilities.ts";
-import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "./chat-office-media.ts";
+import { isOfficeMediaType, OFFICE_MEDIA_PATTERN } from "./chat-files-office.ts";
 
 export const MAX_EXCERPT_CHARS = 2_000;
 export const ABANDONED_UPLOAD_TTL_MS = 86_400_000;
@@ -33,7 +33,7 @@ export const FILE_STATES = ["uploading", "ready", "failed", "expired", "unavaila
 export const FileState = Schema.Literals(FILE_STATES);
 export type FileState = typeof FileState.Type;
 
-/** Allowlisted image, UTF-8 text/JSON and the three supported Office containers. */
+/** Allowlisted image, UTF-8 text/JSON and the three supported OOXML documents. */
 export const FileMediaType = Schema.String.check(
   Schema.isPattern(
     new RegExp(
@@ -85,8 +85,7 @@ export const FileDescriptor = Schema.Struct({
 }).check(
   Schema.makeFilter((file) => {
     if ((file.kind === "image") !== file.mediaType.startsWith("image/")) return false;
-    if (file.kind === "office" && !isOfficeMediaType(file.mediaType)) return false;
-    if (file.kind !== "office" && isOfficeMediaType(file.mediaType)) return false;
+    if ((file.kind === "office") !== isOfficeMediaType(file.mediaType)) return false;
     if (file.state !== "ready") return true;
     if (file.kind === "image")
       return file.width !== null && file.height !== null && file.excerpt === null;

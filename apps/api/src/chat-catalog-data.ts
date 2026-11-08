@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { Schema } from "effect";
 import type { ChatSqlStorage } from "./chat-ledger.ts";
 import type { Chat } from "./chat-model.ts";
@@ -39,9 +39,9 @@ const catalogChat = (db: ChatSqlStorage, id: string): Chat | null => {
 
 /** Owner metadata transactions, separate from paid admission and native execution. */
 export class ChatCatalogData {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
   private readonly preferences: ChatPreferencesStore;
-  constructor(storage: AgentContext["storage"], preferences: ChatPreferencesStore) {
+  constructor(storage: ChatObjectContext["storage"], preferences: ChatPreferencesStore) {
     this.storage = storage;
     this.preferences = preferences;
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS chats (

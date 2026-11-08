@@ -1,5 +1,5 @@
-import type * as cf from "@cloudflare/workers-types";
-import type { AgentContext } from "agents";
+import type * as cf from "./platform.ts";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { ChatFilesCatalog } from "./chat-files-catalog.ts";
 import { handleChatFilesCatalogRequest, receiptProbe } from "./chat-files-catalog-http.ts";
 import { copyToRetained, deleteStoredObjects } from "./chat-files-store.ts";
@@ -17,7 +17,7 @@ export class ChatCatalogFiles {
   private readonly catalog: ChatFilesCatalog;
   private readonly chat: (id: string) => Chat | null;
   constructor(
-    ctx: AgentContext,
+    ctx: ChatObjectContext,
     env: CatalogFilesEnv,
     chat: (id: string) => Chat | null,
     owner: () => Promise<string | undefined>,

@@ -88,63 +88,6 @@ export function reportBrowserEvent(input: BrowserEventInput): void {
   else console.log(line);
 }
 
-export type OfficeRuntimePhase = "init" | "snapshot" | "input" | "flush" | "ack" | "cleanup";
-export class OfficeRuntimeError extends Error {
-  readonly phase: OfficeRuntimePhase;
-  readonly reason: string;
-  readonly viewId: string | null;
-  readonly operation: string;
-  constructor(
-    phase: OfficeRuntimePhase,
-    reason: string,
-    message: string,
-    viewId: string | null,
-    operation: string,
-    cause?: unknown,
-  ) {
-    super(message, cause === undefined ? undefined : { cause });
-    this.name = "OfficeRuntimeError";
-    this.phase = phase;
-    this.reason = reason;
-    this.viewId = viewId;
-    this.operation = operation;
-    reportBrowserEvent({ component: "web", operation, phase, reason, associationId: viewId });
-  }
-}
-/** Fixed user-safe copy per reason; the record carries phase/reason/view association. */
-const OFFICE_MESSAGES: Record<string, string> = {
-  "runtime-unavailable": "Office services are unavailable. Reload the page and try again.",
-  "open-unconfirmed": "The Office document could not be opened. Reload and try again.",
-  "document-changed": "This document has changed. Check your changes before continuing.",
-  "frozen-view": "This document could not be loaded. Reopen it and try again.",
-  "generation-changed": "This draft has changed. Keep this document open and check your changes.",
-  "branch-changed": "This draft has changed. Keep this document open and check your changes.",
-  "anchor-changed": "Save and reopen this document before sending your message.",
-  "editor-unavailable": "The document editor is unavailable. Please try again.",
-  "channel-unconfirmed": "Could not connect to the document editor. Please try again.",
-  "channel-expired": "Your document session has expired. Reopen the document to continue.",
-  "ack-unavailable":
-    "We couldn’t confirm your changes were saved. Keep this document open and try again.",
-  "drain-unconfirmed":
-    "We couldn’t confirm your changes were saved. Keep this document open and try again.",
-  "revoke-unconfirmed": "We couldn’t close the document editor. Please try again.",
-  "head-changed": "The saved document has changed. Reopen it to continue.",
-};
-/** Classify once with a fixed phase/reason; aborts and classified errors pass through. */
-export function officeFail(
-  op: string,
-  phase: OfficeRuntimePhase,
-  reason: string,
-  viewId: string | null,
-  cause?: unknown,
-  signal?: AbortSignal,
-): never {
-  if (cause instanceof OfficeRuntimeError) throw cause;
-  if (signal?.aborted) throw cause ?? signal.reason;
-  const message = OFFICE_MESSAGES[reason] ?? "The Office request could not be completed.";
-  throw new OfficeRuntimeError(phase, reason, message, viewId, op, cause);
-}
-
 const onError = () =>
   reportBrowserEvent({
     component: "web",

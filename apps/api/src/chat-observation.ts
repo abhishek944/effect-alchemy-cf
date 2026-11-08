@@ -1,10 +1,5 @@
-import {
-  diagnosticMetadata,
-  reportEvent,
-  reportFailure,
-  type FailureContext,
-} from "@highchat/diagnostics";
-import type { LiveState, SubmissionRecord } from "@earendil-works/pi-durable";
+import { diagnosticMetadata, reportFailure, type FailureContext } from "@highchat/diagnostics";
+import type { SubmissionRecord } from "./chat-transcript-types.ts";
 import { Effect, ErrorReporter, References } from "effect";
 
 /** Safe, nonsecret composition labels; absent values stay absent. */
@@ -40,7 +35,6 @@ const handlerOperation = (request: Request): string => {
   if (head === "messages") return "send";
   if (head === "stop") return "stop";
   if (head === "title") return "title";
-  if (head === "resolve") return "office-task";
   if (head === "usage" || head === "image-usage") return "usage";
   if (head === "images" || head === "image-files") return "images";
   if (head === "files") return "files";
@@ -134,44 +128,9 @@ export const reportSettlement = (
     event: cancelled ? "application.cancelled" : "application.failure",
     ...(reason === "settlement-stale" || reason === "settlement-reset" ? { level: "WARN" } : {}),
     operationId: ids.operationId,
-    submissionId: String(record.id),
+    submissionId: record.id,
     chatId: ids.chatId,
   });
-};
-
-export type RetryWatch = { key: string | null };
-
-/** One INFO phase per observed retry attempt; provider retry text is never read. */
-export const watchRetry = (
-  watch: RetryWatch,
-  chatId: string,
-  live: {
-    readonly operation: string | null;
-    readonly native?: Readonly<LiveState> | undefined;
-  },
-  metadata: ChatObjectMetadata,
-): boolean => {
-  const generation = live.native?.generation;
-  if (generation?.retry === undefined) {
-    watch.key = null;
-    return false;
-  }
-  const key = `${live.operation ?? "none"}:${generation.attempt ?? 0}`;
-  if (watch.key !== key) {
-    watch.key = key;
-    reportEvent({
-      ...metadata,
-      component: "chat-runtime",
-      operation: "generation-retry",
-      phase: "retry-wait",
-      reason: "retry-deferred",
-      outcome: "unknown",
-      chatId,
-      operationId: live.operation ?? undefined,
-      taskId: live.native?.run?.taskId,
-    });
-  }
-  return true;
 };
 
 /** One final report at the send owner; a failure its final owner already reported stays silent. */

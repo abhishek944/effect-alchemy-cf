@@ -25,11 +25,7 @@ export default function App() {
   if (!checkedSession && isPending && !isPublicAuthPath(pathname)) return <SessionPending />;
   return (
     <Suspense fallback={<SessionPending message="Loading page…" />}>
-      <PublicPages
-        pathname={pathname}
-        checking={isPending}
-        sessionError={error ? error.message || "Please try again." : null}
-      />
+      <PublicPages pathname={pathname} checking={isPending} sessionError={error ?? null} />
     </Suspense>
   );
 }

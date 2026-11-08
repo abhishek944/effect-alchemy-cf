@@ -1,5 +1,5 @@
 import type { Message } from "@earendil-works/pi-ai";
-import { UserEntry, type EntryRecord } from "@earendil-works/pi-durable";
+import { UserEntry, type EntryRecord } from "./chat-transcript-types.ts";
 import { RefreshFence } from "./chat-contract.ts";
 import type { ChatSendRecords, PublicChatInput } from "./chat-send-records.ts";
 import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";

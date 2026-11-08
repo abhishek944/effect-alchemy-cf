@@ -1,5 +1,5 @@
 import type { ImageContent, UserMessage } from "@earendil-works/pi-ai";
-import type { InputOccurrence } from "./chat-image-request-types.ts";
+import type { ImageInputOccurrence } from "./chat-image-hydration-types.ts";
 import { legacyHydrationByteSize } from "./chat-image-hydration-codec.ts";
 import {
   hydrationFailure,
@@ -8,7 +8,7 @@ import {
 } from "./chat-image-hydration-types.ts";
 
 export type HydrationOccurrence = {
-  readonly occurrence: InputOccurrence;
+  readonly occurrence: ImageInputOccurrence;
   readonly message: UserMessage;
 };
 export type ImageHydrationPlan = {
@@ -42,7 +42,6 @@ export const planImageHydration = (input: ImageHydrationInput): ImageHydrationPl
     occurrences.push({ occurrence: { ...occurrence, originals: readable }, message });
     for (const original of readable) {
       const kind = original.kind;
-      if (kind === "office") continue;
       if (kind === "image" && !input.model.imageInput) hydrationFailure("model_image_unsupported");
     }
   }

@@ -1,7 +1,5 @@
 import { Schema } from "effect";
 import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
-import type { OfficeSessionBinding } from "@highchat/auth/office-session";
-import { decodeChatOfficeSession } from "./chat-office-session.ts";
 import { ChatSelection } from "./chat-capabilities.ts";
 import { FileDescriptor } from "./chat-attachment-schema.ts";
 import { decodeOption } from "./chat-internal.ts";
@@ -50,7 +48,6 @@ export class ChatSendRecords {
       "account_chat",
       "account_intent",
       "logical_operation_id",
-      "office_session",
     ]) {
       if (!columns.includes(column)) db.exec(`ALTER TABLE send_inputs ADD COLUMN ${column} TEXT`);
     }
@@ -111,7 +108,6 @@ export class ChatSendRecords {
     record: SendRecord,
     account?: AccountOperationRecord,
     logicalOperationId?: string,
-    officeSession?: OfficeSessionBinding,
   ): boolean {
     const known = this.db
       .exec<{ identity_hash: string }>(
@@ -123,8 +119,8 @@ export class ChatSendRecords {
     this.db.exec(
       `INSERT INTO send_inputs
        (operation_id, identity_hash, metadata, account_owner, account_chat, account_intent,
-        logical_operation_id, office_session)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        logical_operation_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       operationId,
       identityHash,
       JSON.stringify(record),
@@ -132,7 +128,6 @@ export class ChatSendRecords {
       account?.chatScope ?? null,
       account === undefined ? null : JSON.stringify(account),
       logicalOperationId ?? operationId,
-      officeSession === undefined ? null : JSON.stringify(officeSession),
     );
     return true;
   }
@@ -161,17 +156,6 @@ export class ChatSendRecords {
       operationId,
       identityHash: row.identity_hash,
     });
-  }
-
-  /** Private original association only; never include it in history/public metadata. */
-  officeSession(operationId: string): OfficeSessionBinding | null {
-    const row = this.db
-      .exec<{ office_session: string | null }>(
-        "SELECT office_session FROM send_inputs WHERE operation_id = ?",
-        operationId,
-      )
-      .toArray()[0];
-    return decodeChatOfficeSession(row?.office_session ?? null);
   }
 
   forEntry(entryId: number): PublicChatInput | null {

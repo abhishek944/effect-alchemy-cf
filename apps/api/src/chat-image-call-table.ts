@@ -1,10 +1,10 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import type { ImageCallAdmission } from "./chat-image-call-evidence.ts";
 import type { ImageCallState } from "./chat-image-call-schema.ts";
 import { imageCallTotals, isUnsettledImageCall } from "./chat-image-call-cost.ts";
 import { CALL_STATE_BYTES, callJson } from "./chat-image-call-values.ts";
 
-export type CallSql = AgentContext["storage"]["sql"];
+export type CallSql = ChatObjectContext["storage"]["sql"];
 export type ImageAssistantPosition = { readonly entry: number; readonly index: number };
 export type ImageCallRow = {
   call_key: string;
@@ -45,7 +45,7 @@ export type CallAggregate = {
 };
 export class ImageCallTable {
   readonly sql: CallSql;
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.sql = storage.sql;
     this.sql.exec(`CREATE TABLE IF NOT EXISTS chat_image_call_evidence (
       call_key TEXT PRIMARY KEY NOT NULL, operation_id TEXT NOT NULL, logical_operation_id TEXT NOT NULL,

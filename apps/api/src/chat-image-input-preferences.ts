@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { Option, Schema } from "effect";
 import { ImagePreferencesView } from "./chat-image-preference-schema.ts";
 import { ImageResponseCapability } from "./chat-image-response-schema.ts";

@@ -1,4 +1,3 @@
-import type { Ai } from "@cloudflare/workers-types";
 import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
 import { digestText } from "./chat-internal.ts";
@@ -10,7 +9,7 @@ import {
   type ChatTitleNamer,
 } from "./chat-title.ts";
 
-export type ChatTitleEnv = { AI?: Ai; CHAT_GATEWAY_ID?: string };
+export type ChatTitleEnv = { OPENROUTER_API_KEY?: string };
 
 type ChatStamp = { readonly updatedAt: string };
 
@@ -120,7 +119,7 @@ export class ChatTitles {
     this.db = options.db;
     ensureSchema(this.db);
     try {
-      this.namer = makeChatTitleNamer(options.env.AI, options.env.CHAT_GATEWAY_ID);
+      this.namer = makeChatTitleNamer(options.env);
     } catch (error) {
       reportTitleFailure(error, "title.setup", "title_namer_unavailable");
       this.namer = null;

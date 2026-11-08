@@ -7,15 +7,15 @@
  * are forced attachments with no-store/nosniff/sandbox headers and verified
  * complete bytes, so nothing renders on the application origin.
  */
-import type * as cf from "@cloudflare/workers-types";
-import { Auth } from "@highchat/auth";
-import * as Cloudflare from "alchemy/Cloudflare";
-import { RuntimeContext } from "alchemy";
+import type * as cf from "./platform.ts";
+import { RuntimeEnv } from "@highchat/platform";
 import { Cause, Effect, Schema } from "effect";
 import { reportFailureEffect } from "@highchat/diagnostics";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall } from "./chat-bindings.ts";
+import { bodyInit } from "./binary.ts";
+import { nativeIdentity } from "./native-auth.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { SkillId, SkillList, SkillUploadReceipt, SkillVersionRef } from "./skills-model.ts";
 import { invalidSkill, internalFailure, jsonResponse, unavailable } from "./skills-http-shared.ts";
@@ -47,7 +47,7 @@ const downloadResponse = (
     (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
   return HttpServerResponse.fromWeb(
-    new Response(bytes, {
+    new Response(bodyInit(bytes), {
       headers: {
         "cache-control": "no-store",
         "x-content-type-options": "nosniff",
@@ -62,20 +62,22 @@ const downloadResponse = (
 };
 
 export const handleSkills = Effect.gen(function* () {
-  const auth = yield* Auth;
   const ns = yield* ChatNamespaces;
-  const env: Readonly<Record<string, unknown>> = yield* Cloudflare.WorkerEnvironment;
+  const env = yield* RuntimeEnv;
   const request = yield* HttpServerRequest.HttpServerRequest;
   const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
   const url = new URL(web.url);
   const bucket = env.CHAT_FILES;
   if (web.method !== "GET" && web.headers.get("origin") !== url.origin)
     return unavailable("This request must come from the application origin.", 403);
-  const session = yield* auth.getSession();
-  if (session === null) return unavailable("Sign in to manage your skills.", 401);
-  const catalog = ns.catalog(session.user.id);
+  const identity = yield* nativeIdentity;
+  if (identity.ownerId === null)
+    return identity.outage
+      ? unavailable("Authentication is temporarily unavailable.", 503)
+      : unavailable("Sign in to manage your skills.", 401);
+  const catalog = ns.catalog(identity.ownerId);
   const scope = catalog.id.toString();
-  const owner = { "x-chat-owner": session.user.id };
+  const owner = { "x-chat-owner": identity.ownerId };
 
   if (url.pathname === "/api/skills/download") {
     if (web.method !== "GET") return invalidSkill("Download uses GET only.", 405);
@@ -137,7 +139,6 @@ export const handleSkills = Effect.gen(function* () {
   if (!bucketBinding(bucket)) return unavailable("Private skill storage is not configured.");
   return yield* uploadSkill({ catalog, owner, scope, bucket, url, web });
 }).pipe(
-  Effect.provide(RuntimeContext.phantom),
   Effect.tapCause((cause) =>
     Cause.hasInterruptsOnly(cause)
       ? Effect.void

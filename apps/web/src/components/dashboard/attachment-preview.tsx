@@ -2,7 +2,6 @@ import { useEffect, useId, useRef } from "react";
 import type { LocalFile } from "@/lib/chat-file-local";
 import { isLocalAttachment, type AttachmentSource } from "@/lib/chat-preview-content";
 import { savedOriginalUrl } from "@/lib/chat-library-api";
-import { isNativeOpenFile } from "@/lib/office-original";
 import { AttachmentContent } from "./attachment-content";
 import { AttachmentFallback } from "./attachment-fallback";
 import { ChatLibraryImage } from "./chat-library-image";
@@ -53,11 +52,9 @@ export function AttachmentArt({
 export function AttachmentPreview({
   source,
   onClose,
-  onOpenOffice,
 }: {
   source: AttachmentSource;
   onClose: () => void;
-  onOpenOffice?: (() => void) | undefined;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -96,11 +93,6 @@ export function AttachmentPreview({
           <a href={savedOriginalUrl(source)} download={source.name}>
             Download original
           </a>
-        )}
-        {isNativeOpenFile(source) && onOpenOffice && (
-          <button type="button" onClick={onOpenOffice}>
-            Open in panel (imports a draft)
-          </button>
         )}
       </footer>
     </dialog>

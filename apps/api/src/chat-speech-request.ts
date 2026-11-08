@@ -7,6 +7,7 @@
  * canonical 16 kHz mono PCM16 WAV whose duration is derived from its bytes.
  */
 import { Option, Schema } from "effect";
+import { bodyInit } from "./binary.ts";
 import { measureSpeechAudio } from "./chat-audio-duration.ts";
 import { readBoundedBody } from "./body-limit.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
@@ -68,7 +69,7 @@ const formOf = async (request: Request, body: Uint8Array): Promise<FormData | nu
     return await new Request("https://speech.internal/upload", {
       method: "POST",
       headers: { "content-type": contentType },
-      body,
+      body: bodyInit(body),
     }).formData();
   } catch {
     return null;

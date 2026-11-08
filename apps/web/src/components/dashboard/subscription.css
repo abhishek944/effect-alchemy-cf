@@ -1,0 +1,198 @@
+/* Subscription canvas. All surfaces derive from the active dashboard theme. */
+[data-dashboard] [data-cx="subscription"] {
+  --sub-surface: var(--cx-card);
+  --sub-edge: var(--cx-line);
+  --sub-plus-edge: color-mix(in srgb, #386bc6 55%, var(--cx-line));
+  --sub-plus-bg: linear-gradient(
+    165deg,
+    var(--cx-card) 8%,
+    color-mix(in srgb, #386bc6 16%, var(--cx-card)) 72%,
+    color-mix(in srgb, #386bc6 28%, var(--cx-card))
+  );
+  --sub-badge-bg: color-mix(in srgb, #386bc6 20%, var(--cx-card));
+  --sub-badge-text: var(--cx-text);
+  --sub-accent: #386bc6;
+  --sub-danger: color-mix(in srgb, #ed5f58 65%, var(--cx-text));
+  --sub-danger-edge: color-mix(in srgb, #ed5f58 45%, var(--cx-line));
+  width: 100%;
+  max-width: 1264px;
+  margin-inline: auto;
+  padding: 36px 24px 28px;
+  color: var(--cx-text);
+}
+[data-dashboard][data-theme="dark"] [data-cx="subscription"] {
+  --sub-surface: #202020;
+  --sub-edge: #424242;
+  --sub-plus-edge: #4268a8;
+  --sub-plus-bg: linear-gradient(165deg, #212225 8%, #26374f 72%, #304c73);
+  --sub-badge-bg: #2b3e5f;
+  --sub-badge-text: #b1cffc;
+}
+[data-dashboard] [data-cx="subscription-heading"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+[data-dashboard] [data-cx="subscription-heading"] h1 {
+  margin: 0 0 6px;
+  font-size: 29px;
+  font-weight: 550;
+  line-height: 1.3;
+  letter-spacing: -0.8px;
+}
+[data-dashboard] [data-cx="subscription-heading"] p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-tag"] {
+  flex: none;
+  padding: 4px 8px;
+  border: 1px solid var(--sub-edge);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-plans"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 20px;
+}
+[data-dashboard] [data-cx="subscription-plan"] {
+  display: flex;
+  flex-direction: column;
+  min-height: 644px;
+  padding: 30px;
+  border: 1px solid var(--sub-edge);
+  border-radius: 28px;
+  background: var(--sub-surface);
+}
+[data-dashboard] [data-cx="subscription-plan"][data-plan="plus"] {
+  border-color: var(--sub-plus-edge);
+  background: var(--sub-plus-bg);
+}
+[data-dashboard] [data-cx="subscription-plan-top"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 31px;
+}
+[data-dashboard] [data-cx="subscription-plan"] h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 550;
+}
+[data-dashboard] [data-cx="subscription-badge"] {
+  padding: 9px 12px;
+  border-radius: 20px;
+  background: var(--sub-badge-bg);
+  color: var(--sub-badge-text);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+[data-dashboard] [data-cx="subscription-plan"] h3 {
+  margin: 27px 0 10px;
+  font-size: 26px;
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  min-height: 65px;
+}
+[data-dashboard] [data-cx="subscription-description"] {
+  margin: 0 0 25px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--cx-muted) 72%, var(--cx-text));
+  min-height: 45px;
+}
+[data-dashboard] :is([data-cx="subscription-unavailable"], [data-cx="subscription-upgrade"]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 47px;
+  padding: 12px 9px;
+  border: 1px solid var(--sub-edge);
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="subscription-unavailable"] {
+  margin: 0;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-upgrade"] {
+  border-color: transparent;
+  background: var(--sub-accent);
+  color: #fff;
+  font-weight: 550;
+}
+[data-dashboard] [data-cx="subscription-upgrade"] svg {
+  width: 17px;
+  height: 17px;
+}
+[data-dashboard] [data-cx="subscription-price"] {
+  margin: 26px 0 29px;
+  font-size: 39px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.7px;
+}
+[data-dashboard] [data-cx="subscription-price"] > span {
+  display: inline-block;
+  margin: 4px 3px 0 0;
+  font-size: 24px;
+  vertical-align: top;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-price"] small {
+  margin-left: 9px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-caption"] {
+  margin: 0 0 18px;
+  font-size: 10px;
+  letter-spacing: 0.1px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-plan"] ul {
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-dashboard] [data-cx="subscription-plan"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="subscription-plan"] li svg {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-plan"][data-plan="plus"] li svg {
+  color: color-mix(in srgb, #83b6ff 75%, var(--cx-text));
+}
+
+[data-dashboard] [data-cx="subscription-example-note"] {
+  margin: 18px 0 0;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--cx-muted);
+}

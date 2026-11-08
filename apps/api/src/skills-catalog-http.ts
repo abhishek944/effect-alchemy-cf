@@ -6,7 +6,7 @@
  * Success bodies use the public schemas from skills-model.ts, and failures are
  * SkillError envelopes with honest codes and the nullable current conflict file.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import {

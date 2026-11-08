@@ -6,7 +6,7 @@
  * no-op but never creates or replaces a chat-scoped Undo target: only a frozen
  * chat command can own one.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { decodeOption } from "./chat-internal.ts";
 import {
   AccountTheme,
@@ -16,9 +16,9 @@ import {
 } from "./theme-model.ts";
 
 export class ThemeRecord {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     storage.sql.exec(
       `CREATE TABLE IF NOT EXISTS account_theme (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,

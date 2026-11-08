@@ -8,7 +8,7 @@
  * are removed after `SPEECH_PLAYBACK_TTL_MS` of inactivity and refreshed on
  * each reuse, so a paused playback is bounded rather than unbounded.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { Option, Schema } from "effect";
 import { SpeechPreferences } from "./chat-speech-schema.ts";
 
@@ -40,9 +40,9 @@ export type PlaybackLookup =
 type PlaybackRow = { readonly chat_id: string | null; readonly preferences: string };
 
 export class SpeechPlaybackSnapshots {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS speech_playbacks (
       user_id TEXT NOT NULL,

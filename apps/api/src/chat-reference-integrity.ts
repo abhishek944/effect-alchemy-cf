@@ -1,4 +1,4 @@
-import type { UserInput } from "@earendil-works/pi-durable";
+import type { UserInput } from "./chat-transcript-types.ts";
 import type { AcceptedInputRecord } from "./chat-accepted-input-schema.ts";
 import { sameAcceptedInputValue } from "./chat-accepted-input-values.ts";
 import { compactImageInput } from "./chat-image-input-content.ts";
@@ -20,11 +20,6 @@ export function matchingCompactReferenceInput(
   if (typeof content === "string" || content[0]?.type !== "text") return false;
   return sameAcceptedInputValue(
     content,
-    compactImageInput(
-      content[0].text,
-      candidate.originals,
-      candidate.officeTarget,
-      candidate.referenceInputs,
-    ),
+    compactImageInput(content[0].text, candidate.originals, candidate.referenceInputs),
   );
 }

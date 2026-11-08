@@ -1,5 +1,9 @@
 # Manual chat voice
 
+**Current runtime:** voice uses a private OpenRouter profile resolved by `scripts/speech-profile.ts`; no provider binding is attached. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
 Voice Settings has independent account-synced Dictation and Read aloud groups.
 Defaults: `openai/gpt-4o-mini-transcribe` for dictation, and
 `mistralai/voxtral-mini-tts-2603` with `en_paul_neutral` for read aloud.
@@ -95,7 +99,7 @@ yourself and never commit or paste an actual key:
 
 Add an independent `dev` entry for cloud development if needed; the stage must
 match exactly. Never add production credentials. Local startup reads only
-`.env.dev`; cloud launch uses the selected stage, and `prod` loads nothing. The
+`.env.local`; cloud launch uses the selected stage, and `prod` loads nothing. The
 key is bound server-side as a Worker secret for nonproduction stages only, never
 written to a stage/browser env file. Startup validates the file locally; it does
 not create a key, provision provider access, or make an audio request. Profile

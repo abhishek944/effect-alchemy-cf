@@ -1,6 +1,6 @@
 /** Catalog-backed model/effort selection for one chat. The server is authoritative. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatSelection } from "@/lib/chat-capability-types";
+import { CHAT_PROVIDER, type ChatSelection } from "@/lib/chat-capability-types";
 import { capabilityMessage, getChatPreferences } from "@/lib/chat-capability-api";
 import { planModelChoice } from "@/lib/chat-selection-labels";
 import type { ChatSelectionControls } from "@/lib/chat-store-context";
@@ -139,14 +139,14 @@ export function useChatPreferences(chatId: string | null): ChatSelectionControls
       if (plan.kind === "stage") {
         setStaged({
           key: chatKey,
-          selection: { provider: "cloudflare", model, effort: plan.effort },
+          selection: { provider: CHAT_PROVIDER, model, effort: plan.effort },
           needsChoice: true,
         });
         setWrites({ key: chatKey, saving: false, error: null, notice: plan.notice });
         return;
       }
       setStaged(null);
-      write({ provider: "cloudflare", model, effort: plan.effort }, plan.notice || null);
+      write({ provider: CHAT_PROVIDER, model, effort: plan.effort }, plan.notice || null);
     },
     [catalog, chatKey, effective, loaded?.efforts, write],
   );
@@ -155,7 +155,7 @@ export function useChatPreferences(chatId: string | null): ChatSelectionControls
     (effort: ChatSelection["effort"]) => {
       if (!effective || !entry || !entry.efforts.includes(effort)) return;
       setStaged(null);
-      write({ provider: "cloudflare", model: effective.model, effort }, null);
+      write({ provider: CHAT_PROVIDER, model: effective.model, effort }, null);
     },
     [effective, entry, write],
   );

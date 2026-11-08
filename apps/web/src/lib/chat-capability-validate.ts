@@ -17,10 +17,10 @@ import type {
   ChatPricingTier,
   ChatSelection,
 } from "@/lib/chat-capability-types";
-import { CHAT_EFFORTS, STAGE_MODEL_LIMIT } from "@/lib/chat-capability-types";
+import { CHAT_EFFORTS, CHAT_PROVIDER } from "@/lib/chat-capability-types";
 import { isRecord, isText } from "@/lib/chat-validate-base";
 
-export { CHAT_EFFORTS, MODEL_EFFORT_LIMIT, STAGE_MODEL_LIMIT } from "@/lib/chat-capability-types";
+export { CHAT_EFFORTS, MODEL_EFFORT_LIMIT } from "@/lib/chat-capability-types";
 
 const modelIdPattern = /^(openai|anthropic)\/[a-z0-9][a-z0-9._-]{0,63}$/;
 const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -55,9 +55,9 @@ export const listed = <T extends string>(values: readonly T[], value: unknown): 
   values.find((candidate) => candidate === value) !== undefined;
 
 export function parseChatSelection(value: unknown): ChatSelection | null {
-  if (!isRecord(value) || value.provider !== "cloudflare") return null;
+  if (!isRecord(value) || value.provider !== CHAT_PROVIDER) return null;
   if (!isChatModelId(value.model) || !isChatEffort(value.effort)) return null;
-  return { provider: "cloudflare", model: value.model, effort: value.effort };
+  return { provider: CHAT_PROVIDER, model: value.model, effort: value.effort };
 }
 
 export function parseChatEffortAdjustment(value: unknown): ChatEffortAdjustment | null {
@@ -123,9 +123,14 @@ function parseImageResize(value: unknown): ChatImageResize | null | "invalid" {
 }
 
 function parseCatalogModel(value: unknown): ChatCatalogModel | null {
-  if (!isRecord(value) || value.provider !== "cloudflare") return null;
+  if (!isRecord(value) || value.provider !== CHAT_PROVIDER) return null;
   if (value.group !== "openai" && value.group !== "anthropic") return null;
-  if (value.api !== "openai-responses" && value.api !== "anthropic-messages") return null;
+  if (
+    value.api !== "openai-responses" &&
+    value.api !== "openai-completions" &&
+    value.api !== "anthropic-messages"
+  )
+    return null;
   if (!isChatModelId(value.model) || !isText(value.vendorId) || !isText(value.name)) return null;
   if (value.vendorId.length < 1 || value.vendorId.length > 64) return null;
   if (value.name.length < 1 || value.name.length > 120) return null;
@@ -144,7 +149,7 @@ function parseCatalogModel(value: unknown): ChatCatalogModel | null {
   const imageResize = parseImageResize(value.imageResize);
   if (imageResize === "invalid") return null;
   return {
-    provider: "cloudflare",
+    provider: CHAT_PROVIDER,
     group: value.group,
     api: value.api,
     model: value.model,
@@ -176,7 +181,7 @@ export function parseChatCatalog(value: unknown): ChatCatalog | null {
   if (value.version !== 1 || typeof value.stageConfigured !== "boolean") return null;
   const defaultSelection = parseChatSelection(value.defaultSelection);
   if (!defaultSelection) return null;
-  if (!Array.isArray(value.models) || value.models.length > STAGE_MODEL_LIMIT) return null;
+  if (!Array.isArray(value.models)) return null;
   const models: ChatCatalogEntry[] = [];
   for (const item of value.models) {
     const entry = parseChatCatalogEntry(item);

@@ -1,0 +1,81 @@
+/* Centered cancellation preview dialog. */
+[data-dashboard] dialog[data-cx="subscription-dialog"] {
+  width: min(470px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 28px;
+  overflow: auto;
+  border: 1px solid var(--sub-edge);
+  border-radius: 22px;
+  background: var(--cx-sidebar);
+  color: var(--cx-text);
+}
+[data-dashboard] dialog[data-cx="subscription-dialog"]::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+[data-dashboard] dialog[data-cx="subscription-dialog"] h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 550;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+}
+[data-dashboard] dialog[data-cx="subscription-dialog"] p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+[data-dashboard] [data-cx="subscription-dialog-facts"] {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px 0;
+  border-block: 1px solid var(--sub-edge);
+}
+[data-dashboard] [data-cx="subscription-dialog-facts"] div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+[data-dashboard] [data-cx="subscription-dialog-facts"] dt {
+  font-size: 13px;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-dialog-facts"] dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 550;
+  text-align: right;
+}
+[data-dashboard] [data-cx="subscription-dialog-note"] {
+  margin-top: 10px !important;
+  font-size: 12px !important;
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="subscription-dialog-actions"] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+[data-dashboard] [data-cx="subscription-dialog-actions"] button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--sub-edge);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cx-text) 6%, transparent);
+  color: var(--cx-text);
+  font-size: 13px;
+}
+[data-dashboard] [data-cx="subscription-dialog-actions"] button[data-variant="danger"] {
+  border-color: var(--sub-danger-edge);
+  background: color-mix(in srgb, #ed5f58 14%, transparent);
+  color: var(--sub-danger);
+}
+[data-dashboard]:not([data-focus-modality="pointer"])
+  [data-cx="subscription"]
+  :is(button, a):focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 3px;
+}

@@ -1,5 +1,3 @@
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as AlchemyTelemetry from "alchemy/Telemetry";
 import { failureRecord, reportFailure, type FailureContext } from "@highchat/diagnostics";
 import {
   Cause,
@@ -63,17 +61,12 @@ const diagnosticReporter = Effect.sync(() => {
 });
 
 export const TelemetryLive = Layer.mergeAll(
-  Cloudflare.Telemetry(),
-  AlchemyTelemetry.layer(
-    Layer.mergeAll(
-      Logger.layer([diagnosticLogger]),
-      // Alchemy's safeHttpEffect already reports before its public response encoding.
-      ErrorReporter.layer([diagnosticReporter]),
-      // Effect HTTP's automatic tracer captures raw URLs/headers. Use native
-      // platform tracing (query-redacted) plus our fixed-name application spans.
-      Layer.succeed(HttpMiddleware.TracerDisabledWhen, () => true),
-    ),
-  ),
+  Logger.layer([diagnosticLogger]),
+  // safeHttpEffect reports before its public response encoding.
+  ErrorReporter.layer([diagnosticReporter]),
+  // Effect HTTP's automatic tracer captures raw URLs/headers. Use native
+  // platform tracing (query-redacted) plus our fixed-name application spans.
+  Layer.succeed(HttpMiddleware.TracerDisabledWhen, () => true),
 );
 
 export const observeRequest = <E, R>(

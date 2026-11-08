@@ -9,7 +9,7 @@
  * origin (conversation object scope plus native conversation id) so only the chat
  * that made a change can undo it, and only while that change is still current.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { decodeOption } from "./chat-internal.ts";
 import {
   ActionReceipt,
@@ -20,9 +20,9 @@ import {
 } from "./theme-model.ts";
 
 export class ThemeReceipts {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     const db = storage.sql;
     db.exec(`CREATE TABLE IF NOT EXISTS theme_receipts (

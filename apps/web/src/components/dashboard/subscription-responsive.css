@@ -1,0 +1,66 @@
+/* Responsive card stack and compact dialog. */
+@media (max-width: 900px) {
+  [data-dashboard] [data-cx="subscription"] {
+    padding: 28px 22px;
+  }
+  [data-dashboard] [data-cx="subscription-plans"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  [data-dashboard] [data-cx="subscription-plan"] {
+    min-height: 0;
+    padding: 24px;
+    border-radius: 24px;
+  }
+  [data-dashboard] [data-cx="subscription-plan"] h3 {
+    margin-top: 20px;
+    min-height: 0;
+  }
+  [data-dashboard] [data-cx="subscription-description"] {
+    min-height: 0;
+  }
+  [data-dashboard] [data-cx="subscription-price"] {
+    margin: 20px 0 24px;
+  }
+  [data-dashboard] [data-cx="subscription-plan"] ul {
+    gap: 16px;
+  }
+  [data-dashboard] [data-cx="subscription-plan"] li {
+    font-size: 14px;
+  }
+}
+@media (max-width: 520px) {
+  [data-dashboard] [data-cx="subscription"] {
+    padding: 24px 14px;
+  }
+  [data-dashboard] [data-cx="subscription-heading"] {
+    display: block;
+    margin-bottom: 24px;
+  }
+  [data-dashboard] [data-cx="subscription-tag"] {
+    display: inline-flex;
+    margin-top: 16px;
+  }
+  [data-dashboard] [data-cx="subscription-plan"] {
+    padding: 22px;
+  }
+  [data-dashboard] [data-cx="subscription-management"] {
+    padding: 22px;
+  }
+  [data-dashboard] [data-cx="subscription-management-top"] {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  [data-dashboard] [data-cx="subscription-management"] h2 {
+    font-size: 18px;
+  }
+  [data-dashboard] [data-cx="subscription-facts"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  [data-dashboard] dialog[data-cx="subscription-dialog"] {
+    width: calc(100vw - 24px);
+    padding: 22px;
+    border-radius: 20px;
+  }
+}

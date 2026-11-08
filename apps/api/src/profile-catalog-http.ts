@@ -8,7 +8,7 @@
  * publishable only when marked ready, and are claimed into a non-publishable
  * deleting state before any sweep deletion is awaited.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import { avatarObjectKey, deleteAvatarKeys } from "./profile-avatar.ts";

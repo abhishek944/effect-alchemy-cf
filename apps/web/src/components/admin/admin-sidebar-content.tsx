@@ -2,6 +2,7 @@ import { appConfig } from "@/lib/app-config";
 import type { MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import type { AdminIdentity } from "@/lib/admin-api";
+import { adminHomeHref } from "@/lib/admin-home";
 import { navigate } from "@/lib/router";
 
 export type SidebarSection = "users";
@@ -42,6 +43,11 @@ function handleNav(event: MouseEvent<HTMLAnchorElement>, path: string) {
   navigate(path);
 }
 
+function handleHome(event: MouseEvent<HTMLAnchorElement>) {
+  // A local admin origin leaves for the main UI through the absolute href.
+  if (adminHomeHref === "/") handleNav(event, "/");
+}
+
 export default function AdminSidebarContent({
   identity,
   active,
@@ -51,9 +57,9 @@ export default function AdminSidebarContent({
   return (
     <div className="flex h-full flex-col gap-6 p-5">
       <a
-        href="/"
+        href={adminHomeHref}
         className="flex items-center gap-3 font-semibold tracking-tight"
-        onClick={(event) => handleNav(event, "/")}
+        onClick={handleHome}
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-sm text-primary-foreground">
           {appConfig.initial}

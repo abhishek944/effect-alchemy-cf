@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 export const TOOL_LIMIT = 128;
-/** Matches pi-durable 1.1.0 output defaults (not exported by its public API). */
+/** Existing public tool-preview display budget, independent of the agent host. */
 export const TOOL_OUTPUT_BYTES = 50 * 1024;
 export const TOOL_OUTPUT_LINES = 2000;
 /** Aggregate transport budget, separate from each input/output text limit. */

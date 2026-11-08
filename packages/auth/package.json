@@ -3,25 +3,18 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/auth.ts",
-    "./database": "./src/database.ts",
-    "./office-session": "./src/office-session.ts",
+    ".": "./src/identity.ts",
     "./admin-users": "./src/admin-users.ts",
-    "./cloudflare": "./src/cloudflare.ts"
+    "./client": "./src/client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alchemy.run/better-auth": "2.0.0-beta.80",
-    "@highchat/config": "workspace:*",
-    "@highchat/diagnostics": "workspace:*",
-    "alchemy": "2.0.0-beta.80",
-    "better-auth": "1.7.7",
-    "effect": "4.0.1",
-    "kysely": "0.29.6"
+    "@clerk/backend": "3.27.0",
+    "effect": "4.0.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260918.1"
+    "@types/node": "24.13.6"
   }
 }

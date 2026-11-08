@@ -38,7 +38,7 @@ export function ChatLibraryResultActions({
 }) {
   return (
     <div data-cx="chat-library-result-actions" aria-label={`Actions for ${file.name}`}>
-      {
+      {file.kind !== "office" && (
         <Tooltip label="Open in panel">
           <button
             type="button"
@@ -48,11 +48,11 @@ export function ChatLibraryResultActions({
             <Icon name="maximize" />
           </button>
         </Tooltip>
-      }
+      )}
       <Tooltip label="Add reference">
         <button
           type="button"
-          disabled={archived || !readable}
+          disabled={archived || !readable || file.kind === "office"}
           aria-label={`Add reference: ${file.name}`}
           onClick={() => actions.onPrepareReference(file)}
         >

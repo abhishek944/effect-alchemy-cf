@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from "react";
 import { chatIdFromPath, isChatLanding } from "@/lib/chat-route";
@@ -29,9 +30,9 @@ export const WorkspaceNavigationContext = createContext<Navigation | null>(null)
 
 /**
  * No route unmounts retained chat workspaces any more: every chat, Settings and Home keep their
- * open editors mounted. Only sign-out still needs the account-wide save/drain transition.
+ * open editors mounted. Only sign-out still needs the account-wide guard transition.
  */
-export function retainsOffice(intent: LeaveIntent): boolean {
+export function retainsWorkspace(intent: LeaveIntent): boolean {
   if (intent.kind !== "route") return false;
   const path = intent.path.split(/[?#]/)[0] ?? intent.path;
   return (
@@ -42,7 +43,7 @@ export function retainsOffice(intent: LeaveIntent): boolean {
   );
 }
 
-/** One history owner sequences Profile consent before the existing Office barrier. */
+/** One history owner sequences Profile consent before the existing form barrier. */
 export function useWorkspaceNavigation({
   dirty,
   warn,
@@ -62,7 +63,7 @@ export function useWorkspaceNavigation({
     profile?.root ?? root,
     true,
     warn || profileDirty,
-    (intent) => profileDirty || !retainsOffice(intent),
+    (intent) => profileDirty || !retainsWorkspace(intent),
   );
   const processing = useRef(false); // Synchronous admission, before React commits.
   const [waiting, setWaiting] = useState(false); // Reconsider a newer decision after settlement.
@@ -98,7 +99,7 @@ export function useWorkspaceNavigation({
     const cancel = () => {
       if (latest.current.isCurrent(pending)) latest.current.keepEditing();
     };
-    const needed = dirty && !retainsOffice(pending.intent);
+    const needed = dirty && !retainsWorkspace(pending.intent);
     void (
       needed
         ? transition(commit)
@@ -122,6 +123,26 @@ export function useWorkspaceNavigation({
       discard(() => undefined);
   });
   return { register, guard: { ...guard, discard } };
+}
+
+/**
+ * Generic navigation owner. No Office editor participates any more, so the shared guard starts
+ * clean and only the Profile participant can make it dirty; a route inside the workspace keeps
+ * retained views mounted and never defers.
+ */
+export function WorkspaceNavigationProvider({ children }: { children: ReactNode }) {
+  const root = useRef<HTMLElement | null>(null);
+  const navigation = useWorkspaceNavigation({
+    dirty: false,
+    warn: false,
+    root,
+    transition: () => Promise.resolve(true),
+  });
+  return (
+    <WorkspaceNavigationContext.Provider value={navigation}>
+      {children}
+    </WorkspaceNavigationContext.Provider>
+  );
 }
 
 /** Profile supplies a participant, never a second history/popstate/unload observer. */

@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { withCause } from "@highchat/diagnostics";
 import { type Context, Schema } from "effect";
 import type { ChatNamespaces } from "./chat-bindings.ts";

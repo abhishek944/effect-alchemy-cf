@@ -3,7 +3,7 @@
  * Rebuild snapshots after awaits; commit only if head, name and reservation match.
  * Concurrent delivery returns the original receipt; claimed/expired input is refused.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { skillFilenameKey, skillManifestDigest } from "./skills-manifest.ts";
 import {

@@ -1,6 +1,6 @@
 # Dashboard UI
 
-The signed-in application follows the project Codex UI Design skill and the
+The signed-in application reads Clerk session state and the same-origin API; any Cloudflare reference below is historical. It follows the project Codex UI Design skill and the
 supplied workspace, account-menu and chat references. Its neutral dark palette,
 curved frames, platform fonts and Lucide icons follow the approved reconstruction.
 
@@ -32,6 +32,9 @@ color pairing is 4.29:1, not a blanket contrast-compliance guarantee.
   failed/uncertain creation keeps its existing catalog-action recovery notice.
 - `/settings/general`, `/settings/skills`, `/settings/profile`, `/settings/appearance`,
   `/settings/images` and `/settings/account`: grouped settings in the same frame.
+- `/subscription`: one-page illustrative plan preview below Home. No billing source
+  is connected, so plan status, prices, entitlements and financial actions are
+  unavailable; it is not a Settings section and has no Chats sidebar or tabs.
 - `/admin`: existing separate admin portal with its access checks preserved.
 
 Dashboard navigation lists private saved chats, rename and archive/unarchive
@@ -54,6 +57,9 @@ The avatar always sits at the bottom of the icon rail. Its native popover shows
 real Better Auth identity, Settings and Log out. Clicking the identity row opens
 `/settings/profile`; there is no separate Profile item in the account popup.
 Escape and outside clicks dismiss the popup. Signout uses the existing auth client.
+A Subscription design preview sits below Home in the rail. No billing source is
+connected, so the page is clearly illustrative: sample prices and proposed feature
+groups are shown, while plan status, upgrades and cancellation stay unavailable.
 Commercial subscriptions, pets and invitations are not part of this personal office.
 AI usage and cost remain available through the chat controls.
 
@@ -63,8 +69,8 @@ AI usage and cost remain available through the chat controls.
 primitives. The external-store runtime and authoritative store gate sending while
 users can keep drafting. Enter and Send share one submission path, including
 ready staged files; Shift+Enter inserts a newline. Blocked drafts stay intact.
-The same-origin Pi Durable
-backend supplies saved transcripts and streamed snapshots. The composer shows
+The same-origin Worker backend supplies saved transcripts and streamed snapshots;
+its private Node Pi SDK host executes responses and direct extensions. The composer shows
 connection/recovery state, GPT-6 Luna with high thinking, and explicit Stop/Retry
 controls. File and voice controls follow their configured capability gates; see
 [private files](chat-files.md), [Skills](skills.md) and [voice](chat-voice.md). No API credential enters
@@ -112,13 +118,11 @@ The existing top toolbar contains neutral outlined right-pane tabs, preceded by
 a short divider matching the chat-title divider. Files keeps its folder icon and
 text, images open exact preview tabs, and the matching outlined + creates an empty
 Tools tab. New chats start with Tools; Files opens only when selected there.
-Files stays blank without a selected chat. Empty/unavailable optional Office lists
-show no read-error banner or Retry button. A refresh icon beside sort reloads both
-file lists without resetting filters. Files search/filter/sort the saved collection, independent of loaded messages;
-images appear above details; text/CSV and Office originals show content previews.
-Non-image cards open a read-only preview dialog; text source/panel actions open a
-text tab. Only explicit Office Open in panel imports a Univer draft. Composer
-previews stay local until Send. Saved originals retain Download actions. Both use Add reference (@) without sending; upper-draft chips retain
+Files stays blank without a selected chat. A refresh icon beside sort reloads the
+file list without resetting filters. Files search/filter/sort the saved collection,
+independent of loaded messages; images appear above details; text and CSV originals
+show content previews. Non-image cards open a read-only preview dialog; text source
+and panel actions open a text tab. Composer previews stay local until Send. Saved originals retain Download actions. Both use Add reference (@) without sending; upper-draft chips retain
 identity and offer read-only recovery. Image preferences live only in Settings →
 Images. Existing Response facts and Cost details keep image costs separate from
 text/voice totals. See [chat images](chat-images.md) for behavior and limits.
@@ -186,6 +190,9 @@ their existing local presentation and recovery. Signin and admin are unchanged.
     A file-only entry must not reserve space for an absent reply toolbar; per-file
     actions keep their own row. Use existing non-sensitive content or a clearly
     labeled local visual fixture rather than triggering paid generation.
+
+12. Open Subscription from the rail; confirm no Chats pane/tabs, cards stack at
+    320/390px, financial actions are disabled, and the preview dialog restores focus.
 
 Stop local dev before frontend build checks, then restart it. Otherwise the asset
 manifest can become stale and return SPA HTML for new hashed JS/CSS requests.

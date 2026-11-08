@@ -62,7 +62,7 @@ function FileRow({
   );
 }
 
-/** Local content previews do not upload files or import Office drafts. */
+/** Local content previews never upload files. */
 export default function ChatComposerFiles({
   files,
   lockedIds,

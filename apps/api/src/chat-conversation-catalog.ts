@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { ConversationFileEnv } from "./chat-conversation-files.ts";
 
 const catalogFailure = (message: string, status?: number): Error =>

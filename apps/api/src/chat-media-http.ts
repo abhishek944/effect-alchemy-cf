@@ -1,12 +1,11 @@
-import type * as cf from "@cloudflare/workers-types";
-import { Auth } from "@highchat/auth";
+import type * as cf from "./platform.ts";
 import { reportFailureEffect, requestDiagnosticContext } from "@highchat/diagnostics";
-import * as Cloudflare from "alchemy/Cloudflare";
-import { RuntimeContext } from "alchemy";
+import { RuntimeEnv } from "@highchat/platform";
 import { Cause, Effect, Schema } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces } from "./chat-bindings.ts";
+import { nativeIdentity } from "./native-auth.ts";
 import { createChatFilesCatalogClient } from "./chat-files-client.ts";
 import { handleChatFilesRequest, matchChatFilesRoute } from "./chat-files-http.ts";
 import { requireOwnedChat } from "./chat-http-read.ts";
@@ -31,17 +30,19 @@ export const isChatMediaPath = (pathname: string): boolean =>
 
 /** Binary/multipart routes authenticate before their own larger bounded body reads. */
 export const handleChatMedia = Effect.gen(function* () {
-  const auth = yield* Auth;
   const ns = yield* ChatNamespaces;
-  const env: Readonly<Record<string, unknown>> = yield* Cloudflare.WorkerEnvironment;
+  const env = yield* RuntimeEnv;
   const request = yield* HttpServerRequest.HttpServerRequest;
   const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
   const url = new URL(web.url);
   if (web.method !== "GET" && web.method !== "HEAD" && web.headers.get("origin") !== url.origin)
     return fail(403, "This request must come from the application origin.");
-  const session = yield* auth.getSession();
-  if (session === null) return fail(401, "Sign in to use chats.");
-  const ownerId = session.user.id;
+  const identity = yield* nativeIdentity;
+  if (identity.ownerId === null)
+    return identity.outage
+      ? fail(503, "Authentication is temporarily unavailable.")
+      : fail(401, "Sign in to use chats.");
+  const ownerId = identity.ownerId;
   const route = matchChatFilesRoute(url.pathname);
   if (route !== null) {
     const chat = yield* requireOwnedChat(ns, ownerId, route.chatId);
@@ -86,7 +87,6 @@ export const handleChatMedia = Effect.gen(function* () {
   }
   return fail(404, "Not found.");
 }).pipe(
-  Effect.provide(RuntimeContext.phantom),
   Effect.tapCause((cause) =>
     Cause.hasInterruptsOnly(cause)
       ? Effect.void

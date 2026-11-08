@@ -1,5 +1,9 @@
 # Chat models, reasoning and usage
 
+**Current runtime:** the installed catalog is the pinned pi-ai OpenRouter catalog reached over HTTPS. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
 The chat uses the installed Cloudflare OpenAI and Anthropic catalog, not arbitrary
 vendor identifiers. Model metadata is not proof your account can use that model.
 Configure the appropriate default BYOK alias in the development Gateway yourself.
@@ -8,7 +12,7 @@ No provider key or provider client belongs in browser code.
 ## Stage allowlist
 
 `CHAT_GATEWAY_ID` and `CHAT_MODEL_ALLOWLIST` are separate nonsecret settings in
-`packages/config/.env.dev` / `.env.prod`; both files must have identical keys.
+`packages/config/.env.local` / `.env.prod`; both files must have identical keys.
 The allowlist is a JSON array of exact catalog IDs. Example enabling only the
 confirmed installed initial model:
 
@@ -40,7 +44,7 @@ There is one direct Send and exact-operation Stop flow, with one active response
 per chat. A busy send is rejected, not saved as waiting work. No message queue,
 waiting editor, reordering, pause/resume, Fast control or compatibility path.
 The selected model, effort and file IDs are frozen per send. Later preference
-changes affect the next send, never the current response or its checkpoint.
+changes affect the next send, never an already accepted response.
 
 Retry uncertain acceptance with the same operation UUID and complete original
 text/selection/ordered file IDs. Changing any part requires a new send identity;

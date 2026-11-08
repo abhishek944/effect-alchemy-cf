@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
@@ -13,7 +14,9 @@ if (!root) throw new Error("Missing app root element");
 createRoot(root).render(
   <StrictMode>
     <RootErrorBoundary>
-      <App />
+      <ClerkProvider publishableKey={PUBLIC_CLERK_PUBLISHABLE_KEY}>
+        <App />
+      </ClerkProvider>
     </RootErrorBoundary>
   </StrictMode>,
 );

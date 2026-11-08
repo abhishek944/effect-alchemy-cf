@@ -10,6 +10,7 @@ type Props = {
   sidebarOpen: boolean;
   rightOpen: boolean;
   fullView: boolean;
+  showPanes?: boolean;
   toggleSidebar: () => void;
   toggleRight: () => void;
   toggleFullView: () => void;
@@ -52,6 +53,7 @@ export default function Toolbar({
   sidebarOpen,
   rightOpen,
   fullView,
+  showPanes = true,
   toggleSidebar,
   toggleRight,
   toggleFullView,
@@ -61,13 +63,15 @@ export default function Toolbar({
       <div data-cx="toolbar-navigation">
         <Control label="Back" icon="arrow-left" onClick={() => window.history.back()} />
         <Control label="Forward" icon="arrow-right" onClick={() => window.history.forward()} />
-        <Control
-          label={sidebarOpen ? "Close left sidebar" : "Open left sidebar"}
-          icon="panel-left"
-          expanded={sidebarOpen}
-          controls="workspace-sidebar"
-          onClick={toggleSidebar}
-        />
+        {showPanes && (
+          <Control
+            label={sidebarOpen ? "Close left sidebar" : "Open left sidebar"}
+            icon="panel-left"
+            expanded={sidebarOpen}
+            controls="workspace-sidebar"
+            onClick={toggleSidebar}
+          />
+        )}
       </div>
       {chatTitle && !fullView && <div data-cx="toolbar-chat-title">{chatTitle}</div>}
       {title && (
@@ -76,22 +80,24 @@ export default function Toolbar({
         </div>
       )}
       {previewTabs}
-      <div data-cx="toolbar-actions">
-        <Control
-          label={fullView ? "Exit full view" : "Enter full view"}
-          icon={fullView ? "minimize" : "maximize"}
-          pressed={fullView}
-          controls="workspace-right"
-          onClick={toggleFullView}
-        />
-        <Control
-          label={rightOpen ? "Close right section" : "Open right section"}
-          icon="panel-right"
-          expanded={rightOpen}
-          controls="workspace-right"
-          onClick={toggleRight}
-        />
-      </div>
+      {showPanes && (
+        <div data-cx="toolbar-actions">
+          <Control
+            label={fullView ? "Exit full view" : "Enter full view"}
+            icon={fullView ? "minimize" : "maximize"}
+            pressed={fullView}
+            controls="workspace-right"
+            onClick={toggleFullView}
+          />
+          <Control
+            label={rightOpen ? "Close right section" : "Open right section"}
+            icon="panel-right"
+            expanded={rightOpen}
+            controls="workspace-right"
+            onClick={toggleRight}
+          />
+        </div>
+      )}
     </header>
   );
 }

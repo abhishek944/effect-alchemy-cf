@@ -9,7 +9,7 @@ export type SavedFile = ChatFileDescriptor & {
 
 export type LibraryQuery = {
   search?: string;
-  kind?: "all" | "image" | "text";
+  kind?: "all" | "image" | "text" | "office";
   origin?: "all" | "upload" | "generated";
   sort?: "newest" | "oldest" | "name";
   cursor?: string;

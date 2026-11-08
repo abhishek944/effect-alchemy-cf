@@ -1,5 +1,9 @@
 # Email: provider-neutral sending
 
+**Current runtime:** the `@highchat/integrations` Email ports remain available, but this repository wires no provider binding and configures no email sending. See [runtime](runtime.md). The sections below that
+describe the removed stack are historical and no longer describe how this repository
+runs.
+
 ## Contract and low-level design
 
 `@highchat/integrations/email` owns the schema and Effect `Email` service.

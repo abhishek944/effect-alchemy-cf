@@ -36,12 +36,14 @@ export function ChatLibraryQuery({
           value={filters.kind}
           onChange={(event) => {
             const kind = event.target.value;
-            if (kind === "all" || kind === "image" || kind === "text") update({ kind });
+            if (kind === "all" || kind === "image" || kind === "text" || kind === "office")
+              update({ kind });
           }}
         >
           <option value="all">All kinds</option>
           <option value="image">Images</option>
           <option value="text">Text / code</option>
+          <option value="office">Documents</option>
         </DropdownSelect>
         <DropdownSelect
           aria-label="File origin"

@@ -8,7 +8,7 @@ import {
   type EntryId,
   type EntryRecord,
   type ToolSlot,
-} from "@earendil-works/pi-durable";
+} from "./chat-transcript-types.ts";
 import type { AssistantMessage, Message } from "@earendil-works/pi-ai";
 import { MAX_ENTRY_FETCHES, MAX_BLOCK_VISITS, MAX_MODEL_CANDIDATES } from "./chat-contract.ts";
 import { isEntryId } from "./chat-text.ts";

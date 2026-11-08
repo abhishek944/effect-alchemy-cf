@@ -1,6 +1,6 @@
 /**
  * Image callers keep their historical names; the bounded proof primitives are owned by the
- * feature-neutral accepted-input boundary so Office and image proof share one implementation.
+ * feature-neutral accepted-input boundary so every capability shares one implementation.
  */
 export {
   AcceptedEntryId as ImageEntryId,

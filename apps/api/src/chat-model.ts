@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { ChatReferenceInputs, OfficeSendTarget, Target } from "@highchat/office-contract";
+import { ChatReferenceInputs } from "@highchat/chat-contract";
 import { ChatSelection } from "./chat-capabilities.ts";
 import { AttachmentReferences, FileDescriptor } from "./chat-attachment-schema.ts";
 import { validReferenceSend } from "./chat-reference-input.ts";
@@ -14,9 +14,6 @@ const Uuid = Schema.String.check(
 
 export const ChatId = Uuid;
 export const OperationId = Uuid;
-
-/** Initial model only; explicit per-send selections are validated independently. */
-export const CHAT_MODEL = { provider: "cloudflare", id: "openai/gpt-6-luna" } as const;
 
 export const Chat = Schema.Struct({
   id: ChatId,
@@ -66,9 +63,6 @@ export const ChatMessage = Schema.Struct({
 });
 export type ChatMessage = typeof ChatMessage.Type;
 
-export const PanelRequest = Schema.Struct({ id: Uuid, target: Target, expiresAt: Schema.Number });
-export type PanelRequest = typeof PanelRequest.Type;
-
 export const ChatSnapshot = Schema.Struct({
   chat: Chat,
   messages: Schema.Array(ChatMessage),
@@ -81,7 +75,6 @@ export const ChatSnapshot = Schema.Struct({
   usageRevision: Schema.String.check(Schema.isMaxLength(128)),
   /** Present only while a pinned skill attempt still needs an explicit recovery action. */
   skillRecovery: Schema.NullOr(SkillRecovery),
-  panelRequest: Schema.optionalKey(Schema.NullOr(PanelRequest)),
 });
 export type ChatSnapshot = typeof ChatSnapshot.Type;
 
@@ -106,7 +99,6 @@ export const SendMessage = Schema.Struct({
   selection: ChatSelection,
   attachments: AttachmentReferences,
   references: Schema.optionalKey(AttachmentReferences),
-  officeTarget: Schema.optionalKey(OfficeSendTarget),
   referenceInputs: Schema.optionalKey(ChatReferenceInputs),
 }).check(Schema.makeFilter(validReferenceSend));
 
@@ -186,7 +178,7 @@ export class RefreshRequired extends Schema.TaggedError<RefreshRequired>()(
 export const INFERENCE_FAILURE =
   "The model request failed. Check the development gateway and its key setup, then retry.";
 export const INFERENCE_UNCONFIGURED =
-  "Inference is not configured for this stage. Set CHAT_GATEWAY_ID to enable the chat gateway.";
+  "Inference is not configured for this stage. Configure the private Pi host and the chat gateway.";
 export const SUBMISSION_FAILED =
   "Acceptance of the message could not be confirmed. Retry the same message; the same operation id never creates duplicate work.";
 export const PAYLOAD_TOO_LARGE = "The request body is too large for the chat API.";

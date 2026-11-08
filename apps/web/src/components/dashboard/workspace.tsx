@@ -10,35 +10,39 @@ import { AccountProfileProvider } from "./profile-context";
 import { settingsSectionFromPath } from "./routes";
 import SettingsPanel from "./settings-panel";
 import DashboardShell from "./shell";
+import SubscriptionPage from "./subscription-page";
 import { DashboardThemeProvider } from "./theme";
 import { WorkspacePreviewProvider } from "./workspace-preview-context";
-import { WorkspaceOfficeProvider } from "./workspace-office-context";
-import { OfficePanelRequests } from "./use-office-panel-request";
 import { ReferenceWorkspaceProvider } from "./reference-workspace";
+import { WorkspaceNavigationProvider } from "./workspace-navigation";
 
 export default function Workspace({ user, pathname }: { user: DashboardUser; pathname: string }) {
   const section = settingsSectionFromPath(pathname);
+  const subscription = pathname === "/subscription";
   const dashboard = isChatLanding(pathname) || chatIdFromPath(pathname) !== null;
   return (
     <DashboardThemeProvider key={user.id} userId={user.id}>
       <AccountProfileProvider key={user.id} user={user}>
-        <WorkspaceOfficeProvider key={user.id} user={user}>
+        <WorkspaceNavigationProvider>
           <ReferenceWorkspaceProvider>
-            <ChatStoreProvider key={user.id} pathname={pathname}>
-              <WorkspacePreviewProvider active={dashboard}>
-                <OfficePanelRequests active={dashboard} />
+            <ChatStoreProvider key={user.id} pathname={pathname} accountId={user.id}>
+              <WorkspacePreviewProvider active={dashboard} accountId={user.id}>
                 <DashboardShell
+                  accountId={user.id}
                   section={section}
+                  subscription={subscription}
                   homeHref={chatIdFromPath(pathname) ? pathname : "/dashboard"}
                   account={<AccountMenu user={user} />}
                   sidebar={dashboard ? <ChatSidebar /> : undefined}
                   chatTitle={dashboard ? <ChatToolbarTitle /> : undefined}
-                  notFound={!section && !dashboard}
+                  notFound={!section && !subscription && !dashboard}
                 >
                   <div data-cx="chat-page" hidden={!dashboard}>
                     <ChatPanel active={dashboard} />
                   </div>
-                  {section ? (
+                  {subscription ? (
+                    <SubscriptionPage />
+                  ) : section ? (
                     <SettingsPanel user={user} section={section} />
                   ) : !dashboard ? (
                     <section className="mx-auto max-w-xl px-8 py-16">
@@ -53,7 +57,7 @@ export default function Workspace({ user, pathname }: { user: DashboardUser; pat
               </WorkspacePreviewProvider>
             </ChatStoreProvider>
           </ReferenceWorkspaceProvider>
-        </WorkspaceOfficeProvider>
+        </WorkspaceNavigationProvider>
       </AccountProfileProvider>
     </DashboardThemeProvider>
   );

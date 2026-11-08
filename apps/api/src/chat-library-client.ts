@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { generatedCatalogRequest } from "./chat-generated-client.ts";
 import { type LibraryQuery, SavedFile, SavedLibraryPage } from "./chat-library-schema.ts";
 import { SavedOriginalMetadata } from "./chat-library-original.ts";

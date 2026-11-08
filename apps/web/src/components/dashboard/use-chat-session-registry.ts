@@ -13,12 +13,11 @@ export function useChatSessionRegistry(selectedId: string | null) {
   const [store] = useState(createChatSessionStore);
   useSyncExternalStore(store.subscribe, store.getSnapshot);
   // Derived from the store on every render; `revision` is the re-render trigger, not a value.
-  const panelRequests = store.panelRequests();
   const runningChatIds = new Set<string>();
   for (const [chatId, session] of store.ordered()) {
     if (session.state.snapshot?.isRunning) runningChatIds.add(chatId);
   }
-  const ownerIds = store.ownerIds(selectedId, panelRequests);
+  const ownerIds = store.ownerIds(selectedId);
   const selected = store.entry(selectedId);
   const api = useCallback(
     (chatId: string): ChatSessionApi | null => store.entry(chatId)?.api ?? null,
@@ -67,11 +66,9 @@ export function useChatSessionRegistry(selectedId: string | null) {
     selected,
     ownerIds,
     runningChatIds,
-    panelRequests,
     epoch: store.epoch,
     publish: store.publish,
     remove: store.remove,
-    claimPanelRequest: store.claim,
     reload,
     send,
     retrySend,

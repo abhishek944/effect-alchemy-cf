@@ -9,7 +9,7 @@
  * Original-byte quota is released only after the marker is confirmed. Published
  * versions and their objects are never selected, so pinned originals survive.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { retireSkillObject } from "./skills-objects.ts";
 import { skillVersionRow, type SkillStorage, type SkillVersionRow } from "./skills-rows.ts";

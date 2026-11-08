@@ -26,11 +26,13 @@ const HIDDEN = { selection: null, selectionReady: false, referencesBlocked: null
 export default function ChatStoreProvider({
   children,
   pathname,
+  accountId,
 }: {
   children: ReactNode;
   pathname: string;
+  accountId: string;
 }) {
-  const { selectedId, select: selectRoute } = useChatSelection(pathname);
+  const { selectedId, select: selectRoute } = useChatSelection(pathname, accountId);
   const [catalogActionError, reportCatalogError] = useState<ChatActionError | null>(null);
   const sessions = useChatSessionRegistry(selectedId);
   const select = useCallback(
@@ -105,8 +107,6 @@ export default function ChatStoreProvider({
     references,
     usage,
     runningChatIds: sessions.runningChatIds,
-    panelRequests: sessions.panelRequests,
-    claimPanelRequest: sessions.claimPanelRequest,
     select,
     startNewChat,
     renameChat,

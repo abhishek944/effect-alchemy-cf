@@ -6,15 +6,15 @@
  * URL is this owner-authenticated endpoint. Nothing here exposes a public URL,
  * a bucket key or a copy for AI.
  */
-import type * as cf from "@cloudflare/workers-types";
-import { Auth } from "@highchat/auth";
-import * as Cloudflare from "alchemy/Cloudflare";
-import { RuntimeContext } from "alchemy";
+import type * as cf from "./platform.ts";
+import { RuntimeEnv } from "@highchat/platform";
 import { Cause, Effect, Schema } from "effect";
 import { reportFailureEffect } from "@highchat/diagnostics";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatNamespaces, doCall } from "./chat-bindings.ts";
+import { nativeIdentity } from "./native-auth.ts";
+import { bodyInit } from "./binary.ts";
 import { decodeOption, fail } from "./chat-internal.ts";
 import { avatarObjectKey, putAvatarObject, readAvatar } from "./profile-avatar.ts";
 import { AvatarRefResponse, AvatarUploadResponse } from "./profile-model.ts";
@@ -51,21 +51,23 @@ const avatarHeaders = (mediaType: string, byteLength: number): Headers =>
   });
 
 export const handleProfilePhoto = Effect.gen(function* () {
-  const auth = yield* Auth;
   const ns = yield* ChatNamespaces;
-  const env: Readonly<Record<string, unknown>> = yield* Cloudflare.WorkerEnvironment;
+  const env = yield* RuntimeEnv;
   const request = yield* HttpServerRequest.HttpServerRequest;
   const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
   const url = new URL(web.url);
   if (web.method !== "GET" && web.method !== "HEAD" && web.headers.get("origin") !== url.origin)
     return fail(403, "This request must come from the application origin.");
-  const session = yield* auth.getSession();
-  if (session === null) return fail(401, "Sign in to change your profile.");
-  const catalog = ns.catalog(session.user.id);
+  const identity = yield* nativeIdentity;
+  if (identity.ownerId === null)
+    return identity.outage
+      ? fail(503, "Authentication is temporarily unavailable.")
+      : fail(401, "Sign in to change your profile.");
+  const catalog = ns.catalog(identity.ownerId);
   const scope = catalog.id.toString();
   const bucket = env.CHAT_FILES;
   if (!bucketBinding(bucket)) return fail(503, "Private avatar storage is not configured.");
-  const seed = { "x-profile-seed": encodeURIComponent(session.user.name) };
+  const seed = { "x-profile-seed": encodeURIComponent(identity.name) };
 
   if (web.method === "POST") {
     const decoded = yield* Effect.promise(() => decodeAvatar(web));
@@ -171,12 +173,11 @@ export const handleProfilePhoto = Effect.gen(function* () {
   );
   if (stored === null) return fail(404, "No profile photo is saved.");
   return HttpServerResponse.fromWeb(
-    new Response(web.method === "HEAD" ? null : stored.bytes, {
+    new Response(web.method === "HEAD" ? null : bodyInit(stored.bytes), {
       headers: avatarHeaders(stored.mediaType, stored.bytes.byteLength),
     }),
   );
 }).pipe(
-  Effect.provide(RuntimeContext.phantom),
   Effect.tapCause((cause) =>
     Cause.hasInterruptsOnly(cause)
       ? Effect.void

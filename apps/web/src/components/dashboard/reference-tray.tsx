@@ -13,13 +13,7 @@ export function ReferenceKindIcon({
   source?: ReferenceSource;
   fileKind?: string;
 }) {
-  const kind = source
-    ? source.kind === "native"
-      ? source.target.documentKind
-      : source.file.kind === "office" && source.file.name.toLowerCase().endsWith(".xlsx")
-        ? "sheet"
-        : source.file.kind
-    : fileKind;
+  const kind = source ? source.file.kind : fileKind;
   return (
     <span data-cx="reference-kind">
       <svg

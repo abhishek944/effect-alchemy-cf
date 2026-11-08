@@ -22,6 +22,11 @@
   height: 20px;
   background: var(--cx-line);
 }
+/* Dark chrome needs more marker contrast without brightening shared borders. */
+[data-dashboard][data-theme="dark"]
+  :is([data-cx="toolbar-chat-title"], [data-cx="workspace-preview-tabs"])::before {
+  background: #555454;
+}
 [data-dashboard] [data-cx="toolbar-chat-title"] [data-cx="icon"] {
   color: var(--cx-muted);
 }

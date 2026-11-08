@@ -26,9 +26,6 @@ body:has([data-dashboard]) {
   min-width: 0;
   background: var(--cx-chrome);
 }
-[data-dashboard][data-theme="midnight-black"] [data-cx="toolbar"] {
-  box-shadow: inset 0 -1px 0 #303030;
-}
 [data-dashboard] [data-cx="icon-button"] {
   display: inline-flex;
   align-items: center;
@@ -86,6 +83,14 @@ body:has([data-dashboard]) {
   background: var(--cx-sidebar);
   border-radius: var(--cx-radius-frame) 0 0 var(--cx-radius-frame);
   border-right: 1px solid var(--cx-line);
+}
+/*
+ * Midnight Black drops chrome, canvas and sidebar to near-black, so the shell
+ * hairlines read as bright rules. Blend only this seam into its own surface;
+ * card, input and focus borders keep the shared --cx-line token.
+ */
+[data-dashboard][data-theme="midnight-black"] [data-cx="sidebar"] {
+  border-right-color: color-mix(in srgb, var(--cx-sidebar) 50%, var(--cx-canvas));
 }
 [data-dashboard] [data-cx="sidebar"][hidden] {
   display: none;

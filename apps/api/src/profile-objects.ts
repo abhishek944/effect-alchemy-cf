@@ -1,5 +1,5 @@
 /** Owner avatar lifecycle: reserve before I/O, claim before delete, ready-only publish. */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { decodeOption } from "./chat-internal.ts";
 import { StagedAvatar, type ProfileResolution } from "./profile-model.ts";
 
@@ -30,9 +30,9 @@ const fromRow = (row: ObjectRow): StagedAvatar | null =>
   });
 
 export class ProfileObjects {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS profile_objects (
       avatar_id TEXT PRIMARY KEY, state TEXT NOT NULL, media_type TEXT, width INTEGER,

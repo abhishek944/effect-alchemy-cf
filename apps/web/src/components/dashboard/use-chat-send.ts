@@ -1,5 +1,5 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { freezeOfficeSendTarget, type ChatReferenceInputs } from "@highchat/office-contract";
+import { useCallback, useLayoutEffect, useRef } from "react";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
 import { freezeSendDraft, normalizeReferenceCaption } from "./reference-send";
 import { newOperationId } from "@/lib/chat-api";
 import type { ChatSendOptions } from "./chat-send-options";
@@ -10,8 +10,6 @@ import {
   type SendSnapshot,
 } from "@/lib/chat-store-context";
 import { dispatchSend } from "./chat-dispatch";
-import { useWorkspaceOffice } from "./workspace-office-context";
-import { useReferenceWorkspace } from "./reference-workspace";
 import { useChatSendRecovery } from "./use-chat-send-recovery";
 import { sendBlockReason } from "./chat-send-policy";
 const STOPPING = "An answer is being stopped. Try again once it is acknowledged.";
@@ -33,11 +31,6 @@ export function useChatSend({
   setPendingSend,
 }: ChatSendOptions) {
   const inFlightRef = useRef<string | null>(null);
-  const preparing = useRef(false);
-  // Published so the facade never releases an owner whose Send is being prepared.
-  const [sending, setSending] = useState(false);
-  const { prepareSend } = useWorkspaceOffice();
-  const { sendTarget } = useReferenceWorkspace();
   const pendingRef = useRef<PendingSend | null>(pendingSend);
   const referencesRef = useRef(references);
   useLayoutEffect(() => {
@@ -92,7 +85,7 @@ export function useChatSend({
       const trimmed = caption.text;
       const reason = sendBlockReason({
         pending: pendingRef.current,
-        inFlight: Boolean(inFlightRef.current) || preparing.current,
+        inFlight: Boolean(inFlightRef.current),
         stopping: stoppingRef.current,
         snapshot: snapshotRef.current,
         chatId: originChatId,
@@ -115,38 +108,16 @@ export function useChatSend({
       } catch (error) {
         return blocked(error instanceof Error ? error.message : "Reference invalid.");
       }
-      const explicit = Boolean(
-        frozen.attachments.length || frozen.references.length || frozen.referenceInputs?.length,
-      );
-      preparing.current = true;
-      setSending(true);
-      try {
-        const target = await prepareSend(originChatId, explicit);
-        // Switching chats may hide this editor, but it must not invalidate the frozen Send.
-        if (
-          stoppingRef.current !== null ||
-          pendingRef.current !== null ||
-          readFiles()
-            .files.map((file) => file.id)
-            .join(",") !== frozen.attachments.join(",") ||
-          referencesRef.current.ids.join(",") !== frozen.references.join(",")
-        )
-          return blocked("The staged files changed before Send. Nothing was uploaded.");
-        if (target !== null) {
-          // Explicit tokens alone choose context; keep the displayed identity, not new observations.
-          const { context: _observed, ...identity } = target;
-          frozen.officeTarget = frozen.referenceInputs?.length
-            ? freezeOfficeSendTarget(identity)
-            : sendTarget(originChatId, target);
-        }
-      } catch {
-        return blocked(
-          "Office saves are unconfirmed. Save and reopen the displayed tab before sending.",
-        );
-      } finally {
-        preparing.current = false;
-        setSending(false);
-      }
+      // Switching chats may hide this editor, but it must not invalidate the frozen Send.
+      if (
+        stoppingRef.current !== null ||
+        pendingRef.current !== null ||
+        readFiles()
+          .files.map((file) => file.id)
+          .join(",") !== frozen.attachments.join(",") ||
+        referencesRef.current.ids.join(",") !== frozen.references.join(",")
+      )
+        return blocked("The staged files changed before Send. Nothing was uploaded.");
       Object.freeze(frozen);
       const operationId = newOperationId();
       setPendingSend({
@@ -171,8 +142,6 @@ export function useChatSend({
       snapshotRef,
       stoppingRef,
       submit,
-      prepareSend,
-      sendTarget,
     ],
   );
   const { retrySend, discardSend } = useChatSendRecovery({
@@ -184,5 +153,5 @@ export function useChatSend({
     setActionError,
     setPendingSend,
   });
-  return { send, retrySend, discardSend, sending };
+  return { send, retrySend, discardSend };
 }

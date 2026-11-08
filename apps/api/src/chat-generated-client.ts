@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { ImageHost } from "@abhishek944/pi-image-gen/core";
 import { Schema } from "effect";
 import { decodeOption } from "./chat-internal.ts";

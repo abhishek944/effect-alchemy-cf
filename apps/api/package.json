@@ -3,35 +3,26 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./worker": "./src/worker.ts",
-    "./chat-resources": "./src/chat-resources.ts",
-    "./office-resources": "./src/office-resources.ts"
+    ".": "./src/server.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "node --experimental-strip-types build.ts"
+    "start": "node --experimental-strip-types src/server.ts"
   },
   "dependencies": {
     "@abhishek944/pi-image-gen": "0.6.0",
     "@earendil-works/pi-ai": "1.1.0",
-    "@earendil-works/pi-durable": "1.1.0",
     "@effect/platform-node": "4.0.1",
     "@highchat/auth": "workspace:*",
+    "@highchat/chat-contract": "workspace:*",
+    "@highchat/chat-runtime": "workspace:*",
     "@highchat/config": "workspace:*",
     "@highchat/diagnostics": "workspace:*",
-    "@highchat/office-cloudflare": "workspace:*",
-    "@highchat/office-contract": "workspace:*",
-    "@highchat/office-pi": "workspace:*",
-    "@highchat/office-server": "workspace:*",
+    "@highchat/platform": "workspace:*",
     "@jsquash/webp": "1.5.0",
     "@modelcontextprotocol/sdk": "1.31.0",
-    "agents": "0.27.0",
-    "alchemy": "2.0.0-beta.80",
     "effect": "4.0.1",
-    "jpeg-js": "0.4.4"
-  },
-  "devDependencies": {
-    "@alchemy.run/cloudflare-runtime": "2.0.0-beta.80",
-    "@cloudflare/workers-types": "5.20260918.1"
+    "jpeg-js": "0.4.4",
+    "yaml": "2.9.0"
   }
 }

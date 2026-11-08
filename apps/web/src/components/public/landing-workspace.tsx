@@ -13,9 +13,9 @@ const capabilities = [
     description: "Bring your working files into the conversation.",
   },
   {
-    label: "03 / DOCUMENTS",
-    title: "Create documents.",
-    description: "Write, review, and export Office documents.",
+    label: "03 / IMAGES",
+    title: "Create images.",
+    description: "Generate and reference images without leaving the conversation.",
   },
 ];
 
@@ -61,7 +61,7 @@ export default function LandingWorkspace() {
         <p className="intro">
           AI conversations, working files,
           <br />
-          and Office documents.
+          and generated images.
           <br />
           All in one personal workspace.
         </p>

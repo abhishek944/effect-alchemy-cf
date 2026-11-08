@@ -2,7 +2,6 @@ import { useState } from "react";
 import { formatFileSize } from "@/lib/chat-file-local";
 import { savedOriginalUrl } from "@/lib/chat-library-api";
 import type { SavedFile } from "@/lib/chat-library-types";
-import { isNativeOpenFile } from "@/lib/office-original";
 import { AttachmentArt, AttachmentPreview } from "./attachment-preview";
 import { savedIdentityLabel, savedTime } from "./chat-library-format";
 import { DownloadIcon } from "./chat-library-result-actions";
@@ -65,20 +64,7 @@ export function ChatLibraryCard({
           </button>
         </div>
       )}
-      {preview && active && (
-        <AttachmentPreview
-          source={saved}
-          onClose={() => setPreview(false)}
-          onOpenOffice={
-            isNativeOpenFile(saved)
-              ? () => {
-                  setPreview(false);
-                  onOpenImage(saved.id);
-                }
-              : undefined
-          }
-        />
-      )}
+      {preview && active && <AttachmentPreview source={saved} onClose={() => setPreview(false)} />}
     </div>
   );
 }

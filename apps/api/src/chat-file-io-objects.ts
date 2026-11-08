@@ -1,13 +1,10 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { FileMediaType, type FileDescriptor, type FileKind } from "./chat-attachment-schema.ts";
-import { isOfficeMediaType } from "./chat-office-media.ts";
 import { decodeOption } from "./chat-internal.ts";
-import { collectFileBody, holdFileBody } from "./chat-file-io-body.ts";
+import { collectFileBody, fixedLengthStream, holdFileBody } from "./chat-file-io-body.ts";
 import { ChatFileIOUnavailable, fileIOUnavailable } from "./chat-file-io-limits.ts";
-
-// Worker runtime global; the infra compiler must not need Worker ambient declarations.
-declare const FixedLengthStream: typeof cf.FixedLengthStream;
+import { isOfficeMediaType } from "./chat-files-office.ts";
 
 export const fileObjectKind = (object: cf.R2Object, expected?: FileDescriptor): FileKind => {
   const media = decodeOption(FileMediaType, object.httpMetadata?.contentType);
@@ -96,8 +93,8 @@ export const copyFileObject = async (
     const failures: unknown[] = [];
     let valid = false;
     try {
-      // R2 requires a known-length stream. Keep the checked pipeline streaming, not buffered.
-      const fixed = new FixedLengthStream(head.size);
+      // Keep the checked pipeline streaming, not buffered.
+      const fixed = fixedLengthStream(head.size);
       const controller = new AbortController();
       const pumping = held.body.pipeTo(fixed.writable, { signal: controller.signal });
       const writing = Promise.resolve().then(() =>

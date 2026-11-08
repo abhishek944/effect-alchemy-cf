@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
-import { useWorkspaceOffice } from "./workspace-office-context";
 import { readLayout, storePanes } from "./workspace-session";
 
-export function usePanes(chatWorkspace = false) {
-  // Visibility never ends a retained native editor's lifetime.
-  const { accountId } = useWorkspaceOffice();
+export function usePanes(chatWorkspace = false, accountId: string) {
   const { selectedId } = useChatStore();
   const initial = () => ({
     chatId: selectedId,

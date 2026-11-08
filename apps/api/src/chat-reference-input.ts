@@ -2,7 +2,7 @@ import {
   freezeChatReferenceInputs,
   chatReferenceInputsIdentity,
   type ChatReferenceInputs,
-} from "@highchat/office-contract";
+} from "@highchat/chat-contract";
 import { ImageInputError } from "./chat-image-input-types.ts";
 import type { ImageOriginalBinding } from "./chat-image-response-schema.ts";
 

@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { Option, Schema } from "effect";
 import { FileDescriptor } from "./chat-attachment-schema.ts";
 import { inspectFileBytes } from "./chat-files-media.ts";

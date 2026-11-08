@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import type { ChatFilesRequestInput } from "./chat-files-http.ts";
 import type { ChatFilesCatalogClient } from "./chat-files-client.ts";
 import { FileName } from "./chat-attachment-schema.ts";

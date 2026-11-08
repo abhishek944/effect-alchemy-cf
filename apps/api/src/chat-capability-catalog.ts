@@ -1,15 +1,14 @@
 /**
- * Installed Cloudflare OpenAI and Anthropic chat model catalog.
+ * Installed OpenRouter OpenAI and Anthropic chat model catalog.
  *
  * Metadata is derived at module load from the pinned @earendil-works/pi-ai
- * 1.1.0 Cloudflare AI Gateway catalog and the native
- * `getSupportedThinkingLevels` rule. Nothing here calls a provider, reads a
- * credential or touches the network. List prices are catalog values, never
- * account billing proof. An entry whose installed metadata is incomplete is
- * excluded instead of guessed.
+ * 1.1.0 OpenRouter catalog and the native `getSupportedThinkingLevels` rule.
+ * Nothing here calls a provider, reads a credential or touches the network.
+ * List prices are catalog values, never account billing proof. An entry whose
+ * installed metadata is incomplete is excluded instead of guessed.
  */
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai/models";
-import { CLOUDFLARE_AI_GATEWAY_MODELS } from "@earendil-works/pi-ai/providers/cloudflare-ai-gateway.models";
+import { OPENROUTER_MODELS } from "@earendil-works/pi-ai/providers/openrouter.models";
 import {
   CHAT_PROVIDER,
   DEFAULT_CHAT_EFFORT,
@@ -22,15 +21,14 @@ import {
   type ChatPricing,
 } from "./chat-capabilities.ts";
 
-type CatalogEntry =
-  (typeof CLOUDFLARE_AI_GATEWAY_MODELS)[keyof typeof CLOUDFLARE_AI_GATEWAY_MODELS];
+type CatalogEntry = (typeof OPENROUTER_MODELS)[keyof typeof OPENROUTER_MODELS];
 
 const rate = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 const count = (value: unknown): number | null =>
   typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : null;
-const groupOf = (baseUrl: string): ChatGroup | null => {
-  const slug = baseUrl.split("/").at(-1);
+const groupOf = (id: string): ChatGroup | null => {
+  const slug = id.split("/")[0];
   return slug === "openai" || slug === "anthropic" ? slug : null;
 };
 
@@ -88,8 +86,10 @@ const resizeOf = (value: unknown): ChatImageResize | null | "invalid" => {
 };
 
 const describe = (group: ChatGroup, model: CatalogEntry): ChatCatalogModel | null => {
-  if (model.api !== "openai-responses" && model.api !== "anthropic-messages") return null;
-  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(model.id)) return null;
+  if (model.api !== "openai-completions" && model.api !== "anthropic-messages") return null;
+  if (!model.id.startsWith(`${group}/`)) return null;
+  const vendorId = model.id.slice(group.length + 1);
+  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(vendorId)) return null;
   const contextWindow = count(model.contextWindow);
   const maxOutputTokens = count(model.maxTokens);
   const input = Array.isArray(model.input) ? model.input : [];
@@ -109,8 +109,8 @@ const describe = (group: ChatGroup, model: CatalogEntry): ChatCatalogModel | nul
     provider: CHAT_PROVIDER,
     group,
     api: model.api,
-    model: `${group}/${model.id}`,
-    vendorId: model.id,
+    model: model.id,
+    vendorId,
     name: model.name,
     imageInput: input.includes("image"),
     contextWindow,
@@ -124,8 +124,8 @@ const describe = (group: ChatGroup, model: CatalogEntry): ChatCatalogModel | nul
 
 const installed: readonly ChatCatalogModel[] = (() => {
   const models: ChatCatalogModel[] = [];
-  for (const model of Object.values(CLOUDFLARE_AI_GATEWAY_MODELS)) {
-    const group = groupOf(model.baseUrl);
+  for (const model of Object.values(OPENROUTER_MODELS)) {
+    const group = groupOf(model.id);
     if (group === null) continue;
     const described = describe(group, model);
     if (described !== null) models.push(described);

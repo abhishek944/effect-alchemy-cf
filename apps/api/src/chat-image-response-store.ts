@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
 import {
   bindingJson,
@@ -28,8 +28,8 @@ export type { ImageResponsePage } from "./chat-image-response-pages.ts";
 /** Immutable response metadata only: no inference, original I/O or paid-call admission. */
 export class ChatImageResponseStore {
   private readonly table: ImageResponseTable;
-  private readonly storage: AgentContext["storage"];
-  constructor(storage: AgentContext["storage"]) {
+  private readonly storage: ChatObjectContext["storage"];
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     this.table = responseBoundary(() => new ImageResponseTable(storage));
   }

@@ -7,7 +7,7 @@
  * immutable version. An uncertain publish keeps the reservation inspectable via
  * GET receipts instead of replaying a possibly accepted write.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { Effect, Schema } from "effect";
 import type * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { readBoundedBody } from "./body-limit.ts";

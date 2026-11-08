@@ -1,66 +1,31 @@
-import { LiveDoc } from "@earendil-works/pi-durable";
+import { buildWindow } from "./chat-projection.ts";
+import { PI_BACKGROUND, type ChatRuntime } from "./chat-runtime.ts";
+import { WINDOW_MESSAGES, RefreshFence, InvalidCursor } from "./chat-contract.ts";
+import type { Chat, ChatSnapshot } from "./chat-model.ts";
 import { installedChatModel } from "./chat-capability-catalog.ts";
 import { storedMessageTime } from "./chat-time.ts";
-import { WINDOW_MESSAGES, InvalidCursor, RefreshFence, type TextCursor } from "./chat-contract.ts";
-import type { Chat, ChatSnapshot, PanelRequest } from "./chat-model.ts";
-import { INFERENCE_FAILURE } from "./chat-model.ts";
-import type { Target } from "@highchat/office-contract";
-import type { SkillRecovery } from "./skills-model.ts";
-import { buildWindow } from "./chat-projection.ts";
-import { liveToolRound, partialToolPreview } from "./chat-tool-live.ts";
-import { type ChatRuntime, PI_BACKGROUND } from "./chat-runtime.ts";
-import { watchRetry, type RetryWatch } from "./chat-observation.ts";
 import { sliceText, textInfo, textPage } from "./chat-text.ts";
+import { partialToolPreview } from "./chat-tool-live.ts";
+import type { TextCursor } from "./chat-contract.ts";
 export { RefreshFence, InvalidCursor } from "./chat-contract.ts";
+
+/** A view subscription never owns a run or its cancellation signal. */
 export class ChatSource {
-  private epoch = crypto.randomUUID();
-  private readonly retry: RetryWatch = { key: null };
-  private panelRequest: PanelRequest | null = null;
-  requestPanel(target: Target): void {
-    this.panelRequest = { id: crypto.randomUUID(), target, expiresAt: Date.now() + 30_000 };
-    this.revision += 1;
-    this.publish();
-  }
-  private stopNative: (() => void) | null = null;
+  private readonly runtime: ChatRuntime;
+  private readonly hasGeneratedFiles: (entry: number, index: number) => boolean;
+  private readonly listeners = new Set<() => void>();
+  private readonly epoch = crypto.randomUUID();
   private revision = 0;
   private usageRevision = 0;
-  private ready: Promise<void> | null = null;
-  private readonly listeners = new Set<() => void>();
-  private readonly runtime: ChatRuntime;
-  private readonly recovery: () => SkillRecovery | null;
-  private readonly hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean;
-  private readonly attemptState: (
-    operationId: string,
-  ) => { readonly logicalOperationId: string; readonly incomplete: boolean } | null;
-  constructor(
-    runtime: ChatRuntime,
-    recovery: () => SkillRecovery | null = () => null,
-    hasGeneratedFiles: (entryId: number, modelIndex: number) => boolean = () => false,
-    attemptState: (
-      operationId: string,
-    ) => { readonly logicalOperationId: string; readonly incomplete: boolean } | null = () => null,
-  ) {
+  constructor(runtime: ChatRuntime, hasGeneratedFiles: (entry: number, index: number) => boolean) {
     this.runtime = runtime;
-    this.recovery = recovery;
     this.hasGeneratedFiles = hasGeneratedFiles;
-    this.attemptState = attemptState;
+    runtime.subscribe(() => {
+      this.revision += 1;
+      this.publish();
+    });
   }
-  async initialize(): Promise<void> {
-    this.ready ??= this.runtime
-      .pi()
-      .then((pi) => {
-        this.stopNative = pi.subscribeCommits(() => {
-          this.revision += 1;
-          this.publish();
-        });
-        return undefined;
-      })
-      .catch((error: unknown) => {
-        this.ready = null;
-        throw error;
-      });
-    await this.ready;
-  }
+  async initialize(): Promise<void> {}
   private publish(): void {
     for (const invalidate of this.listeners) {
       try {
@@ -78,39 +43,22 @@ export class ChatSource {
     this.listeners.add(invalidate);
     return () => {
       this.listeners.delete(invalidate);
-      if (this.listeners.size === 0) {
-        this.stopNative?.();
-        this.stopNative = null;
-        this.ready = null;
-        this.epoch = crypto.randomUUID();
-        this.revision += 1;
-      }
     };
   }
-  private async live() {
-    await this.initialize();
-    if (this.stopNative === null) throw new RefreshFence();
-    const revision = this.revision;
-    const pi = await this.runtime.pi();
-    const id = await this.runtime.conversationId();
-    const native = await pi.snapshot(LiveDoc, id, PI_BACKGROUND);
-    const active = native?.run?.inputs[0];
-    const operation = active === undefined ? null : await this.runtime.operationIdOf(active);
-    const toolsRound = await liveToolRound(pi, native, id, PI_BACKGROUND);
-    if (revision !== this.revision) throw new RefreshFence();
-    const generation = native?.generation;
+  private live() {
+    const active = this.runtime.active;
     const messageId =
-      generation === undefined
-        ? null
-        : `live:${this.epoch}:${native?.run?.taskId ?? "none"}:${generation.attempt}`;
-    const textRevision = `l${this.epoch}:${revision}:${generation?.attempt ?? 0}`;
-    return { revision, native, operation, messageId, textRevision, toolsRound };
+      active?.partial === undefined ? null : `live:${this.epoch}:${active.record.runId}`;
+    return {
+      revision: this.revision,
+      active,
+      messageId,
+      textRevision: `l${this.epoch}:${this.revision}`,
+    };
   }
   async snapshot(chat: Chat): Promise<ChatSnapshot> {
-    await this.runtime.ensureRoot(chat.id);
-    await this.runtime.reconcile(chat.id);
-    const live = await this.live();
-    const partial = live.native?.generation?.message;
+    const live = this.live();
+    const partial = live.active?.partial;
     const preview = partial === undefined ? null : sliceText(partial, 0, 0, 512, 32);
     const { visited: toolBlocks, ...tools } = partialToolPreview(partial);
     const messages =
@@ -131,28 +79,8 @@ export class ChatSource {
               ...textInfo(chat.id, live.messageId, live.textRevision, preview),
             },
           ];
-    const isRunning = live.native?.run !== undefined;
-    const error = watchRetry(this.retry, chat.id, live, this.runtime.diagnostic)
-      ? INFERENCE_FAILURE
-      : isRunning
-        ? null
-        : await this.runtime.settlementError(chat.id);
-    const recovery = this.recovery();
     const selection = await this.runtime.selection();
-    const selectedModel = selection === null ? null : installedChatModel(selection.model);
-    const base = {
-      chat,
-      messages,
-      isRunning,
-      activeOperationId: live.operation,
-      error: !isRunning && recovery !== null ? recovery.message : error,
-      model: selectedModel?.name ?? "Unknown",
-      thinking: selection?.effort ?? "Unknown",
-      usageRevision: `${this.epoch}:${this.usageRevision}`,
-      skillRecovery: recovery,
-      panelRequest: this.panelRequest,
-      history: { ceilingEntryId: null, through: null, historyCursor: null },
-    };
+    const selected = selection === null ? null : installedChatModel(selection.model);
     const window = await buildWindow(
       await this.runtime.conversation(),
       chat,
@@ -163,27 +91,41 @@ export class ChatSource {
       128 - (preview?.visited ?? 0) - toolBlocks,
       79,
       this.hasGeneratedFiles,
-      this.attemptState,
-      live.toolsRound,
+      (operationId) => ({
+        logicalOperationId: this.runtime.sends.logicalOperation(operationId) ?? operationId,
+        incomplete: this.runtime.transcript.run(operationId)?.status === "unanswered",
+      }),
+      live.active?.assistantEntry === undefined
+        ? undefined
+        : {
+            assistant: live.active.assistantEntry,
+            slots: [...live.active.tools.values()],
+          },
     );
     if (live.revision !== this.revision) throw new RefreshFence();
-    const result = {
-      ...base,
+    return {
+      chat,
       messages: [...window.messages, ...messages],
       history: window.history,
+      isRunning: live.active !== null,
+      activeOperationId: live.active?.record.operationId ?? null,
+      error: live.active !== null ? null : await this.runtime.settlementError(chat.id),
+      model: selected?.name ?? "Unknown",
+      thinking: selection?.effort ?? "Unknown",
+      usageRevision: `${this.epoch}:${this.usageRevision}`,
+      skillRecovery: null,
     };
-    return result;
   }
   async text(chat: Chat, messageId: string, cursor: TextCursor | null) {
-    const live = await this.live();
+    const live = this.live();
+    const partial = live.active?.partial;
     if (
       messageId !== live.messageId ||
-      live.native?.generation?.message === undefined ||
+      partial === undefined ||
       (cursor !== null && (cursor.message !== messageId || cursor.revision !== live.textRevision))
     )
       throw new RefreshFence();
-    const message = live.native.generation.message;
-    const page = textPage(chat.id, messageId, live.textRevision, message, cursor);
+    const page = textPage(chat.id, messageId, live.textRevision, partial, cursor);
     if (live.revision !== this.revision) throw new RefreshFence();
     if (page === null) throw new InvalidCursor();
     return page;

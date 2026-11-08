@@ -1,6 +1,4 @@
-import { Auth } from "@highchat/auth";
-import { OfficeSessionEpochs } from "@highchat/auth/office-session";
-import { RuntimeContext } from "alchemy";
+import { ClerkIdentity } from "@highchat/auth";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
@@ -8,7 +6,6 @@ import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import { ChatForbidden } from "./chat-model.ts";
 import { authUnavailableEffect } from "./auth-failure.ts";
 import { AuthenticationUnavailable, CurrentUser, Unauthorized } from "./model.ts";
-import { CurrentChatOfficeSession, makeChatOfficeSessionCapture } from "./chat-office-session.ts";
 
 /**
  * Authenticates chat traffic, rejects untrusted cross-origin mutations and
@@ -16,48 +13,39 @@ import { CurrentChatOfficeSession, makeChatOfficeSessionCapture } from "./chat-o
  */
 export class ChatAuthentication extends HttpApiMiddleware.Service<
   ChatAuthentication,
-  { provides: CurrentUser | CurrentChatOfficeSession }
+  { provides: CurrentUser }
 >()("highchat/ChatAuthentication", {
   error: [Unauthorized, ChatForbidden, AuthenticationUnavailable],
 }) {
   static readonly layer = Layer.effect(
     ChatAuthentication,
     Effect.gen(function* () {
-      const auth = yield* Auth;
-      const captureOffice = yield* makeChatOfficeSessionCapture;
+      const identity = yield* ClerkIdentity;
       return (httpEffect) =>
         Effect.gen(function* () {
           const request = yield* HttpServerRequest.HttpServerRequest;
+          const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
           if (request.method !== "GET" && request.method !== "HEAD") {
-            const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
             if (web.headers.get("origin") !== new URL(web.url).origin) {
               return yield* Effect.fail(new ChatForbidden());
             }
           }
-          const session = yield* auth.getSession().pipe(
-            Effect.catch((cause) => authUnavailableEffect("chat.session", cause)),
-            Effect.catchDefect((defect) => authUnavailableEffect("chat.session", defect)),
+          const current = yield* identity.current(web).pipe(
+            Effect.catchTag("Unauthenticated", () => Effect.fail(new Unauthorized())),
+            Effect.catchTag("IdentityUnavailable", (cause) =>
+              authUnavailableEffect("chat.identity", cause),
+            ),
           );
-          if (session === null) return yield* Effect.fail(new Unauthorized());
-          const officeSession =
-            request.method === "POST" &&
-            /^\/api\/chats\/[^/]+\/messages$/.test(request.url.split("?")[0] ?? "")
-              ? yield* captureOffice(
-                  session.user.id,
-                  (yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie)).headers,
-                )
-              : null;
           return yield* Effect.provideService(httpEffect, CurrentUser, {
-            id: session.user.id,
-            name: session.user.name,
-            email: session.user.email,
+            id: current.id,
+            name: current.name,
+            email: current.email,
           }).pipe(
-            Effect.provideService(CurrentChatOfficeSession, officeSession),
             Effect.map((response) =>
               HttpServerResponse.setHeader(response, "cache-control", "no-store"),
             ),
           );
-        }).pipe(Effect.provide(RuntimeContext.phantom));
+        });
     }),
-  ).pipe(Layer.provide(OfficeSessionEpochs.layer));
+  );
 }

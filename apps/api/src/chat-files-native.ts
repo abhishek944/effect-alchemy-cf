@@ -2,20 +2,15 @@
  * New sends use compact image-input preparation and request-only hydration instead.
  */
 import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
-import type { UserInput } from "@earendil-works/pi-durable";
-import type * as cf from "@cloudflare/workers-types";
+import type { UserInput } from "./chat-transcript-types.ts";
+import type * as cf from "./platform.ts";
 import { MAX_EXCERPT_CHARS, type FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
 import type { ChatFilesPrepareResult } from "./chat-files-ops.ts";
 import { filesFail, filesOk, type ChatFilesResult } from "./chat-files-model.ts";
+import { documentReferenceBlock } from "./chat-files-office.ts";
 import { readOwnedOriginal } from "./chat-files-store.ts";
-import {
-  attachmentBoundary,
-  decodeTextFile,
-  officeAttachmentBlock,
-  quotedAttachmentBlock,
-} from "./chat-files-text.ts";
-import { csvReferenceBlock, isCsvOriginal } from "./chat-image-hydration-csv.ts";
+import { attachmentBoundary, decodeTextFile, quotedAttachmentBlock } from "./chat-files-text.ts";
 import { chatFilesImageCompatibility } from "./chat-files-image-policy.ts";
 export { chatFilesImageCompatibility } from "./chat-files-image-policy.ts";
 
@@ -37,7 +32,7 @@ const base64Of = (bytes: Uint8Array): string => {
   return btoa(binary);
 };
 
-/** Owned original bytes become native input; Office contributes compact refs only. */
+/** Owned original bytes become native input. */
 export const buildNativeInput = async (input: {
   readonly text: string;
   readonly attachments: readonly NativeAttachment[];
@@ -50,35 +45,24 @@ export const buildNativeInput = async (input: {
   const blocks: (TextContent | ImageContent)[] = [];
   if (input.text.length > 0) blocks.push({ type: "text", text: input.text });
   const boundary = attachmentBoundary();
-  const textTotal = files.filter((file) => file.kind === "text" && !isCsvOriginal(file)).length;
-  const csvTotal = files.filter(isCsvOriginal).length;
+  const textTotal = files.filter((file) => file.kind === "text").length;
   const officeTotal = files.filter((file) => file.kind === "office").length;
   let textIndex = 0;
-  let csvIndex = 0;
   let officeIndex = 0;
   for (const attachment of input.attachments) {
     if (attachment.file.kind === "office") {
+      // Metadata only: document bytes are never read, decoded or injected.
       blocks.push({
         type: "text",
-        text: officeAttachmentBlock({
-          boundary,
-          index: officeIndex,
-          total: officeTotal,
-          fileRef: attachment.file.id,
+        text: documentReferenceBlock({
           name: attachment.file.name,
           mediaType: attachment.file.mediaType,
           byteSize: attachment.file.byteSize,
+          index: officeIndex,
+          total: officeTotal,
         }),
       });
       officeIndex += 1;
-      continue;
-    }
-    if (isCsvOriginal(attachment.file)) {
-      blocks.push({
-        type: "text",
-        text: csvReferenceBlock(attachment.file, boundary, csvIndex, csvTotal),
-      });
-      csvIndex += 1;
       continue;
     }
     const bytes = await input.read(attachment.file.id);

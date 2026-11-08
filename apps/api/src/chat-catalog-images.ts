@@ -1,5 +1,5 @@
-import type * as cf from "@cloudflare/workers-types";
-import type { AgentContext } from "agents";
+import type * as cf from "./platform.ts";
+import type { ChatObjectContext } from "./chat-object.ts";
 import type { Chat } from "./chat-model.ts";
 import { json } from "./chat-internal.ts";
 import { ChatImagePreferencesStore } from "./chat-image-preference-store.ts";
@@ -16,7 +16,7 @@ export class ChatCatalogImages {
   private readonly generated: ChatGeneratedStorage | null;
 
   constructor(
-    ctx: AgentContext,
+    ctx: ChatObjectContext,
     bucket: cf.R2Bucket | undefined,
     chat: (id: string) => Chat | null,
   ) {

@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import { insertUploading, promoteAccepted, clearPurge } from "./chat-files-mutations.ts";
 import { fileRow } from "./chat-files-table.ts";
 import { savedFileMetadata } from "./chat-library-metadata.ts";
@@ -20,7 +20,7 @@ import {
 import type { ChatFilesReserve } from "./chat-files-ops.ts";
 import type { SavedFile } from "./chat-library-schema.ts";
 
-type Storage = AgentContext["storage"];
+type Storage = ChatObjectContext["storage"];
 export class ChatImageStorageLedger {
   private readonly storage: Storage;
   private readonly canGenerate: (id: string) => boolean;

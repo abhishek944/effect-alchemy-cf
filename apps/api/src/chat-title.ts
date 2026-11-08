@@ -1,11 +1,12 @@
-import type { Ai } from "@cloudflare/workers-types";
+import { createModels } from "@earendil-works/pi-ai/models";
 import {
   type AssistantMessage,
   type Context,
   type Model,
   type SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
-import { createAI } from "agents/models/pi-ai";
+import { configuredChatProvider } from "./chat-model-transport.ts";
+import { CHAT_PROVIDER } from "./chat-capabilities.ts";
 import { reportFailure, withDiagnostic } from "@highchat/diagnostics";
 import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
@@ -131,14 +132,16 @@ const titleFromMessage = (message: AssistantMessage): string | null => {
 
 /** One bounded same-model call; null keeps the local excerpt. */
 export const makeChatTitleNamer = (
-  binding: Ai | undefined,
-  gatewayId: string | undefined,
+  env: Readonly<Record<string, unknown>>,
 ): ChatTitleNamer | null => {
-  if (binding === undefined || gatewayId === undefined || gatewayId.length === 0) return null;
-  const ai = createAI({ binding, id: gatewayId, skipCache: true, retries: { maxAttempts: 1 } });
+  const provider = configuredChatProvider(env);
+  if (provider === null) return null;
+  const models = createModels();
+  models.setProvider(provider);
   return async (text, selection, recordUsage) => {
     if (text.trim().length === 0) return null;
-    const model: Model<string> = ai(selection.model);
+    const model: Model<string> | undefined = models.getModel(CHAT_PROVIDER, selection.model);
+    if (model === undefined) return null;
     const reasoning = titleReasoning(model);
     const effective: ChatSelection = { ...selection, effort: reasoning ?? "off" };
     try {
@@ -161,7 +164,7 @@ export const makeChatTitleNamer = (
         { role: "user", content: sliceCodePoints(text, TITLE_MAX_INPUT), timestamp: Date.now() },
       ],
     };
-    const message = await ai.completeSimple(model, context, options);
+    const message = await models.completeSimple(model, context, options);
     try {
       await recordUsage(message, effective);
     } catch (error) {

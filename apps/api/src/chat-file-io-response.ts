@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { reportFailure, type FailureContext } from "@highchat/diagnostics";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import { publicFail } from "./chat-files-public.ts";
@@ -21,7 +21,8 @@ export const originalResponse = (
   body: Uint8Array | ReadableStream<Uint8Array> | null,
 ): Response => {
   const image = descriptor.kind === "image";
-  const office = descriptor.kind === "office";
+  // Text downloads are plain text; images and document originals keep their declared type.
+  const textual = descriptor.kind === "text";
   const headers = new Headers({
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
@@ -30,14 +31,16 @@ export const originalResponse = (
     "content-disposition":
       `${image ? "inline" : "attachment"}; ` +
       `filename="${asciiName(descriptor.name)}"; filename*=UTF-8''${encodedName(descriptor.name)}`,
-    "content-type": image || office ? descriptor.mediaType : "text/plain; charset=utf-8",
+    "content-type": textual ? "text/plain; charset=utf-8" : descriptor.mediaType,
   });
   if (request.method === "HEAD" || body instanceof Uint8Array)
     headers.set(
       "content-length",
       String(body instanceof Uint8Array ? body.byteLength : descriptor.byteSize),
     );
-  return new Response(request.method === "HEAD" ? null : body, { headers });
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- owned file bytes
+  const payload = (request.method === "HEAD" ? null : body) as unknown as BodyInit | null;
+  return new Response(payload, { headers });
 };
 
 /** Keys are server-derived stage, then retained. Only absence permits fallback. */

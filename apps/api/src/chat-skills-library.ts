@@ -8,8 +8,8 @@
  * Skill identity is the authoritative filename; frontmatter metadata is
  * optional description enrichment, never an identity override.
  */
-import type * as cf from "@cloudflare/workers-types";
-import { parseSkillMarkdown } from "agents/skills";
+import type * as cf from "./platform.ts";
+import { parseSkillMarkdown } from "./skills-frontmatter.ts";
 import { decodeOption } from "./chat-internal.ts";
 import type { SkillDocument } from "./chat-skills-document.ts";
 import { verifySkillManifest } from "./skills-manifest.ts";

@@ -121,7 +121,7 @@ function AccountSettings({ user }: { user: DashboardUser }) {
     <>
       <SettingsGroup title="Account">
         <SettingsRow description="Account identifier" label="Email" value={user.email} />
-        <SettingsRow description="Your current office session" label="Session" value="Signed in" />
+        <SettingsRow description="Your current session" label="Session" value="Signed in" />
       </SettingsGroup>
     </>
   );

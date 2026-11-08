@@ -6,7 +6,7 @@
  * instance, never from a request field. Responses use the shared
  * `ChatFilesResult` envelope so the worker client can fail closed uniformly.
  */
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import { OperationReceipt } from "./chat-contract.ts";
 import type { Chat } from "./chat-model.ts";

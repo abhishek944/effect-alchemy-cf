@@ -1,4 +1,4 @@
-import type * as cf from "@cloudflare/workers-types";
+import type * as cf from "./platform.ts";
 import { Schema } from "effect";
 import { ChatSelection, DomainUuid } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";

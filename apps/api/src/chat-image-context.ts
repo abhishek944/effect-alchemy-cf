@@ -1,37 +1,17 @@
 import type { Message, UserMessage } from "@earendil-works/pi-ai";
 import { estimateContextTokens } from "@earendil-works/pi-ai/utils/estimate";
-import type { ContextView } from "@earendil-works/pi-durable";
-import { mapImageInputOccurrences } from "./chat-image-request-occurrences.ts";
-import type {
-  ImageNativeContext,
-  ImageRequestAccess,
-  InputOccurrence,
-} from "./chat-image-request-types.ts";
+import type { ContextView } from "./chat-transcript-types.ts";
+import type { AcceptedOriginalBinding } from "./chat-accepted-input-schema.ts";
 
-/** Null is unavailable evidence, not proof that the active context has no originals. */
-export type ImageContextEvidence = readonly InputOccurrence[] | null;
+export type ImageContextEvidence =
+  | readonly {
+      readonly requestIndex: number;
+      readonly originals: readonly AcceptedOriginalBinding[];
+    }[]
+  | null;
 export type ReadImageContextEvidence = (view: ContextView) => Promise<ImageContextEvidence>;
 
-/** Use the same exact active contributions and accepted joins as the final request bridge. */
-export const readImageContextEvidence = async (
-  access: ImageRequestAccess,
-  view: ContextView,
-  context: ImageNativeContext,
-): Promise<ImageContextEvidence> => {
-  try {
-    return await mapImageInputOccurrences(access, access.conversationId, view, context);
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Accounting-only projection: no bytes, provider calls, mutation or transport context.
- * Empty image data marks proven image presence for the installed SDK estimator.
- * Text byte length cannot prove decoded character count: an uncovered text original
- * therefore makes Context Unknown instead of estimating its tiny descriptor.
- * Applicable provider usage still covers its measured prefix without replacement.
- */
+/** Accounting-only metadata projection. It never loads private bytes or contacts a provider. */
 export const imageContextEstimateMessages = (
   messages: readonly Message[],
   evidence: ImageContextEvidence,
@@ -48,13 +28,10 @@ export const imageContextEstimateMessages = (
     if (message?.role !== "user") return null;
     if (index <= coverage || occurrence.originals.length === 0) continue;
     if (occurrence.originals.some((original) => original.kind === "text")) return null;
-    const provenImages = occurrence.originals.filter((original) => original.kind === "image");
-    if (provenImages.length === 0) continue;
-    const images: UserMessage["content"] = provenImages.map((original) => ({
-      type: "image",
-      data: "",
-      mimeType: original.mediaType,
-    }));
+    const images: UserMessage["content"] = occurrence.originals
+      .filter((original) => original.kind === "image")
+      .map((original) => ({ type: "image", data: "", mimeType: original.mediaType }));
+    if (images.length === 0) continue;
     projected[index] = {
       ...message,
       content: [

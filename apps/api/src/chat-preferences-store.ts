@@ -1,4 +1,4 @@
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import type { Schema } from "effect";
 import { resolveChatSelection, type StageModelPolicy } from "./chat-capability-policy.ts";
 import { decodeOption } from "./chat-internal.ts";
@@ -27,9 +27,9 @@ type WriteResult<T> =
 
 /** Catalog-local preferences: chat choice and next-chat default commit together. */
 export class ChatPreferencesStore {
-  private readonly storage: AgentContext["storage"];
+  private readonly storage: ChatObjectContext["storage"];
 
-  constructor(storage: AgentContext["storage"]) {
+  constructor(storage: ChatObjectContext["storage"]) {
     this.storage = storage;
     storage.sql.exec(`CREATE TABLE IF NOT EXISTS chat_preferences (
       key TEXT PRIMARY KEY, value TEXT NOT NULL

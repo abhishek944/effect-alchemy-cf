@@ -1,21 +1,25 @@
-import type * as cf from "@cloudflare/workers-types";
 import { withCause } from "@highchat/diagnostics";
-import type { Context } from "@earendil-works/pi-ai";
-import type { ChatCatalogModel } from "./chat-capabilities.ts";
-import type { GenerationRequestProof } from "./chat-image-request-types.ts";
 import { ImageIOError } from "./chat-image-io-error.ts";
+import type { Context } from "@earendil-works/pi-ai";
+import type { ChatReferenceInputs } from "@highchat/chat-contract";
+import type { ChatCatalogModel } from "./chat-capabilities.ts";
+import type { ImageOriginalBinding } from "./chat-image-response-schema.ts";
 
+export type ImageInputOccurrence = {
+  readonly requestIndex: number;
+  readonly originals: readonly ImageOriginalBinding[];
+  readonly referenceInputs?: ChatReferenceInputs;
+};
 export type ImageHydrationInput = {
-  /** Already taken/verified by the mandatory parent Models gate. */
-  readonly proof: GenerationRequestProof;
-  /** Exact proof positions; do not collapse/reorder messages before this helper. */
+  readonly proof: {
+    readonly model: { readonly provider: string; readonly modelId: string };
+    readonly inputs: readonly ImageInputOccurrence[];
+  };
   readonly context: Context;
   readonly model: ChatCatalogModel;
-  /** Authenticated owner's actual catalog stub; its id supplies the private object scope. */
-  readonly catalog?: cf.DurableObjectStub;
-  readonly bucket?: cf.R2Bucket;
   readonly signal?: AbortSignal;
 };
+
 const messages = {
   invalid_context: "Image request positions or compact content could not be verified.",
   metadata_mismatch: "A saved original no longer matches its immutable reference.",

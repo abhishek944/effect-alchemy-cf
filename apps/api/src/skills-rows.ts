@@ -5,7 +5,7 @@
  * the object instance rather than any request value. Manifests are stored as
  * the parent-owned schema document and decoded here before semantic verification.
  */
-import type { AgentContext } from "agents";
+import type { ChatObjectContext } from "./chat-object.ts";
 import {
   type SkillFile,
   type SkillReservation,
@@ -13,7 +13,7 @@ import {
   type SkillVersionRef,
 } from "./skills-model.ts";
 
-export type SkillStorage = AgentContext["storage"];
+export type SkillStorage = ChatObjectContext["storage"];
 
 export type SkillFileRow = {
   readonly id: string;
