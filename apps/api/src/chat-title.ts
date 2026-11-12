@@ -1,16 +1,7 @@
-import { createModels } from "@earendil-works/pi-ai/models";
-import {
-  type AssistantMessage,
-  type Context,
-  type Model,
-  type SimpleStreamOptions,
-} from "@earendil-works/pi-ai";
-import { configuredChatProvider } from "./chat-model-transport.ts";
-import { CHAT_PROVIDER } from "./chat-capabilities.ts";
-import { reportFailure, withDiagnostic } from "@highchat/diagnostics";
+export { makeChatTitleNamer } from "./chat-title-generate.ts";
+import { reportFailure } from "@highchat/diagnostics";
 import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
-import { guardTitlePayload, titleReasoning, TITLE_MAX_TOKENS } from "./chat-title-policy.ts";
 
 export type TitleUsageObserver = (
   message: TitleResponse | null,
@@ -20,11 +11,10 @@ export type ChatTitleNamer = (
   text: string,
   selection: ChatSelection,
   recordUsage: TitleUsageObserver,
+  identity: { readonly userId: string; readonly sessionId: string },
 ) => Promise<string | null>;
 
 const TITLE_MAX_CHARS = 60;
-const TITLE_MAX_INPUT = 2000;
-const TITLE_DEADLINE_MS = 10_000;
 
 /** Title naming is best effort; this is its final owner for otherwise-lost evidence. */
 export const reportTitleFailure = (
@@ -118,58 +108,4 @@ export const sanitizeTitle = (raw: string): string | null => {
   )
     return null;
   return bounded;
-};
-
-const titleFromMessage = (message: AssistantMessage): string | null => {
-  if (message.stopReason === "error" || message.errorMessage !== undefined)
-    throw withDiagnostic(new Error("Title generation failed"), "title_provider_result_failed");
-  if (message.stopReason !== "stop") return null;
-  const text = message.content
-    .flatMap((part) => (part.type === "text" ? [part.text] : []))
-    .join(" ");
-  return sanitizeTitle(text);
-};
-
-/** One bounded same-model call; null keeps the local excerpt. */
-export const makeChatTitleNamer = (
-  env: Readonly<Record<string, unknown>>,
-): ChatTitleNamer | null => {
-  const provider = configuredChatProvider(env);
-  if (provider === null) return null;
-  const models = createModels();
-  models.setProvider(provider);
-  return async (text, selection, recordUsage) => {
-    if (text.trim().length === 0) return null;
-    const model: Model<string> | undefined = models.getModel(CHAT_PROVIDER, selection.model);
-    if (model === undefined) return null;
-    const reasoning = titleReasoning(model);
-    const effective: ChatSelection = { ...selection, effort: reasoning ?? "off" };
-    try {
-      await recordUsage(null, effective);
-    } catch (error) {
-      reportTitleFailure(error, "title.usage", "title_usage_claim_failed", { phase: "claim" });
-      return null;
-    } // Do not initiate paid naming if its claim cannot be attributed.
-    const options: SimpleStreamOptions = {
-      maxTokens: TITLE_MAX_TOKENS,
-      maxRetries: 0,
-      signal: AbortSignal.timeout(TITLE_DEADLINE_MS),
-      onPayload: (payload) => guardTitlePayload(payload, model, reasoning),
-      thinkingBudgets: { minimal: 1024, low: 1024, medium: 1024, high: 1024 },
-      ...(reasoning === undefined ? {} : { reasoning }),
-    };
-    const context: Context = {
-      systemPrompt: TITLE_INSTRUCTIONS,
-      messages: [
-        { role: "user", content: sliceCodePoints(text, TITLE_MAX_INPUT), timestamp: Date.now() },
-      ],
-    };
-    const message = await models.completeSimple(model, context, options);
-    try {
-      await recordUsage(message, effective);
-    } catch (error) {
-      reportTitleFailure(error, "title.usage", "title_usage_record_failed", { phase: "record" });
-    }
-    return titleFromMessage(message);
-  };
 };

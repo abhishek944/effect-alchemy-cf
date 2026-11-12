@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
 import ChatComposer from "./chat-composer";
 import CatalogActionNotice from "./catalog-action-notice";
 import ChatIcon from "./chat-icon";
 import ChatUsageTray from "./chat-usage-tray";
+import ChatUsageNotice from "./chat-usage-notice";
+import ChatNoticeLane from "./chat-notice-lane";
 import { useChatLayout } from "./use-chat-layout";
 import Tooltip from "./tooltip";
 import "./chat-archive.css";
@@ -13,7 +15,7 @@ type Props = {
   chatId: string;
   running: boolean;
   status: string;
-  reconnecting: boolean;
+  children?: ReactNode;
   announcement: string;
   announce: boolean;
   stopLabel: string;
@@ -33,7 +35,7 @@ export default function ChatFooter({
   chatId,
   running,
   status,
-  reconnecting,
+  children,
   announcement,
   announce,
   stopLabel,
@@ -44,7 +46,7 @@ export default function ChatFooter({
 }: Props) {
   const footerRef = useRef<HTMLDivElement>(null);
   useChatLayout(footerRef);
-  const { setArchived } = useChatStore();
+  const { setArchived, preferences } = useChatStore();
   const [unarchiving, setUnarchiving] = useState(false);
   const pending = useRef(false);
   const unarchive = async () => {
@@ -59,49 +61,9 @@ export default function ChatFooter({
     }
   };
 
-  return (
-    <div ref={footerRef} data-cx="chat-footer" tabIndex={-1}>
-      <CatalogActionNotice />
-      {!archived ? (
-        <ChatComposer
-          chatId={chatId}
-          running={running}
-          stopping={stopping}
-          stopLabel={stopLabel}
-          sendLabel={sendLabel}
-          onStop={onStop}
-        />
-      ) : (
-        <section data-cx="chat-archived" aria-label="Archived chat">
-          <p>This chat is archived.</p>
-          <div data-cx="chat-archived-actions">
-            {(running || stopping) && (
-              <Tooltip label={stopLabel}>
-                <button
-                  type="button"
-                  data-cx="chat-archive-action"
-                  aria-label={stopLabel}
-                  disabled={!onStop || stopping}
-                  onClick={onStop}
-                >
-                  <ChatIcon name="stop" />
-                  Stop
-                </button>
-              </Tooltip>
-            )}
-            <button
-              type="button"
-              data-cx="chat-archive-action"
-              disabled={unarchiving}
-              onClick={() => void unarchive()}
-            >
-              {unarchiving ? "Unarchiving…" : "Unarchive"}
-            </button>
-          </div>
-        </section>
-      )}
-      <ChatUsageTray chatId={chatId} />
-      {!reconnecting && (
+  const notices = (
+    <>
+      <div data-cx="chat-connection-row" data-kind={onRetry ? "error" : undefined}>
         <output
           id="chat-connection"
           data-cx="chat-connection"
@@ -110,12 +72,71 @@ export default function ChatFooter({
         >
           {status || announcement}
         </output>
+        {onRetry && (
+          <button type="button" data-cx="chat-retry-action" onClick={onRetry}>
+            Try again
+          </button>
+        )}
+      </div>
+      {children}
+      <CatalogActionNotice />
+      <ChatUsageNotice />
+      {preferences.error && (
+        <p data-cx="setup-error" role="alert">
+          {preferences.error}
+          <button type="button" data-cx="file-action" onClick={preferences.retry}>
+            Retry
+          </button>
+        </p>
       )}
-      {onRetry && (
-        <button type="button" data-cx="chat-retry-action" onClick={onRetry}>
-          Try again
-        </button>
+    </>
+  );
+
+  return (
+    <div ref={footerRef} data-cx="chat-footer" tabIndex={-1}>
+      {!archived ? (
+        <ChatComposer
+          chatId={chatId}
+          notices={notices}
+          running={running}
+          stopping={stopping}
+          stopLabel={stopLabel}
+          sendLabel={sendLabel}
+          onStop={onStop}
+        />
+      ) : (
+        <>
+          <ChatNoticeLane>{notices}</ChatNoticeLane>
+          <section data-cx="chat-archived" aria-label="Archived chat">
+            <p>This chat is archived.</p>
+            <div data-cx="chat-archived-actions">
+              {(running || stopping) && (
+                <Tooltip label={stopLabel}>
+                  <button
+                    type="button"
+                    data-cx="chat-archive-action"
+                    aria-label={stopLabel}
+                    disabled={!onStop || stopping}
+                    onClick={onStop}
+                  >
+                    <ChatIcon name="stop" />
+                    Stop
+                  </button>
+                </Tooltip>
+              )}
+              <button
+                type="button"
+                data-cx="chat-archive-action"
+                disabled={unarchiving}
+                onClick={() => void unarchive()}
+              >
+                {unarchiving ? "Unarchiving…" : "Unarchive"}
+              </button>
+            </div>
+          </section>
+        </>
       )}
+      <ChatUsageTray chatId={chatId} />
     </div>
   );
 }

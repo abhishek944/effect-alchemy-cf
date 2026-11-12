@@ -113,8 +113,11 @@ export const prepareChatSdkFiles = async (
     scope.signal?.throwIfAborted();
     if (known !== null && inputDigest !== known.inputDigest) fail("conflict");
     let image = known?.image;
-    if (image === undefined)
+    if (image === undefined) {
       image = await freezeImageInputCapability(stub, deps.imageGatewayId(), scope.signal);
+      if (image.state === "ready" && deps.imageGatewayId(image.model) !== image.gatewayId)
+        image = { state: "unavailable", reason: "configuration_unavailable" };
+    }
     const applicationOrigin = known === null ? scope.applicationOrigin : known.applicationOrigin;
     const candidate =
       known ??

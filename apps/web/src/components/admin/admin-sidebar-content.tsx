@@ -3,20 +3,15 @@ import type { MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import type { AdminIdentity } from "@/lib/admin-api";
 import { adminHomeHref } from "@/lib/admin-home";
+import { ADMIN_NAV, type AdminSection } from "@/lib/admin-routes";
 import { navigate } from "@/lib/router";
-
-export type SidebarSection = "users";
 
 export type SidebarProps = {
   identity: AdminIdentity;
-  active: SidebarSection;
+  active: AdminSection | null;
   signOutPending: boolean;
   onSignOut: () => void;
 };
-
-const NAV_ITEMS: ReadonlyArray<{ id: SidebarSection; label: string; path: string }> = [
-  { id: "users", label: "Users", path: "/admin/users" },
-];
 
 function UsersIcon() {
   return (
@@ -70,7 +65,7 @@ export default function AdminSidebarContent({
         </span>
       </a>
       <nav className="flex-1 space-y-1" aria-label="Admin sections">
-        {NAV_ITEMS.map((item) => (
+        {ADMIN_NAV.map((item) => (
           <Button
             key={item.id}
             asChild

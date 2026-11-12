@@ -28,17 +28,23 @@ export function ChatConversationView({
   chatId: string;
   footer: ComponentProps<typeof ChatFooter>;
 }) {
+  const notices = (
+    <>
+      {runError && (
+        <p data-cx="chat-error" role="alert">
+          {runError}
+        </p>
+      )}
+      {actionError && (
+        <p data-cx="chat-error" data-kind="action" role="alert">
+          {actionError}
+        </p>
+      )}
+      <ChatNotices chatId={chatId} />
+    </>
+  );
   return (
     <ThreadPrimitive.Root data-cx="chat-thread" aria-label="Assistant chat">
-      {footer.reconnecting && (
-        <output
-          id="chat-connection"
-          data-cx="chat-reconnecting"
-          aria-live={footer.announce ? "polite" : "off"}
-        >
-          {footer.status}
-        </output>
-      )}
       <ThreadPrimitive.Viewport data-cx="chat-viewport">
         <HistoryControls
           gap={history.gap}
@@ -57,18 +63,14 @@ export function ChatConversationView({
           </p>
         )}
       </ThreadPrimitive.Viewport>
-      {runError && (
-        <p data-cx="chat-error" role="alert">
-          {runError}
-        </p>
+      {chatId === "none" ? (
+        <>
+          {notices}
+          <ChatStart />
+        </>
+      ) : (
+        <ChatFooter {...footer}>{notices}</ChatFooter>
       )}
-      {actionError && (
-        <p data-cx="chat-error" data-kind="action" role="alert">
-          {actionError}
-        </p>
-      )}
-      <ChatNotices chatId={chatId} />
-      {chatId === "none" ? <ChatStart /> : <ChatFooter {...footer} />}
     </ThreadPrimitive.Root>
   );
 }

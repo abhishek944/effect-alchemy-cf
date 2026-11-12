@@ -4,6 +4,7 @@
   "type": "module",
   "exports": {
     "./public": "./public.ts",
+    "./telemetry": "./telemetry.ts",
     "./stage": "./stage.ts"
   },
   "scripts": {

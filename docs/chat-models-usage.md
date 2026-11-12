@@ -1,93 +1,83 @@
 # Chat models, reasoning and usage
 
-**Current runtime:** the installed catalog is the pinned pi-ai OpenRouter catalog reached over HTTPS. See [runtime](runtime.md). The sections below that
-describe the removed stack are historical and no longer describe how this repository
-runs.
+## Gateway-owned chat availability
 
-The chat uses the installed Cloudflare OpenAI and Anthropic catalog, not arbitrary
-vendor identifiers. Model metadata is not proof your account can use that model.
-Configure the appropriate default BYOK alias in the development Gateway yourself.
-No provider key or provider client belongs in browser code.
+LiteLLM is the single available chat-model source. The API intersects the inference
+credential's `/v1/models` with validated `/model/info` mappings, then enriches exact
+canonical OpenAI/Anthropic models using pinned Pi 1.2.0 native metadata. Unsupported
+or ambiguous aliases are not offered. No `CHAT_MODEL_ALLOWLIST` is read. The legacy
+saved provider identifier `openrouter` remains a storage compatibility identifier,
+not a direct-provider transport. Native Responses and Anthropic protocols point only
+to the configured gateway. No direct-provider fallback is installed.
 
-## Stage allowlist
+Gateway availability is not proof of live entitlement, pricing, every protocol field
+or configured fallback behavior. Operators must verify exact canonical mappings,
+matching native endpoints/efforts, no alternate-model fallback, no dropped parameters,
+zero paid retries, usage logging and pricing before enabling inference. Configuration
+and prerequisites are in [gateway setup](chat-gateway.md).
 
-`CHAT_GATEWAY_ID` and `CHAT_MODEL_ALLOWLIST` are separate nonsecret settings in
-`packages/config/.env.local` / `.env.prod`; both files must have identical keys.
-The allowlist is a JSON array of exact catalog IDs. Example enabling only the
-confirmed installed initial model:
+## Preferences and accepted work
 
-```dotenv
-CHAT_MODEL_ALLOWLIST='["openai/gpt-6-luna"]'
-```
+The initial preference remains `openai/gpt-5.2` / High. Existing per-chat selections
+and per-model effort memory are preserved. First use prefers High or explicitly
+reports its supported lower adjustment. An unavailable saved model/effort needs an
+explicit user correction, never implicit replacement. Revision-checked preference
+writes do not overwrite newer choices from another tab.
 
-Choose additional exact IDs from the authenticated `/api/chat/capabilities`
-catalog and verify account eligibility separately. Missing/malformed configuration
-disables model selection/sending; an empty array deliberately enables none.
-There is no automatic model fallback or inferred entitlement. Development never
-uses a production Gateway. Production requires its own allowlist/Gateway/BYOK
-setup and approved deployment. Production CI settings belong in its production
-GitHub environment, never unprivileged PR checks.
+Send freezes the selected model, effort and ordered file identities. Later changes
+apply to the next Send, not accepted work. Replies, model follow-ups after tools,
+compaction and independent titles all use LiteLLM with server-derived attribution.
+API-owned image and classifier tools also use the gateway through their existing SDKs,
+with separate capability gates and unchanged image receipts. Voice remains outside it.
 
-## Preferences and direct Send
+One response runs per chat; another chat is independent. Busy sends are rejected,
+not queued. An uncertain acceptance is repaired using its original UUID and exact
+input, not replayed as paid work. Stop targets the exact accepted operation; an
+acknowledgement is not a promise that an upstream provider stopped billing.
 
-Initial preference: GPT-6 Luna / High. Each chat retains its own model and effort;
-an explicit change also becomes the account default for newly created chats.
-Effort is remembered per model. First use prefers High, otherwise the highest
-supported level at/below High with a visible adjustment. Unsupported saved choices
-need explicit repair; never silently substitute an available model or effort.
+Missing/disabled inference configuration refuses new affected work before admission
+or reservation, while saved chats remain readable. Report credentials are independent:
+missing report access does not disable otherwise configured inference.
 
-Writes use expected revisions. A stale tab refreshes after conflict rather than
-overwriting another tab's newer selection. Settings are account-synced; visual
-theme remains independent.
+## Account-wide Usage
 
-There is one direct Send and exact-operation Stop flow, with one active response
-per chat. A busy send is rejected, not saved as waiting work. No message queue,
-waiting editor, reordering, pause/resume, Fast control or compatibility path.
-The selected model, effort and file IDs are frozen per send. Later preference
-changes affect the next send, never an already accepted response.
+The protected `/usage` destination follows Home in the rail and has no chat sidebar
+or right pane. It shows input/output tokens, actual reported requests and estimated
+USD spend, grouped Daily, Models or Providers for the selected inclusive UTC dates.
+Refresh reads reporting only; it never invokes a model. Account changes clear/fence
+old requests. Date ranges are not subject to an application lifetime cap.
 
-Retry uncertain acceptance with the same operation UUID and complete original
-text/selection/ordered file IDs. Changing any part requires a new send identity;
-a previously accepted retry repairs metadata/retention without another model run.
-Stop targets the observed native operation, never whichever reply is newest.
-Enter and Send share the same admission path for text or ready staged files;
-Shift+Enter remains a newline. Blocked submissions keep their text and files.
-Catalog failures are visible beside the controls with Retry, and a missing-catalog
-model popup explains the failure instead of opening nothing. Loading is distinct
-from a loaded catalog that does not contain the saved model.
+`GET /api/chat/usage?start=YYYY-MM-DD&end=YYYY-MM-DD` authenticates Clerk and forces
+both that user's unchanged verified Clerk UID and one exact persisted stage inference-key identity
+per upstream request. The reporting credential is never a customer filter. The public
+schema includes source, model-usage scope, timezone, activation, period and completeness;
+it never forwards administrative metadata, credentials, names or raw source IDs.
 
-## What the numbers mean
+LiteLLM 1.108.4 `/customer/daily/activity/aggregated` is authoritative for attributed model usage.
+It reports actual attempts, not just completed replies. A 400-day maximum date
+difference is a vendor request constraint; longer windows are split into disjoint
+inclusive intervals. Key rotation needs complete operator-supplied key windows.
+Missing coverage produces Partial/Unavailable, never an unfiltered request or a
+silent local-accounting fallback. Reporting begins at attributed activation, without
+backfill, replay, deletion or import of earlier receipts. Older hashed-user records
+are not automatically joined after switching to raw Clerk UID attribution.
 
-Response facts use the actual committed response's reported input/output/cache
-and available reasoning counters. Cache tokens are included only once in total
-input. Reasoning is already a subset of output, not another additive category.
-Live/uncommitted responses are Pending, not a fabricated zero-cost answer.
+Unknown counts/prices remain Unknown. Image/decision attempts with only default zero
+tokens and no measured token activity do not prove zero token usage. Partial totals are not presented as complete
+sums; failures/Stop are not automatically free. Estimated spend is not an invoice.
+No optional cache/performance analytics or app-admin reporting console is added.
+Operators retain their gateway reporting surface; global administrators may see both
+stages despite application-level report filtering.
 
-The bottom tray shows estimated authoritative server-context tokens against the
-selected model's actual context window and estimated chat spend. It does not
-estimate from the browser's bounded message window. Selecting another preferred
-model invalidates the old ratio without reconfiguring an active response.
+## Per-chat context and exact receipts
 
-Prices are installed catalog estimates, including supported price tiers, not an
-invoice or account-billing guarantee. Missing counts/prices are Unknown; known
-subtotals with missing work are Partial. Failed, stopped and retried work may still
-cost money. Reply, title, summarization and speech work remain separately
-attributable. Speech retains real seconds/characters/tokens, never fake context
-token equivalents. Dictation before a chat exists remains account-attributable
-rather than being charged to an unrelated chat's display.
+The existing Context/Cost tray and response facts retain their separate purpose.
+Context estimates use the server's actual model context, not the browser's bounded
+history window. Catalog list prices are estimates, not gateway account totals.
+Reply, compaction, title, image and speech receipts remain separately attributable.
+Never add gateway, Langfuse and local amounts together for the same model work.
+Speech seconds/characters and nonchat costs are not fake context-token equivalents.
 
-Titles use one bounded background call with the first accepted send's actual
-model and off/lowest supported effort. See [automatic titles](chat-titles.md).
-No extra provider request is made merely to calculate a displayed estimate.
-Context and Cost open the same ledger above the composer. Escape returns to the
-button that opened it; pointer dismissal leaves focus on the clicked control.
-Leaving the usage host by keyboard closes it before another picker opens.
-
-## User-owned acceptance
-
-After explicit Gateway/BYOK/allowlist setup, verify model eligibility, every
-supported effort, preference conflicts across tabs, new-chat inheritance, native
-streaming/reconnect/Stop and same-UUID repair. Inspect reported usage and provider
-billing separately, including retries/failure/stop, title and summarization.
-Static checks and anonymous rendered fixtures do not prove paid delivery,
-eviction recovery, account billing, authentication or production behavior.
+Static type/lint/build and fixture comparisons do not prove live gateway access,
+customer accounting, authentication, billing, telemetry delivery or cancellation.
+Live acceptance remains separately authorized and operator-owned.

@@ -6,7 +6,7 @@
  * argument, browser string or legacy native proof selects an owner or original.
  */
 import type * as cf from "./platform.ts";
-import type { CloudflareRun } from "@abhishek944/pi-image-gen/core";
+import type { ImageHost } from "@abhishek944/pi-image-gen/core";
 import type { AssistantMessage, Context, TextContent } from "@earendil-works/pi-ai";
 import type { FileDescriptor } from "./chat-attachment-schema.ts";
 import type { ChatCatalogModel } from "./chat-capabilities.ts";
@@ -97,7 +97,7 @@ export type ChatSdkFilesDeps = ChatSdkScopeDeps & {
   readonly responses: ChatImageResponseStore;
   readonly bucket: cf.R2Bucket;
   /** Null unless the trusted stage actually has an image Gateway binding. */
-  readonly imageGatewayId: () => string | null;
+  readonly imageGatewayId: (model?: string) => string | null;
   /** Parent transcript mapping for every accepted compact user message. */
   readonly acceptedFor: (context: Context) => readonly ChatSdkAcceptedMessage[];
 };
@@ -113,8 +113,12 @@ export type ChatSdkImagesDeps = ChatSdkScopeDeps & {
   readonly responses: ChatImageResponseStore;
   readonly bucket: cf.R2Bucket;
   readonly calls: ChatImageCallStore;
-  /** The actual bound `AI.run` adapter; undefined refuses before any dispatch. */
-  readonly cloudflareRun: CloudflareRun | undefined;
+  /** API-owned public root SDK adapter; the host never receives credentials. */
+  readonly imageAdapter: (
+    image: Extract<ImageResponseCandidate["image"], { state: "ready" }>,
+    scope: ChatToolScope,
+    onDispatch: () => void,
+  ) => NonNullable<ImageHost<unknown>["adapter"]>;
   readonly configurationReady: (
     image: Extract<ImageResponseCandidate["image"], { state: "ready" }>,
   ) => boolean;

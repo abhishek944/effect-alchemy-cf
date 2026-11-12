@@ -1,3 +1,5 @@
+import { attributedPayload } from "./chat-gateway-identity.ts";
+import { gatewayCatalogSnapshot } from "./chat-gateway-catalog.ts";
 import type { Context, Models } from "@earendil-works/pi-ai";
 import type { ModelRequestEvent } from "@highchat/chat-runtime";
 import { effectiveGenerationOutputTokens } from "./chat-generation-output-budget.ts";
@@ -7,6 +9,7 @@ import type { ChatAccounting } from "./chat-accounting.ts";
 /** Streaming provider transport only. The Pi SDK session and tool loop run in Node. */
 export const sdkModelReply = (input: {
   readonly models: Models;
+  readonly customer: string;
   readonly request: ModelRequestEvent;
   readonly context: Context;
   readonly selection: ChatSelection;
@@ -16,7 +19,8 @@ export const sdkModelReply = (input: {
   readonly signal: AbortSignal;
 }): ReadableStream<Uint8Array> => {
   const model = input.models.getModel(input.selection.provider, input.selection.model);
-  if (model === undefined) throw new Error("The selected model is unavailable");
+  if (model === undefined || !gatewayCatalogSnapshot().ids.includes(input.selection.model))
+    throw new Error("The selected model is unavailable");
   const maxTokens = effectiveGenerationOutputTokens(
     model.contextWindow,
     model.maxTokens,
@@ -31,9 +35,12 @@ export const sdkModelReply = (input: {
     null,
   );
   const stream = input.models.streamSimple(model, input.context, {
-    ...input.request.options,
     maxTokens,
     signal: input.signal,
+    maxRetries: 0,
+    ...(input.selection.effort === "off" ? {} : { reasoning: input.selection.effort }),
+    headers: { "x-litellm-customer-id": input.customer },
+    onPayload: (payload) => attributedPayload(payload, input.customer, model.api),
   });
   const iterator = stream[Symbol.asyncIterator]();
   const encoder = new TextEncoder();

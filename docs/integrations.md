@@ -163,8 +163,8 @@ boundary once the application actually requires these capabilities.
 ## Secrets and stage isolation
 
 The optional Config layers use `RESEND_API_KEY` and `SLACK_BOT_TOKEN`. They are
-not mandatory stage env keys and have not been added to `.env.local` or `.env.prod`.
-Do not put provider credentials in browser code or committed/stage env files.
+not mandatory stage keys and are not in the Doppler config. Do not put provider
+credentials in browser code or committed configuration.
 Keep credentials in the appropriate private provider profile or application
 secret store, then explicitly supply them via a server-only ConfigProvider or
 redacted layer options. Alchemy profiles do not automatically become application

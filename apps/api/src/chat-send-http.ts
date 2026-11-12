@@ -1,3 +1,6 @@
+import { resolveChatSelectionValue } from "./chat-capability-policy.ts";
+import { configuredChatPolicy } from "./chat-preferences-http.ts";
+import { refreshGatewayCatalog } from "./chat-gateway-catalog.ts";
 import { withDiagnostic } from "@highchat/diagnostics";
 import { type Context, Effect, Schema } from "effect";
 import { type ChatNamespaces, doCall } from "./chat-bindings.ts";
@@ -49,8 +52,7 @@ export const sendChat = (
     const chat = yield* requireOwnedChat(ns, user.id, id);
     const applicationOrigin = yield* publicApplicationOrigin(env);
     if (chat.archived) return yield* Effect.fail(new ChatArchived());
-    // Metadata only: an unavailable object cannot fail the accepted message, and
-    // the bounded title model call runs in the catalog after this quick claim.
+    // Independent title work never delays the accepted answer.
     const claimTitle = () =>
       Effect.gen(function* () {
         if (payload.text.length === 0) return;
@@ -94,7 +96,6 @@ export const sendChat = (
             : Effect.fail(privateUnavailable("receipt", call.status)),
         ),
       );
-    // Native exact input evidence precedes quota. No answer/result entry is read.
     let nativeAccepted = (yield* nativeReceipt()).accepted;
     const attemptId = crypto.randomUUID();
     const admit = () =>
@@ -113,11 +114,13 @@ export const sendChat = (
         ),
       );
     if (!nativeAccepted) {
-      // Configuration presence only, from the same predicate that enables
-      // submission: a configured provider never fails before admission, and an
-      // unconfigured one never admits or reserves quota for unreachable work.
+      yield* Effect.promise(() => refreshGatewayCatalog(env));
       if (!chatInferenceConfigured(env))
         return yield* Effect.fail(new InferenceUnavailable({ message: INFERENCE_UNCONFIGURED }));
+      if (!resolveChatSelectionValue(configuredChatPolicy(), payload.selection).ok)
+        return yield* Effect.fail(
+          new ChatInvalid({ message: "The selected model or effort is unavailable." }),
+        );
     }
     let decision = yield* admit();
     if (!decision.admitted && decision.reason === "rate" && !nativeAccepted) {
@@ -135,7 +138,6 @@ export const sendChat = (
       if (decision.reason === "archived") return yield* Effect.fail(new ChatArchived());
       return yield* Effect.fail(new ChatRateLimited());
     }
-    // Catalog identity is still checked/repaired; native accepted retries never recharge or resubmit.
     if (decision.reason === "duplicate" && !nativeAccepted)
       return yield* Effect.fail(new ChatUnavailable());
     const call = yield* doCall(ns.conversation(user.id, chat.id), "POST", "/messages", payload, {

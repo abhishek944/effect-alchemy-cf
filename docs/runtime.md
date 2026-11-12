@@ -8,8 +8,8 @@ same `/api/*` routes the application always had. There is no edge runtime, no
 infrastructure-as-code provider, no Durable Object and no deployment configuration.
 
 `apps/chat-host` stays a separate private Node process on `127.0.0.1:1338`. It owns
-real Pi SDK sessions; the API never runs model inference in-process on behalf of the
-browser.
+real Pi SDK sessions; the API owns authenticated outbound model and SDK-tool HTTP,
+while the credential-free host owns the agent loop.
 
 ## Chat objects
 
@@ -69,24 +69,23 @@ streaming routes, which answer with a response rather than a typed error.
 
 ## Model transport
 
-`apps/api/src/chat-model-transport.ts` returns a pi-ai provider over HTTP
-(`openrouterProvider()`) only when `OPENROUTER_API_KEY` is set, and `null`
-otherwise. With no provider, submission is disabled and the failure is the typed
-`InferenceUnavailable`; the app never silently picks another provider. The send
-route refuses _before_ admission and quota using `chatInferenceConfigured`, the same
-predicate the conversation uses, so a configured provider never fails early and an
-unconfigured one never reserves quota for unreachable work. The installed model
-catalog is the pinned pi-ai OpenRouter catalog for the `openai/*` and `anthropic/*`
-groups, serialized in full rather than under a fixed response cap; only an explicit
-`CHAT_MODEL_ALLOWLIST` is length-limited.
+`apps/api/src/chat-model-transport.ts` returns a pi-ai provider targeting only
+LiteLLM with explicit server credentials. Gateway discovery controls availability;
+pinned native Pi metadata enriches exact compatible canonical mappings, not another
+manual allowlist. Replies, follow-up model calls, compaction and titles use the
+accepted owner's unchanged verified Clerk UID as customer identity. Missing inference configuration/discovery refuses
+new work before admission; saved chats remain readable and no direct provider is a
+fallback. API-owned image/classifier SDK tools share this gateway; voice stays separate. See [gateway setup](chat-gateway.md)
+and [usage authority](chat-models-usage.md) for exact prerequisites and failure modes.
 
 The application origin used for same-origin checks and absolute attachment URLs is
 the platform request URL validated against server configuration: the configured
 public origin when the stage has one, otherwise loopback hosts only. An unvalidated
 `Host` header is never trusted, and a relative request URL is never parsed bare.
 
-Paid image generation has no configured transport in this runtime; the capability
-reports itself as not configured and refuses before any reservation.
+Image generation uses the existing public SDK only for discovered supported gateway
+mappings. Missing configuration refuses before reservation. Optional classification
+uses the public Decisions SDK with explicit per-call credentials and no file access.
 
 ## Typed errors
 

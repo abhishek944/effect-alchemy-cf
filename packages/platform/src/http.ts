@@ -1,14 +1,34 @@
 import { NodeFileSystem, NodeHttpPlatform } from "@effect/platform-node";
-import { Cause, Effect, ErrorReporter, Layer } from "effect";
+import { Cause, Effect, ErrorReporter, Layer, Option } from "effect";
 import type { FileSystem } from "effect";
 import * as Etag from "effect/http/Etag";
 import type { HttpBodyError } from "effect/http/HttpBody";
 import type * as HttpPlatform from "effect/http/HttpPlatform";
-import { causeResponse, type HttpServerError } from "effect/http/HttpServerError";
-import type { HttpServerRequest } from "effect/http/HttpServerRequest";
+import {
+  causeResponse,
+  RequestParseError,
+  type HttpServerError,
+} from "effect/http/HttpServerError";
+import { toURL, type HttpServerRequest } from "effect/http/HttpServerRequest";
 import type * as HttpServerResponse from "effect/http/HttpServerResponse";
 import * as Path from "effect/Path";
 import type { Scope } from "effect/Scope";
+
+/**
+ * Metadata-only auth view: leave the original body exclusively to the handler's
+ * decoder. `toWeb` would eagerly start a competing reader for Node POST bodies.
+ */
+export const toAuthenticationRequest = Effect.fnUntraced(function* (
+  request: HttpServerRequest,
+): Effect.fn.Return<Request, RequestParseError> {
+  const source = request.source;
+  const metadata = source instanceof Request ? source : request;
+  const url = source instanceof Request ? Option.some(new URL(source.url)) : toURL(request);
+  if (Option.isNone(url)) {
+    return yield* Effect.fail(new RequestParseError({ request, description: "Invalid URL" }));
+  }
+  return new Request(url.value, { method: metadata.method, headers: metadata.headers });
+});
 
 /** The services `HttpApiBuilder.layer` needs, served from the Node runtime. */
 export const httpPlatformLayer: Layer.Layer<

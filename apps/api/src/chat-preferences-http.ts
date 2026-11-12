@@ -1,24 +1,18 @@
+import { gatewayCatalogSnapshot } from "./chat-gateway-catalog.ts";
 import { DomainUuid } from "./chat-capabilities.ts";
-import {
-  publicChatCatalog,
-  stageModelPolicy,
-  type StageModelPolicy,
-} from "./chat-capability-policy.ts";
+import { publicChatCatalog, type StageModelPolicy } from "./chat-capability-policy.ts";
 import { decodeOption, json, requestBody } from "./chat-internal.ts";
 import { ChatPreferencesWrite } from "./chat-preference-schema.ts";
 import type { ChatPreferencesStore } from "./chat-preferences-store.ts";
 import { SpeechPreferencesWrite } from "./chat-speech-schema.ts";
 
-/** Nonsecret server configuration: a JSON array, never a browser-supplied allowlist. */
-export const configuredChatPolicy = (raw: unknown): StageModelPolicy => {
-  if (typeof raw !== "string" || raw.trim() === "") return stageModelPolicy(null);
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return stageModelPolicy(parsed);
-  } catch {
-    return stageModelPolicy(null);
-  }
-};
+/** Live gateway-owned availability, shared by existing synchronous selection consumers. */
+export const configuredChatPolicy = (): StageModelPolicy => ({
+  availability: "configured",
+  get enabled() {
+    return [...gatewayCatalogSnapshot().ids];
+  },
+});
 
 /** Private owner-catalog routes; public authentication is owned by API ingress. */
 export async function catalogPreferences(

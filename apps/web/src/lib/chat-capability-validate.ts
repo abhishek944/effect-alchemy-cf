@@ -191,6 +191,6 @@ export function parseChatCatalog(value: unknown): ChatCatalog | null {
     if (value.stageConfigured && entry.availability === "stage_unconfigured") return null;
     models.push(entry);
   }
-  if (!models.some((entry) => entry.model === defaultSelection.model)) return null;
+  // The default is a preference and may be unavailable in the permitted catalog.
   return { version: 1, stageConfigured: value.stageConfigured, defaultSelection, models };
 }

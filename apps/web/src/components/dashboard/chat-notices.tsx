@@ -45,7 +45,7 @@ export default function ChatNotices({ chatId }: { chatId: string }) {
       )}
       {pending?.phase === "accepted" && (
         <output data-cx="chat-retry" aria-live="off">
-          <span>Sent to the assistant. Waiting for this run to start.</span>
+          <span className="sr-only">Sent to the assistant. Waiting for this run to start.</span>
           <button
             type="button"
             data-cx="chat-retry-action"
@@ -56,7 +56,7 @@ export default function ChatNotices({ chatId }: { chatId: string }) {
           >
             Discard
           </button>
-          <span data-cx="chat-retry-note">Stop is the action that cancels this run.</span>
+          <span className="sr-only">Stop is the action that cancels this run.</span>
         </output>
       )}
     </>

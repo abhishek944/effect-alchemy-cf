@@ -1,3 +1,5 @@
+import { RuntimeEnv } from "@highchat/platform";
+import { readGatewayUsage } from "./chat-gateway-report.ts";
 import { Effect, Schema } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { Api } from "./api.ts";
@@ -29,11 +31,20 @@ const check = Effect.fnUntraced(function* (call: DoCall) {
 export const ChatCapabilitiesLive = HttpApiBuilder.group(Api, "chatCapabilities", (handlers) =>
   Effect.gen(function* () {
     const ns = yield* ChatNamespaces;
+    const env = yield* RuntimeEnv;
     const catalog = Effect.fnUntraced(function* (method: string, path: string, body?: unknown) {
       const user = yield* CurrentUser;
       return yield* doCall(ns.catalog(user.id), method, path, body).pipe(Effect.flatMap(check));
     });
     return handlers
+      .handle("accountChatUsage", ({ query }) =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser;
+          if (query.start > query.end)
+            return yield* Effect.fail(new ChatInvalid({ message: "Choose a valid date range." }));
+          return yield* Effect.promise(() => readGatewayUsage(env, user.id, query));
+        }),
+      )
       .handle("chatCapabilities", () =>
         catalog("GET", "/capabilities").pipe(
           Effect.flatMap((call) => decodeOrFail(ChatCatalog, call.body)),

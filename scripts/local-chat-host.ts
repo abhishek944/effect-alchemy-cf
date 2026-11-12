@@ -3,7 +3,27 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 /** Local-only service credentials are ephemeral and never written or printed. */
-export async function startLocalChatHost() {
+export async function startLocalChatHost(source: NodeJS.ProcessEnv = process.env) {
+  // Only process basics and this host\'s tracing destination/credentials cross the boundary.
+  const names = [
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "NODE_ENV",
+    "APP_STAGE",
+    "LANGFUSE_ENABLED",
+    "LANGFUSE_PUBLIC_KEY",
+    "LANGFUSE_SECRET_KEY",
+    "LANGFUSE_BASE_URL",
+  ];
+  const environment = Object.fromEntries(
+    names.flatMap((name) => {
+      const value = source[name];
+      return value === undefined ? [] : [[name, value]];
+    }),
+  );
   const port = 1338;
   const token = randomBytes(32).toString("hex");
   const child = spawn(
@@ -14,7 +34,7 @@ export async function startLocalChatHost() {
     ],
     {
       cwd: fileURLToPath(new URL("../", import.meta.url)),
-      env: { ...process.env, CHAT_HOST_PORT: String(port), CHAT_HOST_TOKEN: token },
+      env: { ...environment, CHAT_HOST_PORT: String(port), CHAT_HOST_TOKEN: token },
       stdio: ["ignore", "pipe", "inherit"],
     },
   );

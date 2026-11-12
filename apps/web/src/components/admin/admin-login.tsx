@@ -1,34 +1,26 @@
-import { SignIn } from "@clerk/react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import AuthPage from "@/components/auth-page";
+import { adminHomeHref, publicSignUpHref } from "@/lib/admin-home";
 
 type Props = { notice?: string | null };
 
 /**
- * Admin sign-in is ordinary Clerk sign-in; the server decides whether the
- * account carries the admin role. There is no bootstrap token any more, so the
- * Clerk dashboard is the only place a role is granted.
+ * The admin portal signs in through the public auth page, so an operator sees the
+ * same UI as the main website. It is sign-in only: without a mode switch the page
+ * renders no account-creation control and hides Clerk's sign-up prompt, while public
+ * sign-up stays on the main site. This portal owns its origin root, so home and
+ * sign-up links leave for the main UI. The server decides whether the account is an
+ * administrator, so this page never describes how a role is granted.
  */
 export default function AdminLogin({ notice }: Props) {
   return (
-    <Card className="w-full rounded-2xl border-border/80 bg-card shadow-[0_24px_80px_-44px_rgba(20,28,38,0.35)]">
-      <CardHeader className="gap-2 px-7 pb-5 pt-7 sm:px-8 sm:pt-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Admin access
-        </p>
-        <CardTitle className="text-2xl tracking-tight">Sign in to the admin portal</CardTitle>
-        <CardDescription>
-          Sign in with an account whose Clerk public metadata carries{" "}
-          <code className="font-mono">{'{"role":"admin"}'}</code>.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-7 pb-7 sm:px-8 sm:pb-8">
-        {notice && (
-          <output className="mb-5 block rounded-lg border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-            {notice}
-          </output>
-        )}
-        <SignIn routing="hash" appearance={{ variables: { colorPrimary: "inherit" } }} />
-      </CardContent>
-    </Card>
+    <AuthPage
+      mode="sign-in"
+      checking={false}
+      sessionError={null}
+      notice={notice ?? null}
+      homeHref={adminHomeHref}
+      signInHref="/"
+      signUpHref={publicSignUpHref}
+    />
   );
 }

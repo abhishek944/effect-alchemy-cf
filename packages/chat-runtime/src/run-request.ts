@@ -70,6 +70,10 @@ export type ModelDescriptor = typeof ModelDescriptor.Type;
  */
 export const RunRequest = Schema.Struct({
   runId: WireId,
+  tracing: Schema.Struct({
+    userId: Schema.String.check(Schema.isMinLength(1)),
+    sessionId: WireId,
+  }),
   selection: RunSelection,
   model: ModelDescriptor,
   history: Schema.mutable(Schema.Array(Message)),

@@ -121,9 +121,6 @@ export default function ChatConversation({
   const status = composerStatus({
     hasSnapshot: Boolean(snapshot),
     connection,
-    stoppingHere,
-    archived,
-    posting: pending?.phase === "posting",
   });
   const sendLabel = composerSendLabel({
     canSend,
@@ -163,8 +160,6 @@ export default function ChatConversation({
                 chatId,
                 running,
                 status,
-                reconnecting:
-                  Boolean(snapshot) && connection === "reconnecting" && !stoppingHere && !archived,
                 announcement,
                 announce: !runError && pending?.phase !== "failed",
                 stopLabel,

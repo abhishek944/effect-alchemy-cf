@@ -35,11 +35,23 @@ const Control = Schema.Literals([
   "outputFormat",
 ]);
 const Canonical = Schema.Struct({
-  route: Schema.Struct({
-    kind: Schema.Literal("catalog"),
-    model: Schema.Literals(["openai/gpt-image-2.5-flare", "openai/gpt-image-2.5-sunburst"]),
-    gatewayId: CallIdentity.check(Schema.isTrimmed(), Schema.isMaxLength(128)),
-  }),
+  route: Schema.Union([
+    Schema.Struct({
+      kind: Schema.Literal("catalog"),
+      model: Schema.Literals(["openai/gpt-image-2.5-flare", "openai/gpt-image-2.5-sunburst"]),
+      gatewayId: CallIdentity.check(Schema.isTrimmed(), Schema.isMaxLength(128)),
+    }),
+    Schema.Struct({
+      kind: Schema.Literal("provider"),
+      providerId: Schema.Literal("litellm"),
+      api: Schema.Literal("openai"),
+      remoteModelId: Schema.Literals([
+        "openai/gpt-image-2.5-flare",
+        "openai/gpt-image-2.5-sunburst",
+      ]),
+      requestedId: Schema.String,
+    }).check(Schema.makeFilter((route) => route.remoteModelId === route.requestedId)),
+  ]),
   effective: Schema.Array(Schema.Tuple([Control, Schema.Json])),
   supplied: Schema.Array(Schema.Tuple([Control, Schema.Json])),
   controlSources: Schema.Array(

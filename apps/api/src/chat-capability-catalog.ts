@@ -1,14 +1,14 @@
 /**
- * Installed OpenRouter OpenAI and Anthropic chat model catalog.
+ * Pinned native OpenAI and Anthropic capability enrichment for exact gateway models.
  *
  * Metadata is derived at module load from the pinned @earendil-works/pi-ai
- * 1.1.0 OpenRouter catalog and the native `getSupportedThinkingLevels` rule.
+ * 1.1.0 native catalogs and the native `getSupportedThinkingLevels` rule.
  * Nothing here calls a provider, reads a credential or touches the network.
  * List prices are catalog values, never account billing proof. An entry whose
  * installed metadata is incomplete is excluded instead of guessed.
  */
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai/models";
-import { OPENROUTER_MODELS } from "@earendil-works/pi-ai/providers/openrouter.models";
+import { gatewayModelMetadata } from "./chat-gateway-models.ts";
 import {
   CHAT_PROVIDER,
   DEFAULT_CHAT_EFFORT,
@@ -21,7 +21,7 @@ import {
   type ChatPricing,
 } from "./chat-capabilities.ts";
 
-type CatalogEntry = (typeof OPENROUTER_MODELS)[keyof typeof OPENROUTER_MODELS];
+type CatalogEntry = (typeof gatewayModelMetadata)[number];
 
 const rate = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
@@ -86,7 +86,6 @@ const resizeOf = (value: unknown): ChatImageResize | null | "invalid" => {
 };
 
 const describe = (group: ChatGroup, model: CatalogEntry): ChatCatalogModel | null => {
-  if (model.api !== "openai-completions" && model.api !== "anthropic-messages") return null;
   if (!model.id.startsWith(`${group}/`)) return null;
   const vendorId = model.id.slice(group.length + 1);
   if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(vendorId)) return null;
@@ -124,7 +123,7 @@ const describe = (group: ChatGroup, model: CatalogEntry): ChatCatalogModel | nul
 
 const installed: readonly ChatCatalogModel[] = (() => {
   const models: ChatCatalogModel[] = [];
-  for (const model of Object.values(OPENROUTER_MODELS)) {
+  for (const model of gatewayModelMetadata) {
     const group = groupOf(model.id);
     if (group === null) continue;
     const described = describe(group, model);

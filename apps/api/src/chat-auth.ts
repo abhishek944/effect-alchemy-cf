@@ -1,4 +1,5 @@
 import { ClerkIdentity } from "@highchat/auth";
+import { toAuthenticationRequest } from "@highchat/platform";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
@@ -24,7 +25,7 @@ export class ChatAuthentication extends HttpApiMiddleware.Service<
       return (httpEffect) =>
         Effect.gen(function* () {
           const request = yield* HttpServerRequest.HttpServerRequest;
-          const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
+          const web = yield* toAuthenticationRequest(request).pipe(Effect.orDie);
           if (request.method !== "GET" && request.method !== "HEAD") {
             if (web.headers.get("origin") !== new URL(web.url).origin) {
               return yield* Effect.fail(new ChatForbidden());

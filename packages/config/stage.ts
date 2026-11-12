@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { parseEnv } from "node:util";
 import type { AppStage } from "./defaults.ts";
+import { stageDefaults } from "./defaults.ts";
 import { readAppConfig } from "./public.ts";
 
 export function appStage(value: string | undefined): AppStage {
@@ -9,49 +8,35 @@ export function appStage(value: string | undefined): AppStage {
   return stage;
 }
 
-/** One stage-to-file mapping owns loading, Turbo hashing, and documentation. */
-const stageFiles = {
-  dev: ".env.local",
-  prod: ".env.prod",
-} as const satisfies Record<AppStage, string>;
+/** The stage values Doppler injects; an absent value stays absent instead of becoming empty. */
+export type StageValues = Readonly<
+  Record<keyof ReturnType<typeof stageDefaults>, string | undefined>
+>;
 
-export function stageEnvFile(stage: AppStage): URL {
-  return new URL(stageFiles[stage], import.meta.url);
-}
-
-/** Node-only: never export stage files or this loader into browser code. */
-export function loadStage(stage: AppStage): Record<string, string | undefined> {
-  return parseEnv(readFileSync(stageEnvFile(stage), "utf8"));
-}
-
-/** Node dotenv does not decode JSON-style escaped quotes. Verify writes before touching a file. */
-export function serializeEnv(values: Readonly<Record<string, string | undefined>>): string {
-  return (
-    Object.entries(values)
-      .map(([key, value]) => {
-        if (value === undefined) throw new Error("Stage configuration values must be strings.");
-        const quote = ["'", '"', "`"].find((candidate) => !value.includes(candidate));
-        const encoded = quote === undefined ? value : `${quote}${value}${quote}`;
-        const line = `${key}=${encoded}`;
-        if (parseEnv(line)[key] !== value)
-          throw new Error("Stage configuration value cannot be represented by dotenv syntax.");
-        return line;
-      })
-      .join("\n") + "\n"
-  );
-}
-
-/** Resolve public inputs before Turbo calculates task hashes. Stage files win over shell values. */
-export function buildEnvironment(stage: AppStage, inherited: NodeJS.ProcessEnv = process.env) {
-  const config = readAppConfig(loadStage(stage));
-  const publicConfig = stagePublicConfig(stage, inherited);
+/**
+ * Reads stage values from the process environment. `doppler run` injects them
+ * with DOPPLER_CONFIG set; no stage env file is read or created. The literal is
+ * checked against StageValues, so adding a default without reading it fails.
+ */
+export function loadStage(inherited: NodeJS.ProcessEnv = process.env): StageValues {
   return {
-    ...inherited,
-    APP_STAGE: stage,
-    APP_NAME: config.name,
-    APP_DOMAIN: config.domain,
-    CLERK_PUBLISHABLE_KEY: publicConfig.clerkPublishableKey,
-  };
+    APP_NAME: inherited.APP_NAME,
+    APP_DOMAIN: inherited.APP_DOMAIN,
+    AUTH_BASE_URL: inherited.AUTH_BASE_URL,
+    CHAT_HOST_URL: inherited.CHAT_HOST_URL,
+    CLERK_PUBLISHABLE_KEY: inherited.CLERK_PUBLISHABLE_KEY,
+  } satisfies StageValues;
+}
+
+/**
+ * A Doppler-injected process must define every shared key. Without injection the
+ * checked-in defaults apply, which keeps CI lint and build credential-free.
+ */
+export function missingStageKeys(inherited: NodeJS.ProcessEnv = process.env): string[] {
+  if (inherited.DOPPLER_CONFIG === undefined) return [];
+  return Object.entries(loadStage(inherited))
+    .filter(([, value]) => value === undefined)
+    .map(([key]) => key);
 }
 
 export type StagePublicConfig = {
@@ -62,20 +47,21 @@ export type StagePublicConfig = {
 };
 
 /**
- * Public values a browser build may embed. The stage file is the source of
- * truth; a blank file entry falls back to the shell. Secrets are never read
- * here, so a server key can never reach the bundle.
+ * Public values a browser build may embed. The process environment is the
+ * source of truth; blanks fall back to the stage defaults. Secrets are never
+ * read here, so a server key can never reach the bundle.
  */
 export function stagePublicConfig(
   stage: AppStage = appStage(process.env.APP_STAGE),
   inherited: NodeJS.ProcessEnv = process.env,
 ): StagePublicConfig {
-  const values = loadStage(stage);
+  const defaults = stageDefaults(stage);
+  const values = loadStage(inherited);
   const config = readAppConfig({
-    APP_NAME: values.APP_NAME || inherited.APP_NAME,
-    APP_DOMAIN: values.APP_DOMAIN || inherited.APP_DOMAIN || "",
+    APP_NAME: values.APP_NAME || defaults.APP_NAME,
+    APP_DOMAIN: values.APP_DOMAIN || defaults.APP_DOMAIN,
   });
-  const key = (values.CLERK_PUBLISHABLE_KEY || inherited.CLERK_PUBLISHABLE_KEY || "").trim();
+  const key = (values.CLERK_PUBLISHABLE_KEY ?? "").trim();
   return {
     name: config.name,
     domain: config.domain,
@@ -84,12 +70,27 @@ export function stagePublicConfig(
   };
 }
 
+/** Resolve public inputs before Turbo calculates task hashes. */
+export function buildEnvironment(stage: AppStage, inherited: NodeJS.ProcessEnv = process.env) {
+  const missing = missingStageKeys(inherited);
+  if (missing.length > 0)
+    throw new Error(`Doppler stage config is missing keys: ${missing.join(", ")}.`);
+  const config = stagePublicConfig(stage, inherited);
+  return {
+    ...inherited,
+    APP_STAGE: stage,
+    APP_NAME: config.name,
+    APP_DOMAIN: config.domain,
+    CLERK_PUBLISHABLE_KEY: config.clerkPublishableKey,
+  };
+}
+
 /** Vite also supports direct workspace commands; defaults to the dev stage, not its NODE_ENV. */
 export function buildAppConfig() {
   const stage = appStage(process.env.APP_STAGE);
-  const values = loadStage(stage);
+  const defaults = stageDefaults(stage);
   return readAppConfig({
-    APP_NAME: process.env.APP_NAME ?? values.APP_NAME,
-    APP_DOMAIN: process.env.APP_DOMAIN ?? values.APP_DOMAIN,
+    APP_NAME: process.env.APP_NAME || defaults.APP_NAME,
+    APP_DOMAIN: process.env.APP_DOMAIN || defaults.APP_DOMAIN,
   });
 }

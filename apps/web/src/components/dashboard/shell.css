@@ -49,31 +49,6 @@ body:has([data-dashboard]) {
   font-weight: 500;
   min-width: 0;
 }
-[data-dashboard] [data-cx="rail"] {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  background: var(--cx-chrome);
-}
-[data-dashboard] [data-cx="rail-link"] {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-  color: var(--cx-muted);
-  text-decoration: none;
-}
-[data-dashboard] [data-cx="rail-link"]:hover {
-  background: var(--cx-hover);
-  color: var(--cx-text);
-}
-[data-dashboard] [data-cx="rail-link"][aria-current] {
-  background: var(--cx-hover);
-  color: var(--cx-text);
-}
 [data-dashboard] [data-cx="sidebar"] {
   position: relative;
   display: flex;
@@ -176,10 +151,4 @@ body:has([data-dashboard]) {
 
 [data-dashboard] [data-cx="sidebar-navigation"][hidden] {
   display: none;
-}
-
-[data-dashboard] [data-cx="rail-link"] [data-icon-name="house"] {
-  width: 22px;
-  height: 22px;
-  stroke-width: 1.9;
 }

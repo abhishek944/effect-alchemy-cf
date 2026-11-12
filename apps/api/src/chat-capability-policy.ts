@@ -1,4 +1,5 @@
-/** Server allowlist policy; installed metadata is not account eligibility. */
+/** Gateway-only availability; installed metadata enriches capabilities, never entitlement. */
+import { gatewayCatalogSnapshot } from "./chat-gateway-catalog.ts";
 import { Option, Schema } from "effect";
 import { installedChatCatalog, installedChatModel } from "./chat-capability-catalog.ts";
 import {
@@ -14,52 +15,15 @@ import {
   type ChatSelectionFailure,
 } from "./chat-capabilities.ts";
 
-export const STAGE_MODEL_LIMIT = 64;
-
-/** A malformed, oversized, non-string or overlong allowlist fails closed as unconfigured. */
-const RawAllowlist = Schema.Array(Schema.String.check(Schema.isMaxLength(80))).check(
-  Schema.isMaxLength(STAGE_MODEL_LIMIT),
-);
-
-/**
- * Configured allowlist. `unconfigured` means no valid allowlist and every
- * model fails closed; an empty configured list deliberately enables nothing.
- * Non-catalog-shaped or catalog-unknown ids are reported for diagnosis and
- * are never selectable.
- */
+/** Synchronous view of the permitted gateway catalog, not manual configuration. */
 export const StageModelPolicy = Schema.Union([
   Schema.Struct({ availability: Schema.Literal("unconfigured") }),
   Schema.Struct({
     availability: Schema.Literal("configured"),
-    enabled: Schema.Array(ChatModelId).check(Schema.isMaxLength(STAGE_MODEL_LIMIT)),
-    unrecognized: Schema.Array(Schema.String.check(Schema.isMaxLength(80))).check(
-      Schema.isMaxLength(STAGE_MODEL_LIMIT),
-    ),
+    enabled: Schema.Array(ChatModelId),
   }),
 ]);
 export type StageModelPolicy = typeof StageModelPolicy.Type;
-
-export const STAGE_UNCONFIGURED: StageModelPolicy = Object.freeze({
-  availability: "unconfigured",
-});
-
-/** Builds a policy from raw configuration. `null` and `undefined` mean unconfigured. */
-export const stageModelPolicy = (enabled: unknown): StageModelPolicy => {
-  if (enabled === null || enabled === undefined) return STAGE_UNCONFIGURED;
-  const configured = Option.getOrNull(Schema.decodeUnknownOption(RawAllowlist)(enabled));
-  if (configured === null) return STAGE_UNCONFIGURED;
-  const known: string[] = [];
-  const unrecognized: string[] = [];
-  for (const raw of configured) {
-    const id = raw.trim();
-    if (id === "" || known.includes(id) || unrecognized.includes(id)) continue;
-    if (Option.getOrNull(Schema.decodeUnknownOption(ChatModelId)(id)) === null)
-      unrecognized.push(id);
-    else if (installedChatModel(id) === null) unrecognized.push(id);
-    else known.push(id);
-  }
-  return { availability: "configured", enabled: known, unrecognized };
-};
 
 export type ChatModelAvailability = "enabled" | "not_enabled" | "stage_unconfigured";
 
@@ -180,8 +144,7 @@ export const ChatCatalog = Schema.Struct({
   version: Schema.Literal(1),
   stageConfigured: Schema.Boolean,
   defaultSelection: ChatSelection,
-  // The installed catalog is bounded by the pinned provider catalog, not by a
-  // response cap; only an explicit CHAT_MODEL_ALLOWLIST is length-limited.
+  // Only permitted, compatible gateway models are projected; no separate app allowlist.
   models: Schema.Array(ChatCatalogEntry),
 });
 export type ChatCatalog = typeof ChatCatalog.Type;
@@ -189,11 +152,13 @@ export type ChatCatalog = typeof ChatCatalog.Type;
 /** Serializes the complete catalog for the authenticated browser. Never reads credentials. */
 export const publicChatCatalog = (policy: StageModelPolicy): ChatCatalog => ({
   version: 1,
-  stageConfigured: policy.availability === "configured",
+  stageConfigured: gatewayCatalogSnapshot().available,
   defaultSelection: DEFAULT_CHAT_SELECTION,
-  models: installedChatCatalog().map((model) => ({
-    ...model,
-    availability: chatModelAvailability(policy, model.model),
-    accountEligibility: "unverified",
-  })),
+  models: installedChatCatalog()
+    .filter((model) => chatModelAvailability(policy, model.model) === "enabled")
+    .map((model) => ({
+      ...model,
+      availability: chatModelAvailability(policy, model.model),
+      accountEligibility: "unverified",
+    })),
 });

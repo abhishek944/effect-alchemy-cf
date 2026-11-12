@@ -33,15 +33,37 @@ export function useChatLayout(ref: RefObject<HTMLDivElement | null>): void {
         occupied += outerHeight(child);
         next.add(child);
       }
-      // Preserve the viewport's actual padding, not a new product minimum.
+      // Keep the normal viewport padding when it fits; decorative padding must
+      // yield before the editor/actions/ledger need outer-footer scrolling.
       const viewportStyle = viewport ? getComputedStyle(viewport) : null;
       const padding = viewportStyle
-        ? pixels(viewportStyle.paddingTop) + pixels(viewportStyle.paddingBottom)
+        ? pixels(viewportStyle.getPropertyValue("--chat-viewport-padding-block")) * 2
         : 0;
-      const room = Math.max(0, thread.clientHeight - occupied - padding);
-      footer.style.setProperty("--chat-footer-budget", `${room}px`);
       const shell = footer.querySelector('[data-cx="composer-shell"]');
       if (shell) next.add(shell);
+      const lane = footer.querySelector('[data-cx="chat-notice-lane"]');
+      const content = lane?.querySelector('[data-cx="chat-notice-content"]');
+      if (lane) next.add(lane);
+      if (content) next.add(content);
+      const footerStyle = getComputedStyle(footer);
+      let fixed = pixels(footerStyle.paddingTop) + pixels(footerStyle.paddingBottom);
+      for (const child of footer.children) {
+        if (child !== lane) fixed += outerHeight(child);
+      }
+      // Reserve one quiet line even when chrome alone exceeds the available
+      // height; in that case the existing outer footer scrolls every control.
+      const reservation =
+        lane && content
+          ? pixels(getComputedStyle(content).minHeight) +
+            pixels(getComputedStyle(lane).paddingBottom)
+          : 0;
+      const available = Math.max(0, thread.clientHeight - occupied);
+      const fittedPadding = Math.min(padding, Math.max(0, available - fixed - reservation));
+      if (viewport instanceof HTMLElement)
+        viewport.style.setProperty("--chat-viewport-padding-budget", `${fittedPadding / 2}px`);
+      const room = Math.max(0, available - fittedPadding);
+      footer.style.setProperty("--chat-footer-budget", `${room}px`);
+      footer.style.setProperty("--chat-notice-budget", `${Math.max(reservation, room - fixed)}px`);
       const list = footer.querySelector('[data-cx="file-list"]');
       let row = 0;
       for (const child of list?.children ?? []) {
@@ -64,10 +86,8 @@ export function useChatLayout(ref: RefObject<HTMLDivElement | null>): void {
         footer.style.removeProperty("--chat-file-budget");
         return;
       }
-      const style = getComputedStyle(footer);
-      let fixed = pixels(style.paddingTop) + pixels(style.paddingBottom);
-      for (const child of footer.children) fixed += outerHeight(child);
-      fixed -= list.getBoundingClientRect().height;
+      // Notices may take viewport space, not change the same draft/file budget.
+      fixed += reservation - list.getBoundingClientRect().height;
       // Every row is observed; wrapped upload/status changes preserve the
       // largest complete-row minimum without watching the streamed timeline.
       // A complete row remains scrollable. If even fixed chrome cannot fit,
@@ -83,7 +103,7 @@ export function useChatLayout(ref: RefObject<HTMLDivElement | null>): void {
     observed.add(footer);
     const changes = new MutationObserver(schedule);
     changes.observe(thread, { childList: true });
-    changes.observe(footer, { childList: true, subtree: true });
+    changes.observe(footer, { childList: true, subtree: true, characterData: true });
     update();
     return () => {
       resize.disconnect();
@@ -91,6 +111,10 @@ export function useChatLayout(ref: RefObject<HTMLDivElement | null>): void {
       cancelAnimationFrame(frame);
       footer.style.removeProperty("--chat-footer-budget");
       footer.style.removeProperty("--chat-file-budget");
+      footer.style.removeProperty("--chat-notice-budget");
+      thread
+        .querySelector<HTMLElement>('[data-cx="chat-viewport"]')
+        ?.style.removeProperty("--chat-viewport-padding-budget");
     };
   }, [ref]);
 }

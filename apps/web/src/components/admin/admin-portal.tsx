@@ -15,6 +15,7 @@ import {
   adminErrorMessage,
   fetchAdminIdentity,
 } from "@/lib/admin-api";
+import { ADMIN_ROUTES, adminSectionFromPath } from "@/lib/admin-routes";
 import { useSignOut } from "@/lib/auth-client";
 import { navigate, usePathname } from "@/lib/router";
 
@@ -27,7 +28,7 @@ type AccessState =
 
 const SESSION_ENDED = "Your admin session ended or was revoked. Sign in again to continue.";
 const NOT_ADMIN =
-  "The signed-in account does not have the admin role. Ask an administrator to set public metadata role to admin on this account in Clerk, then reload.";
+  "This account does not have admin access. Sign in with an admin account, or contact an administrator if you need it.";
 
 // Server-side check; every admin render is gated by this result, not client state.
 async function loadAccess(signedIn: boolean): Promise<AccessState> {
@@ -134,13 +135,12 @@ export default function AdminPortal() {
     return <UnavailableScreen message={access.message} onRetry={refreshAccess} />;
   }
 
-  const knownSection =
-    pathname === "/admin" || pathname === "/admin/users" || pathname.startsWith("/admin/users/");
+  const section = adminSectionFromPath(pathname);
 
   return (
     <AdminShell
       identity={access.identity}
-      active="users"
+      active={section}
       signOutPending={signOutPending}
       onSignOut={() => void handleSignOut()}
     >
@@ -152,7 +152,7 @@ export default function AdminPortal() {
           {actionError}
         </p>
       )}
-      {knownSection ? (
+      {section ? (
         <AdminUsers
           identity={access.identity}
           onAccessLost={handleAccessLost}
@@ -162,7 +162,7 @@ export default function AdminPortal() {
         <div className="max-w-xl space-y-4">
           <h1 className="text-2xl font-semibold tracking-tight">Page not found</h1>
           <p className="text-sm text-muted-foreground">That admin page does not exist.</p>
-          <Button onClick={() => navigate("/admin/users")}>Go to Users</Button>
+          <Button onClick={() => navigate(ADMIN_ROUTES.users)}>Go to Users</Button>
         </div>
       )}
     </AdminShell>

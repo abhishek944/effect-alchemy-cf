@@ -1,8 +1,8 @@
 # Manual chat voice
 
-**Current runtime:** voice uses a private OpenRouter profile resolved by `scripts/speech-profile.ts`; no provider binding is attached. See [runtime](runtime.md). The sections below that
-describe the removed stack are historical and no longer describe how this repository
-runs.
+Voice uses its separate server-side `OPENROUTER_API_KEY`, injected through Doppler.
+It remains outside LiteLLM routing and account-wide model usage. Existing
+speech receipts and production-disable behavior remain unchanged. See [runtime](runtime.md).
 
 Voice Settings has independent account-synced Dictation and Read aloud groups.
 Defaults: `openai/gpt-4o-mini-transcribe` for dictation, and
@@ -74,40 +74,18 @@ sends Bearer-authenticated requests to
 `response_format=mp3`, validated binary response). OpenRouter selects upstream
 provider routing from the model; application code does not pin or override it.
 
-Development starts without a voice key: a missing private profile, stage entry,
-or empty/missing stage key disables voice only. Voice requests return a setup
-error without contacting OpenRouter. Supplied malformed profiles, unsafe files,
-and invalid nonempty keys still fail validation. Production remains audio-disabled.
-To enable voice, create the dedicated private file `~/.alchemy/profiles/default/openrouter.json` (or the same relative path
-under `ALCHEMY_HOME`). It must be a current-user-owned regular file no larger
-than 64KiB, mode0600, and not a symlink. Example format; replace the placeholder
-yourself and never commit or paste an actual key:
-
-```json
-{
-  "format": "alchemy.profile/v1",
-  "provider": "OpenRouter",
-  "values": {
-    "stages": {
-      "dev_local": {
-        "apiKey": "<development-openrouter-api-key>"
-      }
-    }
-  }
-}
-```
-
-Add an independent `dev` entry for cloud development if needed; the stage must
-match exactly. Never add production credentials. Local startup reads only
-`.env.local`; cloud launch uses the selected stage, and `prod` loads nothing. The
-key is bound server-side as a Worker secret for nonproduction stages only, never
-written to a stage/browser env file. Startup validates the file locally; it does
-not create a key, provision provider access, or make an audio request. Profile
-metadata checks do not prove remote key validity, credit or model eligibility.
+Development starts without a voice key: an empty/missing injected key disables
+voice only and returns a setup error without contacting OpenRouter. Invalid
+nonempty keys fail validation; production remains audio-disabled. An operator can
+separately inject `OPENROUTER_API_KEY` through project `effect-boilerplate`, config
+`dev`. The launcher no longer loads private profiles or blanks an injected key.
+Do not create stage env files or put keys in browser variables/the repository.
+No key or provider access is created by startup, and source validation does not
+prove remote key validity, credit or model eligibility.
 
 **Blast radius:** the development key is a normal OpenRouter API key, not a
 Cloudflare Run token, and the application cannot restrict which upstream
-provider OpenRouter routes to. Treat the file as a full provider credential;
+provider OpenRouter routes to. Treat the injected key as a full provider credential;
 revoke or rotate it directly at OpenRouter if it leaks. Never reuse a
 production credential here.
 

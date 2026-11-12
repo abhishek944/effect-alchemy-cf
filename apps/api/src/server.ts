@@ -1,3 +1,4 @@
+import { titleTracing } from "./chat-tracing.ts";
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
 import { clerkAdminUsersLayer } from "@highchat/auth/admin-users";
 import { ClerkIdentity, clerkIdentityLayer, readClerkSettings } from "@highchat/auth";
@@ -100,8 +101,17 @@ const program = Effect.scoped(
   ),
 );
 
-process.once("SIGINT", () => process.exit(0));
-process.once("SIGTERM", () => process.exit(0));
+const shutdown = () => {
+  void titleTracing
+    .dispose()
+    .catch(() => undefined)
+    .finally(() => {
+      runtime.close();
+      process.exit(0);
+    });
+};
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
 Effect.runPromise(program).catch((error: unknown) => {
   console.error(error);
   process.exitCode = 1;

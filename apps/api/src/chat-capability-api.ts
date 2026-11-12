@@ -1,3 +1,4 @@
+import { GatewayUsage, UsageQuery } from "@highchat/chat-contract/gateway-usage";
 import { Schema } from "effect";
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
@@ -73,6 +74,13 @@ export class ChatCapabilitiesApi extends HttpApiGroup.make("chatCapabilities")
     HttpApiEndpoint.get("chatUsage", "/api/chats/:id/usage", {
       params: ChatIdParams,
       success: ChatUsage,
+      error: errors,
+    }),
+  )
+  .add(
+    HttpApiEndpoint.get("accountChatUsage", "/api/chat/usage", {
+      query: UsageQuery,
+      success: GatewayUsage,
       error: errors,
     }),
   )

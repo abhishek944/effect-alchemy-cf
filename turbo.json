@@ -1,11 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalDependencies": [
-    "tsconfig*.json",
-    "packages/config/*.ts",
-    "packages/config/.env.local",
-    "packages/config/.env.prod"
-  ],
+  "globalDependencies": ["tsconfig*.json", "packages/config/*.ts"],
   "globalEnv": ["APP_STAGE", "APP_NAME", "APP_DOMAIN", "CLERK_PUBLISHABLE_KEY"],
   "tasks": {
     "build": {

@@ -4,16 +4,18 @@
   "type": "module",
   "scripts": {
     "build": "node --experimental-strip-types scripts/build.ts",
-    "dev": "node --experimental-strip-types scripts/local.ts",
-    "dev:web": "node --experimental-strip-types scripts/web.ts",
-    "start": "pnpm --filter @highchat/api start",
+    "dev": "doppler run -p effect-boilerplate -c dev -- node --experimental-strip-types scripts/local.ts",
+    "dev:web": "doppler run -p effect-boilerplate -c dev -- node --experimental-strip-types scripts/web.ts",
+    "build:dev": "doppler run -p effect-boilerplate -c dev -- node --experimental-strip-types scripts/build.ts",
+    "build:prod": "APP_STAGE=prod doppler run -p effect-boilerplate -c prd -- node --experimental-strip-types scripts/build.ts",
+    "start": "doppler run -p effect-boilerplate -c dev -- pnpm --filter @highchat/api start",
     "lint": "pnpm lint:format:check && node --experimental-strip-types packages/config/env.ts && oxlint --type-aware --deny-warnings && node --experimental-strip-types scripts/check-lines.ts && pnpm lint:effect && pnpm lint:typecheck",
     "lint:format": "oxfmt .",
     "lint:format:check": "oxfmt --check .",
     "lint:typecheck": "turbo run typecheck && tsc --noEmit",
     "lint:effect": "effect-tsgo diagnostics --project apps/api/tsconfig.json --severity error && effect-tsgo diagnostics --project packages/auth/tsconfig.json --severity error && effect-tsgo diagnostics --project packages/platform/tsconfig.json --severity error && effect-tsgo diagnostics --project packages/integrations/tsconfig.json --severity error",
     "audit": "pnpm audit --prod --audit-level high",
-    "prepare": "node --experimental-strip-types packages/config/env.ts --init && lefthook install"
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@effect/tsgo": "0.48.1",

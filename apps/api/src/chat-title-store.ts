@@ -1,3 +1,4 @@
+import { chatIdentity } from "./chat-gateway-identity.ts";
 import type { ChatSelection } from "./chat-capabilities.ts";
 import type { TitleResponse } from "./chat-accounting-model.ts";
 import { digestText } from "./chat-internal.ts";
@@ -9,13 +10,13 @@ import {
   type ChatTitleNamer,
 } from "./chat-title.ts";
 
-export type ChatTitleEnv = { OPENROUTER_API_KEY?: string };
+export type ChatTitleEnv = Readonly<Record<string, unknown>>;
 
 type ChatStamp = { readonly updatedAt: string };
-
 type Options = {
   readonly db: ChatSqlStorage;
   readonly env: ChatTitleEnv;
+  readonly ownerId: () => Promise<string | undefined>;
   readonly waitUntil: (task: Promise<unknown>) => void;
   readonly chat: (id: string) => ChatStamp | null;
   readonly nextUpdatedAt: (previous: string) => string;
@@ -125,7 +126,6 @@ export class ChatTitles {
       this.namer = null;
     }
   }
-
   /** Consumes the claim only for the verified first accepted operation text. */
   async claim(
     operationId: string,
@@ -168,8 +168,12 @@ export class ChatTitles {
       title =
         this.namer === null
           ? null
-          : await this.namer(text, selection, (message, effective) =>
-              this.options.recordUsage(chatId, operationId, effective, message),
+          : await this.namer(
+              text,
+              selection,
+              (message, effective) =>
+                this.options.recordUsage(chatId, operationId, effective, message),
+              chatIdentity(this.options.env, await this.options.ownerId(), chatId),
             );
     } catch (error) {
       reportTitleFailure(error, "title.generate", "title_generation_failed", {

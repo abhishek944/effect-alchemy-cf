@@ -1,9 +1,11 @@
-import type { MouseEvent, ReactNode } from "react";
-import AdminLogin from "@/components/admin/admin-login";
+import { lazy, Suspense, type MouseEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminHomeHref } from "@/lib/admin-home";
 import { navigate } from "@/lib/router";
+
+// The public auth page carries the public stylesheet and shader; load it only here.
+const AdminLogin = lazy(() => import("@/components/admin/admin-login"));
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -57,12 +59,9 @@ export function CheckingScreen() {
 
 export function LoginScreen({ notice }: { notice: string | null }) {
   return (
-    <Centered>
-      <div className="w-full max-w-md space-y-4">
-        <AdminLogin notice={notice} />
-        <BackHomeLink />
-      </div>
-    </Centered>
+    <Suspense fallback={<CheckingScreen />}>
+      <AdminLogin notice={notice} />
+    </Suspense>
   );
 }
 

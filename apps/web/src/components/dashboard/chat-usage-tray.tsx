@@ -58,7 +58,7 @@ function CostFigure() {
  * 0$ here; tooltips and the ledger retain the underlying unknown status.
  */
 export default function ChatUsageTray({ chatId }: { chatId: string }) {
-  const { usage, status, error, mismatch, reload, reconcile } = useChatStore().usage;
+  const { usage } = useChatStore().usage;
   const [open, setOpen] = useState(false);
   const [tray, setTray] = useState<HTMLElement | null>(null);
   // The Context/Cost button that initiated the open ledger is the Escape target.
@@ -105,27 +105,11 @@ export default function ChatUsageTray({ chatId }: { chatId: string }) {
       ref={setTray}
       data-cx="usage-tray"
       data-open={open || undefined}
-      data-native-unavailable={!usage || undefined}
       aria-label="Usage and separate cost details"
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
     >
-      {!usage && (
-        <output data-cx="image-usage-native-status">
-          {status === "loading"
-            ? "Loading native usage…"
-            : mismatch
-              ? "Usage model changed"
-              : "Native usage unavailable"}
-          {status !== "loading" && (
-            <button type="button" data-cx="usage-action" onClick={mismatch ? reconcile : reload}>
-              {mismatch ? "Refresh model settings and retry" : "Retry usage"}
-            </button>
-          )}
-          {error && <span className="sr-only">{error}</span>}
-        </output>
-      )}
       <Tooltip label={contextLabel}>
         <button
           type="button"

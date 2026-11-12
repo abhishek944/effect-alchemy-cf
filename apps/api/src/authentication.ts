@@ -1,4 +1,5 @@
 import { ClerkIdentity } from "@highchat/auth";
+import { toAuthenticationRequest } from "@highchat/platform";
 import { Effect, Layer } from "effect";
 import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
@@ -18,7 +19,7 @@ export class Authentication extends HttpApiMiddleware.Service<
       return (httpEffect) =>
         Effect.gen(function* () {
           const request = yield* HttpServerRequest.HttpServerRequest;
-          const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
+          const web = yield* toAuthenticationRequest(request).pipe(Effect.orDie);
           const current = yield* identity.current(web).pipe(
             Effect.catchTag("Unauthenticated", () => Effect.fail(new Unauthorized())),
             Effect.catchTag("IdentityUnavailable", (cause) =>

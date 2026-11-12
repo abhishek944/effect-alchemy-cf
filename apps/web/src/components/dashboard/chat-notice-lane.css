@@ -1,0 +1,71 @@
+/* The accepted compact lane grows upward; the measured budget scrolls all recovery content. */
+[data-dashboard] [data-cx="chat-footer"] > * {
+  flex-shrink: 0;
+}
+[data-dashboard] [data-cx="chat-notice-lane"] {
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: var(--chat-notice-budget, none);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  padding: 0 6px 8px;
+  color: var(--cx-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+[data-dashboard] [data-cx="chat-notice-content"] {
+  min-height: 24px;
+}
+[data-dashboard] [data-cx="chat-notice-lane"]:focus-visible {
+  outline: 1px solid var(--cx-focus);
+  outline-offset: -1px;
+}
+[data-dashboard]
+  [data-cx="chat-notice-lane"]
+  :is(
+    [data-cx="chat-connection-row"],
+    [data-cx="chat-usage-notice"],
+    [data-cx="chat-error"],
+    [data-cx="chat-retry"],
+    [data-cx="setup-error"]
+  ) {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--cx-text);
+  font: inherit;
+}
+[data-dashboard] [data-cx="chat-connection-row"]:has(> [data-announcement-only]):not(:has(button)) {
+  padding: 0;
+}
+[data-dashboard]
+  [data-cx="chat-notice-lane"]
+  [data-cx="chat-connection"]:not([data-announcement-only]) {
+  margin: 0;
+  color: var(--cx-muted);
+  font: inherit;
+}
+[data-dashboard]
+  [data-cx="chat-notice-lane"]
+  [data-cx="chat-connection-row"][data-kind="error"]
+  [data-cx="chat-connection"] {
+  color: var(--cx-text);
+}
+[data-dashboard]
+  [data-cx="chat-notice-lane"]
+  :is([data-cx="chat-retry-action"], [data-cx="usage-action"], [data-cx="file-action"]) {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+  font: inherit;
+}

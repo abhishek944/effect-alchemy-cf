@@ -35,8 +35,9 @@ export function recordImageCall(
   if (update.metadata !== undefined) {
     const metadata = update.metadata;
     if (
-      metadata.model !== prepared.route.model ||
-      metadata.provider !== "cloudflare" ||
+      metadata.model !==
+        (prepared.route.kind === "catalog" ? prepared.route.model : prepared.route.requestedId) ||
+      metadata.provider !== (prepared.route.kind === "catalog" ? "cloudflare" : "litellm") ||
       (!old.dispatched && (metadata.cost.kind !== "unknown" || metadata.outputs.length !== 0))
     )
       throw new ImageCallError("conflict");

@@ -92,7 +92,7 @@ const ResendLive = ResendEmail.layerConfig.pipe(Layer.provide(FetchHttpClient.la
 `layerConfig` reads `RESEND_API_KEY` lazily from the consumer's server-only
 ConfigProvider. Missing config fails acquisition with ConfigError; malformed
 explicit tokens fail InvalidConfiguration. Keep credentials in private profiles or
-an approved secret store, not stage env files/browser code. Profile values do not
+an approved secret store, not repository configuration or browser code. Profile values do not
 automatically become application Config. Only the selected provider needs setup:
 Cloudflare needs no Resend key or HttpClient; Resend needs no Cloudflare binding.
 

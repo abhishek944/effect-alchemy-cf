@@ -1,7 +1,9 @@
 import { useEffect } from "react";
+import AuthPage from "@/components/auth-page";
 import LandingPage from "./landing-page";
-import PublicAuthPage from "./public-auth-page";
 import { PUBLIC_SITE_NAME } from "./public-brand";
+import { authModePath } from "@/lib/public-auth-route";
+import { navigate } from "@/lib/router";
 import "./styles/public.css";
 
 export default function PublicPages({
@@ -26,13 +28,16 @@ export default function PublicPages({
       document.title = previous;
     };
   }, [pathname]);
-  return pathname === "/" ? (
-    <LandingPage />
-  ) : (
-    <PublicAuthPage
+  if (pathname === "/") return <LandingPage />;
+  return (
+    <AuthPage
       mode={pathname === "/signup" ? "sign-up" : "sign-in"}
       checking={checking}
       sessionError={sessionError}
+      homeHref="/"
+      signInHref={authModePath("sign-in", window.location)}
+      signUpHref={authModePath("sign-up", window.location)}
+      onModeChange={(next) => navigate(authModePath(next, window.location))}
     />
   );
 }

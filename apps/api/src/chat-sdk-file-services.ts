@@ -1,5 +1,6 @@
 import type { ChatObjectContext } from "./chat-object.ts";
-import type { CloudflareRun } from "@abhishek944/pi-image-gen/core";
+import { createGatewayImageAdapter } from "./chat-gateway-image-adapter.ts";
+import { gatewayImageReady, imageGatewayId } from "./chat-gateway-images.ts";
 import type { Context } from "@earendil-works/pi-ai";
 import type * as cf from "./platform.ts";
 import { createChatSdkFiles } from "./chat-sdk-files.ts";
@@ -13,11 +14,18 @@ import type { ChatImageCallStore } from "./chat-image-call-store.ts";
 import { acceptedContextInputs } from "./chat-sdk-context.ts";
 import { imageContextEstimateMessages } from "./chat-image-context.ts";
 import { ChatUnavailable } from "./chat-model.ts";
+import { createChatSdkClassifier } from "./chat-sdk-classifier.ts";
 
 export type SdkFileEnv = {
   readonly ChatCatalog?: cf.DurableObjectNamespace;
   readonly CHAT_FILES?: cf.R2Bucket;
-  readonly OPENROUTER_API_KEY?: string;
+  readonly LITELLM_ENABLED?: string;
+  readonly LITELLM_BASE_URL?: string;
+  readonly LITELLM_INFERENCE_KEY?: string;
+  readonly CHAT_IDENTITY_SECRET?: string;
+  readonly APP_STAGE?: string;
+  readonly LITELLM_CLASSIFIER_MODEL?: string;
+  readonly LITELLM_CLASSIFIER_API?: string;
 };
 export const createSdkFileServices = (input: {
   readonly ctx: ChatObjectContext;
@@ -59,16 +67,13 @@ export const createSdkFileServices = (input: {
     )
       throw new Error("The tool no longer owns this accepted operation");
   };
-  // Paid image generation has no configured transport here; every image tool
-  // refuses before a reservation instead of guessing a provider.
-  const run: CloudflareRun | undefined = undefined;
   let files: ChatSdkFiles | null = null;
   if (env.CHAT_FILES !== undefined)
     files = createChatSdkFiles({
       ...scope,
       bucket: env.CHAT_FILES,
       responses,
-      imageGatewayId: () => null,
+      imageGatewayId: (model) => imageGatewayId(env, model),
       acceptedFor: (context) => inputs(context).accepted,
     });
   const tools =
@@ -79,8 +84,9 @@ export const createSdkFileServices = (input: {
           bucket: env.CHAT_FILES,
           responses,
           calls: input.calls,
-          cloudflareRun: run,
-          configurationReady: () => false,
+          imageAdapter: (image, tool, onDispatch) =>
+            createGatewayImageAdapter(env, image, tool, onDispatch),
+          configurationReady: (image) => gatewayImageReady(env, image),
           isAcceptedOperation: (operationId) => runtime.transcript.run(operationId) !== null,
           assertLive,
           accepted: (tool) => {
@@ -96,7 +102,7 @@ export const createSdkFileServices = (input: {
         }).descriptors;
   return {
     files,
-    tools,
+    tools: [...tools, ...createChatSdkClassifier(env, assertLive)],
     hydrateContext: (context: Context) => inputs(context).context,
     estimateMessages: async () => {
       try {

@@ -1,3 +1,5 @@
+import { chatIdentity } from "./chat-gateway-identity.ts";
+import { gatewayConfig } from "./chat-gateway-config.ts";
 import type { ChatObjectContext } from "./chat-object.ts";
 import { createModels } from "@earendil-works/pi-ai/models";
 import { configuredChatProvider } from "./chat-model-transport.ts";
@@ -24,8 +26,7 @@ import { configuredChatPolicy } from "./chat-preferences-http.ts";
 import { installedChatModel } from "./chat-capability-catalog.ts";
 import { ChatUnavailable } from "./chat-model.ts";
 
-export type SkillConversationEnv = SdkFileEnv &
-  ChatHostConfiguration & { readonly CHAT_MODEL_ALLOWLIST?: string };
+export type SkillConversationEnv = SdkFileEnv & ChatHostConfiguration;
 const configuredHost = (env: SkillConversationEnv): ChatSdkHost | null => {
   if (!env.CHAT_HOST_URL || !env.CHAT_HOST_TOKEN) return null;
   try {
@@ -97,13 +98,18 @@ export const createChatConversationServices = (
   const models = createModels();
   const provider = configuredChatProvider(env);
   if (provider !== null) models.setProvider(provider);
+  const identity =
+    gatewayConfig(env) === null || owner === null
+      ? null
+      : chatIdentity(env, owner, ctx.id.name?.split(":").at(-1) ?? "");
   const execution =
-    host === null
+    host === null || identity === null
       ? null
       : new ChatSdkExecution({
           runtime,
           host,
           models,
+          identity,
           accounting,
           tools: [...account.descriptors, ...fileServices.tools],
           chatScope: () => ctx.id.toString(),
@@ -121,10 +127,10 @@ export const createChatConversationServices = (
         });
   const submission = new ChatSubmission({
     runtime,
-    enabled: host !== null && provider !== null,
+    enabled: host !== null && provider !== null && identity !== null,
     fence: new ChatAdmissionFence(),
     noAdmissions: new ChatSkillsNoAdmissions(ctx.storage.sql),
-    policy: configuredChatPolicy(env.CHAT_MODEL_ALLOWLIST),
+    policy: configuredChatPolicy(),
     skills,
     prepare: async (input, scope, model) => {
       const files = fileServices.files;

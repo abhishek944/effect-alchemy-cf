@@ -1,0 +1,155 @@
+[data-dashboard] [data-cx="usage-report"] {
+  max-width: 1080px;
+  margin: auto;
+  padding: 52px 32px;
+}
+[data-dashboard] [data-cx="usage-report"] h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+[data-dashboard] [data-cx="usage-controls"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 24px;
+}
+[data-dashboard] [data-cx="usage-period"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+[data-dashboard] [data-cx="usage-controls"] :is(button, select, input) {
+  padding: 8px 12px;
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-button);
+  color: var(--cx-text);
+  background: var(--cx-sidebar);
+}
+[data-dashboard] [data-cx="usage-controls"] select {
+  font-size: 12px;
+  margin-top: 5px;
+}
+[data-dashboard] [data-cx="usage-controls"] input:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: 2px;
+}
+[data-dashboard] [data-cx="usage-controls"] button {
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="usage-metrics"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--cx-line);
+  border-radius: var(--cx-radius-card);
+  overflow: hidden;
+  background: var(--cx-sidebar);
+}
+[data-dashboard] [data-cx="usage-metrics"] > div {
+  padding: 16px;
+}
+[data-dashboard] [data-cx="usage-metrics"] > div + div {
+  border-left: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="usage-metrics"] span {
+  display: block;
+  color: var(--cx-muted);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="usage-metrics"] strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 25px;
+  font-weight: 400;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="usage-breakdowns"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 20px;
+  margin-top: 28px;
+  border-bottom: 1px solid var(--cx-line);
+}
+[data-dashboard] [data-cx="usage-breakdowns"] button {
+  padding: 10px 0;
+  color: var(--cx-muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+[data-dashboard] [data-cx="usage-breakdowns"] button[aria-pressed="true"] {
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="usage-breakdowns"] output {
+  margin-left: auto;
+  color: var(--cx-muted);
+  font-size: 12px;
+}
+[data-dashboard] [data-cx="usage-table-scroll"] {
+  overflow-x: auto;
+  min-height: 280px;
+}
+[data-dashboard] [data-cx="usage-report"] table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+[data-dashboard] [data-cx="usage-report"] :is(th, td) {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--cx-line);
+  font-weight: 400;
+  text-align: right;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="usage-report"] thead th {
+  color: var(--cx-muted);
+}
+[data-dashboard] [data-cx="usage-report"] tbody th {
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="usage-report"] th:first-child {
+  text-align: left;
+}
+[data-dashboard] [data-cx="usage-report"] [data-cx="usage-empty"] {
+  height: 240px;
+  text-align: center;
+  color: var(--cx-muted);
+}
+@media (max-width: 720px) {
+  [data-dashboard] [data-cx="usage-report"] {
+    padding: 32px 20px;
+  }
+  [data-dashboard] [data-cx="usage-report"] h1 {
+    font-size: 26px;
+  }
+  [data-dashboard] [data-cx="usage-metrics"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  [data-dashboard] [data-cx="usage-metrics"] > div:nth-child(3) {
+    border-left: 0;
+  }
+  [data-dashboard] [data-cx="usage-metrics"] > div:nth-child(n + 3) {
+    border-top: 1px solid var(--cx-line);
+  }
+  [data-dashboard] [data-cx="usage-controls"] {
+    align-items: start;
+  }
+}
+@media (max-width: 480px) {
+  [data-dashboard] [data-cx="usage-metrics"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-dashboard] [data-cx="usage-metrics"] > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--cx-line);
+  }
+}

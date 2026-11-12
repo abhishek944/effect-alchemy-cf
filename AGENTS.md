@@ -8,13 +8,15 @@
   `apps/web`; runtime adapters (SQLite, object storage, runtime env, HTTP boundary)
   in `packages/platform`.
 - Never import provider clients or secrets into browser code.
-- Stage env files live in `packages/config/.env.local` (the `dev` stage) and
-  `.env.prod`, stay gitignored, and must have identical keys. They hold public
-  values only; secrets are process environment values.
+- Stage configuration is injected by `doppler run` from project
+  `effect-boilerplate` (config `dev` or `prd`); the repository keeps no stage env
+  files. Public browser values are limited to app branding and `pk_`
+  publishable keys; provider credentials remain process environment values.
 - Prefer Effect services and schema-defined boundaries over custom abstractions.
 - The runtime is one local Node process plus the private Pi host. There is no
-  edge runtime, infrastructure-as-code provider or deployment configuration, and no
-  cloud resource is referenced by this repository.
+  edge runtime, infrastructure-as-code provider, deployment configuration or cloud
+  infrastructure. The only cloud configuration dependency named by the repository
+  is the Doppler project `effect-boilerplate` used to inject stage values.
 - Read plans before deploying. Do not deploy, destroy, adopt, or commit without approval.
 - CI runs frozen install, audit, lint and build only; it holds no cloud credential.
   See docs/github-cicd.md and docs/runtime.md.

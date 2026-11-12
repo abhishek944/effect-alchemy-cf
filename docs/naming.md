@@ -6,8 +6,8 @@ runs.
 
 ## Editable branding
 
-Edit the existing gitignored `packages/config/.env.local` and `.env.prod`.
-Both stages have the same keys. Defaults come from `packages/config/defaults.ts`:
+Values live in the Doppler `dev` and `prd` configs of project `effect-boilerplate`;
+`doppler run` injects them. Defaults come from `packages/config/defaults.ts`:
 
 | Key          | Dev default | Prod default     | Consumer                                 |
 | ------------ | ----------- | ---------------- | ---------------------------------------- |
@@ -22,29 +22,29 @@ Cloud auth derives `https://APP_DOMAIN`. Existing `AUTH_BASE_URL` is an optional
 explicit override and must agree with a configured domain. Without either, auth
 keeps its existing request-origin behavior. Local mode ignores the domain and
 custom auth origin; it always uses localhost/same-origin application auth.
-Do not put provider credentials in these files or any public browser variable.
+Keep provider credentials out of browser code and public build variables.
 
 ## How values reach the app
 
 `@highchat/config/public` owns schemas/pure validation. The Node-only stage loader
 is separate at `@highchat/config/stage`; browser code must never import it.
-Root `pnpm build` loads the selected file before Turbo calculates hashes. Vite
-receives only the public name as a JSON constant and HTML-escaped document title.
-UI consumers import `apps/web/src/lib/app-config.ts`, not independent env reads.
-The Worker receives the same name through Config bindings; auth uses its appName.
-No config endpoint, boot fetch or runtime rebranding service exists.
+Root `pnpm build` resolves the injected public values before Turbo calculates
+hashes. Vite receives only the public name as a JSON constant and HTML-escaped
+document title. UI consumers import `apps/web/src/lib/app-config.ts`, not
+independent env reads. The Worker receives the same name through Config bindings;
+auth uses its appName. No config endpoint, boot fetch or runtime rebranding
+service exists.
 
 `pnpm build` and direct Vite commands default to dev, regardless of Vite production
-mode or NODE_ENV. `APP_STAGE=prod pnpm build` selects prod for an offline build.
-The stage files are authoritative for the root build; direct Vite commands also
-accept explicit public APP_NAME/APP_DOMAIN environment overrides. Turbo hashes
-these public fields, stage selection, shared config source and both env inputs.
+mode or NODE_ENV. `pnpm build:prod` (or
+`APP_STAGE=prod doppler run -p effect-boilerplate -c prd -- pnpm build`) selects
+prod for an offline build. `doppler run` values are authoritative; direct Vite
+commands also accept explicit public APP_NAME/APP_DOMAIN environment overrides.
+Turbo hashes these public fields and the stage selection.
 
-Cloud `plan:*`/`deploy:*` launchers select dev/prod BEFORE running lint/build and
-then invoke Alchemy with that same stage file. CI reconstructs its production
-file before the actual prod build. Configure `APP_NAME`/`APP_DOMAIN` in the GitHub
-production environment; blank CI APP_DOMAIN deliberately leaves domain management
-unset. PR/main checks receive no cloud credentials and use dev build defaults.
+PR/main checks receive no cloud credentials and use the shared build defaults;
+there is no production configuration file to reconstruct. Configure
+`APP_NAME`/`APP_DOMAIN` in the Doppler `prd` config for a real production build.
 
 A name change requires restarting local Worker/Vite, or rebuilding and redeploying
 cloud assets/Worker. It does not require editing components or package manifests.

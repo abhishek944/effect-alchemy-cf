@@ -1,11 +1,9 @@
-import RouteLink from "@/lib/route-link";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import PaneResizer from "./pane-resizer";
 import SettingsNavigation from "./settings-navigation";
 import "./pane-resizer.css";
 import { usePanes } from "./use-panes";
 import { useFocusModality } from "./use-focus-modality";
-import { Icon } from "./icon";
 import type { SettingsSection } from "./model";
 import { ChatLibraryWorkspace } from "./chat-library-workspace";
 import { ChatLibraryThumbnail } from "./chat-library-thumbnail";
@@ -14,7 +12,7 @@ import { WorkspacePreviewTabs } from "./workspace-preview-tabs";
 
 import { useDashboardTheme } from "./theme";
 import Toolbar from "./toolbar";
-import Tooltip from "./tooltip";
+import RailNavigation from "./rail-navigation";
 import "./tokens.css";
 import "./shell.css";
 import "./responsive.css";
@@ -24,6 +22,7 @@ type Props = {
   accountId: string;
   section: SettingsSection | null;
   subscription?: boolean;
+  usage?: boolean;
   account: ReactNode;
   children?: ReactNode;
   sidebar?: ReactNode;
@@ -36,6 +35,7 @@ export default function DashboardShell({
   accountId,
   section,
   subscription = false,
+  usage = false,
   account,
   children,
   sidebar,
@@ -43,7 +43,8 @@ export default function DashboardShell({
   notFound = false,
   homeHref = "/dashboard",
 }: Props) {
-  const chatWorkspace = section === null && !subscription && !notFound;
+  const standalone = subscription || usage;
+  const chatWorkspace = section === null && !standalone && !notFound;
   const {
     sidebarOpen,
     rightOpen,
@@ -69,9 +70,15 @@ export default function DashboardShell({
     "--cx-chat-width": `${chatWidth}%`,
   };
   const settings = section !== null;
-  const showSidebar = !subscription && sidebarOpen;
-  const effectiveFullView = !subscription && fullView;
-  const pageTitle = subscription ? "Subscription" : settings ? "Settings" : "Dashboard";
+  const showSidebar = !standalone && sidebarOpen;
+  const effectiveFullView = !standalone && fullView;
+  const pageTitle = usage
+    ? "Usage"
+    : subscription
+      ? "Subscription"
+      : settings
+        ? "Settings"
+        : "Dashboard";
   const title = notFound ? "Page not found" : pageTitle;
 
   return (
@@ -81,7 +88,7 @@ export default function DashboardShell({
       data-theme={theme}
       style={paneStyle}
       data-sidebar-open={showSidebar}
-      data-right-open={!subscription && rightOpen}
+      data-right-open={!standalone && rightOpen}
       data-full-view={effectiveFullView}
     >
       <a
@@ -91,13 +98,13 @@ export default function DashboardShell({
       >
         Skip to content
       </a>
-      {!subscription && rightOpen && !effectiveFullView && (
+      {!standalone && rightOpen && !effectiveFullView && (
         <a href="#workspace-right" data-cx="skip-link" data-skip="right">
           Skip to right section
         </a>
       )}
       <Toolbar
-        title={settings || subscription || notFound ? title : ""}
+        title={settings || standalone || notFound ? title : ""}
         chatTitle={chatTitle}
         previewTabs={
           chatWorkspace ? (
@@ -111,44 +118,26 @@ export default function DashboardShell({
         sidebarOpen={showSidebar && !effectiveFullView}
         rightOpen={rightOpen}
         fullView={effectiveFullView}
-        showPanes={!subscription}
+        showPanes={!standalone}
         toggleSidebar={toggleSidebar}
         toggleRight={toggleRight}
         toggleFullView={toggleFullView}
       />
-      <nav data-cx="rail" aria-label="Global navigation">
-        <Tooltip label="Home" side="right">
-          <RouteLink
-            href={homeHref}
-            data-cx="rail-link"
-            aria-label="Dashboard"
-            aria-current={!settings && !subscription && !notFound ? "page" : undefined}
-          >
-            <Icon name="house" />
-          </RouteLink>
-        </Tooltip>
-        <Tooltip label="Subscription" side="right">
-          <RouteLink
-            href="/subscription"
-            data-cx="rail-link"
-            aria-label="Subscription"
-            aria-current={subscription ? "page" : undefined}
-          >
-            <Icon name="credit-card" />
-          </RouteLink>
-        </Tooltip>
-        <Tooltip label="Settings" side="right">
-          <RouteLink
-            href="/settings/general"
-            data-cx="rail-link"
-            aria-label="Settings"
-            aria-current={settings ? "page" : undefined}
-          >
-            <Icon name="settings" />
-          </RouteLink>
-        </Tooltip>
-        <div data-cx="rail-account">{account}</div>
-      </nav>
+      <RailNavigation
+        homeHref={homeHref}
+        current={
+          notFound
+            ? null
+            : usage
+              ? "usage"
+              : settings
+                ? "settings"
+                : subscription
+                  ? "subscription"
+                  : "home"
+        }
+        account={account}
+      />
       <aside id="workspace-sidebar" data-cx="sidebar" hidden={!showSidebar}>
         {settings ? (
           <SettingsNavigation section={section} search={search} onSearch={setSearch} />
@@ -167,7 +156,7 @@ export default function DashboardShell({
         )}
       </aside>
       <div data-cx="work-area">
-        {!subscription && rightOpen && !effectiveFullView && (
+        {!standalone && rightOpen && !effectiveFullView && (
           <PaneResizer
             target="dashboard-content"
             label="Resize conversation panel"
@@ -179,7 +168,7 @@ export default function DashboardShell({
           />
         )}
         <main id="dashboard-content" data-cx="canvas" tabIndex={-1} aria-label={title}>
-          {!settings && !subscription && !notFound && <h1 className="sr-only">Dashboard</h1>}
+          {!settings && !standalone && !notFound && <h1 className="sr-only">Dashboard</h1>}
           {children}
         </main>
         <section
@@ -188,7 +177,7 @@ export default function DashboardShell({
           data-cx="right-section"
           aria-label="Right section"
           tabIndex={-1}
-          hidden={subscription || !rightOpen}
+          hidden={standalone || !rightOpen}
         >
           <ChatLibraryWorkspace active={chatWorkspace && rightOpen} />
         </section>

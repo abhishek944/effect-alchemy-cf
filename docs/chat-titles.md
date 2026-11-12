@@ -9,13 +9,15 @@ retry. Files-only input without a typed caption keeps New chat until renamed.
 ## Model and limits
 
 Naming uses the first native-accepted send's actual frozen model, after validating
-the stage allowlist, through the same Gateway boundary. It is not a cheaper fallback
+the permitted gateway catalog, through the same LiteLLM boundary. It is not a cheaper fallback
 model or another public conversation turn. It never changes the reply configuration.
-Naming uses off, otherwise the model's lowest supported reasoning level, no tools,
-at most2000 Unicode input characters and64 output tokens with a10-second abort
-signal and one SDK/Gateway attempt. Provider-specific OpenAI/Anthropic guards
-verify the actual wire caps/effort before dispatch. A provider requiring budgeted
-thinking has an additional bounded1024-token reasoning allowance.
+Naming retains the exact frozen effort, uses no tools, and preserves the existing
+2000-character input / 64-token output / 10-second abort boundaries and one attempt.
+Native Pi protocol serializers receive the same selection and trusted customer
+header as replies; unsupported output or provider constraints retain the excerpt.
+Independent metadata-only title tracing uses the supported Langfuse generation
+adapter, grouped by the same unchanged verified Clerk UID and separate per-chat HMAC
+conversation ID as the host's native traces.
 
 The prompt targets 3–6 words, matching the first message's main language, with a
 60-Unicode-character maximum. Only the first user message is input; neither the

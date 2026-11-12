@@ -25,41 +25,30 @@ const branding: Plugin = {
   transformIndexHtml: (html) => html.replaceAll("__APP_NAME__", () => escapedName),
 };
 /**
- * The admin dev origin is admin-only: document navigations outside /admin become
- * /admin, so its root opens the portal. Assets, HMR and proxied /api are untouched,
- * and the app keeps its single production path.
+ * A local admin server links home to the main Vite origin; a built admin surface
+ * uses the configured main domain. No admin host is invented here.
  */
-const adminSurface: Plugin = {
-  name: "admin-surface",
-  apply: "serve",
-  configureServer(server) {
-    server.middlewares.use((request, response, next) => {
-      const navigation =
-        request.method === "GET" && (request.headers.accept ?? "").includes("text/html");
-      const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
-      // Portal pages and proxied API responses keep their own paths.
-      const portal = pathname === "/admin" || pathname.startsWith("/admin/");
-      if (!navigation || portal || pathname.startsWith("/api/")) return next();
-      response.writeHead(302, { location: "/admin" });
-      response.end();
-    });
-  },
-};
+function mainSiteUrl(admin: boolean, serve: boolean): string {
+  if (!admin) return "";
+  if (serve) return `http://localhost:${mainPort}`;
+  return app.domain ? `https://${app.domain}` : "";
+}
 const revision = process.env["GITHUB_SHA"] ?? "";
 const webRelease = /^[a-f0-9]{40}$/.test(revision) ? revision : `web-${Date.now().toString(36)}`;
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const admin = mode === "admin";
   return {
     define: {
       "import.meta.env.VITE_APP_VERSION": JSON.stringify(webRelease),
       PUBLIC_APP_CONFIG: JSON.stringify({ name: app.name }),
-      // The local admin origin links home to the main UI; blank elsewhere.
-      PUBLIC_ADMIN_HOME_URL: JSON.stringify(admin ? `http://localhost:${mainPort}` : ""),
+      // The admin surface is a separate build/origin; the main build never routes it.
+      PUBLIC_APP_SURFACE: JSON.stringify(admin ? "admin" : "main"),
+      PUBLIC_MAIN_SITE_URL: JSON.stringify(mainSiteUrl(admin, command === "serve")),
       // Public by design: only the stage publishable key reaches the bundle.
       PUBLIC_CLERK_PUBLISHABLE_KEY: JSON.stringify(stageConfig.clerkPublishableKey),
     },
-    plugins: [tailwindcss(), react(), branding, ...(admin ? [adminSurface] : [])],
+    plugins: [tailwindcss(), react(), branding],
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
     },

@@ -1,20 +1,22 @@
 # Local development
 
-Development starts without optional voice credentials. To enable dictation and
-read aloud, complete [speech setup](chat-voice.md) with the private `default`
-OpenRouter profile and its `dev_local` key. Missing credentials disable voice only;
-malformed or unsafe supplied profiles still fail validation.
+Development starts without optional voice credentials. Voice stays outside the
+chat gateway; inject its separate provider values through Doppler. The launcher
+preserves injected credentials and no longer reads a private audio profile.
 
-Run from the repository root:
+Authenticate the Doppler CLI once (`doppler login`); `pnpm dev` and `pnpm dev:web`
+inject project `effect-boilerplate` config `dev`. Then run from the repository root:
 
 ```sh
 pnpm install
+pnpm build:dev    # configured dev web assets served by the API on :1337
 pnpm dev          # terminal 1: Node Pi host + the local API and UI assets
 pnpm dev:web      # terminal 2: Vite main UI (:5173) and admin UI (:5175)
 ```
 
 Open **http://localhost:5173** for the main UI and **http://localhost:5175** for
-the admin portal, whose root opens `/admin`.
+the admin portal, whose root is the portal; `/users` is its Users section. The main
+origin has no admin route.
 
 ## One local process
 
@@ -33,9 +35,10 @@ directories are gitignored; deleting them resets local data.
 `pnpm dev:web` serves `apps/web` with Vite hot module replacement and proxies
 same-origin `/api` traffic to the API on localhost:1337. Both Vite servers bind
 only to localhost and fail if port 5173 (main UI) or 5175 (admin UI) is
-unavailable, so there is no silent fallback port. Each surface keeps one browser
-origin for its app and proxied API, which preserves the session cookie and
-Server-Sent Events.
+unavailable, so there is no silent fallback port. The admin server selects the
+admin surface, while the main server never routes admin UI. Each surface keeps
+one browser origin for its app and proxied API, which preserves the session cookie
+and Server-Sent Events.
 
 ## Identity
 
@@ -46,13 +49,14 @@ CLERK_SECRET_KEY=sk_test_…          # server only, never committed
 CLERK_PUBLISHABLE_KEY=pk_test_…     # safe for the browser
 ```
 
-Set `CLERK_PUBLISHABLE_KEY` in `packages/config/.env.local`; the stage file is the
-source of truth and Vite injects it as `PUBLIC_CLERK_PUBLISHABLE_KEY` for both
-`pnpm dev:web` and `pnpm build`. A blank stage value falls back to a shell
-`CLERK_PUBLISHABLE_KEY`, and any value that is not a `pk_…` publishable key is
-refused so a secret key can never reach the bundle. Server-side, the process
-environment supplies `CLERK_SECRET_KEY`; export it in the shell that runs
-`pnpm dev`.
+Set `CLERK_PUBLISHABLE_KEY` in the Doppler `dev` config. `pnpm dev:web` and
+`pnpm build:dev` run under `doppler run`, so Vite reads it from the final inherited
+environment and exposes it as `PUBLIC_CLERK_PUBLISHABLE_KEY`; any value that is
+not a `pk_…` publishable key is refused so a secret key can never reach the
+bundle. A blank key falls back to the stage default, which is blank. Plain
+`pnpm build` is the credential-free CI path and never contacts Doppler.
+Server-side, the process environment supplies `CLERK_SECRET_KEY`; put it in the
+Doppler config or the shell that runs `pnpm dev`.
 
 With no Clerk secret configured the API still starts and answers `/api/health`;
 every authenticated route fails closed with a typed `503 AuthenticationUnavailable`
@@ -66,36 +70,37 @@ request, so a role change applies immediately. There is no one-time access token
 
 ## Model transport
 
-Chat inference needs a configured HTTP provider credential:
-
-```sh
-OPENROUTER_API_KEY=…   # shell or a private profile; never committed
-```
-
-With no key the app runs, but sending stays unavailable with a typed, explicit
-failure; nothing silently falls back to another provider. Paid image generation has
-no configured transport in this runtime and reports itself as not configured.
+Chat inference uses LiteLLM only. Inject the stage-specific gateway/identity
+settings described in [gateway setup](chat-gateway.md). No separate manual model
+allowlist, direct-provider key or profile enables chat. Missing configuration keeps
+saved chats readable but refuses affected new work before paid admission. Reporting
+and metadata-only Langfuse tracing have independent credentials/failure behavior.
+Images activate only for supported discovered gateway mappings; optional text/JSON
+classification requires the explicit server model/API names in gateway setup. Voice
+remains outside the gateway. No operator resources are created by the launcher.
 
 ## Isolation and configuration
 
 Obsolete keys from the previous runtime (`DEV_ACCESS_EMAILS`, `ALLOW_PRODUCTION`,
-`CHAT_GATEWAY_ID`) may still exist in a stage file created earlier; they are
-ignored and can be deleted by hand. `CLERK_PUBLISHABLE_KEY` is the one public
-browser value, and `turbo.json` lists it in `globalEnv` so a change to it both
-reaches the Vite process and invalidates the build cache.
+`CHAT_GATEWAY_ID`) may still exist in the Doppler config; they are ignored and can
+be deleted by hand. No stage env file is read or created. `CLERK_PUBLISHABLE_KEY`
+is the one public browser value, and `turbo.json` lists it in `globalEnv` so a
+change to it both reaches the Vite process and invalidates the build cache.
 
-Public `APP_NAME` branding and nonsecret chat/model settings come from
-`packages/config/.env.local`. `.env.prod` is never loaded locally, and no
-`pnpm dev` argument can select a cloud stage. Both stage files must contain
-identical keys; `pnpm lint` enforces that.
+Public `APP_NAME` branding and nonsecret chat/model settings come from the Doppler
+`dev` config. The `prd` config is never loaded locally, and no `pnpm dev` argument
+can select a cloud stage. `pnpm lint` validates the active configuration and, when
+Doppler injected it, fails on a missing shared key.
 
 ## Branding and build stage
 
-`APP_NAME` in `.env.local` supplies the local UI and backend name. Restart both the
-API and Vite after changing it. `APP_DOMAIN` never attaches a domain locally; auth
-and API calls stay same-origin on localhost.
-`pnpm build` loads dev configuration before Turbo; `APP_STAGE=prod pnpm build`
-is an explicit offline build with production public values, not a deployment.
+`APP_NAME` in the Doppler `dev` config supplies the local UI and backend name.
+Restart both the API and Vite after changing it. `APP_DOMAIN` never attaches a
+domain locally; auth and API calls stay same-origin on localhost.
+Run `pnpm build:dev` for the configured dev web assets served on :1337; plain
+`pnpm build` is the credential-free CI build with shared defaults. `pnpm build:prod`
+(or `APP_STAGE=prod doppler run -c prd -- pnpm build`) is an explicit offline
+build with production public values, not a deployment.
 
 See [naming](naming.md).
 

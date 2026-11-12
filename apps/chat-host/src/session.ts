@@ -1,3 +1,4 @@
+import { tracing } from "./tracing.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -36,7 +37,15 @@ export const openSession = async (channel: RunChannel): Promise<OpenedSession> =
     cwd: sandbox,
     agentDir: sandbox,
     settingsManager: settings,
-    extensionFactories: [toolExtension(channel)],
+    extensionFactories: [
+      toolExtension(channel),
+      tracing.extension({
+        ...request.tracing,
+        traceName: "chat.run",
+        tags: ["chat-host"],
+        metadata: { runId: request.runId },
+      }),
+    ],
     noExtensions: true,
     noSkills: true,
     noPromptTemplates: true,

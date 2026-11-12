@@ -8,7 +8,7 @@ export default function CatalogActionNotice() {
   const error = store.catalogActionError;
   if (!error) return null;
   const dismiss = () => {
-    const footer = hostRef.current?.parentElement;
+    const footer = hostRef.current?.closest<HTMLElement>('[data-cx="chat-footer"]');
     const target = Array.from(
       footer?.querySelectorAll<HTMLElement>(
         '[data-cx="chat-input"]:not(:disabled), [data-cx="chat-archive-action"]:not(:disabled)',

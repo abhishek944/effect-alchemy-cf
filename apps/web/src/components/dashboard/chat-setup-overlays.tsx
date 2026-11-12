@@ -58,17 +58,6 @@ export default function ChatSetupOverlays({
           onClose={onClose}
         />
       )}
-      {preferences.error && (
-        <p data-cx="setup-error" role="alert">
-          {preferences.error}
-          <button type="button" data-cx="file-action" onClick={preferences.retry}>
-            Retry
-          </button>
-        </p>
-      )}
-      {preferences.notice && !preferences.error && (
-        <output data-cx="setup-notice">{preferences.notice}</output>
-      )}
     </>
   );
 }

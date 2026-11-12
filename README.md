@@ -46,20 +46,21 @@ automatically enabled.
 
 ## Install and local development
 
-Use Node >=22.21.1 and pnpm 10.33.4:
+Use Node >=22.21.1 and pnpm 10.33.4, and authenticate the Doppler CLI once
+(`doppler login`; project `effect-boilerplate`):
 
 ```sh
 corepack enable
 pnpm install
 pnpm lint
-pnpm build
+pnpm build:dev  # configured dev web assets served by the API on :1337
 pnpm dev        # local Pi host at :1338; API and UI assets at :1337
 pnpm dev:web    # Vite HMR: main UI :5173, admin UI :5175
 ```
 
 Open **http://localhost:5173** for the main UI and **http://localhost:5175** for
-the admin portal, whose root opens `/admin`. After backend changes, restart the
-API.
+the admin portal, whose root is the portal; `/users` is its Users section. The
+main origin has no admin route. After backend changes, restart the API.
 See [local development](docs/local-development.md) for the complete workflow.
 
 Local storage stays local; configured AI inference is remote and billable. Missing
@@ -67,16 +68,22 @@ inference configuration disables sending. Optional voice setup is separate.
 
 ## Configuration and compatibility
 
-Install initializes gitignored `packages/config/.env.local` and `.env.prod`.
-Both must contain identical keys: `APP_NAME`, `APP_DOMAIN`, `AUTH_BASE_URL`,
-`CHAT_MODEL_ALLOWLIST`, `CHAT_HOST_URL` and `CLERK_PUBLISHABLE_KEY`. Secrets are
-process environment values: `CLERK_SECRET_KEY`, `OPENROUTER_API_KEY` and the Pi
-host token. Local development generates an ephemeral host token.
+Stage configuration comes from Doppler project `effect-boilerplate` (`dev` or
+`prd`) through `doppler run`; no `.env` file is read. The shared public keys are
+`APP_NAME`, `APP_DOMAIN`, `AUTH_BASE_URL`,
+`CHAT_HOST_URL` and `CLERK_PUBLISHABLE_KEY`. `pnpm dev` and `pnpm dev:web`
+already inject the dev config. Secrets are process environment values:
+`CLERK_SECRET_KEY`, gateway/identity/report/tracing credentials and the Pi host token.
+Local development generates an ephemeral host token. [Gateway setup](docs/chat-gateway.md)
+lists the exact server-only LiteLLM and Langfuse names and operator prerequisites.
+Chat models come only from the permitted gateway catalog, not an app allowlist;
+`/usage` reports own-user chat-model usage separately from per-chat/nonchat receipts.
 
 `APP_NAME` is the display name everywhere; its default is `highchat`. `APP_DOMAIN`
-defaults to blank in dev and `highchat.space` in prod. `pnpm build` defaults to dev
-configuration; `APP_STAGE=prod pnpm build` selects production public values without
-deploying. See [naming and domains](docs/naming.md) for exact boundaries.
+defaults to blank in dev and `highchat.space` in prod. `pnpm build` uses injected
+values when present and the shared defaults otherwise; `pnpm build:prod` selects
+production public values without deploying. See [naming and domains](docs/naming.md)
+for exact boundaries.
 
 Branding/package identity is separate from stored-data identity:
 

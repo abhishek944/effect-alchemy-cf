@@ -4,22 +4,14 @@ import type { ChatConnection } from "@/lib/chat-store-context";
 export function composerStatus(input: {
   hasSnapshot: boolean;
   connection: ChatConnection;
-  stoppingHere: boolean;
-  archived: boolean;
-  posting: boolean;
 }): string {
-  if (!input.hasSnapshot) {
-    if (input.connection === "error") return "This chat is not available right now.";
-    if (input.connection === "idle") return "Select a chat or start a new one to send messages.";
-    return "Connecting to this chat…";
-  }
-  if (input.stoppingHere) return "Stopping the current answer…";
-  if (input.archived) return "This chat is archived. Unarchive it to send new messages.";
-  if (input.connection === "error") return "Connection lost. Reload this chat to reconnect.";
-  if (input.connection === "reconnecting") return "Reconnecting ...";
-  if (input.connection === "connecting")
-    return "Connecting to this chat… showing saved messages until it is ready.";
-  return input.posting ? "Sending…" : "";
+  if (input.connection === "error")
+    return input.hasSnapshot
+      ? "Connection lost. Reload this chat to reconnect."
+      : "This chat is not available right now.";
+  if (input.connection === "connecting" || input.connection === "reconnecting")
+    return "Connecting...";
+  return "";
 }
 
 export function composerSendLabel(input: {

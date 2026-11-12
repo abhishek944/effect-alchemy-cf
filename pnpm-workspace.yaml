@@ -2,5 +2,14 @@ packages:
   - apps/*
   - packages/*
 
+# Langfuse's SDK peers require the API <1.10; keep their shared runtime compatible.
+overrides:
+  "@opentelemetry/api": 1.9.1
+  # Keep Pi's caret-ranged internal packages on the explicitly reviewed SDK family.
+  "@earendil-works/pi-codemode": 1.2.0
+  "@earendil-works/pi-mcp": 1.2.0
+  "@earendil-works/pi-telemetry": 1.2.0
+  "@earendil-works/pi-tui": 1.2.0
+
 onlyBuiltDependencies:
   - lefthook

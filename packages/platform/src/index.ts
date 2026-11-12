@@ -5,3 +5,4 @@ export * from "./kv.ts";
 export * from "./objects-record.ts";
 export * from "./objects.ts";
 export * from "./sql.ts";
+export * from "./temporary-files.ts";

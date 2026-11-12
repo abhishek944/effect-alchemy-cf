@@ -32,10 +32,13 @@ color pairing is 4.29:1, not a blanket contrast-compliance guarantee.
   failed/uncertain creation keeps its existing catalog-action recovery notice.
 - `/settings/general`, `/settings/skills`, `/settings/profile`, `/settings/appearance`,
   `/settings/images` and `/settings/account`: grouped settings in the same frame.
-- `/subscription`: one-page illustrative plan preview below Home. No billing source
+- `/usage`: own-user chat-model report after Home, without sidebar/right pane;
+  date/Refresh, four metrics and Daily/Models/Providers. See [usage](chat-models-usage.md).
+- `/subscription`: one-page illustrative plan preview after Usage. No billing source
   is connected, so plan status, prices, entitlements and financial actions are
   unavailable; it is not a Settings section and has no Chats sidebar or tabs.
-- `/admin`: existing separate admin portal with its access checks preserved.
+
+The admin portal is not a workspace route; its own local origin at http://localhost:5175 serves `/` and `/users`. The main origin has no `/admin`.
 
 Dashboard navigation lists private saved chats, rename and archive/unarchive
 actions. A quiet filled **+ New** button beside **Chats** replaces the separate
@@ -57,11 +60,11 @@ The avatar always sits at the bottom of the icon rail. Its native popover shows
 real Better Auth identity, Settings and Log out. Clicking the identity row opens
 `/settings/profile`; there is no separate Profile item in the account popup.
 Escape and outside clicks dismiss the popup. Signout uses the existing auth client.
-A Subscription design preview sits below Home in the rail. No billing source is
+A Subscription design preview follows Usage in the rail. No billing source is
 connected, so the page is clearly illustrative: sample prices and proposed feature
 groups are shown, while plan status, upgrades and cancellation stay unavailable.
 Commercial subscriptions, pets and invitations are not part of this personal office.
-AI usage and cost remain available through the chat controls.
+Per-chat receipts remain in chat controls; account-wide chat usage is separate.
 
 ## Chat and panes
 
@@ -184,13 +187,11 @@ their existing local presentation and recovery. Signin and admin are unchanged.
     Escape returns to the initiating button; outside clicks keep their native focus.
     Shift+Tab from Usage to model/effort must close the old ledger, not cover the picker.
     Cancel Rename with Escape and confirm focus returns without saving.
-
 11. Include populated message layouts, not only an empty chat: an image-only
     assistant entry followed by text, image entries with Copy, and ordinary text.
     A file-only entry must not reserve space for an absent reply toolbar; per-file
     actions keep their own row. Use existing non-sensitive content or a clearly
     labeled local visual fixture rather than triggering paid generation.
-
 12. Open Subscription from the rail; confirm no Chats pane/tabs, cards stack at
     320/390px, financial actions are disabled, and the preview dialog restores focus.
 

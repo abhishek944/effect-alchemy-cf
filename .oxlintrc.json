@@ -93,6 +93,7 @@
     {
       "files": [
         "apps/web/src/components/public/**/*.tsx",
+        "apps/web/src/components/auth-page.tsx",
         "apps/web/src/components/auth-form.tsx",
         "apps/web/src/components/auth-panel.tsx"
       ],

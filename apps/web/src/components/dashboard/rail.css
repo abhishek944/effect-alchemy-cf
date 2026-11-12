@@ -1,0 +1,74 @@
+/*
+ * Global destination rail. Each destination stacks a labelled icon target so
+ * the section stays readable without opening its tooltip; hover and the
+ * persistent current state keep separate surfaces.
+ */
+[data-dashboard] [data-cx="rail"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  background: var(--cx-chrome);
+}
+[data-dashboard] [data-cx="rail-link"] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 11px;
+  color: var(--cx-muted);
+  text-decoration: none;
+}
+[data-dashboard] [data-cx="rail-icon"] {
+  display: grid;
+  place-items: center;
+}
+[data-dashboard] [data-cx="rail-link"] [data-cx="icon"] {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.9;
+}
+[data-dashboard] [data-cx="rail-link"] [data-icon-name="house"] {
+  width: 22px;
+  height: 22px;
+}
+[data-dashboard] [data-cx="rail-label"] {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--cx-muted);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-dashboard] [data-cx="rail-link"]:hover [data-cx="rail-icon"] {
+  color: var(--cx-text);
+}
+[data-dashboard] [data-cx="rail-link"]:hover {
+  background: color-mix(in srgb, var(--cx-text) 6%, transparent);
+}
+[data-dashboard] [data-cx="rail-link"][aria-current] {
+  background: var(--cx-hover);
+}
+[data-dashboard] [data-cx="rail-link"][aria-current] [data-cx="rail-icon"] {
+  color: var(--cx-text);
+}
+/* Narrow layouts keep the original compact icon-only rail. */
+@media (max-width: 760px) {
+  [data-dashboard] [data-cx="rail"] {
+    gap: 8px;
+    padding: 8px 0;
+  }
+  [data-dashboard] [data-cx="rail-link"] {
+    gap: 0;
+  }
+  [data-dashboard] [data-cx="rail-label"] {
+    display: none;
+  }
+}

@@ -10,8 +10,11 @@
     "start": "node --experimental-strip-types src/server.ts"
   },
   "dependencies": {
+    "@abhishek944/pi-classifier": "file:../../vendor/abhishek944-pi-classifier-0.4.1.tgz",
     "@abhishek944/pi-image-gen": "0.6.0",
-    "@earendil-works/pi-ai": "1.1.0",
+    "@abhishek944/pi-langfuse": "file:../../vendor/abhishek944-pi-langfuse-0.1.0.tgz",
+    "@earendil-works/pi-ai": "1.2.0",
+    "@earendil-works/pi-coding-agent": "1.2.0",
     "@effect/platform-node": "4.0.1",
     "@highchat/auth": "workspace:*",
     "@highchat/chat-contract": "workspace:*",

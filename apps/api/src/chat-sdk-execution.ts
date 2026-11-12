@@ -108,6 +108,7 @@ export class ChatSdkExecution {
       await this.options.host.run(
         {
           runId: active.record.runId,
+          tracing: this.options.identity,
           selection: input.selection,
           model: {
             contextWindow: model.contextWindow,

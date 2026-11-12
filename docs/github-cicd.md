@@ -12,7 +12,7 @@ is a local Node process, and the repository owns no deployment configuration.
 
 ## What CI proves
 
-`Check` proves formatting, configuration-key parity, linting, the 200-line rule,
+`Check` proves formatting, configuration validation, linting, the 200-line rule,
 Effect diagnostics, all workspace typechecks and the production build. It does not
 prove that Clerk sign-in works, that a model provider answers, or that a deployment
 succeeds, because none of those run in CI.
@@ -28,14 +28,16 @@ whichever machine runs the server, never to GitHub.
 
 ## Private environment configuration
 
-`packages/config/.env.local` and `.env.prod` stay gitignored and must contain
-identical keys; `pnpm lint` fails otherwise. They hold only public, nonsecret
-values: `APP_NAME`, `APP_DOMAIN`, `AUTH_BASE_URL`, `CHAT_MODEL_ALLOWLIST`,
-`CHAT_HOST_URL` and `CLERK_PUBLISHABLE_KEY`.
+Stage values live in Doppler project `effect-boilerplate` (`dev` and `prd`), not
+in the repository. `pnpm lint` validates the active configuration, including a
+missing shared key when Doppler injected it, and otherwise validates the
+checked-in defaults. The shared public keys are `APP_NAME`, `APP_DOMAIN`,
+`AUTH_BASE_URL`, `CHAT_MODEL_ALLOWLIST`, `CHAT_HOST_URL` and
+`CLERK_PUBLISHABLE_KEY`.
 
 `CLERK_SECRET_KEY`, `OPENROUTER_API_KEY` and the Pi host token are process
-environment values on the machine that runs the server. Install creates blank
-dev/prod files when they are missing; it never overwrites existing values.
+environment values on the machine that runs the server. CI holds no Doppler token
+and builds with the shared defaults.
 
 ## Deployments
 

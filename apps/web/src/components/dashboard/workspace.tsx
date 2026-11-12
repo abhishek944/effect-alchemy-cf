@@ -1,3 +1,4 @@
+import UsagePage from "./usage-page";
 import RouteLink from "@/lib/route-link";
 import { chatIdFromPath, isChatLanding } from "@/lib/chat-route";
 import AccountMenu from "./account-menu";
@@ -19,6 +20,7 @@ import { WorkspaceNavigationProvider } from "./workspace-navigation";
 export default function Workspace({ user, pathname }: { user: DashboardUser; pathname: string }) {
   const section = settingsSectionFromPath(pathname);
   const subscription = pathname === "/subscription";
+  const usage = pathname === "/usage";
   const dashboard = isChatLanding(pathname) || chatIdFromPath(pathname) !== null;
   return (
     <DashboardThemeProvider key={user.id} userId={user.id}>
@@ -31,16 +33,19 @@ export default function Workspace({ user, pathname }: { user: DashboardUser; pat
                   accountId={user.id}
                   section={section}
                   subscription={subscription}
+                  usage={usage}
                   homeHref={chatIdFromPath(pathname) ? pathname : "/dashboard"}
                   account={<AccountMenu user={user} />}
                   sidebar={dashboard ? <ChatSidebar /> : undefined}
                   chatTitle={dashboard ? <ChatToolbarTitle /> : undefined}
-                  notFound={!section && !subscription && !dashboard}
+                  notFound={!section && !subscription && !usage && !dashboard}
                 >
                   <div data-cx="chat-page" hidden={!dashboard}>
                     <ChatPanel active={dashboard} />
                   </div>
-                  {subscription ? (
+                  {usage ? (
+                    <UsagePage key={user.id} />
+                  ) : subscription ? (
                     <SubscriptionPage />
                   ) : section ? (
                     <SettingsPanel user={user} section={section} />

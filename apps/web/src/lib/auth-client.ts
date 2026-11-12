@@ -16,13 +16,20 @@ const primaryEmail = (user: {
   "";
 
 /**
+ * A blank publishable key is a supported state: Clerk never loads, so sign-in is
+ * unavailable rather than pending. Waiting on it would hang the page forever.
+ */
+const clerkConfigured = PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
+const CLERK_MISSING = "Sign-in is unavailable: this environment has no Clerk publishable key.";
+
+/**
  * The session surface this app reads. Clerk owns loading, refresh and the
  * session cookie; a background refresh never tears down a rendered page.
  */
 export const authClient = {
-  useSession(): { data: { user: SessionUser } | null; isPending: boolean; error: null } {
+  useSession(): { data: { user: SessionUser } | null; isPending: boolean; error: string | null } {
     const { isLoaded, isSignedIn, user } = useUser();
-    const pending = !isLoaded;
+    const pending = clerkConfigured && !isLoaded;
     const session =
       isSignedIn && user && !pending
         ? {
@@ -34,7 +41,7 @@ export const authClient = {
             },
           }
         : null;
-    return { data: session, isPending: pending, error: null };
+    return { data: session, isPending: pending, error: clerkConfigured ? null : CLERK_MISSING };
   },
 };
 

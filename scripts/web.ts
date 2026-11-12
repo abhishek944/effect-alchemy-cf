@@ -9,7 +9,7 @@ const vite = fileURLToPath(
 const root = fileURLToPath(new URL("../apps/web/", import.meta.url));
 
 console.log("Main UI : http://localhost:5173");
-console.log("Admin UI: http://localhost:5175 (opens /admin)");
+console.log("Admin UI: http://localhost:5175 (portal at /)");
 
 // Fixed ports from apps/web/vite.config.ts; strictPort fails instead of drifting.
 const main = spawn(process.execPath, [vite], { cwd: root, env: process.env, stdio: "inherit" });

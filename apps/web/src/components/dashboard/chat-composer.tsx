@@ -1,4 +1,4 @@
-import { useState, type ClipboardEvent, type DragEvent } from "react";
+import { useState, type ClipboardEvent, type DragEvent, type ReactNode } from "react";
 import { ComposerPrimitive } from "@assistant-ui/react";
 import { useChatStore } from "@/lib/chat-store-context";
 import ChatComposerActions from "./chat-composer-actions";
@@ -6,6 +6,7 @@ import ChatComposerFiles from "./chat-composer-files";
 import { useVoice } from "./chat-voice-bridge";
 import { useChatSubmit } from "./use-chat-submit";
 import ChatSkillsReadinessNotice from "./chat-skills-readiness-notice";
+import ChatNoticeLane from "./chat-notice-lane";
 import VoiceRecorder from "./voice-recorder";
 import { ChatReferenceInput } from "./chat-reference-input";
 import { ReferenceTray } from "./reference-tray";
@@ -13,6 +14,7 @@ import "./chat-composer.css";
 
 type Props = {
   chatId: string;
+  notices: ReactNode;
   running: boolean;
   stopLabel: string;
   sendLabel: string;
@@ -29,7 +31,7 @@ type Props = {
  * admission and dispatch callback as the Send button; Shift+Enter and IME
  * still reach the native input untouched.
  */
-export default function ChatComposer({ chatId, running, stopping, ...actions }: Props) {
+export default function ChatComposer({ chatId, notices, running, stopping, ...actions }: Props) {
   const store = useChatStore();
   const { stagedFiles } = store;
   const voice = useVoice();
@@ -61,11 +63,19 @@ export default function ChatComposer({ chatId, running, stopping, ...actions }: 
 
   return (
     <>
-      <ChatSkillsReadinessNotice
-        message={skillsNotice}
-        checking={skillsChecking}
-        onRetry={() => void recheckSkills()}
-      />
+      <ChatNoticeLane>
+        {notices}
+        <ChatSkillsReadinessNotice
+          message={skillsNotice}
+          checking={skillsChecking}
+          onRetry={() => void recheckSkills()}
+        />
+        {readinessFeedback && (
+          <p data-cx="setup-error" role="alert">
+            {readinessFeedback}
+          </p>
+        )}
+      </ChatNoticeLane>
       <ReferenceTray chatId={chatId} />
       <div
         data-cx="composer-shell"
@@ -109,11 +119,6 @@ export default function ChatComposer({ chatId, running, stopping, ...actions }: 
             blockedReason={blockedReason}
             addFiles={addFiles}
           />
-          {readinessFeedback && (
-            <p data-cx="setup-error" role="alert">
-              {readinessFeedback}
-            </p>
-          )}
         </ComposerPrimitive.Root>
       </div>
     </>

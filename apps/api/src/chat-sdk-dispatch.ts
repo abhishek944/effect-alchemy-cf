@@ -14,6 +14,7 @@ export type SdkExecutionOptions = {
   readonly runtime: ChatRuntime;
   readonly host: ChatSdkHost;
   readonly models: Models;
+  readonly identity: { readonly userId: string; readonly sessionId: string };
   readonly accounting: ChatAccounting;
   readonly tools: readonly ChatSdkTool[];
   readonly chatScope: () => string;
@@ -132,6 +133,7 @@ export const dispatchSdkModel = async (
   assertSdkRunLive(options.runtime, active);
   const body = sdkModelReply({
     models: options.models,
+    customer: options.identity.userId,
     request: event,
     context,
     selection: input.selection,

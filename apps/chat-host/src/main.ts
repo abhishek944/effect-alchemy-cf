@@ -1,3 +1,4 @@
+import { tracing } from "./tracing.ts";
 import { readConfig } from "./config.ts";
 import { createHost } from "./server.ts";
 
@@ -6,7 +7,11 @@ const start = async (): Promise<void> => {
   const host = createHost(config);
   const port = await host.listen();
   const shutdown = () => {
-    void host.close().then(() => process.exit(0));
+    void host
+      .close()
+      .then(() => tracing.dispose())
+      .catch(() => undefined)
+      .finally(() => process.exit(0));
   };
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);

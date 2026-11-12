@@ -10,11 +10,11 @@
  */
 import {
   canonicalizePreparedRequest,
-  catalogImageRoute,
   generateImageCore,
   prepareImageRequest,
 } from "@abhishek944/pi-image-gen/core";
 import { digestText } from "./chat-internal.ts";
+import { gatewayImageRoute } from "./chat-gateway-images.ts";
 import { createChatGeneratedClient, type ChatGeneratedClient } from "./chat-generated-client.ts";
 import { decodeImageArguments } from "./chat-sdk-images-args.ts";
 import type { ImageResponseCandidate } from "./chat-image-response-schema.ts";
@@ -83,7 +83,7 @@ export const runImageTool = async (
         ...(args.quality === undefined ? {} : { quality: args.quality }),
       },
       { size: image.preferences.size, quality: image.preferences.quality },
-      catalogImageRoute(image.model, image.gatewayId),
+      gatewayImageRoute(image),
     );
     const canonicalRequest = canonicalizePreparedRequest(request);
     const requestDigest = await digestText(canonicalRequest);

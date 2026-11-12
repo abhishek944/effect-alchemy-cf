@@ -1,3 +1,4 @@
+import { refreshGatewayCatalog } from "./chat-gateway-catalog.ts";
 import { ChatObject } from "./chat-object.ts";
 import type { ChatObjectContext } from "./chat-object.ts";
 import {
@@ -27,7 +28,7 @@ import { reportTitleUsage } from "./chat-external-usage.ts";
 import { json } from "./chat-internal.ts";
 import { type ChatTitleEnv, ChatTitles } from "./chat-title-store.ts";
 
-export type ChatCatalogEnv = ChatTitleEnv & CatalogFilesEnv & { CHAT_MODEL_ALLOWLIST?: string };
+export type ChatCatalogEnv = ChatTitleEnv & CatalogFilesEnv;
 
 /** One private metadata, preference and paid-admission catalog per authenticated owner. */
 export class ChatCatalog extends ChatObject<ChatCatalogEnv> {
@@ -51,7 +52,7 @@ export class ChatCatalog extends ChatObject<ChatCatalogEnv> {
     this.objects = new ProfileObjects(ctx.storage);
     this.profile = new ProfileStore(ctx.storage, this.objects);
     this.themes = new ThemeStore(ctx.storage);
-    this.policy = configuredChatPolicy(env.CHAT_MODEL_ALLOWLIST);
+    this.policy = configuredChatPolicy();
     this.admission = new ChatAdmission(ctx.storage.sql);
     this.data = new ChatCatalogData(ctx.storage, this.preferences);
     this.speech = new ChatCatalogSpeech(ctx.storage, this.preferences);
@@ -66,6 +67,7 @@ export class ChatCatalog extends ChatObject<ChatCatalogEnv> {
     this.titles = new ChatTitles({
       db: ctx.storage.sql,
       env,
+      ownerId: () => this.data.ownerId(),
       waitUntil: (task) => ctx.waitUntil(task),
       chat: (id) => this.data.find(id),
       nextUpdatedAt: (previous) => this.data.nextUpdatedAt(previous),
@@ -127,6 +129,8 @@ export class ChatCatalog extends ChatObject<ChatCatalogEnv> {
   async onRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
     try {
+      if (url.pathname === "/capabilities" || url.pathname === "/preferences/chat")
+        await refreshGatewayCatalog(this.env);
       const owner = request.headers.get("x-chat-owner");
       if (owner !== null && !(await this.data.bindOwner(owner)))
         return json({ message: "Invalid owner" }, 400);
