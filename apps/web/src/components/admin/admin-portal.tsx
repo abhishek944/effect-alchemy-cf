@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/react";
+import { useAuth } from "@clerk/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CheckingScreen,
@@ -26,7 +26,8 @@ type AccessState =
   | { kind: "unavailable"; message: string }
   | { kind: "ready"; identity: AdminIdentity };
 
-const SESSION_ENDED = "Your admin session ended or was revoked. Sign in again to continue.";
+const SESSION_UNVERIFIED =
+  "The server could not verify your sign-in. Try again, or return home to check your session.";
 const NOT_ADMIN =
   "This account does not have admin access. Sign in with an admin account, or contact an administrator if you need it.";
 
@@ -40,7 +41,7 @@ async function loadAccess(signedIn: boolean): Promise<AccessState> {
       : { kind: "forbidden", notice: NOT_ADMIN };
   } catch (caught) {
     if (caught instanceof AdminApiError && caught.status === 401) {
-      return { kind: "unauthenticated", notice: null };
+      return { kind: "unavailable", message: SESSION_UNVERIFIED };
     }
     if (caught instanceof AdminApiError && caught.status === 403) {
       return { kind: "forbidden", notice: NOT_ADMIN };
@@ -63,9 +64,15 @@ async function applyNewest(
 }
 
 export default function AdminPortal() {
+  const { isLoaded, isSignedIn, userId, sessionId } = useAuth();
+  // Mounting SignIn before hydration can redirect an already signed-in session,
+  // reloading this page before its server-side access check can finish.
+  if (!isLoaded) return <CheckingScreen />;
+  return <SessionAdminPortal key={JSON.stringify([userId, sessionId])} signedIn={isSignedIn} />;
+}
+
+function SessionAdminPortal({ signedIn }: { signedIn: boolean }) {
   const pathname = usePathname();
-  // Clerk reports sign-in here; the server still decides whether this account is admin.
-  const { isSignedIn } = useUser();
   const [access, setAccess] = useState<AccessState>({ kind: "checking" });
   const [signOutPending, setSignOutPending] = useState(false);
   const clerkSignOut = useSignOut();
@@ -76,19 +83,19 @@ export default function AdminPortal() {
   useEffect(() => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
-    void applyNewest(requestRef, requestId, isSignedIn === true, setAccess);
+    void applyNewest(requestRef, requestId, signedIn, setAccess);
     return () => {
       // Unmount or remount invalidates any in-flight check.
       requestRef.current += 1;
     };
-  }, [isSignedIn]);
+  }, [signedIn]);
 
   const refreshAccess = () => {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
     setAccess({ kind: "checking" });
     setActionError(null);
-    void applyNewest(requestRef, requestId, isSignedIn === true, setAccess);
+    void applyNewest(requestRef, requestId, signedIn, setAccess);
   };
 
   const handleAccessLost = useCallback((status: number) => {
@@ -96,7 +103,7 @@ export default function AdminPortal() {
     setAccess(
       status === 403
         ? { kind: "forbidden", notice: "Your admin access was revoked on the server." }
-        : { kind: "unauthenticated", notice: SESSION_ENDED },
+        : { kind: "unavailable", message: SESSION_UNVERIFIED },
     );
   }, []);
 
