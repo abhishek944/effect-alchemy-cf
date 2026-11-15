@@ -10,6 +10,10 @@
   line-height: 1.2;
   letter-spacing: -0.02em;
 }
+/* Keep the route's heading focus without drawing an interactive-control ring. */
+[data-dashboard] #usage-heading:focus {
+  outline: none;
+}
 [data-dashboard] [data-cx="usage-controls"] {
   display: flex;
   align-items: center;
@@ -24,15 +28,21 @@
   gap: 8px;
 }
 [data-dashboard] [data-cx="usage-controls"] :is(button, select, input) {
-  padding: 8px 12px;
   border: 1px solid var(--cx-line);
   border-radius: var(--cx-radius-button);
   color: var(--cx-text);
   background: var(--cx-sidebar);
 }
+[data-dashboard] [data-cx="usage-controls"] :is(button, input) {
+  padding: 8px 12px;
+}
 [data-dashboard] [data-cx="usage-controls"] select {
   font-size: 12px;
-  margin-top: 5px;
+  /* Inline padding stays with dropdown.css so the triangle's end space wins. */
+  padding-block: 8px;
+}
+[data-dashboard] [data-cx="usage-controls"] [data-cx="select-wrap"] {
+  color: var(--cx-text);
 }
 [data-dashboard] [data-cx="usage-controls"] input:focus-visible {
   outline: 2px solid var(--cx-focus);
@@ -68,6 +78,11 @@
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
+}
+[data-dashboard] [data-cx="usage-coverage"] {
+  margin: 12px 0 0;
+  color: var(--cx-muted);
+  font-size: 12px;
 }
 [data-dashboard] [data-cx="usage-breakdowns"] {
   display: flex;

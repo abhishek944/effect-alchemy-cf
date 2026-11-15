@@ -68,10 +68,10 @@ Per-chat receipts remain in chat controls; account-wide chat usage is separate.
 
 ## Chat and panes
 
-`@assistant-ui/react` provides the thread, viewport, message and composer
-primitives. The external-store runtime and authoritative store gate sending while
-users can keep drafting. Enter and Send share one submission path, including
-ready staged files; Shift+Enter inserts a newline. Blocked drafts stay intact.
+`@assistant-ui/react` owns the thread, viewport, message and composer primitives.
+The external-store runtime and store gate sending while users keep drafting. Enter
+and Send share one submission path, including ready staged files; Shift+Enter
+inserts a newline. Blocked drafts stay intact; dispatched drafts clear at admission.
 The same-origin Worker backend supplies saved transcripts and streamed snapshots;
 its private Node Pi SDK host executes responses and direct extensions. The composer shows
 connection/recovery state, GPT-6 Luna with high thinking, and explicit Stop/Retry

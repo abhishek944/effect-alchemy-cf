@@ -65,6 +65,26 @@ export const mergeRow = (
 export const nextDate = (date: string, days: number): string =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
+export type ReportInterval = { readonly start: string; readonly end: string };
+
+/** Inclusive UTC day count; zero for an empty or inverted span. */
+export const dayCount = (start: string, end: string): number =>
+  Math.max(0, (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000 + 1);
+
+/** Disjoint union of successfully reported intervals; adjacent days merge too. */
+export const mergeIntervals = (intervals: readonly ReportInterval[]): ReportInterval[] => {
+  const merged: { start: string; end: string }[] = [];
+  for (const interval of intervals.toSorted((a, b) => a.start.localeCompare(b.start))) {
+    const last = merged.at(-1);
+    if (last !== undefined && interval.start <= nextDate(last.end, 1)) {
+      if (interval.end > last.end) last.end = interval.end;
+      continue;
+    }
+    merged.push({ start: interval.start, end: interval.end });
+  }
+  return merged;
+};
+
 /** Vendor v1.108.4 permits a 400-day difference and uses inclusive date keys. */
 export function* reportIntervals(start: string, end: string) {
   for (let cursor = start; cursor <= end;) {

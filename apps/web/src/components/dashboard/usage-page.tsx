@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getGatewayUsage, type GatewayUsage } from "@/lib/gateway-usage";
+import { DropdownSelect } from "./dropdown";
 import UsageReport, { type UsageGrouping } from "./usage-report";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -56,7 +57,7 @@ export default function UsagePage() {
       controls={
         <>
           <div data-cx="usage-period">
-            <select
+            <DropdownSelect
               aria-label="Date range"
               value={preset}
               onChange={(event) => choosePeriod(event.target.value)}
@@ -67,14 +68,13 @@ export default function UsagePage() {
                 Since activation
               </option>
               <option value="custom">Custom range</option>
-            </select>
+            </DropdownSelect>
             {preset === "custom" && (
               <>
                 <input
                   aria-label="Start date"
                   type="date"
                   value={period.start}
-                  min={activation ?? undefined}
                   max={period.end}
                   onChange={(event) => {
                     if (event.target.value) setPeriod({ ...period, start: event.target.value });

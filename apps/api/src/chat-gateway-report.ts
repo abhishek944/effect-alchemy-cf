@@ -6,16 +6,19 @@ import { reportSettings } from "./chat-gateway-report-config.ts";
 import {
   AggregatedUsage,
   addMetrics,
+  dayCount,
+  mergeIntervals,
   mergeRow,
   metricsOf,
-  nextDate,
   reportIntervals,
   zeroMetrics,
+  type ReportInterval,
 } from "./chat-gateway-report-data.ts";
 import {
   UsageDate,
   unknownUsageMetrics,
   type GatewayUsage,
+  type UsageCoverage,
   type UsageRow,
 } from "@highchat/chat-contract/gateway-usage";
 
@@ -33,6 +36,7 @@ export const readGatewayUsage = async (
     Schema.is(UsageDate)(env.LITELLM_USAGE_ACTIVATED_ON)
       ? env.LITELLM_USAGE_ACTIVATED_ON
       : null;
+  const requestedDays = dayCount(period.start, period.end);
   const unavailable: GatewayUsage = {
     status: "unavailable",
     source: "litellm",
@@ -41,6 +45,7 @@ export const readGatewayUsage = async (
     activation,
     period,
     totals: unknownUsageMetrics(),
+    coverage: { start: null, end: null, recordedDays: 0, requestedDays },
     daily: [],
     models: [],
     providers: [],
@@ -66,9 +71,11 @@ export const readGatewayUsage = async (
   const models = new Map<string, UsageRow>();
   const providers = new Map<string, UsageRow>();
   let totals = zeroMetrics();
-  let partial = period.start < settings.activation;
   let succeeded = 0;
-  const coverage: { start: string; end: string }[] = [];
+  // Overlapping key windows can cover the same dates, so a failed interval is not
+  // always a visible date gap; the failure itself still makes the report partial.
+  let hadFailure = false;
+  const ranges: ReportInterval[] = [];
   for (const window of settings.windows) {
     const from = window.start > start ? window.start : start;
     const to = window.end !== null && window.end < period.end ? window.end : period.end;
@@ -82,7 +89,9 @@ export const readGatewayUsage = async (
           api_key: window.apiKey,
           start_date: range.start,
           end_date: range.end,
-          timezone: "UTC",
+          // Pinned 1.108.4 declares `timezone` as an integer offset in minutes, so a zone
+          // name like "UTC" is rejected as 422 before any aggregation runs. Day keys stay UTC.
+          timezone: "0",
         }).toString();
         const response = await fetch(url, {
           headers: { authorization: `Bearer ${settings.credential}` },
@@ -90,7 +99,7 @@ export const readGatewayUsage = async (
         });
         if (!response.ok) {
           await response.body?.cancel();
-          partial = true;
+          hadFailure = true;
           continue;
         }
         const raw: unknown = await response.json();
@@ -107,29 +116,34 @@ export const readGatewayUsage = async (
             mergeRow(providers, publicReportProvider(name), metricsOf(bucket.metrics));
         }
         succeeded += 1;
-        coverage.push(range);
+        ranges.push(range);
       } catch {
-        partial = true;
+        // A failed interval contributes no coverage and marks the report partial.
+        hadFailure = true;
       }
     }
   }
   if (succeeded === 0) return unavailable;
-  let cursor = start;
-  for (const range of coverage.toSorted((a, b) => a.start.localeCompare(b.start))) {
-    if (range.start > cursor) partial = true;
-    if (range.end >= cursor) cursor = nextDate(range.end, 1);
-  }
-  if (cursor <= period.end) partial = true;
+  const reported = mergeIntervals(ranges);
+  const recordedDays = reported.reduce((sum, range) => sum + dayCount(range.start, range.end), 0);
+  const coverage: UsageCoverage = {
+    start: reported[0]?.start ?? null,
+    end: reported.at(-1)?.end ?? null,
+    recordedDays,
+    requestedDays,
+  };
   const unknownMetrics =
     Object.values(totals).some((value) => value === null) ||
     [...daily.values(), ...models.values(), ...providers.values()].some((row) =>
       [row.inputTokens, row.outputTokens, row.requests, row.spend].some((value) => value === null),
     );
-  // Partial coverage never presents incomplete sums as complete totals.
+  // Partial coverage keeps the recorded sums and states how much of the period they
+  // cover; only a wholly unavailable report replaces them with Unknown.
   return {
     ...unavailable,
-    status: partial || unknownMetrics ? "partial" : "complete",
-    totals: partial ? unknownUsageMetrics() : totals,
+    status: recordedDays < requestedDays || hadFailure || unknownMetrics ? "partial" : "complete",
+    totals,
+    coverage,
     daily: rows(daily),
     models: rows(models),
     providers: rows(providers),

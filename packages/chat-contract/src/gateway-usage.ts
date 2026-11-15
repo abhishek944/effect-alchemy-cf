@@ -20,6 +20,18 @@ export const UsageMetrics = Schema.Struct({
 export type UsageMetrics = typeof UsageMetrics.Type;
 export const UsageRow = Schema.Struct({ name: Schema.String, ...UsageMetrics.fields });
 export type UsageRow = typeof UsageRow.Type;
+const Days = Schema.Number.check(Schema.makeFilter((n) => Number.isSafeInteger(n) && n >= 0));
+/** How much of the requested period an upstream report actually recorded. */
+export const UsageCoverage = Schema.Struct({
+  /** First recorded day; null when no interval succeeded. */
+  start: Schema.NullOr(UsageDate),
+  end: Schema.NullOr(UsageDate),
+  /** Days covered by successful intervals, inside the requested period. */
+  recordedDays: Days,
+  /** Days in the requested inclusive period. */
+  requestedDays: Days,
+});
+export type UsageCoverage = typeof UsageCoverage.Type;
 /** Minimal own-customer projection; never an upstream administrative response. */
 export const GatewayUsage = Schema.Struct({
   status: Schema.Literals(["complete", "partial", "unavailable"]),
@@ -28,7 +40,9 @@ export const GatewayUsage = Schema.Struct({
   timezone: Schema.Literal("UTC"),
   activation: Schema.NullOr(UsageDate),
   period: UsageQuery,
+  /** Sums of the recorded rows; never widened to the uncovered days. */
   totals: UsageMetrics,
+  coverage: UsageCoverage,
   daily: Schema.Array(UsageRow),
   models: Schema.Array(UsageRow),
   providers: Schema.Array(UsageRow),

@@ -66,14 +66,14 @@ export function useChatSubmit({
     const composer = aui.composer.getState();
     // On remount the parent restores assistant-ui's raw draft after child effects.
     if (!current || current.text !== composer.text || composer.text !== text) return;
-    references.recordSend(chatId, null);
-    if (
-      current?.text === sent.text &&
+    const restorable =
       composer.text === sent.text &&
       !composer.dictation &&
-      JSON.stringify(current.inputs) === JSON.stringify(sent.inputs)
-    )
-      aui.composer.setText("");
+      JSON.stringify(current.inputs) === JSON.stringify(sent.inputs);
+    // Dispatch clears at admission; this only repairs a restored raw draft and
+    // never overwrites text typed after Send.
+    references.recordSend(chatId, null);
+    if (restorable) aui.composer.setText("");
   }, [aui, chatId, references, session, store.pendingSend, store.snapshot, text]);
   const dictation = useAuiState((state) => state.composer.dictation);
   const connected = Boolean(store.snapshot) && store.connection === "live";
@@ -156,12 +156,24 @@ export function useChatSubmit({
       store.reportChatError(chatId, outcome.message);
       return;
     }
-    // Keep uncertain/failed drafts and atomic occurrences until actual acceptance.
+    // Keep the atomic occurrence so a remount that restores the raw draft can
+    // still clear it once this operation is public.
     references.recordSend(chatId, {
       operationId: outcome.operationId,
       text: draft,
       inputs: frozen.inputs,
     });
+    // Clear on admission, not on response or stream completion, so the composer
+    // cannot trail its optimistic message. Anything typed since Send survives.
+    const latest = aui.composer.getState();
+    const latestDraft = references.editor(chatId)?.read();
+    if (
+      latest.text === draft &&
+      !latest.dictation &&
+      latestDraft?.text === draft &&
+      JSON.stringify(latestDraft.inputs) === JSON.stringify(frozen.inputs)
+    )
+      aui.composer.setText("");
   };
 
   return {

@@ -24,6 +24,28 @@ const dayLabel = (date: string) =>
     day: "numeric",
     timeZone: "UTC",
   });
+/** Explains partial coverage instead of hiding the recorded sums behind Unknown. */
+const coverageNote = (report: GatewayUsage | null): string | null => {
+  if (report === null || report.status !== "partial") return null;
+  const { coverage } = report;
+  const parts: string[] = [];
+  if (coverage.recordedDays < coverage.requestedDays)
+    parts.push(
+      `Partial coverage: ${numbers.format(coverage.recordedDays)} of ${numbers.format(coverage.requestedDays)} days recorded${
+        coverage.start === null || coverage.end === null
+          ? ""
+          : ` (${dayLabel(coverage.start)} – ${dayLabel(coverage.end)})`
+      }. Days without a recorded report are not counted.`,
+    );
+  // Every requested day can be covered while another key interval failed.
+  else
+    parts.push(
+      "Partial coverage: part of this range was not confirmed, so these totals may be incomplete.",
+    );
+  if (Object.values(report.totals).some((value) => value === null))
+    parts.push("Reported metrics without a value stay Unknown.");
+  return parts.length === 0 ? null : parts.join(" ");
+};
 
 /** Presentation only; account fencing and authenticated loading remain in UsagePage. */
 export default function UsageReport({
@@ -49,6 +71,7 @@ export default function UsageReport({
         ? "Partial"
         : "";
   const rows = report?.[grouping] ?? [];
+  const note = loading ? null : coverageNote(report);
   const first = grouping === "daily" ? "Day" : grouping === "models" ? "Model" : "Provider";
   return (
     <section data-cx="usage-report" aria-busy={loading}>
@@ -64,6 +87,7 @@ export default function UsageReport({
           </div>
         ))}
       </div>
+      {note !== null && <p data-cx="usage-coverage">{note}</p>}
       <div data-cx="usage-breakdowns" aria-label="Usage breakdown">
         {(["daily", "models", "providers"] satisfies UsageGrouping[]).map((value) => (
           <button

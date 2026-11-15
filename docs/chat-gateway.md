@@ -45,13 +45,17 @@ date or `null` for current). At least the current identity must have an open win
 Each identity's windows must be disjoint. Different identities can overlap because
 multiple actual keys can serve traffic in one day. Retain old identities through
 rotation; start the new window when it actually begins attribution. Missing periods
-are Partial/Unavailable. Never substitute a comma-separated list or omit the filter.
+keep the recorded sums as Partial with recorded/requested day coverage, or stay
+Unavailable when nothing was recorded. Never substitute a comma-separated list or omit
+the filter.
 
 Every request to pinned LiteLLM 1.108.4 core customer aggregation forces both
-`end_user_ids` and `api_key`; empty filters would mean ALL and are refused. Report
-access is independent of inference enablement. Missing credentials/roles/mapping or
-invalid responses yield Unavailable, not zero or local estimated totals. The backend
-splits periods into nonoverlapping vendor-legal intervals (difference <=400 days).
+`end_user_ids` and `api_key`; empty filters would mean ALL and are refused. The same
+route types `timezone` as an integer UTC offset in minutes, so a zone name is a 422
+before aggregation runs; the report sends `0` and day keys stay UTC. Report access is
+independent of inference enablement. Missing credentials/roles/mapping or invalid
+responses yield Unavailable, not zero or local estimated totals. The backend splits
+periods into nonoverlapping vendor-legal intervals (difference <=400 days).
 
 Operators must ensure complete key coverage, actual pricing and usage logging;
 source-level validation cannot prove those facts. Zero reported usage is distinct

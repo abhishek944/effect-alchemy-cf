@@ -50,8 +50,9 @@ old requests. Date ranges are not subject to an application lifetime cap.
 `GET /api/chat/usage?start=YYYY-MM-DD&end=YYYY-MM-DD` authenticates Clerk and forces
 both that user's unchanged verified Clerk UID and one exact persisted stage inference-key identity
 per upstream request. The reporting credential is never a customer filter. The public
-schema includes source, model-usage scope, timezone, activation, period and completeness;
-it never forwards administrative metadata, credentials, names or raw source IDs.
+schema includes source, model-usage scope, timezone, activation, period, coverage and
+completeness; it never forwards administrative metadata, credentials, names or raw
+source IDs.
 
 LiteLLM 1.108.4 `/customer/daily/activity/aggregated` is authoritative for attributed model usage.
 It reports actual attempts, not just completed replies. A 400-day maximum date
@@ -63,8 +64,12 @@ backfill, replay, deletion or import of earlier receipts. Older hashed-user reco
 are not automatically joined after switching to raw Clerk UID attribution.
 
 Unknown counts/prices remain Unknown. Image/decision attempts with only default zero
-tokens and no measured token activity do not prove zero token usage. Partial totals are not presented as complete
-sums; failures/Stop are not automatically free. Estimated spend is not an invoice.
+tokens and no measured token activity do not prove zero token usage. Totals always sum
+the rows that were actually recorded, so a range that starts before activation or
+contains an unreported interval shows those sums with Partial status and a coverage
+line stating the recorded and requested day counts. Only a wholly unavailable report
+keeps Unknown totals. Failures/Stop are not automatically free. Estimated spend is not
+an invoice.
 No optional cache/performance analytics or app-admin reporting console is added.
 Operators retain their gateway reporting surface; global administrators may see both
 stages despite application-level report filtering.
