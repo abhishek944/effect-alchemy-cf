@@ -63,11 +63,30 @@ export type ModelRequestEvent = typeof ModelRequestEvent.Type;
 export const SettledStatus = Schema.Literals(["answered", "unanswered", "stopped"]);
 export type SettledStatus = typeof SettledStatus.Type;
 
+/** Finite origin-owned failure metadata; never carries native error text. */
+export const HostDiagnostic = Schema.Struct({
+  phase: Schema.Literals(["session", "prompt", "model", "outcome", "channel"]),
+  reason: Schema.Literals([
+    "sdk_auth",
+    "sdk_provider",
+    "sdk_tools",
+    "sdk_error",
+    "model_failed",
+    "model_aborted",
+    "no_output",
+    "unfinished",
+    "deferred",
+    "channel_lost",
+  ]),
+});
+export type HostDiagnostic = typeof HostDiagnostic.Type;
+
 /** Terminal run event; exactly one closes every run stream. */
 export const SettledEvent = Schema.Struct({
   type: Schema.Literal("settled"),
   status: SettledStatus,
   error: Schema.optionalKey(Schema.String),
+  diagnostic: Schema.optionalKey(HostDiagnostic),
 });
 export type SettledEvent = typeof SettledEvent.Type;
 

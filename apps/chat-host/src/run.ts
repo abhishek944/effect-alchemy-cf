@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { hostExceptionDiagnostic } from "./diagnostics.ts";
+import type { HostDiagnostic } from "@highchat/chat-runtime";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type {
   AssistantMessageEvent,
@@ -10,7 +12,7 @@ import type {
 import type { ModelOpenInput, ModelSink, RunChannel, ToolCallInput } from "./channel.ts";
 import { HostFailure, failureMessage } from "./errors.ts";
 import { createModelSink } from "./model-sink.ts";
-import { unansweredReason } from "./outcome.ts";
+import { settledEvent } from "./outcome.ts";
 import { abortedMessage, observe } from "./observe.ts";
 import { openSession } from "./session.ts";
 
@@ -28,6 +30,7 @@ export class Run implements RunChannel {
   #stopped = false;
   #channelLost = false;
   #settled = false;
+  #modelRequested = false;
 
   constructor(request: RunRequest, emit: (event: RunEvent) => void) {
     this.request = request;
@@ -50,6 +53,7 @@ export class Run implements RunChannel {
   };
 
   openModel = (input: ModelOpenInput, signal: AbortSignal | undefined): ModelSink => {
+    this.#modelRequested = true;
     const requestId = randomUUID();
     const sink = createModelSink();
     this.#models.set(requestId, sink);
@@ -129,6 +133,7 @@ export class Run implements RunChannel {
   }
 
   async execute(): Promise<void> {
+    let phase: "session" | "prompt" = "session";
     try {
       if (this.#abandoned) {
         this.#settle();
@@ -144,6 +149,7 @@ export class Run implements RunChannel {
       const observer = { partial: this.emitPartial, message: this.emitMessage };
       const off = session.session.subscribe((event) => observe(event, observer));
       try {
+        phase = "prompt";
         await session.session.prompt(this.request.prompt, {
           images: this.request.images,
           expandPromptTemplates: false,
@@ -153,26 +159,28 @@ export class Run implements RunChannel {
       }
       this.#settle();
     } catch (error) {
-      this.#settle(this.#abandoned ? undefined : failureMessage(error));
+      this.#settle(
+        this.#abandoned ? undefined : failureMessage(error),
+        this.#abandoned ? undefined : hostExceptionDiagnostic(error, phase),
+      );
     } finally {
       this.#failPending();
       this.#session?.session.dispose();
     }
   }
 
-  #settle(error?: string): void {
+  #settle(error?: string, exception?: HostDiagnostic): void {
     if (this.#settled) return;
     this.#settled = true;
-    if (this.#stopped) {
-      // Only an explicit Stop reports "stopped"; a lost channel or model failure does not.
-      this.#emit({ type: "settled", status: "stopped" });
-      return;
-    }
-    const reason = this.#channelLost ? "Run channel lost" : unansweredReason(this.#final, error);
     this.#emit(
-      reason === undefined
-        ? { type: "settled", status: "answered" }
-        : { type: "settled", status: "unanswered", error: reason },
+      settledEvent({
+        stopped: this.#stopped,
+        channelLost: this.#channelLost,
+        modelRequested: this.#modelRequested,
+        final: this.#final,
+        error,
+        exception,
+      }),
     );
   }
 

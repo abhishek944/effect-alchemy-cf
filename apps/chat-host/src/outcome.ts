@@ -1,4 +1,6 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
+import type { HostDiagnostic, SettledEvent } from "@highchat/chat-runtime";
+import { hostOutcomeDiagnostic } from "./diagnostics.ts";
 
 /**
  * Classifies a finished run from its last finalized assistant message.
@@ -24,4 +26,27 @@ export const unansweredReason = (
   if (final.stopReason === "deferred") return "Run ended with a deferred response";
   if (final.stopReason === "toolUse") return "Run ended without a final assistant answer";
   return "Run ended with an unfinished assistant message";
+};
+
+export const settledEvent = (input: {
+  readonly stopped: boolean;
+  readonly channelLost: boolean;
+  readonly modelRequested: boolean;
+  readonly final: AssistantMessage | undefined;
+  readonly error: string | undefined;
+  readonly exception: HostDiagnostic | undefined;
+}): SettledEvent => {
+  // Only explicit Stop reports stopped; lost channels and failures remain unanswered.
+  if (input.stopped) return { type: "settled", status: "stopped" };
+  const reason = input.channelLost
+    ? "Run channel lost"
+    : unansweredReason(input.final, input.error);
+  return reason === undefined
+    ? { type: "settled", status: "answered" }
+    : {
+        type: "settled",
+        status: "unanswered",
+        error: reason,
+        diagnostic: hostOutcomeDiagnostic(input),
+      };
 };

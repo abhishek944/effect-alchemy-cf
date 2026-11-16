@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getGatewayUsage, type GatewayUsage } from "@/lib/gateway-usage";
 import { DropdownSelect } from "./dropdown";
+import { Icon } from "./icon";
+import Tooltip from "./tooltip";
 import UsageReport, { type UsageGrouping } from "./usage-report";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -93,9 +95,18 @@ export default function UsagePage() {
               </>
             )}
           </div>
-          <button type="button" onClick={() => setPeriod({ ...period })} disabled={loading}>
-            Refresh
-          </button>
+          <Tooltip label="Refresh">
+            <button
+              data-cx="usage-refresh"
+              type="button"
+              aria-label="Refresh"
+              aria-busy={loading}
+              onClick={() => setPeriod({ ...period })}
+              disabled={loading}
+            >
+              <Icon name="refresh-cw" />
+            </button>
+          </Tooltip>
         </>
       }
     />

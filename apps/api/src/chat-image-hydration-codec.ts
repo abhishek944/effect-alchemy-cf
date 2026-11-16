@@ -40,17 +40,12 @@ export const legacyHydrationByteSize = (block: ImageContent, model: ChatCatalogM
   )
     return hydrationFailure("original_integrity");
   const bytes = (data.length / 4) * 3 - padding;
-  if (bytes <= 0 || (model.imageResize !== null && data.length > model.imageResize.maxBytes))
-    return hydrationFailure("model_image_limits");
+  if (bytes <= 0) return hydrationFailure("original_integrity");
   return bytes;
 };
 
 /** Compatibility only; never turn historical inline content into saved-file authority. */
-export const checkLegacyHydrationImage = (
-  block: ImageContent,
-  byteSize: number,
-  model: ChatCatalogModel,
-): void => {
+export const checkLegacyHydrationImage = (block: ImageContent, byteSize: number): void => {
   const binary = atob(block.data);
   if (binary.length !== byteSize) hydrationFailure("original_integrity");
   const bytes = new Uint8Array(binary.length);
@@ -64,7 +59,5 @@ export const checkLegacyHydrationImage = (
     `image/${info.format}` !== block.mimeType
   )
     return hydrationFailure("original_integrity");
-  const limits = model.imageResize;
-  if (limits !== null && (info.width > limits.maxWidth || info.height > limits.maxHeight))
-    hydrationFailure("model_image_limits");
+  // Optional SDK resize profiles are not original-dimension restrictions.
 };

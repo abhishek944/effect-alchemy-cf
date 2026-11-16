@@ -1,10 +1,11 @@
 import { ClerkIdentity } from "@highchat/auth";
+import { toAuthenticationRequest } from "@highchat/platform";
 import { Effect } from "effect";
 import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import { authUnavailableEffect } from "./auth-failure.ts";
 
 export interface NativeIdentity {
-  /** The Web request already materialized for native handlers. */
+  /** Metadata-only identity view; the native handler exclusively owns the body. */
   readonly web: Request;
   /** Verified owner id, or null when the request must not proceed. */
   readonly ownerId: string | null;
@@ -29,7 +30,7 @@ export const nativeIdentity: Effect.Effect<
   HttpServerRequest.HttpServerRequest | ClerkIdentity
 > = Effect.gen(function* () {
   const request = yield* HttpServerRequest.HttpServerRequest;
-  const web = yield* HttpServerRequest.toWeb(request).pipe(Effect.orDie);
+  const web = yield* toAuthenticationRequest(request).pipe(Effect.orDie);
   const identity = yield* ClerkIdentity;
   const outcome: Outcome = yield* identity.current(web).pipe(
     Effect.map((current) => ({ kind: "signed-in" as const, id: current.id, name: current.name })),

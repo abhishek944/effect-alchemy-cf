@@ -69,7 +69,7 @@ export const retainConversationFiles = async (
   if (!result.ok) throw new ChatUnavailable();
 };
 
-/** Check original dimensions against the next model without rewriting native history. */
+/** Check image modality against the next model without rewriting native history. */
 export const validateChatImageContext = async (
   runtime: ChatRuntime,
   model: ChatCatalogModel,
@@ -114,7 +114,7 @@ export const validateChatImageContext = async (
   if (!result.ok)
     throw new ChatInvalid({
       message:
-        "Images already in this chat exceed this model’s original-image limits. Choose another model or start a new chat; nothing was resized.",
+        "This model cannot use the images in this chat. Choose an image-capable model or start a new chat.",
     });
 };
 

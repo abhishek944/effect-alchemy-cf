@@ -14,7 +14,7 @@ function FileRow({
   file: LocalFile;
   locked: boolean;
   active: boolean;
-  onRemove: () => void;
+  onRemove?: (() => void) | undefined;
 }) {
   const [preview, setPreview] = useState(false);
   if (!active && preview) setPreview(false);
@@ -43,21 +43,26 @@ function FileRow({
         <span data-cx="file-name" title={file.name}>
           {file.name}
         </span>
-        <small data-cx="file-meta">{formatFileSize(file.byteSize)}</small>
+        <small data-cx="file-meta">
+          {formatFileSize(file.byteSize)}
+          {file.state === "uploading" ? " · Uploading…" : ""}
+        </small>
         {error && <output data-cx="file-error">{error}</output>}
       </div>
-      <div data-cx="file-actions">
-        <button
-          type="button"
-          data-cx="file-action"
-          onClick={onRemove}
-          aria-label={`Remove ${file.name}`}
-          disabled={locked}
-          title={locked ? "Waiting for the frozen send to settle." : undefined}
-        >
-          Remove
-        </button>
-      </div>
+      {onRemove && (
+        <div data-cx="file-actions">
+          <button
+            type="button"
+            data-cx="file-action"
+            onClick={onRemove}
+            aria-label={`Remove ${file.name}`}
+            disabled={locked}
+            title={locked ? "Waiting for the frozen send to settle." : undefined}
+          >
+            Remove
+          </button>
+        </div>
+      )}
     </li>
   );
 }
@@ -69,17 +74,19 @@ export default function ChatComposerFiles({
   notice,
   onRemove,
   onClearNotice,
+  label = "Files added to this message",
 }: {
   files: LocalFile[];
   lockedIds: readonly string[];
   notice: string | null;
-  onRemove: (id: string) => void;
+  onRemove?: ((id: string) => void) | undefined;
   onClearNotice: () => void;
+  label?: string;
 }) {
   const { active } = useHistoryText();
   if (files.length === 0) return null;
   return (
-    <section data-cx="composer-files" aria-label="Files added to this message">
+    <section data-cx="composer-files" aria-label={label}>
       <ul data-cx="file-list">
         {files.map((file) => (
           <FileRow
@@ -87,7 +94,7 @@ export default function ChatComposerFiles({
             file={file}
             locked={lockedIds.includes(file.id)}
             active={active}
-            onRemove={() => onRemove(file.id)}
+            onRemove={onRemove ? () => onRemove(file.id) : undefined}
           />
         ))}
       </ul>

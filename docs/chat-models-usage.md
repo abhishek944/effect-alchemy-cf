@@ -42,8 +42,9 @@ missing report access does not disable otherwise configured inference.
 ## Account-wide Usage
 
 The protected `/usage` destination follows Home in the rail and has no chat sidebar
-or right pane. It shows input/output tokens, actual reported requests and estimated
-USD spend, grouped Daily, Models or Providers for the selected inclusive UTC dates.
+or right pane. It shows input/output tokens, distinct Chats and estimated USD spend
+for the selected inclusive UTC dates. Daily shows distinct Chats per day; Models
+and Providers retain actual reported Requests (gateway attempts), not chat counts.
 Refresh reads reporting only; it never invokes a model. Account changes clear/fence
 old requests. Date ranges are not subject to an application lifetime cap.
 
@@ -52,7 +53,15 @@ both that user's unchanged verified Clerk UID and one exact persisted stage infe
 per upstream request. The reporting credential is never a customer filter. The public
 schema includes source, model-usage scope, timezone, activation, period, coverage and
 completeness; it never forwards administrative metadata, credentials, names or raw
-source IDs.
+source IDs. A separate app-sourced activity projection counts conversations with
+accepted user messages in the selected UTC period, including archived chats and
+failed/stopped replies. Authoritative stored user-message timestamps, not chat
+creation/update dates or tentative reservations, determine the days. A conversation
+counts once overall and once per active day; never sum daily distincts for the total.
+Missing activity yields Unknown independently of valid gateway metrics. No
+model/provider chat attribution is inferred from aggregate attempts or saved model
+preferences. The private projection returns only distinct days, never message bodies
+or IDs. No new table, backfill, replay or cache is used.
 
 LiteLLM 1.108.4 `/customer/daily/activity/aggregated` is authoritative for attributed model usage.
 It reports actual attempts, not just completed replies. A 400-day maximum date
@@ -66,9 +75,10 @@ are not automatically joined after switching to raw Clerk UID attribution.
 Unknown counts/prices remain Unknown. Image/decision attempts with only default zero
 tokens and no measured token activity do not prove zero token usage. Totals always sum
 the rows that were actually recorded, so a range that starts before activation or
-contains an unreported interval shows those sums with Partial status and a coverage
-line stating the recorded and requested day counts. Only a wholly unavailable report
-keeps Unknown totals. Failures/Stop are not automatically free. Estimated spend is not
+contains an unreported interval retains those sums and backend Partial/coverage
+metadata. The UI omits the coverage paragraph and Partial label, while preserving
+loading/unavailable feedback. Only a wholly unavailable gateway report keeps Unknown
+model-usage totals; independently known app Chat counts remain available. Failures/Stop are not automatically free. Estimated spend is not
 an invoice.
 No optional cache/performance analytics or app-admin reporting console is added.
 Operators retain their gateway reporting surface; global administrators may see both

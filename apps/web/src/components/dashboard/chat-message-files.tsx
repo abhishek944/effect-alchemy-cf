@@ -2,6 +2,7 @@ import { useAuiState } from "@assistant-ui/react";
 import type { ChatFileDescriptor } from "@/lib/chat-capability-file-types";
 import { useChatStore } from "@/lib/chat-store-context";
 import { ChatLibraryResults } from "./chat-library-results";
+import ChatComposerFiles from "./chat-composer-files";
 import { ChatLibraryOpenStatus } from "./chat-library-workspace-status";
 import { useChatLibraryOpen } from "./use-chat-library-open";
 import { useChatLibraryFile } from "./use-chat-library-file";
@@ -58,6 +59,37 @@ function UploadedFile({ file, active }: { file: ChatFileDescriptor; active: bool
       )}
       <ChatLibraryOpenStatus read={read} />
     </>
+  );
+}
+
+/** Local originals belong to this exact optimistic operation, not the editable draft. */
+export function PendingSendFiles() {
+  const messageId = useAuiState((state) => state.message.id);
+  const { pendingSend, selectedId, stagedFiles } = useChatStore();
+  if (
+    !pendingSend ||
+    pendingSend.chatId !== selectedId ||
+    messageId !== `pending-${pendingSend.operationId}`
+  )
+    return null;
+  const ids = pendingSend.frozen?.attachments ?? [];
+  return (
+    <div data-cx="pending-message-files">
+      <output>
+        {pendingSend.phase === "posting"
+          ? "Sending message…"
+          : pendingSend.phase === "failed"
+            ? "Message not confirmed. Retry or discard this send."
+            : "Sent. Waiting for the assistant…"}
+      </output>
+      <ChatComposerFiles
+        files={stagedFiles.files.filter((file) => ids.includes(file.id))}
+        lockedIds={ids}
+        notice={null}
+        onClearNotice={() => undefined}
+        label="Files in pending message"
+      />
+    </div>
   );
 }
 

@@ -48,6 +48,26 @@ export const GatewayUsage = Schema.Struct({
   providers: Schema.Array(UsageRow),
 });
 export type GatewayUsage = typeof GatewayUsage.Type;
+
+const Count = Schema.Number.check(Schema.makeFilter((n) => Number.isSafeInteger(n) && n >= 0));
+export const ConversationActivity = Schema.Struct({ days: Schema.Array(UsageDate) });
+export type ConversationActivity = typeof ConversationActivity.Type;
+
+/** App-owned sent-message activity, independent of gateway attempts and coverage. */
+export const ChatActivity = Schema.Struct({
+  source: Schema.Literal("app"),
+  total: Schema.NullOr(Count),
+  daily: Schema.Array(Schema.Struct({ date: UsageDate, chats: Count })),
+});
+export type ChatActivity = typeof ChatActivity.Type;
+export const unknownChatActivity = (): ChatActivity => ({ source: "app", total: null, daily: [] });
+
+export const AccountUsage = Schema.Struct({
+  ...GatewayUsage.fields,
+  // An older retained API can still supply valid gateway metrics during a source reload.
+  activity: Schema.optionalKey(ChatActivity),
+});
+export type AccountUsage = typeof AccountUsage.Type;
 export const unknownUsageMetrics = (): UsageMetrics => ({
   inputTokens: null,
   outputTokens: null,

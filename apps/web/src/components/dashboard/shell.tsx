@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type CSSProperties, type ReactNode } from "react";
 import PaneResizer from "./pane-resizer";
 import SettingsNavigation from "./settings-navigation";
 import "./pane-resizer.css";
@@ -12,6 +12,7 @@ import { WorkspacePreviewTabs } from "./workspace-preview-tabs";
 
 import { useDashboardTheme } from "./theme";
 import Toolbar from "./toolbar";
+import type { ChatTitleControls } from "./chat-toolbar-title";
 import RailNavigation from "./rail-navigation";
 import "./tokens.css";
 import "./shell.css";
@@ -26,7 +27,7 @@ type Props = {
   account: ReactNode;
   children?: ReactNode;
   sidebar?: ReactNode;
-  chatTitle?: ReactNode;
+  chatTitle?: ComponentType<ChatTitleControls> | undefined;
   notFound?: boolean;
   homeHref?: string;
 };
@@ -39,7 +40,7 @@ export default function DashboardShell({
   account,
   children,
   sidebar,
-  chatTitle,
+  chatTitle: ChatTitle,
   notFound = false,
   homeHref = "/dashboard",
 }: Props) {
@@ -54,6 +55,7 @@ export default function DashboardShell({
     toggleSidebar,
     toggleRight,
     toggleFullView,
+    selectChatCollapsed,
   } = usePanes(chatWorkspace, accountId);
   const { registerReveal } = useWorkspacePreview();
   useEffect(() => registerReveal(openRight), [registerReveal, openRight]);
@@ -105,7 +107,11 @@ export default function DashboardShell({
       )}
       <Toolbar
         title={settings || standalone || notFound ? title : ""}
-        chatTitle={chatTitle}
+        chatTitle={
+          ChatTitle ? (
+            <ChatTitle sidebarOpen={showSidebar} onSelectChat={selectChatCollapsed} />
+          ) : undefined
+        }
         previewTabs={
           chatWorkspace ? (
             <WorkspacePreviewTabs

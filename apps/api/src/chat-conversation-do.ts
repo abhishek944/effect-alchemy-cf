@@ -1,4 +1,6 @@
 import { ChatObject } from "./chat-object.ts";
+import { conversationActivity } from "./chat-activity.ts";
+import { UsageQuery } from "@highchat/chat-contract/gateway-usage";
 import type { ChatObjectContext } from "./chat-object.ts";
 import { readConversationImages } from "./chat-image-read-http.ts";
 import { conversationCatalogStub } from "./chat-conversation-catalog.ts";
@@ -48,6 +50,12 @@ export class ChatConversation extends ChatObject<SkillConversationEnv> {
     const { runtime, accounting, source, imageCalls, ledger, skills, owners, submission } =
       this.services;
     try {
+      if (request.method === "GET" && url.pathname === "/activity") {
+        const period = decodeOption(UsageQuery, Object.fromEntries(url.searchParams));
+        if (period === null || period.start > period.end)
+          return json({ message: "Invalid activity period" }, 400);
+        return json(conversationActivity(runtime.transcript.db, period));
+      }
       const usage = await conversationUsage(
         request,
         chat,

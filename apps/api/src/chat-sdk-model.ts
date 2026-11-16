@@ -1,4 +1,6 @@
 import { attributedPayload } from "./chat-gateway-identity.ts";
+import type { FailureContext } from "@highchat/diagnostics";
+import { modelDiagnostics } from "./chat-model-diagnostics.ts";
 import { gatewayCatalogSnapshot } from "./chat-gateway-catalog.ts";
 import type { Context, Models } from "@earendil-works/pi-ai";
 import type { ModelRequestEvent } from "@highchat/chat-runtime";
@@ -17,6 +19,7 @@ export const sdkModelReply = (input: {
   readonly operationId: string;
   readonly accounting: ChatAccounting;
   readonly signal: AbortSignal;
+  readonly diagnostic: Pick<FailureContext, "service" | "stage" | "release">;
 }): ReadableStream<Uint8Array> => {
   const model = input.models.getModel(input.selection.provider, input.selection.model);
   if (model === undefined || !gatewayCatalogSnapshot().ids.includes(input.selection.model))
@@ -34,7 +37,14 @@ export const sdkModelReply = (input: {
     input.selection,
     null,
   );
+  const diagnostic = modelDiagnostics({
+    protocol: model.api,
+    metadata: input.diagnostic,
+    requestId: input.request.requestId,
+    operationId: input.operationId,
+  });
   const stream = input.models.streamSimple(model, input.context, {
+    fetch: diagnostic.fetch,
     maxTokens,
     signal: input.signal,
     maxRetries: 0,
@@ -57,6 +67,8 @@ export const sdkModelReply = (input: {
         }
         const event = item.value;
         if (event.type === "done" || event.type === "error") {
+          if (event.type === "error" && event.reason !== "aborted" && !input.signal.aborted)
+            diagnostic.terminalFailure();
           terminal = true;
           const message = event.type === "done" ? event.message : event.error;
           input.accounting.recordModel(

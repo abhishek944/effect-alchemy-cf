@@ -15,16 +15,21 @@ editable draft text. Nothing executes uploaded markup or code.
 ## Send and storage
 
 Files stay local until explicit Send. Uploads use authenticated same-origin
-`/api/chats/:chatId/attachments/:fileId` routes, then the single direct message
+`/api/chats/:chatId/attachments/:fileId` routes. Native identity checks use a
+metadata-only request: the upload handler alone owns the Node body reader, so
+authentication cannot drain or split the original bytes. Exact declared length,
+content validation and digest checks remain enforced. The single direct message
 submission freezes their UUIDs with the selected model/effort. Keep the same
 operation and file IDs when acceptance is uncertain; never re-send a changed
-selection under an old UUID. Preparation/upload failures preserve the draft and
-local originals for send recovery or removal. Composer cards show a local content
+selection under an old UUID. Local admission moves only the frozen caption and
+attachment rows out of the editable composer into the pending message. Upload
+failures retain that tuple and local originals for Retry or Discard; later draft
+text, references and files stay untouched. Composer cards show a local content
 preview, filename, individual size and Remove, with a neutral border in all five
 themes. Click the thumbnail to preview; there is no separate Preview button.
 Previewing never uploads a file.
 Failed files keep their explanation; remove and reattach files that cannot prepare.
-Frozen sends keep Remove disabled until their outcome settles.
+Pending-message cards show upload progress without an editable Remove action.
 
 An accepted message retains private originals across reload/archive. Metadata and
 accounting live in the owner's catalog actor; bytes live in the stage's private R2
@@ -70,9 +75,10 @@ This is not unlimited capacity. Upload/content validation and request hydration
 still materialize whole originals, so real browser and Worker memory/CPU limits
 can fail an operation. Uploads use one native request buffer, not a retained chunk
 list plus another concatenation. Exact length, content and upload hash checks stay.
-Model dimensions, encoded image bytes, modalities and context still apply; the
-installed generation SDK has its own non-overridable limits. No silent resizing,
-truncation or dropping historical images is permitted.
+Actual provider request/image constraints, modalities and context still apply;
+the installed generation SDK has its own non-overridable limits. The chat SDK's
+optional cache-safe image resize profile is not a hard original-file limit.
+No silent resizing, truncation or dropping historical images is permitted.
 
 ### Compact native inputs and platform storage
 
@@ -90,10 +96,9 @@ original fits every request. See
 [chat images and saved references](chat-images.md) for honest post-charge failures,
 per-chat library/@ behavior and accounting.
 
-Models may also impose smaller image dimensions or encoded-byte limits. Existing
-images in the authoritative model context must be compatible with the next
-selected model. Choose another model or a new chat when they are not; changing
-models never rewrites accepted history.
+Models may impose actual image/request constraints. Image modality is checked
+against the next selected model, without treating the SDK's optional resize
+profile as a provider limit. Changing models never rewrites accepted history.
 
 Source: [Cloudflare Durable Object limits](https://developers.cloudflare.com/durable-objects/platform/limits/).
 

@@ -31,7 +31,7 @@ const legacyImages = (context: Context, model: ChatCatalogModel): void => {
     for (const block of message.content) {
       if (block.type !== "image") continue;
       const byteSize = legacyHydrationByteSize(block, model);
-      checkLegacyHydrationImage(block, byteSize, model);
+      checkLegacyHydrationImage(block, byteSize);
     }
   }
 };

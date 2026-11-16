@@ -3,7 +3,7 @@ import type { GatewayUsage, UsageMetrics } from "@/lib/gateway-usage";
 import "./usage.css";
 
 export type UsageGrouping = "daily" | "models" | "providers";
-const labels = ["Input tokens", "Output tokens", "Requests", "Estimated spend"];
+const labels = ["Input tokens", "Output tokens", "Chats", "Estimated spend"];
 const numbers = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -12,10 +12,10 @@ const money = new Intl.NumberFormat("en-US", {
 });
 const amount = (value: number | null, spend = false) =>
   value === null ? "Unknown" : spend ? money.format(value) : numbers.format(value);
-const values = (metrics: UsageMetrics | undefined) => [
+const values = (metrics: UsageMetrics | undefined, count: number | null) => [
   amount(metrics?.inputTokens ?? null),
   amount(metrics?.outputTokens ?? null),
-  amount(metrics?.requests ?? null),
+  amount(count),
   amount(metrics?.spend ?? null, true),
 ];
 const dayLabel = (date: string) =>
@@ -24,27 +24,20 @@ const dayLabel = (date: string) =>
     day: "numeric",
     timeZone: "UTC",
   });
-/** Explains partial coverage instead of hiding the recorded sums behind Unknown. */
-const coverageNote = (report: GatewayUsage | null): string | null => {
-  if (report === null || report.status !== "partial") return null;
-  const { coverage } = report;
-  const parts: string[] = [];
-  if (coverage.recordedDays < coverage.requestedDays)
-    parts.push(
-      `Partial coverage: ${numbers.format(coverage.recordedDays)} of ${numbers.format(coverage.requestedDays)} days recorded${
-        coverage.start === null || coverage.end === null
-          ? ""
-          : ` (${dayLabel(coverage.start)} – ${dayLabel(coverage.end)})`
-      }. Days without a recorded report are not counted.`,
-    );
-  // Every requested day can be covered while another key interval failed.
-  else
-    parts.push(
-      "Partial coverage: part of this range was not confirmed, so these totals may be incomplete.",
-    );
-  if (Object.values(report.totals).some((value) => value === null))
-    parts.push("Reported metrics without a value stay Unknown.");
-  return parts.length === 0 ? null : parts.join(" ");
+/** Include app-active days even when no gateway model report was recorded for that day. */
+const dailyRows = (report: GatewayUsage | null) => {
+  const rows = new Map((report?.daily ?? []).map((row) => [row.name, row]));
+  for (const { date } of report?.activity?.daily ?? []) {
+    if (!rows.has(date))
+      rows.set(date, {
+        name: date,
+        inputTokens: null,
+        outputTokens: null,
+        requests: null,
+        spend: null,
+      });
+  }
+  return [...rows.values()].toSorted((a, b) => a.name.localeCompare(b.name));
 };
 
 /** Presentation only; account fencing and authenticated loading remain in UsagePage. */
@@ -67,11 +60,11 @@ export default function UsageReport({
     ? "Loading…"
     : failed || report?.status === "unavailable"
       ? "Unavailable"
-      : report?.status === "partial"
-        ? "Partial"
-        : "";
-  const rows = report?.[grouping] ?? [];
-  const note = loading ? null : coverageNote(report);
+      : "";
+  const rows = grouping === "daily" ? dailyRows(report) : (report?.[grouping] ?? []);
+  const activity = report?.activity;
+  const dailyChats = new Map(activity?.daily.map((row) => [row.date, row.chats]) ?? []);
+  const countLabel = grouping === "daily" ? "Chats" : "Requests";
   const first = grouping === "daily" ? "Day" : grouping === "models" ? "Model" : "Provider";
   return (
     <section data-cx="usage-report" aria-busy={loading}>
@@ -80,14 +73,13 @@ export default function UsageReport({
       </h1>
       <div data-cx="usage-controls">{controls}</div>
       <div data-cx="usage-metrics">
-        {values(report?.totals).map((value, index) => (
+        {values(report?.totals, activity?.total ?? null).map((value, index) => (
           <div key={labels[index]}>
             <span>{labels[index]}</span>
             <strong>{loading ? "…" : value}</strong>
           </div>
         ))}
       </div>
-      {note !== null && <p data-cx="usage-coverage">{note}</p>}
       <div data-cx="usage-breakdowns" aria-label="Usage breakdown">
         {(["daily", "models", "providers"] satisfies UsageGrouping[]).map((value) => (
           <button
@@ -107,7 +99,7 @@ export default function UsageReport({
           <caption className="sr-only">Model usage by {first.toLowerCase()}</caption>
           <thead>
             <tr>
-              {[first, "Input tokens", "Output tokens", "Requests", "Est. spend"].map((label) => (
+              {[first, "Input tokens", "Output tokens", countLabel, "Est. spend"].map((label) => (
                 <th key={label} scope="col">
                   {label}
                 </th>
@@ -121,7 +113,14 @@ export default function UsageReport({
                   <th scope="row">
                     {grouping === "daily" ? dayLabel(row.name) : row.name || "Unknown"}
                   </th>
-                  {values(row).map((value, index) => (
+                  {values(
+                    row,
+                    grouping === "daily"
+                      ? activity?.total === undefined || activity.total === null
+                        ? null
+                        : (dailyChats.get(row.name) ?? 0)
+                      : row.requests,
+                  ).map((value, index) => (
                     <td key={labels[index]}>{value}</td>
                   ))}
                 </tr>

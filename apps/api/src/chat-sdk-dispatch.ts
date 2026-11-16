@@ -1,6 +1,6 @@
 import type { Context, Models } from "@earendil-works/pi-ai";
 import type { ModelRequestEvent, ToolRequestEvent } from "@highchat/chat-runtime";
-import { reportFailure } from "@highchat/diagnostics";
+import { reportFailure, withDiagnostic } from "@highchat/diagnostics";
 import type { ChatSdkHost } from "./chat-sdk-host.ts";
 import { type ActiveChatRun, type ChatRuntime } from "./chat-runtime.ts";
 import type { ChatSendScope } from "./chat-submission.ts";
@@ -129,7 +129,12 @@ export const dispatchSdkModel = async (
   input: typeof SendMessage.Type,
 ): Promise<void> => {
   assertSdkRunLive(options.runtime, active);
-  const context = await options.hydrate(event.context, input, active);
+  const context = await options.hydrate(event.context, input, active).catch((error: unknown) => {
+    throw withDiagnostic(
+      error instanceof Error ? error : new Error("Chat hydration failed", { cause: error }),
+      "image_hydration",
+    );
+  });
   assertSdkRunLive(options.runtime, active);
   const body = sdkModelReply({
     models: options.models,
@@ -141,6 +146,7 @@ export const dispatchSdkModel = async (
     operationId: input.operationId,
     accounting: options.accounting,
     signal: active.controller.signal,
+    diagnostic: options.runtime.diagnostic,
   });
   await options.host.reply(
     active.record.runId,

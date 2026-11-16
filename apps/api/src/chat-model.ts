@@ -175,8 +175,7 @@ export class RefreshRequired extends Schema.TaggedError<RefreshRequired>()(
 ) {}
 
 /** Safe, non-diagnostic inference failure text shared by worker and object code. */
-export const INFERENCE_FAILURE =
-  "The model request failed. Check the development gateway and its key setup, then retry.";
+export const INFERENCE_FAILURE = "The model request failed. Please try again.";
 export const INFERENCE_UNCONFIGURED =
   "Inference is not configured for this stage. Configure the private Pi host and the chat gateway.";
 export const SUBMISSION_FAILED =

@@ -47,7 +47,6 @@ export default function SubscriptionPage() {
             actions are unavailable.
           </p>
         </div>
-        <span data-cx="subscription-tag">Illustrative plan details</span>
       </header>
 
       <section data-cx="subscription-plans" aria-label="Illustrative plan comparison">

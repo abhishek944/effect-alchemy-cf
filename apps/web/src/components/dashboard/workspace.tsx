@@ -37,7 +37,7 @@ export default function Workspace({ user, pathname }: { user: DashboardUser; pat
                   homeHref={chatIdFromPath(pathname) ? pathname : "/dashboard"}
                   account={<AccountMenu user={user} />}
                   sidebar={dashboard ? <ChatSidebar /> : undefined}
-                  chatTitle={dashboard ? <ChatToolbarTitle /> : undefined}
+                  chatTitle={dashboard ? ChatToolbarTitle : undefined}
                   notFound={!section && !subscription && !usage && !dashboard}
                 >
                   <div data-cx="chat-page" hidden={!dashboard}>

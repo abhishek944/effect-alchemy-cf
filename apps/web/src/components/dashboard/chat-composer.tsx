@@ -34,6 +34,8 @@ type Props = {
 export default function ChatComposer({ chatId, notices, running, stopping, ...actions }: Props) {
   const store = useChatStore();
   const { stagedFiles } = store;
+  const submittedIds =
+    store.pendingSend?.chatId === chatId ? (store.pendingSend.frozen?.attachments ?? []) : [];
   const voice = useVoice();
   const [dragging, setDragging] = useState(false);
   const {
@@ -98,12 +100,8 @@ export default function ChatComposer({ chatId, notices, running, stopping, ...ac
           }}
         >
           <ChatComposerFiles
-            files={stagedFiles.files}
-            lockedIds={
-              store.pendingSend?.chatId === chatId
-                ? (store.pendingSend.frozen?.attachments ?? [])
-                : []
-            }
+            files={stagedFiles.files.filter((file) => !submittedIds.includes(file.id))}
+            lockedIds={[]}
             notice={stagedFiles.notice}
             onRemove={stagedFiles.remove}
             onClearNotice={stagedFiles.clearNotice}

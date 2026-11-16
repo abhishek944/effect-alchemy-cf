@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import { useChatStore } from "@/lib/chat-store-context";
+import { chatIdFromPath } from "@/lib/chat-route";
 import { readLayout, storePanes } from "./workspace-session";
 
 export function usePanes(chatWorkspace = false, accountId: string) {
-  const { selectedId } = useChatStore();
-  const initial = () => ({
-    chatId: selectedId,
-    panes: readLayout(accountId, selectedId)?.panes ?? {
+  const { selectedId, select } = useChatStore();
+  const initial = (chatId = selectedId) => ({
+    chatId,
+    panes: readLayout(accountId, chatId)?.panes ?? {
       sidebar: window.matchMedia("(min-width: 601px)").matches,
       right: window.matchMedia("(min-width: 761px)").matches,
       full: false,
@@ -88,6 +89,13 @@ export function usePanes(chatWorkspace = false, accountId: string) {
     fullView,
     rightRef,
     openRight,
+    selectChatCollapsed: (id: string) => {
+      select(id);
+      // An existing leave guard may decline navigation; never change panes in that case.
+      if (chatIdFromPath(window.location.pathname) !== id) return;
+      const target = initial(id);
+      setChatLayout({ ...target, panes: { ...target.panes, sidebar: false } });
+    },
     toggleSidebar: () => {
       setFullView(false);
       if (fullView) setRightOpen(restoreRight);

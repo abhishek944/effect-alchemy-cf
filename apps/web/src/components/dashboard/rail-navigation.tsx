@@ -49,7 +49,7 @@ export default function RailNavigation({ homeHref, current, account }: Props) {
       />
       <RailItem
         href="/subscription"
-        label="Subscription"
+        label="Plans"
         icon="credit-card"
         current={current === "subscription"}
       />

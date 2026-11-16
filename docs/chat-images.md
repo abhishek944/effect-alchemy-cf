@@ -42,7 +42,9 @@ At model request time, immutable accepted sidecars map current/historical user
 messages to their originals. Hydration rechecks owner, chat, accepted state, format
 and model compatibility before exact private reads. Text uses only accepted slices.
 Missing/altered sidecars fail closed. Existing valid inline history stays readable.
-There is no silent image resizing, dropping or truncation to make inputs fit.
+Originals are not silently resized, dropped or truncated. The installed chat
+SDK's optional cache-safe resize profile is not a provider admission limit;
+valid originals are not refused solely for exceeding that preparation profile.
 
 Every `image_generate` callback matches the accepted operation and exact stored
 assistant tool call. Edits resolve only authorized same-chat immutable originals;

@@ -51,6 +51,18 @@
 [data-dashboard] [data-cx="usage-controls"] button {
   cursor: pointer;
 }
+[data-dashboard] [data-cx="usage-controls"] [data-cx="usage-refresh"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+}
+[data-dashboard] [data-cx="usage-controls"] button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
 [data-dashboard] [data-cx="usage-metrics"] {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -78,11 +90,6 @@
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
-}
-[data-dashboard] [data-cx="usage-coverage"] {
-  margin: 12px 0 0;
-  color: var(--cx-muted);
-  font-size: 12px;
 }
 [data-dashboard] [data-cx="usage-breakdowns"] {
   display: flex;

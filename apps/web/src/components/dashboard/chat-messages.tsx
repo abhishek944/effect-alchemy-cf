@@ -4,7 +4,7 @@ import { ChatAssistantParts, ToolPreviewNote } from "./chat-assistant-parts";
 import { MessageText, useHistoryText } from "./chat-history-ui";
 import { MessageImageAltsProvider, collectMessageImageAlts } from "./chat-message-image-alts";
 import { AssistantActions, UserActions } from "./chat-message-actions";
-import { SentSavedFiles, AssistantSavedFiles } from "./chat-message-files";
+import { SentSavedFiles, AssistantSavedFiles, PendingSendFiles } from "./chat-message-files";
 import { SentMessageSelections } from "./chat-message-selections";
 import "./chat-feedback.css";
 import "./chat-message-actions.css";
@@ -70,6 +70,7 @@ export function UserMessage() {
   return (
     <MessagePrimitive.Root data-cx="chat-message" data-role="user">
       <MessagePrimitive.Parts components={userParts} />
+      {optimistic && <PendingSendFiles />}
       {!optimistic && (
         <>
           <SentMessageSelections />
@@ -112,6 +113,7 @@ export function ChatMessage({ messageRole = "assistant" }: { messageRole?: "user
         ) : (
           <>
             <MessagePrimitive.Parts components={userParts} />
+            {optimistic && <PendingSendFiles />}
             {!optimistic && (
               <>
                 <SentMessageSelections />

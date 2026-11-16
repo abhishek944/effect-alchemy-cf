@@ -1,4 +1,5 @@
-import type { RunEvent } from "@highchat/chat-runtime";
+import type { HostDiagnostic, RunEvent } from "@highchat/chat-runtime";
+import { reportHostDiagnostic } from "./chat-model-diagnostics.ts";
 import { reportFailure } from "@highchat/diagnostics";
 import { PI_BACKGROUND, type ActiveChatRun } from "./chat-runtime.ts";
 import type { ChatSendScope } from "./chat-submission.ts";
@@ -79,6 +80,7 @@ export class ChatSdkExecution {
     const state: { outcome: "done" | "unanswered" | "stopped" } = { outcome: "unanswered" };
     const pending = new Set<Promise<void>>();
     let failure: unknown;
+    let settlement: HostDiagnostic | undefined;
     const called = new Set<string>();
     const launch = (work: Promise<void>) => {
       const tracked = work
@@ -155,18 +157,21 @@ export class ChatSdkExecution {
             launch(dispatchSdkModel(this.options, event, active, input));
           else if (event.type === "tool")
             launch(dispatchSdkTool(this.options, event, active, scope, tools, called));
-          else
+          else {
+            settlement = event.status === "unanswered" ? event.diagnostic : undefined;
             state.outcome =
               event.status === "answered"
                 ? "done"
                 : event.status === "stopped" && failure === undefined
                   ? "stopped"
                   : "unanswered";
+          }
         },
         accepted,
       );
       await Promise.all(pending);
       if (failure !== undefined) throw failure;
+      reportHostDiagnostic(settlement, runtime.diagnostic, input.operationId);
     } catch (error) {
       active.controller.abort(error);
       await Promise.all(pending);
@@ -174,6 +179,7 @@ export class ChatSdkExecution {
         ...runtime.diagnostic,
         component: "chat-sdk",
         operation: "run",
+        phase: failure === undefined ? "host" : "dispatch",
         operationId: input.operationId,
         chatId: scope.chat.id,
       });

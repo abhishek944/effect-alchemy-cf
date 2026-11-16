@@ -48,11 +48,13 @@ export const readAcceptedOriginal = async (
   const { metadata, bucket, signal } = input;
   checkImageIOSignal(signal);
   const file = Option.getOrNull(Schema.decodeUnknownOption(FileDescriptor)({ ...metadata.file }));
+  // Actor IDs are opaque: local catalog names include the `owner:` prefix.
+  // Scope equality, not the retired storage provider's ID alphabet, proves the attestation.
   const scope = input.ownerScope;
   if (
     metadata.state !== "accepted" ||
     metadata.ownerScope !== scope ||
-    !/^[A-Za-z0-9_-]{1,256}$/.test(scope) ||
+    scope.length === 0 ||
     file === null ||
     file.chatId !== input.chatId ||
     file.state !== "ready" ||

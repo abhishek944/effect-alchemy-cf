@@ -1,5 +1,6 @@
 import { RuntimeEnv } from "@highchat/platform";
 import { readGatewayUsage } from "./chat-gateway-report.ts";
+import { readAccountActivity } from "./chat-account-activity.ts";
 import { Effect, Schema } from "effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import { Api } from "./api.ts";
@@ -42,7 +43,9 @@ export const ChatCapabilitiesLive = HttpApiBuilder.group(Api, "chatCapabilities"
           const user = yield* CurrentUser;
           if (query.start > query.end)
             return yield* Effect.fail(new ChatInvalid({ message: "Choose a valid date range." }));
-          return yield* Effect.promise(() => readGatewayUsage(env, user.id, query));
+          const report = yield* Effect.promise(() => readGatewayUsage(env, user.id, query));
+          const activity = yield* readAccountActivity(ns, user.id, query);
+          return { ...report, activity };
         }),
       )
       .handle("chatCapabilities", () =>
