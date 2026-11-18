@@ -113,12 +113,14 @@ obligations.
 | `pnpm lint:format`          | Apply formatting fixes                                                              |
 | `pnpm build`                | Build frontend and typecheck every workspace, without deployment                    |
 | `pnpm dev` / `pnpm dev:web` | Local API + Pi host / Vite HMR for the main and admin UIs                           |
-| `pnpm audit`                | Production dependency advisory check                                                |
+| `pnpm audit`                | Dependency advisory report; nonblocking in CI                                       |
 
 Direct dependencies are pinned and the pnpm lockfile is retained. Authored text
 files must be <=200 physical lines; dependencies, generated output, lockfiles and
-`var/` are excluded. Lint never applies fixes. The commit hook runs lint; CI runs
-frozen install, audit, lint and build. No unit-test framework is included.
+`var/` are excluded. Lint never applies fixes. The pre-commit and pre-push hooks
+run frozen install, lint and build in order and stop at the first failure. CI runs
+the same three steps plus a dependency audit step that is nonblocking: it reports
+advisories without failing `Check`. No unit-test framework is included.
 
 ## Runtime and deployment
 

@@ -2,20 +2,25 @@
 
 ## Branch workflow
 
-1. Work on a feature branch and run `pnpm lint` and `pnpm build` locally.
+1. Work on a feature branch; the local pre-commit and pre-push hooks run frozen
+   install, lint and build in order and stop at the first failure.
 2. Open a PR into `main`; merge only after the `Check` job succeeds.
 3. Open a PR from tested `main` into `prod` and merge it.
 
-PRs targeting main/prod and pushes to either run a frozen install, audit, lint and
-build. There is no deploy job and no cloud credential in this workflow: the runtime
-is a local Node process, and the repository owns no deployment configuration.
+PRs targeting main/prod and pushes to either run a frozen install, lint and build.
+A separate audit step runs `pnpm audit` with step-level `continue-on-error`, so
+advisories stay visible in the log without failing `Check`. There is no deploy job
+and no cloud credential in this workflow: the runtime is a local Node process, and
+the repository owns no deployment configuration.
 
 ## What CI proves
 
 `Check` proves formatting, configuration validation, linting, the 200-line rule,
-Effect diagnostics, all workspace typechecks and the production build. It does not
-prove that Clerk sign-in works, that a model provider answers, or that a deployment
-succeeds, because none of those run in CI.
+Effect diagnostics, all workspace typechecks and the production build. The audit
+step reports advisories without gating the job, so a green `Check` does not mean the
+audit is clean; read that step's log. CI does not prove that Clerk sign-in works,
+that a model provider answers, or that a deployment succeeds, because none of those
+run in CI.
 
 ## One-time repository setup
 

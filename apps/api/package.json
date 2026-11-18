@@ -23,7 +23,7 @@
     "@highchat/diagnostics": "workspace:*",
     "@highchat/platform": "workspace:*",
     "@jsquash/webp": "1.5.0",
-    "@modelcontextprotocol/sdk": "1.31.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "effect": "4.0.1",
     "jpeg-js": "0.4.4",
     "yaml": "2.9.0"

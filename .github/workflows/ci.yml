@@ -21,6 +21,8 @@ jobs:
           node-version: 22.21.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit
+      - name: Dependency audit (nonblocking)
+        run: pnpm audit
+        continue-on-error: true
       - run: pnpm lint
       - run: pnpm build

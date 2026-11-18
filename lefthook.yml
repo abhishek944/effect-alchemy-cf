@@ -1,4 +1,13 @@
-pre-commit:
-  commands:
-    lint:
+# Both hooks run the local gate in order and stop at the first failure. The
+# dependency audit is a nonblocking CI step, not a local hook step.
+pre-commit: &checks
+  piped: true
+  jobs:
+    - name: frozen install
+      run: pnpm install --frozen-lockfile
+    - name: lint
       run: pnpm lint
+    - name: build
+      run: pnpm build
+
+pre-push: *checks

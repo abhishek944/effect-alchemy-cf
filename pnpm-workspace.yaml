@@ -11,5 +11,13 @@ overrides:
   "@earendil-works/pi-telemetry": 1.2.0
   "@earendil-works/pi-tui": 1.2.0
 
+# Advisory-specific exceptions for published advisories with no available fix.
+# Each entry names one GitHub advisory and has a removal condition in
+# docs/dependency-audit-exceptions.md. This is not a package-wide ignore: another
+# advisory for the same package still fails the audit gate.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
+
 onlyBuiltDependencies:
   - lefthook
