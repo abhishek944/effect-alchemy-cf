@@ -66,9 +66,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-[data-dashboard] [data-cx="toolbar-actions"] [data-cx="icon-button"] {
-  background: var(--cx-selected);
-}
 [data-dashboard] [data-cx="rail-account"] {
   margin-top: auto;
   width: 40px;

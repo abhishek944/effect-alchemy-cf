@@ -16,6 +16,17 @@
   --chat-viewport-padding-block: 32px;
   padding: min(var(--chat-viewport-padding-block), var(--chat-viewport-padding-budget, 32px)) 24px;
 }
+[data-dashboard] [data-cx="chat-viewport"][data-empty="true"] {
+  display: flex;
+  flex-direction: column;
+}
+[data-dashboard] [data-cx="chat-viewport"][data-empty="true"] [data-cx="chat-empty"] {
+  flex-shrink: 0;
+  min-width: 0;
+  margin: auto;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 [data-dashboard] [data-cx="chat-message"] {
   position: relative;
   /* Reserve space for response controls; user timestamps need less room. */

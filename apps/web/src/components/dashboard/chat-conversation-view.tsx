@@ -28,6 +28,7 @@ export function ChatConversationView({
   chatId: string;
   footer: ComponentProps<typeof ChatFooter>;
 }) {
+  const empty = snapshot !== null && history.rows.length + history.live.length === 0 && !running;
   const notices = (
     <>
       {runError && (
@@ -45,7 +46,7 @@ export function ChatConversationView({
   );
   return (
     <ThreadPrimitive.Root data-cx="chat-thread" aria-label="Assistant chat">
-      <ThreadPrimitive.Viewport data-cx="chat-viewport">
+      <ThreadPrimitive.Viewport data-cx="chat-viewport" data-empty={empty && !archived}>
         <HistoryControls
           gap={history.gap}
           newerUnloaded={history.newerUnloaded}
@@ -57,9 +58,9 @@ export function ChatConversationView({
           onReturnToLatest={history.returnToLatest}
         />
         <ChatMessageList />
-        {snapshot && history.rows.length + history.live.length === 0 && !running && (
+        {empty && (
           <p data-cx="chat-empty">
-            {archived ? "This chat has no messages." : "Ask anything to start this chat."}
+            {archived ? "This chat has no messages." : "What would you like to work on?"}
           </p>
         )}
       </ThreadPrimitive.Viewport>

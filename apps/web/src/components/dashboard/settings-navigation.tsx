@@ -7,13 +7,11 @@ import SearchField from "./search-field";
 import SkillsNavIcon from "./skills-nav-icon";
 
 const icons = {
-  general: <Icon name="sliders-horizontal" />,
   voice: <Icon name="mic" />,
   images: <ImageIcon />,
   skills: <SkillsNavIcon />,
   profile: <Icon name="square-pen" />,
   appearance: <Icon name="wrench" />,
-  account: <Icon name="shield" />,
 };
 
 /** Shared route registry remains the authority; the shell keeps its search draft. */

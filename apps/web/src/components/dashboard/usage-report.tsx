@@ -5,6 +5,10 @@ import "./usage.css";
 export type UsageGrouping = "daily" | "models" | "providers";
 const labels = ["Input tokens", "Output tokens", "Chats", "Estimated spend"];
 const numbers = new Intl.NumberFormat("en-US");
+const compactNumbers = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -12,9 +16,17 @@ const money = new Intl.NumberFormat("en-US", {
 });
 const amount = (value: number | null, spend = false) =>
   value === null ? "Unknown" : spend ? money.format(value) : numbers.format(value);
-const values = (metrics: UsageMetrics | undefined, count: number | null) => [
-  amount(metrics?.inputTokens ?? null),
-  amount(metrics?.outputTokens ?? null),
+const tokenAmount = (value: number | null, compact: boolean) =>
+  value === null || !compact ? (
+    amount(value)
+  ) : (
+    <span aria-label={numbers.format(value)} title={numbers.format(value)}>
+      {compactNumbers.format(value)}
+    </span>
+  );
+const values = (metrics: UsageMetrics | undefined, count: number | null, compact = true) => [
+  tokenAmount(metrics?.inputTokens ?? null, compact),
+  tokenAmount(metrics?.outputTokens ?? null, compact),
   amount(count),
   amount(metrics?.spend ?? null, true),
 ];
@@ -120,6 +132,7 @@ export default function UsageReport({
                         ? null
                         : (dailyChats.get(row.name) ?? 0)
                       : row.requests,
+                    grouping === "daily",
                   ).map((value, index) => (
                     <td key={labels[index]}>{value}</td>
                   ))}

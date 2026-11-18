@@ -13,19 +13,17 @@ export type SettingsRoute = {
 };
 
 export const SETTINGS_ROUTES: readonly SettingsRoute[] = [
-  { section: "general", title: "General", href: "/settings/general" },
   { section: "voice", title: "Voice", href: "/settings/voice" },
   { section: "images", title: "Images", href: "/settings/images" },
   { section: "skills", title: "Skills", href: "/settings/skills" },
   { section: "profile", title: "Profile", href: "/settings/profile" },
   { section: "appearance", title: "Appearance", href: "/settings/appearance" },
-  { section: "account", title: "Account", href: "/settings/account" },
 ];
 
-/** `/settings` opens General, exactly as before; unknown paths resolve to null. */
+/** Legacy General and Account links open Profile; unknown paths resolve to null. */
 export function settingsSectionFromPath(pathname: string): SettingsSection | null {
   return (
     SETTINGS_ROUTES.find((route) => route.href === pathname)?.section ??
-    (pathname === "/settings" ? "general" : null)
+    (["/settings", "/settings/general", "/settings/account"].includes(pathname) ? "profile" : null)
   );
 }

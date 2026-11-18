@@ -9,7 +9,7 @@ import { useAccountProfile } from "./profile-context";
 import "./account.css";
 
 const accountLinks = [
-  { href: "/settings/general", icon: "settings", label: "Settings" },
+  { href: "/settings/profile", icon: "settings", label: "Settings" },
 ] satisfies { href: string; icon: IconName; label: string }[];
 
 /** Saved private photo when one exists, initials otherwise. */

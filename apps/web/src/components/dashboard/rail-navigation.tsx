@@ -54,7 +54,7 @@ export default function RailNavigation({ homeHref, current, account }: Props) {
         current={current === "subscription"}
       />
       <RailItem
-        href="/settings/general"
+        href="/settings/profile"
         label="Settings"
         icon="settings"
         current={current === "settings"}

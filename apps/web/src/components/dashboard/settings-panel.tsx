@@ -1,4 +1,3 @@
-import { appConfig } from "@/lib/app-config";
 import "./settings.css";
 import type { ReactNode } from "react";
 import { DropdownSelect } from "./dropdown";
@@ -22,13 +21,11 @@ type SettingsRowProps = {
 };
 
 const sectionTitles: Record<SettingsSection, string> = {
-  general: "General",
   voice: "Voice",
   images: "Images",
   skills: "Skills",
   profile: "Profile",
   appearance: "Appearance",
-  account: "Account",
 };
 
 function SettingsRow({ label, description, value, control }: SettingsRowProps) {
@@ -52,14 +49,6 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
       <h2 data-cx="settings-group-title">{title}</h2>
       <dl data-cx="settings-card">{children}</dl>
     </section>
-  );
-}
-
-function GeneralSettings({ user }: { user: DashboardUser }) {
-  return (
-    <SettingsGroup title={appConfig.name}>
-      <SettingsRow description={user.email} label="Signed in as" value={user.name} />
-    </SettingsGroup>
   );
 }
 
@@ -116,23 +105,11 @@ function AppearanceSettings() {
   );
 }
 
-function AccountSettings({ user }: { user: DashboardUser }) {
-  return (
-    <>
-      <SettingsGroup title="Account">
-        <SettingsRow description="Account identifier" label="Email" value={user.email} />
-        <SettingsRow description="Your current session" label="Session" value="Signed in" />
-      </SettingsGroup>
-    </>
-  );
-}
-
 export default function SettingsPanel({ user, section }: SettingsPanelProps) {
   const titled = section !== "profile" && section !== "skills";
   return (
     <div data-cx="settings-panel" data-section={section}>
       {titled ? <h1 data-cx="settings-title">{sectionTitles[section]}</h1> : null}
-      {section === "general" ? <GeneralSettings user={user} /> : null}
       {section === "voice" ? <VoiceSettings /> : null}
       {section === "images" ? <ImagePreferencesSettings /> : null}
       {section === "skills" ? <SkillsSettings key={user.id} userId={user.id} /> : null}
@@ -140,7 +117,6 @@ export default function SettingsPanel({ user, section }: SettingsPanelProps) {
         <ProfileSettings email={user.email} fallbackName={user.name} />
       ) : null}
       {section === "appearance" ? <AppearanceSettings /> : null}
-      {section === "account" ? <AccountSettings user={user} /> : null}
     </div>
   );
 }
